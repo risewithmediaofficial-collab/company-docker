@@ -1,0 +1,641 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import {
+  ChevronLeft,
+  Settings,
+  Share2,
+  Plus,
+  MessageSquare,
+  Paperclip,
+  Clock,
+  LayoutGrid,
+  MoreHorizontal,
+  Calendar,
+  Filter,
+  Briefcase,
+  List,
+  Activity,
+  ShieldCheck,
+  UserPlus,
+  CheckCircle2,
+  XCircle,
+  Lock,
+} from 'lucide-react';
+import api from '../../api';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
+import { AddTaskModal } from '../../components/modals/AddTaskModal';
+import { AddProjectModal } from '../../components/modals/AddProjectModal';
+
+const statuses = ['todo', 'in_progress', 'review', 'approved', 'rejected', 'done'];
+
+const statusLabels = {
+  todo: 'To Do',
+  in_progress: 'In Progress',
+  review: 'In Review',
+  approved: 'Approved',
+  rejected: 'Blocked',
+  done: 'Done',
+};
+
+const projectStatusStyles = {
+  Planning: 'bg-secondary text-muted-foreground',
+  'In Progress': 'bg-emerald-500/10 text-emerald-600',
+  'On Hold': 'bg-amber-500/10 text-amber-600',
+  Completed: 'bg-blue-500/10 text-blue-600',
+  Cancelled: 'bg-red-500/10 text-red-600',
+};
+
+const ProjectDetails = () => {
+  const { id } = useParams();
+  const { user } = useSelector((state) => state.auth);
+  const [project, setProject] = useState(null);
+  const [kanban, setKanban] = useState({});
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [recentTasks, setRecentTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('board');
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const [taskDefaults, setTaskDefaults] = useState({});
+  const [accessRequests, setAccessRequests] = useState([]);
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [hasRequested, setHasRequested] = useState(false);
+
+  const fetchProjectData = async () => {
+    try {
+      setLoading(true);
+      const [projectRes, kanbanRes] = await Promise.all([
+        api.get(`/projects/${id}`),
+        api.get(`/projects/${id}/kanban`),
+      ]);
+
+      setProject(projectRes.data.project);
+      setRecentActivity(projectRes.data.recentActivity || []);
+      setRecentTasks(projectRes.data.recentTasks || []);
+      setKanban(kanbanRes.data.kanban || {});
+
+      if (user?.role === 'superAdmin' || user?.role === 'manager') {
+        const requestsRes = await api.get(`/access-requests/project/${id}`);
+        setAccessRequests(requestsRes.data.requests || []);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to load project');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRequestAccess = async () => {
+    try {
+      setIsRequesting(true);
+      await api.post('/access-requests', { projectId: id, reason: 'Requesting access to project assets.' });
+      toast.success('Access request sent successfully');
+      setHasRequested(true);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to send request');
+    } finally {
+      setIsRequesting(false);
+    }
+  };
+
+  const handleProcessRequest = async (requestId, status) => {
+    try {
+      await api.put(`/access-requests/${requestId}`, { status });
+      toast.success(`Request ${status}`);
+      fetchProjectData();
+    } catch (error) {
+      toast.error('Failed to process request');
+    }
+  };
+
+  useEffect(() => {
+    fetchProjectData();
+  }, [id]);
+
+  const openTaskModal = (defaults = {}) => {
+    if (user?.role === 'client') return;
+    setTaskDefaults({
+      project: id,
+      taskType: 'task',
+      status: 'To Do',
+      ...defaults,
+    });
+    setShowTaskModal(true);
+  };
+
+  const allTasks = useMemo(
+    () => statuses.flatMap((status) => kanban[status] || []),
+    [kanban],
+  );
+
+  const files = useMemo(() => {
+    const projectFiles = (project?.files || []).map((file) => ({
+      ...file,
+      source: 'Project file',
+      createdAt: file.uploadedAt,
+    }));
+    const taskFiles = allTasks.flatMap((task) => (task.attachments || []).map((file) => ({
+      ...file,
+      source: task.title,
+      createdAt: file.uploadedAt,
+    })));
+
+    return [...projectFiles, ...taskFiles];
+  }, [allTasks, project]);
+
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center text-muted-foreground animate-pulse">
+        Loading workspace...
+      </div>
+    );
+  }
+
+  if (!project) {
+    return <div className="rounded-3xl border border-border bg-card p-12 text-center text-muted-foreground">Project not found.</div>;
+  }
+
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/projects/${id}`);
+      toast.success('Project link copied to clipboard');
+    } catch (_) {
+      toast.error('Unable to copy project link');
+    }
+  };
+
+  const renderBoard = () => (
+    <div className="flex h-[calc(100vh-320px)] space-x-6 overflow-x-auto pb-6 scrollbar-hide">
+      {statuses.map((status) => (
+        <div key={status} className="flex w-80 flex-shrink-0 flex-col">
+          <div className="mb-4 flex items-center justify-between px-2">
+            <div className="flex items-center space-x-2">
+              <div className={`h-2 w-2 rounded-full ${
+                status === 'done' ? 'bg-emerald-500'
+                  : status === 'review' ? 'bg-amber-500'
+                    : status === 'in_progress' ? 'bg-blue-500'
+                      : 'bg-muted-foreground'
+              }`}
+              />
+              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                {statusLabels[status]}
+              </h3>
+              <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-bold">
+                {kanban[status]?.length || 0}
+              </span>
+            </div>
+            {user?.role !== 'client' && (
+              <button
+                onClick={() => openTaskModal({ status: statusLabels[status] })}
+                className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-secondary"
+              >
+                <Plus size={14} />
+              </button>
+            )}
+          </div>
+
+          <div className="flex-1 space-y-3 overflow-y-auto rounded-2xl border border-dashed border-border bg-secondary/20 p-3">
+            {(kanban[status] || []).map((task) => (
+              <motion.div
+                layoutId={task._id}
+                key={task._id}
+                className="group cursor-pointer rounded-xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
+              >
+                <div className="mb-3 flex items-start justify-between">
+                  <div className="flex flex-wrap gap-1">
+                    {(task.tags || []).length ? task.tags.map((tag) => (
+                      <span key={tag} className="rounded bg-primary/10 px-1.5 py-0.5 text-[8px] font-bold uppercase text-primary">
+                        {tag}
+                      </span>
+                    )) : (
+                      <span className="rounded bg-secondary px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-tighter text-muted-foreground">
+                        {task.taskType || 'Task'}
+                      </span>
+                    )}
+                  </div>
+                  <button className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                    <MoreHorizontal size={14} />
+                  </button>
+                </div>
+
+                <h4 className="line-clamp-2 text-sm font-bold leading-tight">{task.title}</h4>
+
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="flex items-center space-x-3 text-[10px] text-muted-foreground">
+                    <span className="flex items-center">
+                      <MessageSquare size={12} className="mr-1" /> {task.comments?.length || 0}
+                    </span>
+                    <span className="flex items-center">
+                      <Paperclip size={12} className="mr-1" /> {task.attachments?.length || 0}
+                    </span>
+                  </div>
+                  <div className="flex -space-x-1.5">
+                    {(task.assignedTo || []).map((member) => (
+                      <div
+                        key={member._id}
+                        className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border-2 border-card bg-secondary text-[8px] font-bold shadow-sm"
+                        title={member.name}
+                      >
+                        {member.avatar ? <img src={member.avatar} alt="" /> : member.name?.charAt(0)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {task.dueDate && (
+                  <div className={`mt-3 flex items-center text-[10px] font-bold ${
+                    new Date(task.dueDate) < new Date() && status !== 'done' ? 'text-destructive' : 'text-muted-foreground'
+                  }`}>
+                    <Clock size={10} className="mr-1" />
+                    {new Date(task.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                  </div>
+                )}
+              </motion.div>
+            ))}
+
+            {(kanban[status] || []).length === 0 && (
+              <div className="flex h-20 items-center justify-center text-xs italic text-muted-foreground">
+                No tasks in this column.
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderList = () => {
+    const rows = recentTasks.length ? recentTasks : allTasks;
+
+    return (
+      <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+        <div className="flex items-center justify-between border-b border-border bg-secondary/10 p-5">
+          <h2 className="font-bold">Recent Tasks</h2>
+          {user?.role !== 'client' && (
+            <button
+              onClick={() => openTaskModal()}
+              className="inline-flex items-center rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 hover:bg-primary/90"
+            >
+              <Plus size={16} className="mr-2" />
+              Add Task
+            </button>
+          )}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-muted-foreground">
+                <th className="px-6 py-4">Task</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Priority</th>
+                <th className="px-6 py-4">Due Date</th>
+                <th className="px-6 py-4">Assignees</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {rows.length ? rows.map((task) => (
+                <tr key={task._id} className="transition-colors hover:bg-secondary/20">
+                  <td className="px-6 py-4">
+                    <div className="font-semibold">{task.title}</div>
+                    <div className="text-xs text-muted-foreground">{task.taskType || 'task'}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="rounded-lg bg-secondary px-2 py-1 text-[10px] font-bold">
+                      {statusLabels[task.status] || task.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">{task.priority || 'Medium'}</td>
+                  <td className="px-6 py-4 text-muted-foreground">
+                    {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
+                  </td>
+                  <td className="px-6 py-4">
+                    {(task.assignedTo || []).length
+                      ? task.assignedTo.map((member) => member.name).join(', ')
+                      : 'Unassigned'}
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
+                    No tasks have been created yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  const renderFiles = () => (
+    <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="font-bold">Files & Attachments</h2>
+        <span className="text-xs font-semibold text-muted-foreground">
+          {files.length} item{files.length === 1 ? '' : 's'}
+        </span>
+      </div>
+
+      <div className="space-y-3">
+        {files.length ? files.map((file, index) => (
+          <a
+            key={`${file.url}-${index}`}
+            href={file.url}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-between rounded-2xl border border-border bg-secondary/20 p-4 transition-colors hover:bg-secondary/40"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Paperclip size={18} />
+              </div>
+              <div>
+                <p className="font-semibold">{file.name || 'Untitled file'}</p>
+                <p className="text-xs text-muted-foreground">{file.source}</p>
+              </div>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {file.createdAt ? new Date(file.createdAt).toLocaleDateString() : 'Recently added'}
+            </span>
+          </a>
+        )) : (
+          <div className="rounded-2xl border border-dashed border-border bg-secondary/10 p-12 text-center text-sm text-muted-foreground">
+            No project files or task attachments have been uploaded yet.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderAccessManagement = () => (
+    <div className="space-y-6">
+      <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold">Team Access</h2>
+            <p className="text-xs text-muted-foreground">Manage who has access to this project and its assets.</p>
+          </div>
+          <button className="rounded-xl bg-primary/10 px-4 py-2 text-xs font-bold text-primary hover:bg-primary/20 transition-colors flex items-center gap-2">
+            <UserPlus size={14} /> Add Member
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {(project.team || []).map((member) => (
+            <div key={member._id} className="flex items-center justify-between rounded-2xl border border-border p-4 hover:bg-secondary/10 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center font-bold">
+                  {member.avatar ? <img src={member.avatar} alt="" className="rounded-full" /> : member.name?.charAt(0)}
+                </div>
+                <div>
+                  <p className="text-sm font-bold">{member.name}</p>
+                  <p className="text-xs text-muted-foreground">{member.role}</p>
+                </div>
+              </div>
+              <button className="text-xs font-bold text-destructive hover:underline">Remove</button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {(user.role === 'superAdmin' || user.role === 'manager') && accessRequests.length > 0 && (
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-bold">Pending Requests</h2>
+          <div className="space-y-3">
+            {accessRequests.filter(r => r.status === 'pending').map((request) => (
+              <div key={request._id} className="flex items-center justify-between rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center font-bold">
+                    {request.requester.avatar ? <img src={request.requester.avatar} alt="" className="rounded-full" /> : request.requester.name?.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">{request.requester.name}</p>
+                    <p className="text-xs text-muted-foreground">{request.reason}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleProcessRequest(request._id, 'rejected')}
+                    className="rounded-lg p-2 text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <XCircle size={20} />
+                  </button>
+                  <button 
+                    onClick={() => handleProcessRequest(request._id, 'approved')}
+                    className="rounded-lg p-2 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                  >
+                    <CheckCircle2 size={20} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const isTeamMember = useMemo(() => {
+    if (user.role === 'superAdmin' || user.role === 'manager') return true;
+    return (project.team || []).some(m => m._id === user._id) || project.manager?._id === user._id;
+  }, [project.team, project.manager, user._id, user.role]);
+
+  const renderActivity = () => (
+    <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="font-bold">Recent Activity</h2>
+        <span className="text-xs font-semibold text-muted-foreground">{recentActivity.length} updates</span>
+      </div>
+
+      <div className="space-y-4">
+        {recentActivity.length ? recentActivity.map((item) => (
+          <div key={item._id} className="flex gap-4 rounded-2xl border border-border bg-secondary/15 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Activity size={18} />
+            </div>
+            <div>
+              <p className="font-semibold">{item.title}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {item.actor?.name || 'System'} • {new Date(item.createdAt).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        )) : (
+          <div className="rounded-2xl border border-dashed border-border bg-secondary/10 p-12 text-center text-sm text-muted-foreground">
+            No recent activity has been recorded for this project yet.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  if (!isTeamMember && user.role !== 'client') {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-6">
+        <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary">
+          <Lock size={40} />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold">Access Restricted</h2>
+          <p className="text-muted-foreground mt-2 max-w-md mx-auto">
+            You don't have permission to view this project's assets. Please request access from the project manager.
+          </p>
+        </div>
+        <button
+          onClick={handleRequestAccess}
+          disabled={isRequesting || hasRequested}
+          className={`px-8 py-3 rounded-2xl font-bold transition-all shadow-lg ${
+            hasRequested 
+              ? 'bg-secondary text-muted-foreground cursor-default' 
+              : 'bg-primary text-white hover:bg-primary/90 shadow-primary/20'
+          }`}
+        >
+          {isRequesting ? 'Sending...' : hasRequested ? 'Request Sent' : 'Request Access'}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-sm">
+        <div className="absolute left-0 top-0 h-1 w-full bg-primary" />
+
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start space-x-4">
+            <Link to="/projects" className="mt-1 rounded-xl p-2 text-muted-foreground transition-colors hover:bg-secondary">
+              <ChevronLeft size={20} />
+            </Link>
+            <div>
+              <div className="flex items-center space-x-3">
+                <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+                <span className={`rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${projectStatusStyles[project.status] || projectStatusStyles.Planning}`}>
+                  {project.status}
+                </span>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                <span className="flex items-center font-medium">
+                  <Briefcase size={16} className="mr-2" />
+                  {project.client?.name}
+                </span>
+                <span className="h-1 w-1 rounded-full bg-border" />
+                <span className="flex items-center">
+                  <Calendar size={16} className="mr-2" />
+                  Due {project.dueDate ? new Date(project.dueDate).toLocaleDateString() : 'TBD'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <div className="mr-4 flex -space-x-2">
+              {(project.team || []).map((member) => (
+                <div
+                  key={member._id}
+                  className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border-2 border-card bg-secondary text-xs font-bold shadow-sm"
+                  title={member.name}
+                >
+                  {member.avatar ? <img src={member.avatar} alt="" /> : member.name.charAt(0)}
+                </div>
+              ))}
+              {user?.role !== 'client' && (
+                <button
+                  onClick={() => openTaskModal()}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-card bg-primary text-white text-xs font-bold transition-transform hover:scale-110"
+                  title="Add task"
+                >
+                  <Plus size={14} />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={handleShare}
+              className="rounded-xl border border-border p-2.5 transition-colors hover:bg-secondary"
+            >
+              <Share2 size={18} className="text-muted-foreground" />
+            </button>
+            {user?.role !== 'client' && (
+              <button
+                onClick={() => setShowProjectModal(true)}
+                className="rounded-xl border border-border p-2.5 transition-colors hover:bg-secondary"
+              >
+                <Settings size={18} className="text-muted-foreground" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-8 flex items-center space-x-8 border-t border-border pt-4">
+          {[
+            { id: 'board', label: 'Task Board', icon: LayoutGrid },
+            { id: 'list', label: 'List View', icon: List },
+            { id: 'files', label: 'Files', icon: Paperclip },
+            { id: 'activity', label: 'Activity', icon: Clock },
+            (user.role === 'superAdmin' || user.role === 'manager') && { id: 'access', label: 'Access', icon: ShieldCheck },
+          ].filter(Boolean).map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`relative flex items-center py-2 text-sm font-bold transition-all ${
+                activeTab === tab.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <tab.icon size={16} className="mr-2" />
+              {tab.label}
+              {activeTab === tab.id && (
+                <motion.div layoutId="activeTab" className="absolute -bottom-4 left-0 h-0.5 w-full rounded-full bg-primary" />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+        >
+          {activeTab === 'board' && renderBoard()}
+          {activeTab === 'list' && renderList()}
+          {activeTab === 'files' && renderFiles()}
+          {activeTab === 'activity' && renderActivity()}
+          {activeTab === 'access' && renderAccessManagement()}
+        </motion.div>
+      </AnimatePresence>
+
+      {user?.role !== 'client' && (
+        <>
+          <AddTaskModal
+            open={showTaskModal}
+            onOpenChange={(open) => {
+              setShowTaskModal(open);
+              if (!open) {
+                setTaskDefaults({});
+                fetchProjectData();
+              }
+            }}
+            initialValues={taskDefaults}
+          />
+
+          <AddProjectModal
+            open={showProjectModal}
+            onOpenChange={(open) => {
+              setShowProjectModal(open);
+              if (!open) fetchProjectData();
+            }}
+            project={project}
+          />
+        </>
+      )}
+    </div>
+  );
+};
+
+export default ProjectDetails;

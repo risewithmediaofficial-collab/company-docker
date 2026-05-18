@@ -1,0 +1,269 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { useEffect } from 'react';
+import { fetchMe } from './store/slices/authSlice';
+import { Toaster as HotToaster } from 'react-hot-toast';
+import { Toaster as SonnerToaster } from 'sonner';
+
+// Layouts
+import MainLayout from './layouts/MainLayout';
+import AuthLayout from './layouts/AuthLayout';
+
+// Pages
+import Dashboard from './pages/Dashboard';
+import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
+import Leads from './pages/crm/Leads';
+import Projects from './pages/projects/Projects';
+import ProjectDetails from './pages/projects/ProjectDetails';
+import Clients from './pages/clients/Clients';
+import ClientDetails from './pages/clients/ClientDetails';
+import Tasks from './pages/tasks/Tasks';
+import ContentCalendar from './pages/tasks/ContentCalendar';
+import Finance from './pages/finance/Finance';
+import HR from './pages/hr/HR';
+import Automations from './pages/automations/Automations';
+import Reports from './pages/reports/Reports';
+import Attendance from './pages/employee/Attendance';
+import Communication from './pages/employee/Communication';
+import ReferralDashboard from './pages/referral/ReferralDashboard';
+import Users from './pages/admin/Users';
+import Settings from './pages/Settings';
+import NotFound from './pages/NotFound';
+import PortalManager from './pages/portal/PortalManager';
+import PortalDashboard from './pages/portal/sections/PortalDashboard';
+import ContentReview from './pages/portal/sections/ContentReview';
+import PortalReports from './pages/portal/sections/PortalReports';
+import PortalDownloads from './pages/portal/sections/PortalDownloads';
+import BrandAssets from './pages/portal/sections/BrandAssets';
+import PortalSupport from './pages/portal/sections/PortalSupport';
+import PortalGuidelines from './pages/portal/sections/PortalGuidelines';
+
+// ─── Shared Loading Screen ────────────────────────────────────────────────────
+const LoadingScreen = () => (
+  <div className="flex h-screen w-full flex-col items-center justify-center bg-[#090a0f] text-white">
+    <div className="relative flex items-center justify-center">
+      <div className="h-16 w-16 animate-spin rounded-full border-4 border-indigo-500/20 border-t-indigo-500 border-r-indigo-500" />
+      <div className="absolute h-10 w-10 animate-ping rounded-full bg-indigo-500/25" />
+      <div className="absolute h-4 w-4 rounded-full bg-indigo-500" />
+    </div>
+    <p className="mt-6 text-sm font-bold tracking-widest uppercase text-indigo-400/80 animate-pulse">
+      Rise With Media
+    </p>
+    <span className="mt-1 text-[10px] text-slate-500 tracking-wider">Connecting Hub…</span>
+  </div>
+);
+
+// ─── Protected Route ──────────────────────────────────────────────────────────
+const ProtectedRoute = ({ isAuthenticated, user, loading, allowedRoles, children }) => {
+  // Still resolving session — don't redirect prematurely
+  if (loading && !user) return <LoadingScreen />;
+
+  // Truly unauthenticated
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  // Token valid but user profile not yet fetched (edge case)
+  if (!user) return <LoadingScreen />;
+
+  // RBAC check
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
+// ─── App ──────────────────────────────────────────────────────────────────────
+const App = () => {
+  const dispatch = useDispatch();
+  const { isAuthenticated, user, loading } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    // Fetch user profile once: token present, no user object, not already loading
+    if (isAuthenticated && !user && !loading) {
+      dispatch(fetchMe());
+    }
+  }, [dispatch, isAuthenticated, user, loading]);
+
+  // Global boot-screen while the very first /me call is in-flight
+  if (loading && !user && isAuthenticated) return <LoadingScreen />;
+
+  return (
+    <Router>
+      <HotToaster position="top-right" reverseOrder={false} />
+      <SonnerToaster position="top-right" richColors closeButton />
+      <Routes>
+        {/* ── Auth Routes ─────────────────────────────────────────────── */}
+        <Route element={<AuthLayout />}>
+          <Route path="/login"          element={!isAuthenticated ? <Login />          : <Navigate to="/" />} />
+          <Route path="/register"       element={!isAuthenticated ? <Register />       : <Navigate to="/" />} />
+          <Route path="/forgot-password" element={!isAuthenticated ? <ForgotPassword /> : <Navigate to="/" />} />
+          <Route path="/reset-password/:token" element={!isAuthenticated ? <ResetPassword /> : <Navigate to="/" />} />
+        </Route>
+
+        {/* ── Protected Shell ─────────────────────────────────────────── */}
+        <Route
+          element={(
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading}>
+              <MainLayout />
+            </ProtectedRoute>
+          )}
+        >
+          {/* Root */}
+          <Route
+            path="/"
+            element={user?.role === 'client' ? <PortalDashboard dark={false} user={user} /> : <Dashboard />}
+          />
+
+          {/* CRM */}
+          <Route path="/crm/leads" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'referral']}>
+              <Leads />
+            </ProtectedRoute>
+          } />
+
+          {/* Projects */}
+          <Route path="/projects" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+              <Projects />
+            </ProtectedRoute>
+          } />
+          <Route path="/projects/:id" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+              <ProjectDetails />
+            </ProtectedRoute>
+          } />
+
+          {/* Clients */}
+          <Route path="/clients" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+              <Clients />
+            </ProtectedRoute>
+          } />
+          <Route path="/clients/:id" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+              <ClientDetails />
+            </ProtectedRoute>
+          } />
+
+          {/* Portal Manager (agency-side) */}
+          <Route path="/portal-manager" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+              <PortalManager />
+            </ProtectedRoute>
+          } />
+
+          {/* Tasks & Calendar */}
+          <Route path="/tasks" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+              <Tasks />
+            </ProtectedRoute>
+          } />
+          <Route path="/calendar" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+              <ContentCalendar />
+            </ProtectedRoute>
+          } />
+
+          {/* Finance */}
+          <Route path="/finance" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+              <Finance />
+            </ProtectedRoute>
+          } />
+
+          {/* HR — admin/manager only */}
+          <Route path="/hr" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+              <HR />
+            </ProtectedRoute>
+          } />
+
+          {/* Automations — admin/manager only */}
+          <Route path="/automations" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+              <Automations />
+            </ProtectedRoute>
+          } />
+
+          {/* Reports — admin/manager only */}
+          <Route path="/reports" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+              <Reports />
+            </ProtectedRoute>
+          } />
+
+          {/* Attendance */}
+          <Route path="/attendance" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+              <Attendance />
+            </ProtectedRoute>
+          } />
+
+          {/* Chat / Communication */}
+          <Route path="/chat" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+              <Communication />
+            </ProtectedRoute>
+          } />
+
+          {/* Referral */}
+          <Route path="/referral" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'referral', 'client']}>
+              <ReferralDashboard />
+            </ProtectedRoute>
+          } />
+
+          {/* Admin — superAdmin only */}
+          <Route path="/admin/users" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin']}>
+              <Users />
+            </ProtectedRoute>
+          } />
+
+          {/* Settings — any authenticated user */}
+          <Route path="/settings" element={<Settings />} />
+
+          {/* Client Portal Sections */}
+          <Route path="/portal/review" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
+              <ContentReview dark={false} />
+            </ProtectedRoute>
+          } />
+          <Route path="/portal/reports" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
+              <PortalReports dark={false} />
+            </ProtectedRoute>
+          } />
+          <Route path="/portal/downloads" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
+              <PortalDownloads dark={false} />
+            </ProtectedRoute>
+          } />
+          <Route path="/portal/assets" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
+              <BrandAssets dark={false} />
+            </ProtectedRoute>
+          } />
+          <Route path="/portal/support" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
+              <PortalSupport dark={false} />
+            </ProtectedRoute>
+          } />
+          <Route path="/portal/guidelines" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
+              <PortalGuidelines dark={false} />
+            </ProtectedRoute>
+          } />
+        </Route>
+
+        {/* 404 */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Router>
+  );
+};
+
+export default App;
