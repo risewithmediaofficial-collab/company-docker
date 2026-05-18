@@ -5,6 +5,8 @@
 
 import express from 'express';
 import http from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { Server as SocketIO } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -139,6 +141,18 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/portal', portalRoutes);
 app.use('/api/brands', brandRoutes);
 app.use('/api/access-requests', accessRequestRoutes);
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+  
+  // Any route that doesn't start with /api gets sent to the React app
+  app.get(/^(?!\/api).*/, (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../client', 'dist', 'index.html'));
+  });
+}
 
 app.use(notFound);
 app.use(errorHandler);
