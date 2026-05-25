@@ -26,7 +26,7 @@ A production-ready full-stack SaaS operating system for digital marketing agenci
 
 ### 2. Backend Setup
 ```bash
-cd server
+cd backend
 npm install
 # Copy .env.example to .env and configure your variables
 npm run seed  # This will create test accounts and data
@@ -35,7 +35,7 @@ npm run dev
 
 ### 3. Frontend Setup
 ```bash
-cd client
+cd frontend
 npm install
 npm run dev
 ```

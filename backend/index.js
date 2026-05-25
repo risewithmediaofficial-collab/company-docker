@@ -1,0 +1,180 @@
+// =============================================
+// MAIN SERVER ENTRY POINT
+// Agency CRM & Project Management System
+// =============================================
+
+import express from 'express';
+import http from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { Server as SocketIO } from 'socket.io';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
+import mongoSanitize from 'express-mongo-sanitize';
+import { connectDB } from './config/db.js';
+import { getEnv, loadEnv } from './config/env.js';
+import { initSocket } from './config/socket.js';
+import { initCronJobs } from './services/cron.service.js';
+import User from './models/user.model.js';
+
+// Route imports
+import authRoutes from './routes/auth.routes.js';
+import userRoutes from './routes/user.routes.js';
+import leadRoutes from './routes/lead.routes.js';
+import clientRoutes from './routes/client.routes.js';
+import projectRoutes from './routes/project.routes.js';
+import taskRoutes from './routes/task.routes.js';
+import financeRoutes from './routes/finance.routes.js';
+import hrRoutes from './routes/hr.routes.js';
+import attendanceRoutes from './routes/attendance.routes.js';
+import referralRoutes from './routes/referral.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
+import reportRoutes from './routes/report.routes.js';
+import automationRoutes from './routes/automation.routes.js';
+import ticketRoutes from './routes/ticket.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
+import communicationRoutes from './routes/communication.routes.js';
+import settingsRoutes from './routes/settings.routes.js';
+import aiRoutes from './routes/ai.routes.js';
+import portalRoutes from './routes/portal.routes.js';
+import brandRoutes from './routes/brand.routes.js';
+import accessRequestRoutes from './routes/accessRequest.routes.js';
+import credentialRoutes from './routes/credential.routes.js';
+import clientFollowupRoutes from './routes/clientFollowup.routes.js';
+import { errorHandler, notFound } from './middleware/error.middleware.js';
+
+loadEnv();
+const env = getEnv();
+
+await connectDB();
+
+const ensureDefaultAdmin = async () => {
+  const existingUsers = await User.estimatedDocumentCount();
+  if (existingUsers > 0) return;
+
+  const name = process.env.DEFAULT_ADMIN_NAME || 'DINESH M';
+  const email = process.env.DEFAULT_ADMIN_EMAIL || 'admin@agencycrm.com';
+  const password = process.env.DEFAULT_ADMIN_PASSWORD || 'password123';
+  await User.create({
+    name,
+    email,
+    password,
+    role: 'superAdmin',
+    isActive: true,
+    permissions: {
+      canManageLeads: true,
+      canManageFinance: true,
+      canManageHR: true,
+      canViewReports: true,
+    },
+  });
+  console.log(`Default super admin created: ${email}`);
+};
+
+await ensureDefaultAdmin();
+
+const app = express();
+const httpServer = http.createServer(app);
+
+const io = new SocketIO(httpServer, {
+  cors: {
+    origin: env.clientUrl,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    credentials: true,
+  },
+});
+
+initSocket(io);
+initCronJobs(io);
+
+app.set('io', io);
+
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(mongoSanitize());
+app.use(cors({
+  origin: env.clientUrl,
+  credentials: true,
+}));
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  message: { success: false, message: 'Too many requests, please try again later.' },
+});
+app.use('/api', limiter);
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use('/uploads', express.static(env.uploadDir));
+
+if (env.nodeEnv === 'development') {
+  app.use(morgan('dev'));
+}
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Agency CRM API is running',
+    timestamp: new Date().toISOString(),
+    env: env.nodeEnv,
+  });
+});
+
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/leads', leadRoutes);
+app.use('/api/clients', clientRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/finance', financeRoutes);
+app.use('/api/hr', hrRoutes);
+app.use('/api/attendance', attendanceRoutes);
+app.use('/api/referrals', referralRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/automations', automationRoutes);
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/communications', communicationRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/portal', portalRoutes);
+app.use('/api/brands', brandRoutes);
+app.use('/api/access-requests', accessRequestRoutes);
+app.use('/api/credentials', credentialRoutes);
+app.use('/api/client-followups', clientFollowupRoutes);
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+  
+  // Any route that doesn't start with /api gets sent to the React app
+  app.get(/^(?!\/api).*/, (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../client', 'dist', 'index.html'));
+  });
+}
+
+app.use(notFound);
+app.use(errorHandler);
+
+httpServer.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${env.port} is already in use. Stop the existing server or change PORT.`);
+  } else {
+    console.error('Server startup failed:', error.message);
+  }
+  process.exit(1);
+});
+
+httpServer.listen(env.port, () => {
+  console.log(`\nAgency CRM Server running on port ${env.port}`);
+  console.log(`Environment: ${env.nodeEnv}`);
+  console.log(`Client URL: ${env.clientUrl}`);
+  console.log(`API Health: http://localhost:${env.port}/api/health\n`);
+});
+
+export default app;
