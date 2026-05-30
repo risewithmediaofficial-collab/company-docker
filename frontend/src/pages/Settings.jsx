@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Bell,
@@ -23,6 +23,7 @@ import {
   useSettings,
   useUpdatePreferences,
   useUpdateProfileSettings,
+  useUploadProfileAvatar,
 } from '../hooks/useSettings';
 
 const sections = [
@@ -39,9 +40,11 @@ const Settings = () => {
   const { darkMode } = useSelector((state) => state.ui);
   const { data, isLoading } = useSettings();
   const updateProfile = useUpdateProfileSettings();
+  const uploadProfileAvatar = useUploadProfileAvatar();
   const updatePreferences = useUpdatePreferences();
   const changePassword = useChangePassword();
   const [activeSection, setActiveSection] = useState('profile');
+  const fileInputRef = useRef(null);
 
   const settings = data?.settings;
   const profileUser = data?.user || user;
@@ -99,6 +102,26 @@ const Settings = () => {
     });
     dispatch(updateCurrentUser(saved));
     return saved;
+  };
+
+  const handleAvatarButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file');
+      return;
+    }
+
+    const uploadResult = await uploadProfileAvatar.mutateAsync(file);
+    const saved = await updateProfile.mutateAsync({ avatar: uploadResult.url });
+    dispatch(updateCurrentUser(saved));
   };
 
   const handlePasswordFieldChange = (event) => {
@@ -188,17 +211,31 @@ const Settings = () => {
               <div className="space-y-8">
                 <div className="flex flex-col md:flex-row items-center gap-8 border-b border-border pb-8">
                   <div className="relative group">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                    />
                     <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-white text-3xl font-black shadow-xl overflow-hidden">
                       {profileUser?.avatar ? <img src={profileUser.avatar} alt="" className="h-full w-full object-cover" /> : profileUser?.name?.charAt(0)}
                     </div>
-                    <button className="absolute -bottom-2 -right-2 p-2 bg-card rounded-xl border border-border shadow-lg text-primary hover:bg-primary hover:text-white transition-all">
+                    <button
+                      type="button"
+                      onClick={handleAvatarButtonClick}
+                      disabled={uploadProfileAvatar.isPending || updateProfile.isPending}
+                      className="absolute -bottom-2 -right-2 p-2 bg-card rounded-xl border border-border shadow-lg text-primary hover:bg-primary hover:text-white transition-all disabled:opacity-60"
+                    >
                       <Camera size={16} />
                     </button>
                   </div>
                   <div className="text-center md:text-left">
                     <h3 className="text-xl font-bold">{profileUser?.name}</h3>
                     <p className="text-sm text-muted-foreground capitalize">{profileUser?.role} / {profileUser?.department || 'Operations'}</p>
-                    <p className="mt-2 text-xs text-muted-foreground">Email changes are restricted to administrators.</p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {uploadProfileAvatar.isPending ? 'Uploading profile picture...' : 'Email changes are restricted to administrators.'}
+                    </p>
                   </div>
                 </div>
 

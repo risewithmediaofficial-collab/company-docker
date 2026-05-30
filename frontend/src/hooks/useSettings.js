@@ -27,6 +27,24 @@ export const useUpdateProfileSettings = () => {
   });
 };
 
+export const useUploadProfileAvatar = () => {
+  return useMutation({
+    mutationFn: async (file) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post('/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      return response.data;
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to upload profile picture'),
+  });
+};
+
 export const useUpdatePreferences = () => {
   const queryClient = useQueryClient();
   return useMutation({

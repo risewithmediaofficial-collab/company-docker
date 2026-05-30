@@ -25,6 +25,7 @@ import ClientFollowups from './pages/clients/ClientFollowups';
 import Tasks from './pages/tasks/Tasks';
 import ContentCalendar from './pages/tasks/ContentCalendar';
 import Finance from './pages/finance/Finance';
+import Loans from './pages/finance/Loans';
 import HR from './pages/hr/HR';
 import Automations from './pages/automations/Automations';
 import Reports from './pages/reports/Reports';
@@ -183,6 +184,13 @@ const App = () => {
           <Route path="/finance" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
               <Finance />
+            </ProtectedRoute>
+          } />
+
+          {/* Loans Calculator */}
+          <Route path="/loans" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+              <Loans />
             </ProtectedRoute>
           } />
 

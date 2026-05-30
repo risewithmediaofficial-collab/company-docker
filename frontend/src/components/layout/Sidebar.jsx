@@ -27,7 +27,8 @@ import {
   BookOpen,
   Calendar,
   KeyRound,
-  PhoneCall
+  PhoneCall,
+  Calculator
 } from 'lucide-react';
 import { toggleSidebar } from '../../store/slices/uiSlice';
 import { motion } from 'framer-motion';
@@ -72,6 +73,7 @@ const Sidebar = () => {
       { name: 'Content Calendar', icon: FileText, path: '/calendar' },
       { name: 'Message Center', icon: MessageSquare, path: '/chat' },
       { name: 'Finance', icon: IndianRupee, path: '/finance' },
+      { name: 'Loans', icon: Calculator, path: '/loans' },
       { name: 'HR & Hiring', icon: Users2, path: '/hr' },
       { name: 'Automations', icon: Zap, path: '/automations' },
       { name: 'Reports', icon: BarChart3, path: '/reports' },
@@ -87,6 +89,8 @@ const Sidebar = () => {
       { name: 'Team Tasks', icon: CheckSquare, path: '/tasks' },
       { name: 'Content Calendar', icon: FileText, path: '/calendar' },
       { name: 'Message Center', icon: MessageSquare, path: '/chat' },
+      { name: 'Finance', icon: IndianRupee, path: '/finance' },
+      { name: 'Loans', icon: Calculator, path: '/loans' },
       { name: 'Reports', icon: BarChart3, path: '/reports' },
       { name: 'Portal Manager', icon: FileText, path: '/portal-manager' },
     ],
@@ -106,6 +110,7 @@ const Sidebar = () => {
       { name: 'Downloads', icon: Download, path: '/portal/downloads' },
       { name: 'Brand Assets', icon: Palette, path: '/portal/assets' },
       { name: 'Invoices', icon: Receipt, path: '/finance' },
+      { name: 'Loans', icon: Calculator, path: '/loans' },
       { name: 'Support', icon: HeadphonesIcon, path: '/portal/support' },
       { name: 'Guidelines', icon: BookOpen, path: '/portal/guidelines' },
       { name: 'Message Center', icon: MessageSquare, path: '/chat' },
