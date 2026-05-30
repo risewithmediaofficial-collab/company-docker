@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Calculator, TrendingUp, BarChart3 } from 'lucide-react';
 import { PageHeader, PageToolbar, SectionCard } from '../../components/ui/page';
-import { LoanCalculator } from '../../components/finance/LoanCalculator';
+import LoanCalculator from '../../components/finance/LoanCalculator';
 
 const Loans = () => {
   const [activeTab, setActiveTab] = useState('calculator');
