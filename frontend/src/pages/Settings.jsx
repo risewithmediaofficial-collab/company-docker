@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Bell,
@@ -44,7 +44,6 @@ const Settings = () => {
   const updatePreferences = useUpdatePreferences();
   const changePassword = useChangePassword();
   const [activeSection, setActiveSection] = useState('profile');
-  const fileInputRef = useRef(null);
 
   const settings = data?.settings;
   const profileUser = data?.user || user;
@@ -102,10 +101,6 @@ const Settings = () => {
     });
     dispatch(updateCurrentUser(saved));
     return saved;
-  };
-
-  const handleAvatarButtonClick = () => {
-    fileInputRef.current?.click();
   };
 
   const handleAvatarUpload = async (event) => {
@@ -212,7 +207,7 @@ const Settings = () => {
                 <div className="flex flex-col md:flex-row items-center gap-8 border-b border-border pb-8">
                   <div className="relative group">
                     <input
-                      ref={fileInputRef}
+                      id="profile-avatar-upload"
                       type="file"
                       accept="image/*"
                       className="hidden"
@@ -221,14 +216,17 @@ const Settings = () => {
                     <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-white text-3xl font-black shadow-xl overflow-hidden">
                       {profileUser?.avatar ? <img src={profileUser.avatar} alt="" className="h-full w-full object-cover" /> : profileUser?.name?.charAt(0)}
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleAvatarButtonClick}
-                      disabled={uploadProfileAvatar.isPending || updateProfile.isPending}
-                      className="absolute -bottom-2 -right-2 p-2 bg-card rounded-xl border border-border shadow-lg text-primary hover:bg-primary hover:text-white transition-all disabled:opacity-60"
+                    <label
+                      htmlFor="profile-avatar-upload"
+                      aria-disabled={uploadProfileAvatar.isPending || updateProfile.isPending}
+                      className={`absolute -bottom-2 -right-2 rounded-xl border border-border bg-card p-2 text-primary shadow-lg transition-all ${
+                        uploadProfileAvatar.isPending || updateProfile.isPending
+                          ? 'pointer-events-none opacity-60'
+                          : 'cursor-pointer hover:bg-primary hover:text-white'
+                      }`}
                     >
                       <Camera size={16} />
-                    </button>
+                    </label>
                   </div>
                   <div className="text-center md:text-left">
                     <h3 className="text-xl font-bold">{profileUser?.name}</h3>
