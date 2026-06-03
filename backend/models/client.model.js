@@ -66,6 +66,8 @@ const clientSchema = new mongoose.Schema(
       twitter: String,
     },
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    referralSource: { type: String, default: '' },
+    referralPermissionEnabled: { type: Boolean, default: false },
     totalRevenue: { type: Number, default: 0 },
     lastActivityDate: { type: Date },
   },

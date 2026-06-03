@@ -6,10 +6,34 @@ import mongoose from 'mongoose';
 
 const referralSchema = new mongoose.Schema(
   {
+    organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization' },
+    brandId: { type: mongoose.Schema.Types.ObjectId, ref: 'BrandWorkspace' },
     referrer: { type: mongoose.Schema.Types.ObjectId, required: true, refPath: 'referrerModel' },
     referrerModel: { type: String, required: true, enum: ['User', 'Client'] },
     lead: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' },
     client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
+    projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+    clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
+    referralSource: {
+      type: String,
+      enum: ['LinkedIn', 'Instagram', 'Facebook', 'WhatsApp', 'Website', 'Google Search', 'Google Ads', 'Existing Client Referral', 'Direct Call', 'Walk-in', 'Friend Referral', 'Partner Referral', 'Other', ''],
+      default: '',
+    },
+    referralPersonName: { type: String, default: '' },
+    referralPersonContact: { type: String, default: '' },
+    referralPlatformLink: { type: String, default: '' },
+    campaignName: { type: String, default: '' },
+    leadQuality: {
+      type: String,
+      enum: ['Hot', 'Warm', 'Cold', ''],
+      default: '',
+    },
+    conversionStatus: {
+      type: String,
+      enum: ['Lead', 'Contacted', 'Proposal Sent', 'Converted', 'Not Converted', ''],
+      default: '',
+    },
+    addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     referralCode: { type: String },
     status: {
       type: String,
@@ -41,6 +65,8 @@ const referralSchema = new mongoose.Schema(
 
 referralSchema.index({ referrer: 1 });
 referralSchema.index({ referralCode: 1 });
+referralSchema.index({ clientId: 1 });
+referralSchema.index({ projectId: 1 });
 
 const Referral = mongoose.model('Referral', referralSchema);
 export default Referral;

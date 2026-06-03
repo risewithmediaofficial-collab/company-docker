@@ -6,7 +6,9 @@ import {
   Receipt, TrendingUp, TrendingDown, AlertCircle, ArrowUpRight,
   Layers, Star, Activity
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useSocket } from '../../../context/SocketContext';
+import { exportProposalToPDF } from '../../../utils/pdfExport';
 
 const KPICard = ({ label, value, icon: Icon, color, sub, dark }) => (
   <motion.div
@@ -90,6 +92,15 @@ export default function PortalDashboard({ dark, user, setPendingCount }) {
 
   const stats = data?.stats || {};
   const client = data?.client || {};
+
+  const handleProposalDownload = (project) => {
+    try {
+      exportProposalToPDF({ project, client });
+      toast.success('Proposal PDF downloaded');
+    } catch (error) {
+      toast.error(error.message || 'Failed to download proposal PDF');
+    }
+  };
 
   const onboardingSteps = [
     { label: 'Welcome Email', done: client.onboardingSteps?.welcomeEmailSent },
@@ -200,9 +211,28 @@ export default function PortalDashboard({ dark, user, setPendingCount }) {
               ? <p className={`text-xs ${sub}`}>No active projects</p>
               : (data?.activeProjects || []).map(p => (
                 <div key={p._id} className="mb-3 last:mb-0">
-                  <div className="flex justify-between mb-1">
-                    <span className={`text-xs font-medium ${txt}`}>{p.name}</span>
-                    <span className="text-[10px] font-bold text-indigo-400">{p.progress || 0}%</span>
+                  <div className="mb-1 flex items-start justify-between gap-3">
+                    <div>
+                      <span className={`text-xs font-medium ${txt}`}>{p.name}</span>
+                      {p.dueDate && (
+                        <p className={`mt-1 text-[10px] ${sub}`}>
+                          Due {new Date(p.dueDate).toLocaleDateString('en-IN')}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-indigo-400">{p.progress || 0}%</span>
+                      {p.proposalText?.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => handleProposalDownload(p)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 px-2 py-1 text-[10px] font-semibold text-indigo-600 transition-colors hover:bg-indigo-50"
+                        >
+                          <FileCheck size={12} />
+                          Proposal PDF
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="h-1.5 rounded-full" style={{ background: dark ? '#1e293b' : '#e2e8f0' }}>
                     <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${p.progress || 0}%` }} />

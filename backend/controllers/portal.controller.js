@@ -8,6 +8,11 @@ import ReportingEntry from '../models/reportingEntry.model.js';
 import Task from '../models/task.model.js';
 import Invoice from '../models/invoice.model.js';
 import Project from '../models/project.model.js';
+import Finance from '../models/finance.model.js';
+import PaymentNote from '../models/paymentNote.model.js';
+import Payment from '../models/payment.model.js';
+import Referral from '../models/referral.model.js';
+import CallHistory from '../models/callHistory.model.js';
 import { withWorkspaceScope } from '../middleware/auth.middleware.js';
 import Notification from '../models/notification.model.js';
 
@@ -36,7 +41,7 @@ export const getPortalDashboard = async (req, res) => {
       ContentItem.countDocuments({ ...scope, status: 'Send to Client', approved: false }),
       ContentItem.countDocuments({ ...scope, approved: true }),
       ContentItem.countDocuments({ ...scope, status: 'Done' }),
-      Project.find({ ...scope, status: { $in: ['active', 'in_progress'] } }).select('name status progress dueDate'),
+      Project.find({ ...scope, status: { $in: ['active', 'in_progress'] } }).select('name status progress dueDate startDate description category proposalText'),
       Invoice.find({ ...scope, status: { $in: ['sent', 'overdue'] } }).select('invoiceNumber total dueDate status').sort({ dueDate: 1 }).limit(5),
       ContentItem.find(scope).sort({ updatedAt: -1 }).limit(10).populate('assignedEditor', 'name avatar'),
     ]);
@@ -320,11 +325,76 @@ export const deleteReportingEntry = async (req, res) => {
 
 export const getClientInvoices = async (req, res) => {
   try {
-    const invoices = await Invoice.find(withWorkspaceScope(req))
-      .sort({ createdAt: -1 })
-      .limit(20);
+    const client = await getClientFromUser(req.user._id);
+    if (!client) return res.status(404).json({ success: false, message: 'Client profile not found' });
 
-    res.json({ success: true, invoices });
+    const invoices = await Invoice.find({
+      ...withWorkspaceScope(req),
+      client: client._id,
+    })
+      .populate('project', 'name')
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    const financeRecords = await Finance.find({
+      ...withWorkspaceScope(req),
+      clientId: client._id,
+    })
+      .populate('projectId', 'name')
+      .sort({ updatedAt: -1 });
+
+    const invoiceIds = invoices.map((item) => item._id);
+    const financeIds = financeRecords.map((item) => item._id);
+
+    const [payments, paymentNotes] = await Promise.all([
+      Payment.find({ invoice: { $in: invoiceIds } }).sort({ paidAt: -1 }),
+      PaymentNote.find({ financeId: { $in: financeIds }, visibleToClient: true }).sort({ paymentDate: -1 }),
+    ]);
+
+    const paymentMap = payments.reduce((acc, item) => {
+      const key = item.invoice?.toString();
+      acc[key] = acc[key] || [];
+      acc[key].push(item);
+      return acc;
+    }, {});
+
+    const noteMap = paymentNotes.reduce((acc, item) => {
+      const key = item.financeId?.toString();
+      acc[key] = acc[key] || [];
+      acc[key].push(item);
+      return acc;
+    }, {});
+
+    const invoicePayload = invoices.map((invoice) => ({
+      ...invoice.toObject(),
+      projectName: invoice.project?.name || '',
+      paymentHistory: paymentMap[invoice._id.toString()] || [],
+    }));
+
+    const financePayload = financeRecords.map((record) => ({
+      ...record.toObject(),
+      projectName: record.projectName || record.projectId?.name || '',
+      paymentHistory: noteMap[record._id.toString()] || [],
+    }));
+
+    res.json({ success: true, invoices: invoicePayload, financeRecords: financePayload, client });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getClientFinanceOverview = async (req, res) => {
+  try {
+    const client = await getClientFromUser(req.user._id);
+    if (!client) return res.status(404).json({ success: false, message: 'Client profile not found' });
+
+    const [financeRecords, referrals, callHistory] = await Promise.all([
+      Finance.find({ ...withWorkspaceScope(req), clientId: client._id }).sort({ updatedAt: -1 }),
+      Referral.find({ ...withWorkspaceScope(req), clientId: client._id }).sort({ createdAt: -1 }),
+      CallHistory.find({ ...withWorkspaceScope(req), clientId: client._id, visibleToClient: true }).sort({ callDate: -1 }).limit(20),
+    ]);
+
+    res.json({ success: true, financeRecords, referrals, callHistory, client });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -339,6 +409,35 @@ export const getClientProjects = async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json({ success: true, projects });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getClientTasks = async (req, res) => {
+  try {
+    const client = await getClientFromUser(req.user._id);
+    if (!client) {
+      return res.status(404).json({ success: false, message: 'Client profile not found' });
+    }
+
+    const { status, taskCategory, taskType } = req.query;
+    const filter = {
+      ...withWorkspaceScope(req),
+      client: client._id,
+      isClientVisible: true,
+    };
+
+    if (status) filter.status = status;
+    if (taskCategory) filter.taskCategory = taskCategory;
+    if (taskType) filter.taskType = taskType;
+
+    const tasks = await Task.find(filter)
+      .populate('assignedTo', 'name avatar')
+      .populate('clientResponseBy', 'name')
+      .sort({ dueDate: 1, createdAt: -1 });
+
+    res.json({ success: true, tasks, client });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

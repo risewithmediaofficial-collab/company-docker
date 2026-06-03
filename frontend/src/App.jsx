@@ -25,7 +25,6 @@ import ClientFollowups from './pages/clients/ClientFollowups';
 import Tasks from './pages/tasks/Tasks';
 import ContentCalendar from './pages/tasks/ContentCalendar';
 import Finance from './pages/finance/Finance';
-import Loans from './pages/finance/Loans';
 import HR from './pages/hr/HR';
 import Automations from './pages/automations/Automations';
 import Reports from './pages/reports/Reports';
@@ -33,6 +32,7 @@ import Attendance from './pages/employee/Attendance';
 import Communication from './pages/employee/Communication';
 import ReferralDashboard from './pages/referral/ReferralDashboard';
 import Users from './pages/admin/Users';
+import AssetsLibrary from './pages/assets/AssetsLibrary';
 import Settings from './pages/Settings';
 import NotFound from './pages/NotFound';
 import PortalManager from './pages/portal/PortalManager';
@@ -187,13 +187,6 @@ const App = () => {
             </ProtectedRoute>
           } />
 
-          {/* Loans Calculator */}
-          <Route path="/loans" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
-              <Loans />
-            </ProtectedRoute>
-          } />
-
           {/* HR — admin/manager only */}
           <Route path="/hr" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
@@ -212,6 +205,11 @@ const App = () => {
           <Route path="/reports" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
               <Reports />
+            </ProtectedRoute>
+          } />
+          <Route path="/assets" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+              <AssetsLibrary />
             </ProtectedRoute>
           } />
 

@@ -1,58 +1,124 @@
-import { useEffect, useState } from 'react';
-import api from '../../../api';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Receipt, Download, AlertCircle, CheckCircle2, Clock, XCircle } from 'lucide-react';
-
+import { CheckCircle2, Clock, Download, Receipt, TriangleAlert } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import api from '../../../api';
 import { TableSkeleton } from '../../../components/ui/Skeleton';
 
-const STATUS_MAP = {
-  draft:   { label: 'Draft',   color: '#64748b', icon: Clock },
-  sent:    { label: 'Sent',    color: '#3b82f6', icon: Clock },
-  paid:    { label: 'Paid',    color: '#10b981', icon: CheckCircle2 },
-  overdue: { label: 'Overdue', color: '#ef4444', icon: XCircle },
-  void:    { label: 'Void',    color: '#64748b', icon: XCircle },
+const currency = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 0,
+});
+
+const statusMeta = {
+  Draft: { color: '#64748b', icon: Clock },
+  Sent: { color: '#3b82f6', icon: Clock },
+  Viewed: { color: '#0ea5e9', icon: Clock },
+  'Partially Paid': { color: '#f59e0b', icon: TriangleAlert },
+  Paid: { color: '#10b981', icon: CheckCircle2 },
+  Overdue: { color: '#ef4444', icon: TriangleAlert },
+  Cancelled: { color: '#64748b', icon: TriangleAlert },
+};
+
+const normalizeStatus = (status) => {
+  const map = {
+    draft: 'Draft',
+    sent: 'Sent',
+    viewed: 'Viewed',
+    partially_paid: 'Partially Paid',
+    paid: 'Paid',
+    overdue: 'Overdue',
+    cancelled: 'Cancelled',
+  };
+  return map[status] || status || 'Draft';
+};
+
+const downloadInvoicePdf = (invoice) => {
+  const doc = new jsPDF();
+  let y = 18;
+  doc.setFontSize(18);
+  doc.text(invoice.invoiceNumber || 'Invoice', 14, y);
+  y += 10;
+  doc.setFontSize(11);
+  doc.text(`Client: ${invoice.clientDetails?.businessName || invoice.clientDetails?.name || invoice.client?.company || invoice.client?.name || ''}`, 14, y);
+  y += 7;
+  doc.text(`Project: ${invoice.projectName || invoice.project?.name || 'N/A'}`, 14, y);
+  y += 7;
+  doc.text(`Invoice Date: ${invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString() : 'N/A'}`, 14, y);
+  y += 7;
+  doc.text(`Due Date: ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}`, 14, y);
+  y += 10;
+  (invoice.invoiceItems || invoice.lineItems || []).forEach((item) => {
+    const amount = Number(item.amount || item.total || (Number(item.quantity || 1) * Number(item.rate || item.unitPrice || 0)));
+    doc.text(`${item.serviceName || 'Service'} - ${item.description || ''}`, 14, y);
+    y += 6;
+    doc.text(`Qty: ${item.quantity || 1}  Rate: ${currency.format(Number(item.rate || item.unitPrice || 0))}  Amount: ${currency.format(amount)}`, 18, y);
+    y += 8;
+  });
+  doc.text(`Total: ${currency.format(Number(invoice.totalAmount || invoice.total || 0))}`, 14, y);
+  y += 7;
+  doc.text(`Paid: ${currency.format(Number(invoice.paidAmount || 0))}`, 14, y);
+  y += 7;
+  doc.text(`Balance: ${currency.format(Number(invoice.balanceAmount || 0))}`, 14, y);
+  if (invoice.paymentTerms) {
+    y += 10;
+    doc.text('Payment Instructions:', 14, y);
+    y += 7;
+    doc.text(doc.splitTextToSize(invoice.paymentTerms, 180), 14, y);
+  }
+  doc.save(`${invoice.invoiceNumber || 'invoice'}.pdf`);
 };
 
 export default function PortalInvoices({ dark }) {
   const [invoices, setInvoices] = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [financeRecords, setFinanceRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api.get('/portal/invoices')
-      .then(r => setInvoices(r.data.invoices || []))
+      .then((response) => {
+        const nextInvoices = response.data.invoices || [];
+        setInvoices(nextInvoices);
+        setFinanceRecords(response.data.financeRecords || []);
+        nextInvoices
+          .filter((invoice) => ['sent', 'draft'].includes(String(invoice.status).toLowerCase()))
+          .forEach((invoice) => {
+            api.post(`/finance/invoices/${invoice._id}/viewed`).catch(() => {});
+          });
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  const txt    = dark ? 'text-white' : 'text-slate-800';
-  const sub    = dark ? 'text-slate-400' : 'text-slate-500';
-  const card   = dark ? 'rgba(255,255,255,0.04)' : '#fff';
+  const txt = dark ? 'text-white' : 'text-slate-800';
+  const sub = dark ? 'text-slate-400' : 'text-slate-500';
   const border = dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.07)';
 
-  const total   = invoices.reduce((s, i) => s + (i.total || 0), 0);
-  const paid    = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + (i.total || 0), 0);
-  const pending = invoices.filter(i => i.status === 'sent').reduce((s, i) => s + (i.total || 0), 0);
-  const overdue = invoices.filter(i => i.status === 'overdue').length;
+  const summary = useMemo(() => ({
+    total: invoices.reduce((sum, item) => sum + Number(item.totalAmount || item.total || 0), 0),
+    paid: invoices.reduce((sum, item) => sum + Number(item.paidAmount || 0), 0),
+    balance: invoices.reduce((sum, item) => sum + Number(item.balanceAmount || 0), 0),
+    overdue: invoices.filter((item) => normalizeStatus(item.status) === 'Overdue').length,
+  }), [invoices]);
 
   return (
-    <div className="p-6 space-y-5 max-w-5xl mx-auto">
+    <div className="mx-auto max-w-6xl space-y-5 p-6">
       <div>
-        <h2 className={`text-xl font-black ${txt}`}>Invoices</h2>
-        <p className={`text-xs mt-0.5 ${sub}`}>View and track all your billing and payment history.</p>
+        <h2 className={`text-xl font-black ${txt}`}>Finance & Invoices</h2>
+        <p className={`mt-0.5 text-xs ${sub}`}>Review invoices, paid amount, balance amount, due date, payment instructions, and client-visible payment history.</p>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
-          { label: 'Total Invoiced', val: `$${total.toLocaleString()}`, color: '#6366f1' },
-          { label: 'Amount Paid',    val: `$${paid.toLocaleString()}`,  color: '#10b981' },
-          { label: 'Pending',        val: `$${pending.toLocaleString()}`, color: '#f59e0b' },
-          { label: 'Overdue',        val: overdue,                       color: '#ef4444' },
-        ].map(s => (
-          <motion.div key={s.label} whileHover={{ y: -2 }}
-            className="rounded-2xl p-4" style={{ background: `${s.color}15`, border: `1px solid ${s.color}30` }}>
-            <p className="text-xs font-medium mb-1" style={{ color: s.color }}>{s.label}</p>
-            <p className={`text-xl font-black ${txt}`}>{s.val}</p>
+          { label: 'Total Amount', val: currency.format(summary.total), color: '#6366f1' },
+          { label: 'Paid Amount', val: currency.format(summary.paid), color: '#10b981' },
+          { label: 'Balance Amount', val: currency.format(summary.balance), color: '#f59e0b' },
+          { label: 'Overdue', val: summary.overdue, color: '#ef4444' },
+        ].map((item) => (
+          <motion.div key={item.label} whileHover={{ y: -2 }} className="rounded-2xl p-4" style={{ background: `${item.color}15`, border: `1px solid ${item.color}30` }}>
+            <p className="mb-1 text-xs font-medium" style={{ color: item.color }}>{item.label}</p>
+            <p className={`text-xl font-black ${txt}`}>{item.val}</p>
           </motion.div>
         ))}
       </div>
@@ -60,51 +126,88 @@ export default function PortalInvoices({ dark }) {
       {loading ? (
         <TableSkeleton columns={6} rows={5} dark={dark} />
       ) : !invoices.length ? (
-        <div className="flex flex-col items-center py-16 rounded-2xl" style={{ border }}>
-          <Receipt size={36} className="text-slate-500 mb-3" />
+        <div className="flex flex-col items-center rounded-2xl py-16" style={{ border }}>
+          <Receipt size={36} className="mb-3 text-slate-500" />
           <p className={`text-sm font-medium ${sub}`}>No invoices yet</p>
         </div>
       ) : (
-        <div className="rounded-2xl overflow-hidden" style={{ border }}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr style={{ background: dark ? 'rgba(99,102,241,0.08)' : '#f8fafc' }}>
-                  {['Invoice #','Date','Due Date','Amount','Status','Action'].map(h => (
-                    <th key={h} className={`text-left px-4 py-3 font-semibold whitespace-nowrap ${sub}`}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.map((inv, i) => {
-                  const st = STATUS_MAP[inv.status] || STATUS_MAP.draft;
-                  const Icon = st.icon;
-                  return (
-                    <tr key={inv._id}
-                      style={{ borderTop: dark ? '1px solid rgba(255,255,255,0.04)' : '1px solid #f1f5f9',
-                               background: i % 2 === 1 ? (dark ? 'rgba(255,255,255,0.015)' : '#fafafa') : 'transparent' }}>
-                      <td className={`px-4 py-3 font-bold ${txt}`}>{inv.invoiceNumber || `INV-${i+1}`}</td>
-                      <td className={`px-4 py-3 ${sub}`}>{inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : '—'}</td>
-                      <td className={`px-4 py-3 ${sub}`}>{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : '—'}</td>
-                      <td className={`px-4 py-3 font-bold ${txt}`}>${(inv.total || 0).toLocaleString()}</td>
-                      <td className="px-4 py-3">
-                        <span className="flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full w-fit"
-                          style={{ background: `${st.color}20`, color: st.color }}>
-                          <Icon size={9} /> {st.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <button className="flex items-center gap-1 text-indigo-400 hover:text-indigo-300 transition-all"
-                          onClick={() => window.open(`/api/finance/invoices/${inv._id}`, '_blank')}>
-                          <Download size={11} /> Download
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+        <div className="space-y-4">
+          {invoices.map((invoice) => {
+            const normalizedStatus = normalizeStatus(invoice.status);
+            const meta = statusMeta[normalizedStatus] || statusMeta.Draft;
+            const Icon = meta.icon;
+            const financeRecord = financeRecords.find((item) => (item.projectId?._id || item.projectId) === (invoice.project?._id || invoice.project));
+            return (
+              <div key={invoice._id} className="rounded-3xl p-5" style={{ border, background: dark ? 'rgba(255,255,255,0.03)' : '#fff' }}>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full px-3 py-1 text-[10px] font-bold" style={{ background: `${meta.color}20`, color: meta.color }}>
+                        <Icon size={10} className="mr-1 inline" /> {normalizedStatus}
+                      </span>
+                    </div>
+                    <h3 className={`mt-3 text-lg font-bold ${txt}`}>{invoice.invoiceNumber}</h3>
+                    <p className={`mt-1 text-sm ${sub}`}>{invoice.projectName || invoice.project?.name || 'No linked project'}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-indigo-600 transition-all hover:bg-indigo-50"
+                      onClick={() => downloadInvoicePdf(invoice)}
+                    >
+                      <Download size={14} />
+                      Download PDF
+                    </button>
+                    {invoice.paymentLink ? (
+                      <a href={invoice.paymentLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
+                        Pay Now
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-4">
+                  <div className="rounded-2xl border border-slate-200/60 p-4">
+                    <p className={`text-[11px] font-bold uppercase tracking-[0.18em] ${sub}`}>Total</p>
+                    <p className={`mt-2 text-sm font-semibold ${txt}`}>{currency.format(Number(invoice.totalAmount || invoice.total || 0))}</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200/60 p-4">
+                    <p className={`text-[11px] font-bold uppercase tracking-[0.18em] ${sub}`}>Paid</p>
+                    <p className={`mt-2 text-sm font-semibold ${txt}`}>{currency.format(Number(invoice.paidAmount || 0))}</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200/60 p-4">
+                    <p className={`text-[11px] font-bold uppercase tracking-[0.18em] ${sub}`}>Balance</p>
+                    <p className={`mt-2 text-sm font-semibold ${txt}`}>{currency.format(Number(invoice.balanceAmount || 0))}</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200/60 p-4">
+                    <p className={`text-[11px] font-bold uppercase tracking-[0.18em] ${sub}`}>Due Date</p>
+                    <p className={`mt-2 text-sm font-semibold ${txt}`}>{invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-200/60 p-4">
+                    <p className={`text-[11px] font-bold uppercase tracking-[0.18em] ${sub}`}>Payment Instructions</p>
+                    <p className={`mt-2 whitespace-pre-wrap text-sm ${txt}`}>{invoice.paymentTerms || 'No payment instructions shared yet.'}</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200/60 p-4">
+                    <p className={`text-[11px] font-bold uppercase tracking-[0.18em] ${sub}`}>Payment History</p>
+                    {(financeRecord?.paymentHistory || invoice.paymentHistory || []).length ? (
+                      <div className="mt-2 space-y-2">
+                        {(financeRecord?.paymentHistory || invoice.paymentHistory || []).map((item, index) => (
+                          <div key={`${item._id || item.reference || index}`} className="rounded-xl bg-slate-50/70 p-3 text-sm text-slate-700">
+                            <p className="font-semibold">{currency.format(Number(item.amountPaid || item.amount || 0))} via {item.paymentMode || item.method || 'Manual'}</p>
+                            <p className="mt-1 text-xs text-slate-500">{item.noteTitle || item.noteDescription || item.notes || 'Payment update'}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className={`mt-2 text-sm ${sub}`}>No payment history available.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

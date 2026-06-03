@@ -6,6 +6,7 @@ import Task from '../models/task.model.js';
 import Client from '../models/client.model.js';
 import Project from '../models/project.model.js';
 import ActivityLog from '../models/activityLog.model.js';
+import User from '../models/user.model.js';
 import { createNotification } from '../utils/notification.js';
 import { runAutomation } from '../services/automation.service.js';
 import { createActivityLog } from '../utils/activity.js';
@@ -19,6 +20,14 @@ const taskStatusMap = {
   Done: 'done',
   Blocked: 'rejected',
   Rejected: 'rejected',
+  'On Process': 'on_process',
+  'Waiting for Client': 'waiting_for_client',
+  Completed: 'completed',
+  Rework: 'rework',
+  'Rework Completed': 'rework_completed',
+  'Review Required': 'review_required',
+  'Work in Progress': 'on_process',
+  'Task Received': 'todo',
 };
 
 const statusLabels = {
@@ -28,6 +37,12 @@ const statusLabels = {
   approved: 'Approved',
   rejected: 'Blocked',
   done: 'Done',
+  on_process: 'On Process',
+  waiting_for_client: 'Waiting for Client',
+  completed: 'Completed',
+  rework: 'Rework',
+  rework_completed: 'Rework Completed',
+  review_required: 'Review Required',
 };
 
 const priorityMap = {
@@ -44,12 +59,50 @@ const priorityLabels = {
   urgent: 'Urgent',
 };
 
+const taskCategoryMap = {
+  'Content Task': 'content',
+  content: 'content',
+  'Non-Content Task': 'non_content',
+  'Non Content Task': 'non_content',
+  non_content: 'non_content',
+};
+
+const normalizeLink = (value) => (value ? value.toString().trim() : '');
+
+const normalizeStringArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean).map((item) => item.toString().trim()).filter(Boolean);
+  return value.toString().split(',').map((item) => item.trim()).filter(Boolean);
+};
+
+const normalizeFiles = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(Boolean)
+    .map((file) => ({
+      name: file.name || file.originalname || 'Attachment',
+      url: file.url || '',
+      type: file.type || '',
+      size: Number(file.size) || 0,
+      uploadedBy: file.uploadedBy || undefined,
+      uploadedAt: file.uploadedAt || undefined,
+    }))
+    .filter((file) => file.url);
+};
+
 const toArray = (value) => {
   if (!value) return [];
   return Array.isArray(value) ? value : [value];
 };
 
 const uniqueIds = (items = []) => [...new Set(items.filter(Boolean).map((item) => item.toString()))];
+
+const isTaskOverdue = (item) => {
+  if (!item?.dueDate) return false;
+  const completedStatuses = ['approved', 'done', 'completed'];
+  if (completedStatuses.includes(item.status)) return false;
+  return new Date(item.dueDate).getTime() < Date.now();
+};
 
 const serializeTask = (task) => {
   const item = task?.toObject ? task.toObject() : task;
@@ -59,6 +112,14 @@ const serializeTask = (task) => {
     ...item,
     status: statusLabels[item.status] || item.status,
     priority: priorityLabels[item.priority] || item.priority,
+    taskCategory: taskCategoryMap[item.taskCategory] || item.taskCategory,
+    title: item.title || item.taskTitle || '',
+    taskTitle: item.taskTitle || item.title || '',
+    clientName: item.clientName || item.client?.name || item.client?.company || '',
+    projectName: item.projectName || item.project?.name || '',
+    assignedPersonName: item.assignedPersonName
+      || (Array.isArray(item.assignedTo) ? item.assignedTo.map((user) => user?.name).filter(Boolean).join(', ') : ''),
+    isOverdue: isTaskOverdue(item),
   };
 };
 
@@ -81,6 +142,18 @@ const normalizeTaskPayload = (body = {}) => {
   if (payload.isClientVisible !== undefined) payload.isClientVisible = Boolean(payload.isClientVisible);
   if (payload.approvalRequired !== undefined) payload.approvalRequired = Boolean(payload.approvalRequired);
   if (payload.actualStartDate !== undefined) payload.actualStartDate = payload.actualStartDate ? new Date(payload.actualStartDate) : undefined;
+  if (payload.taskTitle && !payload.title) payload.title = payload.taskTitle;
+  if (payload.title && !payload.taskTitle) payload.taskTitle = payload.title;
+  if (payload.taskCategory) payload.taskCategory = taskCategoryMap[payload.taskCategory] || payload.taskCategory;
+  if (payload.deadline !== undefined) payload.deadline = payload.deadline ? new Date(payload.deadline) : undefined;
+  if (payload.referenceLink !== undefined) payload.referenceLink = normalizeLink(payload.referenceLink);
+  if (payload.scriptLink !== undefined) payload.scriptLink = normalizeLink(payload.scriptLink);
+  if (payload.pagesNeeded !== undefined) payload.pagesNeeded = normalizeStringArray(payload.pagesNeeded);
+  if (payload.attachments !== undefined) payload.attachments = normalizeFiles(payload.attachments);
+  if (payload.completedFiles !== undefined) payload.completedFiles = normalizeFiles(payload.completedFiles);
+  if (payload.clientResponse) payload.clientResponse = payload.clientResponse.toString().toLowerCase();
+  if (payload.approvalStatus) payload.approvalStatus = payload.approvalStatus.toString().toLowerCase();
+  if (payload.clientFeedback !== undefined) payload.clientFeedback = payload.clientFeedback?.toString?.().trim?.() || '';
 
   return payload;
 };
@@ -101,26 +174,28 @@ const getManagedScope = async (userId) => {
 
 const buildScopedTaskFilter = async (req, baseFilter = {}) => {
   const filter = { ...baseFilter };
+  const baseOr = filter.$or;
+  if (baseOr) delete filter.$or;
 
-  if (req.user.role === 'superAdmin') return filter;
+  if (req.user.role === 'superAdmin') return baseOr ? { ...filter, $or: baseOr } : filter;
 
   if (req.user.role === 'manager') {
     const { projectIds, clientIds } = await getManagedScope(req.user._id);
-    filter.$or = [
+    const scopedOr = [
       { project: { $in: projectIds.length ? projectIds : [null] } },
       { client: { $in: clientIds.length ? clientIds : [null] } },
       { createdBy: req.user._id },
       { assignedTo: req.user._id },
     ];
-    return filter;
+    return baseOr ? { ...filter, $and: [{ $or: baseOr }, { $or: scopedOr }] } : { ...filter, $or: scopedOr };
   }
 
   if (req.user.role === 'employee') {
-    filter.$or = [
+    const scopedOr = [
       { assignedTo: req.user._id },
       { createdBy: req.user._id },
     ];
-    return filter;
+    return baseOr ? { ...filter, $and: [{ $or: baseOr }, { $or: scopedOr }] } : { ...filter, $or: scopedOr };
   }
 
   if (req.user.role === 'client') {
@@ -132,11 +207,11 @@ const buildScopedTaskFilter = async (req, baseFilter = {}) => {
 
     filter.client = client._id;
     filter.isClientVisible = true;
-    return filter;
+    return baseOr ? { ...filter, $or: baseOr } : filter;
   }
 
   filter._id = null;
-  return filter;
+  return baseOr ? { ...filter, $or: baseOr } : filter;
 };
 
 const assertTaskAccess = async (req, task) => {
@@ -184,10 +259,29 @@ const hydrateTask = async (taskId) => Task.findById(taskId)
   .populate('createdBy', 'name email avatar role')
   .populate('project', 'name client manager')
   .populate('client', 'name company email')
+  .populate('clientResponseBy', 'name email avatar role')
   .populate('comments.author', 'name avatar')
   .populate('approvedBy', 'name avatar')
   .populate('timeEntries.user', 'name avatar')
   .populate('progressUpdates.updatedBy', 'name avatar');
+
+const syncTaskDerivedFields = async (task) => {
+  if (task.client) {
+    const client = await Client.findById(task.client).select('name company');
+    if (client) {
+      task.clientName = client.name || client.company || '';
+    }
+  }
+
+  if (Array.isArray(task.assignedTo) && task.assignedTo.length) {
+    const assignees = await User.find({ _id: { $in: task.assignedTo } }).select('name');
+    task.assignedPersonName = assignees.map((user) => user.name).filter(Boolean).join(', ');
+  } else {
+    task.assignedPersonName = '';
+  }
+
+  task.taskTitle = task.title;
+};
 
 const notifyNewAssignees = async ({ task, previousAssignedTo = [], actorId, io }) => {
   const previousIds = uniqueIds(previousAssignedTo);
@@ -208,7 +302,7 @@ const notifyNewAssignees = async ({ task, previousAssignedTo = [], actorId, io }
 };
 
 const updateCompletionState = (task) => {
-  if (['done', 'approved'].includes(task.status)) {
+  if (['done', 'approved', 'completed', 'rework_completed'].includes(task.status)) {
     task.completedAt = task.completedAt || new Date();
     return;
   }
@@ -220,15 +314,67 @@ const updateCompletionState = (task) => {
   }
 };
 
+const mapLegacyTaskType = (value = '') => value.toString().trim().toLowerCase();
+
+const isWebsiteTaskType = (taskType) => ['website_development', 'website_update', 'landing_page'].includes(mapLegacyTaskType(taskType));
+
+const isTaskResponseOpen = (status) => ['completed', 'waiting_for_client', 'rework_completed', 'review_required'].includes(status);
+
+const notifyTaskStakeholders = async ({ task, sender, type, title, message, io, extraRecipients = [] }) => {
+  const recipients = uniqueIds([
+    task.createdBy,
+    ...(task.assignedTo || []),
+    ...extraRecipients,
+  ]).filter((userId) => userId && userId !== sender.toString());
+
+  await Promise.all(recipients.map((recipient) => createNotification({
+    recipient,
+    sender,
+    type,
+    title,
+    message,
+    link: '/tasks',
+    metadata: { taskId: task._id, clientId: task.client },
+  }, io)));
+};
+
+const applyDateFilter = (filter, field, startValue, endValue) => {
+  if (!startValue && !endValue) return;
+
+  const range = {};
+
+  if (startValue) {
+    const start = new Date(startValue);
+    if (!Number.isNaN(start.getTime())) {
+      start.setHours(0, 0, 0, 0);
+      range.$gte = start;
+    }
+  }
+
+  if (endValue) {
+    const end = new Date(endValue);
+    if (!Number.isNaN(end.getTime())) {
+      end.setHours(23, 59, 59, 999);
+      range.$lte = end;
+    }
+  }
+
+  if (Object.keys(range).length) {
+    filter[field] = range;
+  }
+};
+
 export const getTasks = async (req, res) => {
   try {
     const {
       project,
       client,
+      taskCategory,
       taskType,
       status,
       assignedTo,
       priority,
+      dueDate,
       search,
       parent,
       page = 1,
@@ -239,6 +385,7 @@ export const getTasks = async (req, res) => {
 
     if (project) filter.project = project;
     if (client) filter.client = client;
+    if (taskCategory) filter.taskCategory = taskCategoryMap[taskCategory] || taskCategory;
     if (taskType) filter.taskType = taskType;
     if (parent === 'all') {
       // leave unfiltered
@@ -251,11 +398,26 @@ export const getTasks = async (req, res) => {
     if (status) filter.status = taskStatusMap[status] || status;
     if (priority) filter.priority = priorityMap[priority] || priority;
     if (assignedTo) filter.assignedTo = assignedTo;
+    if (dueDate) {
+      const date = new Date(dueDate);
+      if (!Number.isNaN(date.getTime())) {
+        const start = new Date(date);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(date);
+        end.setHours(23, 59, 59, 999);
+        filter.dueDate = { $gte: start, $lte: end };
+      }
+    }
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
         { tags: { $regex: search, $options: 'i' } },
+        { taskType: { $regex: search, $options: 'i' } },
+        { clientName: { $regex: search, $options: 'i' } },
+        { assignedPersonName: { $regex: search, $options: 'i' } },
+        { scriptText: { $regex: search, $options: 'i' } },
+        { websiteRequirements: { $regex: search, $options: 'i' } },
       ];
     }
 
@@ -331,6 +493,9 @@ export const createTask = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Project not found' });
     }
 
+    if (project && payload.client && project.client?.toString() !== payload.client.toString()) {
+      return res.status(400).json({ success: false, message: 'Selected project does not belong to the selected client' });
+    }
     if (project && !payload.client) payload.client = project.client;
 
     const client = payload.client
@@ -340,10 +505,22 @@ export const createTask = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Client not found' });
     }
 
+    if (!payload.taskCategory) {
+      payload.taskCategory = isWebsiteTaskType(payload.taskType) || payload.taskType === 'non_content'
+        ? 'non_content'
+        : 'content';
+    }
+
+    if (!payload.isClientVisible && payload.clientVisibleNotes?.trim()) {
+      payload.isClientVisible = true;
+    }
+
     const task = await Task.create({
       ...payload,
       createdBy: req.user._id,
     });
+    await syncTaskDerivedFields(task);
+    await task.save();
 
     const io = req.app.get('io');
     await notifyNewAssignees({
@@ -390,7 +567,30 @@ export const updateTask = async (req, res) => {
     const previousAssignedTo = [...(task.assignedTo || [])];
     const payload = normalizeTaskPayload(req.body);
 
+    if (payload.project || payload.client) {
+      const nextProjectId = payload.project || task.project;
+      const nextClientId = payload.client || task.client;
+      if (nextProjectId && nextClientId) {
+        const project = await Project.findById(nextProjectId).select('client');
+        if (!project) {
+          return res.status(404).json({ success: false, message: 'Project not found' });
+        }
+        if (project.client?.toString() !== nextClientId.toString()) {
+          return res.status(400).json({ success: false, message: 'Selected project does not belong to the selected client' });
+        }
+      }
+    }
+
     Object.assign(task, payload);
+    if (!task.taskCategory) {
+      task.taskCategory = isWebsiteTaskType(task.taskType) || task.taskType === 'non_content'
+        ? 'non_content'
+        : 'content';
+    }
+    if (!task.isClientVisible && task.clientVisibleNotes?.trim()) {
+      task.isClientVisible = true;
+    }
+    await syncTaskDerivedFields(task);
     updateCompletionState(task);
     await task.save();
 
@@ -442,6 +642,13 @@ export const updateTaskStatus = async (req, res) => {
 
     task.status = taskStatusMap[status] || status;
     if (orderIndex !== undefined) task.orderIndex = Number(orderIndex) || 0;
+    if (req.user.role !== 'client' && ['todo', 'on_process', 'waiting_for_client', 'completed', 'review_required', 'rework_completed'].includes(task.status)) {
+      task.clientResponse = 'pending';
+      task.approvalStatus = 'pending';
+      task.clientFeedback = '';
+      task.clientResponseDate = undefined;
+      task.clientResponseBy = undefined;
+    }
     updateCompletionState(task);
     await task.save();
 
@@ -640,7 +847,7 @@ export const logTime = async (req, res) => {
 
 export const addProgressUpdate = async (req, res) => {
   try {
-    const { description, hours } = req.body;
+    const { description, hours, workNotes, attachments } = req.body;
     
     if (!description?.trim()) {
       return res.status(400).json({ success: false, message: 'Progress description is required' });
@@ -663,6 +870,8 @@ export const addProgressUpdate = async (req, res) => {
       hours: Number(hours) || 0,
       completedAt: new Date(),
       updatedBy: req.user._id,
+      workNotes: workNotes?.trim?.() || '',
+      attachments: normalizeFiles(attachments),
     };
 
     task.progressUpdates.push(progressEntry);
@@ -699,6 +908,272 @@ export const addProgressUpdate = async (req, res) => {
     }
 
     res.json({ success: true, task: serializeTask(updated) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const getCalendarTasks = async (req, res) => {
+  try {
+    const {
+      project,
+      client,
+      taskCategory,
+      taskType,
+      status,
+      assignedTo,
+      priority,
+      search,
+      parent = 'all',
+      startDate,
+      endDate,
+      overdue,
+      approvalStatus,
+      clientResponse,
+      limit = 500,
+    } = req.query;
+
+    const filter = {};
+
+    if (project) filter.project = project;
+    if (client) filter.client = client;
+    if (taskCategory) filter.taskCategory = taskCategoryMap[taskCategory] || taskCategory;
+    if (taskType) filter.taskType = taskType;
+    if (status) filter.status = taskStatusMap[status] || status;
+    if (priority) filter.priority = priorityMap[priority] || priority;
+    if (assignedTo) filter.assignedTo = assignedTo;
+    if (approvalStatus) filter.approvalStatus = approvalStatus.toString().toLowerCase();
+    if (clientResponse) filter.clientResponse = clientResponse.toString().toLowerCase();
+
+    if (parent === 'all') {
+      // leave unfiltered
+    } else if (parent) {
+      filter.parent = parent;
+    } else {
+      filter.parent = null;
+    }
+
+    applyDateFilter(filter, 'dueDate', startDate, endDate);
+
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { taskType: { $regex: search, $options: 'i' } },
+        { clientName: { $regex: search, $options: 'i' } },
+        { assignedPersonName: { $regex: search, $options: 'i' } },
+        { scriptText: { $regex: search, $options: 'i' } },
+        { caption: { $regex: search, $options: 'i' } },
+        { websiteRequirements: { $regex: search, $options: 'i' } },
+        { requiredFeatures: { $regex: search, $options: 'i' } },
+        { clientVisibleNotes: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    if (overdue === 'true') {
+      const now = new Date();
+      filter.dueDate = {
+        ...(filter.dueDate || {}),
+        $lt: now,
+      };
+      filter.status = { $nin: ['approved', 'done', 'completed'] };
+    }
+
+    const scopedFilter = withWorkspaceScope(req, await buildScopedTaskFilter(req, filter));
+
+    const tasks = await Task.find(scopedFilter)
+      .populate('assignedTo', 'name avatar role')
+      .populate('createdBy', 'name avatar role')
+      .populate('project', 'name')
+      .populate('client', 'name company')
+      .sort({ dueDate: 1, priority: -1, createdAt: -1 })
+      .limit(Math.min(Number(limit) || 500, 1000));
+
+    const serialized = tasks.map(serializeTask);
+
+    const summary = {
+      total: serialized.length,
+      overdue: serialized.filter((task) => task.isOverdue).length,
+      waitingForClient: serialized.filter((task) => task.status === 'Waiting for Client').length,
+      completed: serialized.filter((task) => ['Completed', 'Approved'].includes(task.status)).length,
+    };
+
+    res.json({
+      success: true,
+      tasks: serialized,
+      summary,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const addTaskAttachments = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    const access = await assertTaskAccess(req, task);
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const attachments = normalizeFiles(req.body.attachments).map((file) => ({
+      ...file,
+      uploadedBy: req.user._id,
+      uploadedAt: new Date(),
+    }));
+
+    if (!attachments.length) {
+      return res.status(400).json({ success: false, message: 'At least one attachment is required' });
+    }
+
+    task.attachments.push(...attachments);
+    await task.save();
+
+    const updated = await hydrateTask(task._id);
+    res.json({ success: true, task: serializeTask(updated) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const addCompletedFiles = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    const access = await assertTaskAccess(req, task);
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const completedFiles = normalizeFiles(req.body.completedFiles).map((file) => ({
+      ...file,
+      uploadedBy: req.user._id,
+      uploadedAt: new Date(),
+    }));
+
+    if (!completedFiles.length) {
+      return res.status(400).json({ success: false, message: 'At least one completed file is required' });
+    }
+
+    task.completedFiles.push(...completedFiles);
+    if (task.status === 'on_process') {
+      task.status = 'review_required';
+    }
+    await task.save();
+
+    const updated = await hydrateTask(task._id);
+    res.json({ success: true, task: serializeTask(updated) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const getTaskResponseDetails = async (req, res) => {
+  try {
+    const task = await hydrateTask(req.params.id);
+    const access = await assertTaskAccess(req, task);
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    res.json({
+      success: true,
+      response: {
+        clientResponse: task.clientResponse || 'pending',
+        clientFeedback: task.clientFeedback || '',
+        clientResponseDate: task.clientResponseDate || null,
+        clientResponseBy: task.clientResponseBy || null,
+        approvalStatus: task.approvalStatus || 'pending',
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const submitClientTaskResponse = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    const access = await assertTaskAccess(req, task);
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    if (req.user.role !== 'client') {
+      return res.status(403).json({ success: false, message: 'Only clients can submit task responses' });
+    }
+
+    if (!task.isClientVisible) {
+      return res.status(403).json({ success: false, message: 'This task is not visible to the client' });
+    }
+
+    if (!isTaskResponseOpen(task.status)) {
+      return res.status(400).json({ success: false, message: 'Client response is not available for this task status' });
+    }
+
+    if (task.clientResponse && task.clientResponse !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Response already submitted. Ask admin to reopen the task to respond again.' });
+    }
+
+    const responseValue = (req.body.clientResponse || '').toString().toLowerCase();
+    if (!['yes', 'no'].includes(responseValue)) {
+      return res.status(400).json({ success: false, message: 'Client response must be Yes or No' });
+    }
+
+    const feedback = req.body.clientFeedback?.toString()?.trim() || '';
+    if (responseValue === 'no' && !feedback) {
+      return res.status(400).json({ success: false, message: 'Feedback is required when requesting changes' });
+    }
+
+    task.clientResponse = responseValue;
+    task.clientFeedback = feedback;
+    task.clientResponseDate = new Date();
+    task.clientResponseBy = req.user._id;
+    task.approvalStatus = responseValue === 'yes' ? 'approved' : 'rework_requested';
+    task.status = responseValue === 'yes' ? 'approved' : 'rework';
+    if (responseValue === 'yes') {
+      task.approvedBy = req.user._id;
+      task.approvedAt = new Date();
+    }
+    updateCompletionState(task);
+    await task.save();
+
+    const hydrated = await hydrateTask(task._id);
+    const io = req.app.get('io');
+    const client = task.client ? await Client.findById(task.client).select('assignedManager') : null;
+    const message = responseValue === 'yes'
+      ? `Client has approved the task: ${task.title}`
+      : `Client requested changes for task: ${task.title}`;
+
+    await notifyTaskStakeholders({
+      task,
+      sender: req.user._id,
+      type: responseValue === 'yes' ? 'client_approved' : 'client_rework_requested',
+      title: responseValue === 'yes' ? 'Task approved by client' : 'Client requested rework',
+      message,
+      io,
+      extraRecipients: client?.assignedManager ? [client.assignedManager] : [],
+    });
+
+    await createActivityLog({
+      actor: req.user,
+      action: 'task.client.response',
+      entityType: 'task',
+      entityId: task._id,
+      title: 'Client response submitted',
+      description: message,
+      relatedClient: task.client,
+      relatedProject: task.project,
+      relatedTask: task._id,
+      metadata: { clientResponse: responseValue, clientFeedback: feedback },
+    });
+
+    res.json({
+      success: true,
+      message: responseValue === 'yes'
+        ? 'Thank you. Your approval has been submitted.'
+        : 'Your feedback has been submitted. Our team will update the task.',
+      task: serializeTask(hydrated),
+    });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }

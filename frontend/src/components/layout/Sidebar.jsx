@@ -27,8 +27,7 @@ import {
   BookOpen,
   Calendar,
   KeyRound,
-  PhoneCall,
-  Calculator
+  PhoneCall
 } from 'lucide-react';
 import { toggleSidebar } from '../../store/slices/uiSlice';
 import { motion } from 'framer-motion';
@@ -73,10 +72,10 @@ const Sidebar = () => {
       { name: 'Content Calendar', icon: FileText, path: '/calendar' },
       { name: 'Message Center', icon: MessageSquare, path: '/chat' },
       { name: 'Finance', icon: IndianRupee, path: '/finance' },
-      { name: 'Loans', icon: Calculator, path: '/loans' },
       { name: 'HR & Hiring', icon: Users2, path: '/hr' },
       { name: 'Automations', icon: Zap, path: '/automations' },
       { name: 'Reports', icon: BarChart3, path: '/reports' },
+      { name: 'Asset Library', icon: Palette, path: '/assets' },
       { name: 'Portal Manager', icon: FileText, path: '/portal-manager' },
       { name: 'Users', icon: Users2, path: '/admin/users' },
     ],
@@ -90,8 +89,8 @@ const Sidebar = () => {
       { name: 'Content Calendar', icon: FileText, path: '/calendar' },
       { name: 'Message Center', icon: MessageSquare, path: '/chat' },
       { name: 'Finance', icon: IndianRupee, path: '/finance' },
-      { name: 'Loans', icon: Calculator, path: '/loans' },
       { name: 'Reports', icon: BarChart3, path: '/reports' },
+      { name: 'Asset Library', icon: Palette, path: '/assets' },
       { name: 'Portal Manager', icon: FileText, path: '/portal-manager' },
     ],
     employee: [
@@ -104,13 +103,13 @@ const Sidebar = () => {
     ],
     client: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+      { name: 'Tasks', icon: CheckSquare, path: '/tasks' },
       { name: 'Content Review', icon: FileCheck, path: '/portal/review' },
       { name: 'Content Calendar', icon: Calendar, path: '/calendar' },
       { name: 'Reports', icon: BarChart3, path: '/portal/reports' },
       { name: 'Downloads', icon: Download, path: '/portal/downloads' },
       { name: 'Brand Assets', icon: Palette, path: '/portal/assets' },
       { name: 'Invoices', icon: Receipt, path: '/finance' },
-      { name: 'Loans', icon: Calculator, path: '/loans' },
       { name: 'Support', icon: HeadphonesIcon, path: '/portal/support' },
       { name: 'Guidelines', icon: BookOpen, path: '/portal/guidelines' },
       { name: 'Message Center', icon: MessageSquare, path: '/chat' },

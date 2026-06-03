@@ -37,15 +37,21 @@ const ClientDetails = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['client', id],
     queryFn: async () => {
-      const [clientRes, projectsRes, invoicesRes] = await Promise.all([
+      const [clientRes, projectsRes, invoicesRes, financeRes, callRes, referralRes] = await Promise.all([
         api.get(`/clients/${id}`),
         api.get(`/projects?client=${id}&limit=10`),
         api.get(`/finance/invoices?client=${id}&limit=10`),
+        api.get(`/finance/records/client/${id}`),
+        api.get(`/finance/call-history/client/${id}`),
+        api.get(`/referrals/client/${id}`),
       ]);
       return {
         client: clientRes.data.client,
         projects: projectsRes.data.projects || [],
         invoices: invoicesRes.data.invoices || [],
+        financeRecords: financeRes?.data?.records || [],
+        callHistory: callRes?.data?.calls || [],
+        referrals: referralRes?.data?.referrals || [],
       };
     },
   });
@@ -65,7 +71,7 @@ const ClientDetails = () => {
     <div className="p-12 text-center text-muted-foreground">Client not found.</div>
   );
 
-  const { client, projects, invoices } = data;
+  const { client, projects, invoices, financeRecords = [], callHistory = [], referrals = [] } = data;
 
   const onboardingSteps = client.onboardingSteps || {};
   const completedSteps = Object.values(onboardingSteps).filter(Boolean).length;
@@ -75,6 +81,7 @@ const ClientDetails = () => {
   const paidInvoices = invoices.filter(inv => inv.status?.toLowerCase() === 'paid');
   const pendingInvoices = invoices.filter(inv => inv.status?.toLowerCase() !== 'paid' && inv.status?.toLowerCase() !== 'cancelled');
   const totalRevenue = paidInvoices.reduce((sum, inv) => sum + (inv.total || inv.amount || 0), 0);
+  const paymentNotes = financeRecords.flatMap((record) => record.paymentHistory || []);
 
   const stats = [
     { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
@@ -86,7 +93,11 @@ const ClientDetails = () => {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
     { id: 'projects', label: `Projects (${projects.length})`, icon: Briefcase },
+    { id: 'finance', label: `Finance (${financeRecords.length})`, icon: DollarSign },
     { id: 'invoices', label: `Invoices (${invoices.length})`, icon: FileText },
+    { id: 'paymentNotes', label: 'Payment Notes', icon: AlertCircle },
+    { id: 'callHistory', label: `Call History (${callHistory.length})`, icon: Phone },
+    { id: 'referrals', label: `Referrals (${referrals.length})`, icon: Users },
     { id: 'onboarding', label: 'Onboarding', icon: CheckCircle2 },
   ];
 
@@ -320,6 +331,125 @@ const ClientDetails = () => {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'finance' && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {financeRecords.length > 0 ? financeRecords.map((record) => (
+            <div key={record._id} className="bg-card rounded-3xl border border-border shadow-sm p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-bold">{record.serviceName}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{record.projectName || record.projectId?.name}</p>
+                </div>
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  record.paymentStatus === 'Paid' ? 'bg-emerald-500/10 text-emerald-600' :
+                  record.paymentStatus === 'Overdue' ? 'bg-red-500/10 text-red-600' :
+                  record.paymentStatus === 'Partially Paid' ? 'bg-amber-500/10 text-amber-600' :
+                  'bg-slate-500/10 text-slate-600'
+                }`}>{record.paymentStatus}</span>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-3">
+                <div className="rounded-2xl bg-secondary/30 border border-border/50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total</p>
+                  <p className="mt-1 font-semibold">₹{Number(record.totalProjectAmount || 0).toLocaleString()}</p>
+                </div>
+                <div className="rounded-2xl bg-secondary/30 border border-border/50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Paid</p>
+                  <p className="mt-1 font-semibold">₹{Number(record.totalPaidAmount || 0).toLocaleString()}</p>
+                </div>
+                <div className="rounded-2xl bg-secondary/30 border border-border/50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Balance</p>
+                  <p className="mt-1 font-semibold">₹{Number(record.balanceAmount || 0).toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="mt-4 text-sm text-muted-foreground space-y-1">
+                <p>Invoice Status: <span className="font-semibold text-foreground">{record.invoiceStatus}</span></p>
+                <p>Due Date: <span className="font-semibold text-foreground">{record.paymentDueDate ? new Date(record.paymentDueDate).toLocaleDateString() : '—'}</span></p>
+                <p>Next Follow-up: <span className="font-semibold text-foreground">{record.nextFollowUpDate ? new Date(record.nextFollowUpDate).toLocaleDateString() : '—'}</span></p>
+              </div>
+            </div>
+          )) : (
+            <div className="bg-card rounded-3xl border border-border shadow-sm p-12 text-center text-muted-foreground lg:col-span-2">No finance records yet.</div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'paymentNotes' && (
+        <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-border bg-secondary/10">
+            <h2 className="font-bold flex items-center gap-2"><AlertCircle size={18} className="text-primary"/>Payment Notes</h2>
+          </div>
+          <div className="divide-y divide-border">
+            {paymentNotes.length > 0 ? paymentNotes.map((note, index) => (
+              <div key={note._id || index} className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{note.noteTitle || 'Payment note'}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{note.noteDescription || 'No description added'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-emerald-600">₹{Number(note.amountPaid || 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">{note.paymentDate ? new Date(note.paymentDate).toLocaleDateString() : '—'}</p>
+                  </div>
+                </div>
+              </div>
+            )) : (
+              <div className="p-12 text-center text-muted-foreground">No payment notes yet.</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'callHistory' && (
+        <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-border bg-secondary/10">
+            <h2 className="font-bold flex items-center gap-2"><Phone size={18} className="text-primary"/>Call History</h2>
+          </div>
+          <div className="divide-y divide-border">
+            {callHistory.length > 0 ? callHistory.map((call) => (
+              <div key={call._id} className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{call.callPurpose} • {call.callType}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{call.callSummary || 'No summary added'}</p>
+                    <p className="text-xs text-muted-foreground mt-2">Spoken with {call.spokenWith || 'N/A'} • {call.nextFollowUpDate ? `Next follow-up ${new Date(call.nextFollowUpDate).toLocaleDateString()}` : 'No follow-up set'}</p>
+                  </div>
+                  <p className="text-xs font-semibold text-muted-foreground">{call.callDate ? new Date(call.callDate).toLocaleDateString() : '—'}</p>
+                </div>
+              </div>
+            )) : (
+              <div className="p-12 text-center text-muted-foreground">No call history yet.</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'referrals' && (
+        <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-border bg-secondary/10">
+            <h2 className="font-bold flex items-center gap-2"><Users size={18} className="text-primary"/>Referrals</h2>
+          </div>
+          <div className="divide-y divide-border">
+            {referrals.length > 0 ? referrals.map((referral) => (
+              <div key={referral._id} className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{referral.referralSource || 'Other'}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{referral.referralPersonName || 'Unknown person'} • {referral.campaignName || 'No campaign'}</p>
+                    <p className="text-xs text-muted-foreground mt-2">{referral.notes || 'No notes added.'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold uppercase tracking-wider text-primary">{referral.conversionStatus || referral.status}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{referral.leadQuality || '—'}</p>
+                  </div>
+                </div>
+              </div>
+            )) : (
+              <div className="p-12 text-center text-muted-foreground">No referral records yet.</div>
+            )}
           </div>
         </div>
       )}

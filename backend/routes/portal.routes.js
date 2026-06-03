@@ -17,8 +17,10 @@ import {
   createReportingEntry,
   updateReportingEntry,
   deleteReportingEntry,
+  getClientFinanceOverview,
   getClientInvoices,
   getClientProjects,
+  getClientTasks,
 } from '../controllers/portal.controller.js';
 import { authorize, protect } from '../middleware/auth.middleware.js';
 
@@ -33,8 +35,10 @@ router.post('/content/:id/approve', authorize('client'), approveContentItem);
 router.post('/content/:id/revision', authorize('client'), requestRevision);
 router.post('/content/:id/feedback', authorize('client'), addContentFeedback);
 router.get('/reporting', authorize('client'), getReportingData);
+router.get('/finance', authorize('client'), getClientFinanceOverview);
 router.get('/invoices', authorize('client'), getClientInvoices);
 router.get('/projects', authorize('client'), getClientProjects);
+router.get('/tasks', authorize('client'), getClientTasks);
 
 // ─── ADMIN / MANAGER ROUTES ──────────────────────────────────────────────────
 router.post('/content', authorize('superAdmin', 'manager', 'employee'), createContentItem);

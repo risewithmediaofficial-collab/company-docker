@@ -43,6 +43,7 @@ import brandRoutes from './routes/brand.routes.js';
 import accessRequestRoutes from './routes/accessRequest.routes.js';
 import credentialRoutes from './routes/credential.routes.js';
 import clientFollowupRoutes from './routes/clientFollowup.routes.js';
+import assetRoutes from './routes/asset.routes.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
 
 loadEnv();
@@ -145,6 +146,7 @@ app.use('/api/brands', brandRoutes);
 app.use('/api/access-requests', accessRequestRoutes);
 app.use('/api/credentials', credentialRoutes);
 app.use('/api/client-followups', clientFollowupRoutes);
+app.use('/api/assets', assetRoutes);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

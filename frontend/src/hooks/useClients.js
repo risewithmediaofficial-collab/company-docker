@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { toast } from 'sonner';
 
-export const useClients = (filters = {}) => {
+export const useClients = (filters = {}, options = {}) => {
   return useQuery({
     queryKey: ['clients', filters],
     queryFn: async () => {
@@ -14,6 +14,7 @@ export const useClients = (filters = {}) => {
       return response.data.clients;
     },
     staleTime: 5 * 60 * 1000,
+    ...options,
   });
 };
 

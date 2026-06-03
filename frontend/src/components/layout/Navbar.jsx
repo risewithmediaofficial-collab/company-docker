@@ -39,6 +39,11 @@ const Navbar = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
+  const markNotificationRead = useMutation({
+    mutationFn: async (id) => api.put(`/notifications/${id}/read`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+
   // Global keyboard shortcut for search
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -124,7 +129,11 @@ const Navbar = () => {
               ) : (
                 notificationData.notifications.map((notification) => (
                   <DropdownMenuItem key={notification._id} asChild>
-                    <Link to={notification.link || '/'} className="flex flex-col items-start gap-1 whitespace-normal">
+                    <Link
+                      to={notification.link || '/'}
+                      onClick={() => !notification.isRead && markNotificationRead.mutate(notification._id)}
+                      className="flex flex-col items-start gap-1 whitespace-normal"
+                    >
                       <span className="text-sm font-semibold">{notification.title}</span>
                       <span className="text-xs text-muted-foreground">{notification.message}</span>
                     </Link>

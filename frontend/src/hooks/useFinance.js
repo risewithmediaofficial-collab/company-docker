@@ -20,6 +20,131 @@ export const useFinanceEntries = (filters = {}) => {
 
 export const useFinance = useFinanceEntries;
 
+export const useFinanceRecords = (filters = {}) => {
+  return useQuery({
+    queryKey: ['finance-records', filters],
+    queryFn: async () => {
+      const response = await api.get('/finance/records', { params: filters });
+      return response.data?.records || [];
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+};
+
+export const useFinanceRecord = (id) => {
+  return useQuery({
+    queryKey: ['finance-record', id],
+    queryFn: async () => {
+      if (!id) return null;
+      const response = await api.get(`/finance/records/${id}`);
+      return response.data;
+    },
+    enabled: !!id,
+  });
+};
+
+export const useCreateFinanceRecord = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data) => {
+      const response = await api.post('/finance/records', data);
+      return response.data.record;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finance-records'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+      toast.success('Finance record created successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to create finance record');
+    },
+  });
+};
+
+export const useUpdateFinanceRecord = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }) => {
+      const response = await api.put(`/finance/records/${id}`, data);
+      return response.data.record;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['finance-records'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-record', data?._id] });
+      queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+      toast.success('Finance record updated successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to update finance record');
+    },
+  });
+};
+
+export const useDeleteFinanceRecord = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id) => {
+      await api.delete(`/finance/records/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finance-records'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+      toast.success('Finance record deleted successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to delete finance record');
+    },
+  });
+};
+
+export const useAddPaymentNote = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }) => {
+      const response = await api.post(`/finance/records/${id}/payment-notes`, data);
+      return response.data.note;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finance-records'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['portal-finance'] });
+      queryClient.invalidateQueries({ queryKey: ['portal-invoices'] });
+      toast.success('Payment note added successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to add payment note');
+    },
+  });
+};
+
+export const useAddInternalFinanceNote = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }) => {
+      const response = await api.post(`/finance/records/${id}/internal-notes`, data);
+      return response.data.record;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finance-records'] });
+      toast.success('Follow-up note added successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to add follow-up note');
+    },
+  });
+};
+
+export const useOverdueFinanceRecords = () => {
+  return useQuery({
+    queryKey: ['finance-overdue'],
+    queryFn: async () => {
+      const response = await api.get('/finance/records/overdue/list');
+      return response.data?.records || [];
+    },
+    staleTime: 60 * 1000,
+  });
+};
+
 export const useCreateFinanceEntry = () => {
   const queryClient = useQueryClient();
 
@@ -170,6 +295,44 @@ export const useMarkInvoicePaid = () => {
   });
 };
 
+export const useSendInvoice = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id) => {
+      const response = await api.post(`/finance/invoices/${id}/send`);
+      return response.data.invoice;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['portal-invoices'] });
+      toast.success('Invoice sent successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to send invoice');
+    },
+  });
+};
+
+export const useAddPartialPayment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }) => {
+      const response = await api.post(`/finance/invoices/${id}/partial-payment`, data);
+      return response.data.invoice;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-records'] });
+      queryClient.invalidateQueries({ queryKey: ['portal-invoices'] });
+      toast.success('Partial payment added successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to add partial payment');
+    },
+  });
+};
+
 export const usePayments = (filters = {}) => {
   return useQuery({
     queryKey: ['payments', filters],
@@ -178,6 +341,153 @@ export const usePayments = (filters = {}) => {
       return response.data?.payments || [];
     },
     staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useCallHistory = (filters = {}) => {
+  return useQuery({
+    queryKey: ['call-history', filters],
+    queryFn: async () => {
+      const response = await api.get('/finance/call-history', { params: filters });
+      return response.data?.calls || [];
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+};
+
+export const useCreateCallHistory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data) => {
+      const response = await api.post('/finance/call-history', data);
+      return response.data.call;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['call-history'] });
+      toast.success('Call history added successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to add call history');
+    },
+  });
+};
+
+export const useUpdateCallHistory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }) => {
+      const response = await api.put(`/finance/call-history/${id}`, data);
+      return response.data.call;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['call-history'] });
+      toast.success('Call history updated successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to update call history');
+    },
+  });
+};
+
+export const useDeleteCallHistory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id) => {
+      await api.delete(`/finance/call-history/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['call-history'] });
+      toast.success('Call history deleted successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to delete call history');
+    },
+  });
+};
+
+export const useTodayFollowupCalls = () => {
+  return useQuery({
+    queryKey: ['call-history-followups-today'],
+    queryFn: async () => {
+      const response = await api.get('/finance/call-history/followups/today');
+      return response.data?.calls || [];
+    },
+    staleTime: 60 * 1000,
+  });
+};
+
+export const useReferrals = (filters = {}) => {
+  return useQuery({
+    queryKey: ['referrals', filters],
+    queryFn: async () => {
+      const response = await api.get('/referrals', { params: filters });
+      return response.data?.referrals || [];
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+};
+
+export const useReferralAnalytics = () => {
+  return useQuery({
+    queryKey: ['referral-analytics'],
+    queryFn: async () => {
+      const response = await api.get('/referrals/analytics');
+      return response.data?.analytics || {};
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+};
+
+export const useCreateReferral = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data) => {
+      const response = await api.post('/referrals', data);
+      return response.data.referral;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['referrals'] });
+      queryClient.invalidateQueries({ queryKey: ['referral-analytics'] });
+      toast.success('Referral added successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to add referral');
+    },
+  });
+};
+
+export const useUpdateReferral = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }) => {
+      const response = await api.put(`/referrals/${id}`, data);
+      return response.data.referral;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['referrals'] });
+      queryClient.invalidateQueries({ queryKey: ['referral-analytics'] });
+      toast.success('Referral updated successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to update referral');
+    },
+  });
+};
+
+export const useDeleteReferral = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id) => {
+      await api.delete(`/referrals/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['referrals'] });
+      queryClient.invalidateQueries({ queryKey: ['referral-analytics'] });
+      toast.success('Referral deleted successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to delete referral');
+    },
   });
 };
 

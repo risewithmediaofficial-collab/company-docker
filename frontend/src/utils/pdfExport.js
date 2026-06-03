@@ -117,6 +117,109 @@ export const exportDataToPDF = (data, columns, filename = 'report.pdf') => {
   }
 };
 
+const formatProposalDate = (value) => {
+  if (!value) return 'N/A';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString('en-IN');
+};
+
+const safeFilePart = (value) => String(value || 'proposal')
+  .trim()
+  .replace(/[<>:"/\\|?*\x00-\x1F]/g, '')
+  .replace(/\s+/g, '-')
+  .toLowerCase();
+
+export const exportProposalToPDF = ({ project = {}, client = {} }) => {
+  const proposalText = String(project.proposalText || '').trim();
+  if (!proposalText) {
+    throw new Error('No proposal text found');
+  }
+
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 15;
+  const contentWidth = pageWidth - margin * 2;
+  let y = margin;
+
+  const ensureSpace = (heightNeeded = 8) => {
+    if (y + heightNeeded <= pageHeight - margin) return;
+    pdf.addPage();
+    y = margin;
+  };
+
+  pdf.setFontSize(20);
+  pdf.setTextColor(28, 37, 54);
+  pdf.text('Project Proposal', margin, y);
+  y += 10;
+
+  pdf.setFontSize(10);
+  pdf.setTextColor(107, 114, 128);
+  pdf.text(`Generated on ${new Date().toLocaleString('en-IN')}`, margin, y);
+  y += 10;
+
+  pdf.setDrawColor(226, 232, 240);
+  pdf.setFillColor(248, 250, 252);
+  pdf.roundedRect(margin, y, contentWidth, 38, 3, 3, 'FD');
+
+  pdf.setFontSize(11);
+  pdf.setTextColor(15, 23, 42);
+  const projectDetails = [
+    ['Client', client.name || client.company || 'N/A'],
+    ['Project', project.name || 'N/A'],
+    ['Status', project.status || 'N/A'],
+    ['Category', project.category || 'N/A'],
+    ['Start Date', formatProposalDate(project.startDate)],
+    ['Due Date', formatProposalDate(project.dueDate)],
+  ];
+
+  let detailsY = y + 8;
+  projectDetails.forEach(([label, value], index) => {
+    const columnX = index % 2 === 0 ? margin + 4 : margin + contentWidth / 2;
+    if (index % 2 === 0 && index > 0) detailsY += 9;
+    pdf.setFont(undefined, 'bold');
+    pdf.text(`${label}:`, columnX, detailsY);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(String(value), columnX + 24, detailsY);
+  });
+
+  y += 48;
+
+  if (project.description) {
+    pdf.setFont(undefined, 'bold');
+    pdf.setFontSize(12);
+    pdf.text('Project Summary', margin, y);
+    y += 7;
+    pdf.setFont(undefined, 'normal');
+    pdf.setFontSize(11);
+    const summaryLines = pdf.splitTextToSize(String(project.description), contentWidth);
+    summaryLines.forEach((line) => {
+      ensureSpace(6);
+      pdf.text(line, margin, y);
+      y += 5.5;
+    });
+    y += 4;
+  }
+
+  ensureSpace(12);
+  pdf.setFont(undefined, 'bold');
+  pdf.setFontSize(12);
+  pdf.text('Proposal', margin, y);
+  y += 7;
+
+  pdf.setFont(undefined, 'normal');
+  pdf.setFontSize(11);
+  const proposalLines = pdf.splitTextToSize(proposalText, contentWidth);
+  proposalLines.forEach((line) => {
+    ensureSpace(6);
+    pdf.text(line, margin, y);
+    y += 5.5;
+  });
+
+  const filename = `${safeFilePart(client.name || client.company || 'client')}-${safeFilePart(project.name || 'project')}-proposal.pdf`;
+  pdf.save(filename);
+};
+
 /**
  * Export CSV file
  * @param {array} data - Array of objects

@@ -42,6 +42,7 @@ const projectSchema = new mongoose.Schema(
       enum: ['social_media', 'seo', 'paid_ads', 'web_design', 'web_development', 'video_content', 'content', 'branding', 'video', 'graphic_design', 'mobile_app', 'e_commerce', 'other'],
       default: 'other',
     },
+    proposalText: { type: String, default: '' },
     clientDiscussionNotes: { type: String, default: '' }, // Notes about what was discussed with client
     nextMeetupDate: { type: Date }, // Date of next scheduled meetup with client
     tags: [{ type: String }],

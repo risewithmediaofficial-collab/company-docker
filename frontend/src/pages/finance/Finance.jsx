@@ -1,19 +1,20 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { ArrowDownCircle, ArrowUpCircle, CheckCircle2, FileText, Plus, Receipt } from 'lucide-react';
 import {
-  useDeleteFinanceEntry,
-  useDeleteInvoice,
-  useFinance,
-  useFinanceSummary,
-  useInvoices,
-  useMarkInvoicePaid,
-  usePayments,
-} from '../../hooks/useFinance';
+  AlertCircle,
+  CheckCircle2,
+  FileText,
+  IndianRupee,
+  Phone,
+  Plus,
+  Receipt,
+  Send,
+  Users2,
+} from 'lucide-react';
+import { Button } from '../../components/ui/button';
 import { AddFinanceModal } from '../../components/modals/AddFinanceModal';
 import { AddInvoiceModal } from '../../components/modals/AddInvoiceModal';
 import { DataTable } from '../../components/ui/DataTable';
-import { Button } from '../../components/ui/button';
 import {
   MetricCard,
   MetricGrid,
@@ -23,152 +24,191 @@ import {
   SectionCard,
   StatusBadge,
 } from '../../components/ui/page';
+import { useClients } from '../../hooks/useClients';
+import { useProjects } from '../../hooks/useProjects';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  useAddInternalFinanceNote,
+  useAddPartialPayment,
+  useAddPaymentNote,
+  useCallHistory,
+  useCreateCallHistory,
+  useCreateReferral,
+  useDeleteFinanceRecord,
+  useDeleteReferral,
+  useFinanceRecords,
+  useFinanceSummary,
+  useInvoices,
+  useMarkInvoicePaid,
+  useOverdueFinanceRecords,
+  usePayments,
+  useReferralAnalytics,
+  useReferrals,
+  useSendInvoice,
+} from '../../hooks/useFinance';
 
-const currencyFormatter = new Intl.NumberFormat('en-IN', {
+const currency = new Intl.NumberFormat('en-IN', {
   style: 'currency',
   currency: 'INR',
   maximumFractionDigits: 0,
 });
 
-const entryTypeTone = {
-  Income: 'success',
-  Expense: 'danger',
-};
+const tabs = [
+  { id: 'records', label: 'Finance Records', icon: IndianRupee },
+  { id: 'invoices', label: 'Invoices', icon: FileText },
+  { id: 'calls', label: 'Call History', icon: Phone },
+  { id: 'referrals', label: 'Referrals', icon: Users2 },
+];
 
-const financeStatusTone = {
-  Completed: 'success',
-  Pending: 'warning',
-  Cancelled: 'danger',
-  Failed: 'danger',
-};
-
-const invoiceStatusTone = {
+const paymentStatusTone = {
+  'Not Paid': 'neutral',
+  'Partially Paid': 'warning',
   Paid: 'success',
-  Sent: 'info',
-  Draft: 'neutral',
   Overdue: 'danger',
 };
 
+const invoiceStatusTone = {
+  Draft: 'neutral',
+  Sent: 'info',
+  Viewed: 'info',
+  'Partially Paid': 'warning',
+  Paid: 'success',
+  Overdue: 'danger',
+  Cancelled: 'danger',
+};
+
 const Finance = () => {
-  const [showAddEntryModal, setShowAddEntryModal] = useState(false);
-  const [showAddInvoiceModal, setShowAddInvoiceModal] = useState(false);
-  const [selectedEntry, setSelectedEntry] = useState(null);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [deleteEntryId, setDeleteEntryId] = useState(null);
-  const [deleteInvoiceId, setDeleteInvoiceId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const { user } = useSelector((state) => state.auth);
-  const canViewSummary = ['superAdmin', 'manager'].includes(user?.role);
-  const canManageBilling = ['superAdmin', 'manager'].includes(user?.role);
-  const canDeleteInvoices = user?.role === 'superAdmin';
+  const [activeTab, setActiveTab] = useState('records');
+  const [search, setSearch] = useState('');
+  const [showFinanceModal, setShowFinanceModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [paymentForms, setPaymentForms] = useState({});
+  const [followupForms, setFollowupForms] = useState({});
+  const [callForm, setCallForm] = useState({
+    clientId: '',
+    projectId: '',
+    callType: 'Outgoing',
+    callPurpose: 'General Update',
+    callDate: new Date().toISOString().split('T')[0],
+    callTime: '',
+    spokenWith: '',
+    contactNumber: '',
+    callSummary: '',
+    clientResponse: '',
+    nextAction: '',
+    nextFollowUpDate: '',
+    visibleToClient: false,
+  });
+  const [referralForm, setReferralForm] = useState({
+    clientId: '',
+    projectId: '',
+    referralSource: 'LinkedIn',
+    referralPersonName: '',
+    referralPersonContact: '',
+    referralPlatformLink: '',
+    campaignName: '',
+    leadQuality: 'Warm',
+    conversionStatus: 'Lead',
+    notes: '',
+  });
 
-  const { data: entries = [], isLoading: entriesLoading } = useFinance();
-  const { data: invoices = [], isLoading: invoicesLoading } = useInvoices();
+  const canManage = ['superAdmin', 'manager'].includes(user?.role) || user?.permissions?.canManageFinance;
+  const canDeleteFinance = ['superAdmin', 'manager'].includes(user?.role);
+
+  const { data: clients = [] } = useClients({}, { enabled: canManage });
+  const { data: projects = [] } = useProjects({}, { enabled: canManage });
+  const { data: financeRecords = [] } = useFinanceRecords({ search });
+  const { data: invoices = [] } = useInvoices({ search });
+  const { data: callHistory = [] } = useCallHistory({ search });
+  const { data: referrals = [] } = useReferrals();
+  const { data: referralAnalytics = {} } = useReferralAnalytics();
+  const { data: financeSummary = {} } = useFinanceSummary({ enabled: canManage });
   const { data: payments = [] } = usePayments();
-  const { data: summary = {} } = useFinanceSummary({ enabled: canViewSummary });
-  const deleteEntryMutation = useDeleteFinanceEntry();
-  const deleteInvoiceMutation = useDeleteInvoice();
-  const markPaidMutation = useMarkInvoicePaid();
+  const { data: overdueRecords = [] } = useOverdueFinanceRecords();
 
-  // Ensure data is always an array
-  const safeEntries = Array.isArray(entries) ? entries : [];
-  const safeInvoices = Array.isArray(invoices) ? invoices : [];
+  const addPaymentNote = useAddPaymentNote();
+  const addInternalFinanceNote = useAddInternalFinanceNote();
+  const createCallHistory = useCreateCallHistory();
+  const createReferral = useCreateReferral();
+  const deleteFinanceRecord = useDeleteFinanceRecord();
+  const markInvoicePaid = useMarkInvoicePaid();
+  const addPartialPayment = useAddPartialPayment();
+  const sendInvoice = useSendInvoice();
+  const deleteReferral = useDeleteReferral();
 
-  // Simple search filter
-  const filteredEntries = safeEntries.filter((entry) => {
-    const term = searchTerm.toLowerCase();
-    return (
-      (entry.category?.toLowerCase() || '').includes(term) ||
-      (entry.description?.toLowerCase() || '').includes(term) ||
-      (entry.paymentMethod?.toLowerCase() || '').includes(term) ||
-      (entry.client?.name?.toLowerCase() || '').includes(term) ||
-      (entry.client?.company?.toLowerCase() || '').includes(term) ||
-      (entry.project?.name?.toLowerCase() || '').includes(term)
-    );
-  });
+  const filteredReferrals = useMemo(() => referrals.filter((item) => {
+    const haystack = [
+      item.referralSource,
+      item.referralPersonName,
+      item.campaignName,
+      item.client?.name,
+      item.client?.company,
+    ].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(search.toLowerCase());
+  }), [referrals, search]);
 
-  const filteredInvoices = safeInvoices.filter((invoice) => {
-    const term = searchTerm.toLowerCase();
-    return (
-      (invoice.invoiceNumber?.toLowerCase() || '').includes(term) ||
-      (invoice.client?.name?.toLowerCase() || '').includes(term) ||
-      (invoice.client?.company?.toLowerCase() || '').includes(term) ||
-      (invoice.project?.name?.toLowerCase() || '').includes(term)
-    );
-  });
+  const selectedClientProjects = callForm.clientId
+    ? projects.filter((project) => project.client?._id === callForm.clientId || project.client === callForm.clientId)
+    : projects;
 
-  const incomeTotal = summary.totalRevenue ?? safeEntries
-    .filter((entry) => entry.type === 'Income')
-    .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
-  const expenseTotal = summary.totalExpenses ?? safeEntries
-    .filter((entry) => entry.type !== 'Income')
-    .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
-  const pendingInvoices = summary.pendingInvoices ?? safeInvoices.filter((invoice) => ['Draft', 'Sent', 'Overdue'].includes(invoice.status)).length;
-  const entryColumns = [
-    {
-      key: 'type',
-      label: 'Type',
-      render: (row) => (
-        <StatusBadge tone={entryTypeTone[row.type] || 'neutral'}>
-          {row.type}
-        </StatusBadge>
-      ),
-    },
-    {
-      key: 'category',
-      label: 'Category',
-      render: (row) => (
-        <div className="min-w-0">
-          <div className="font-semibold text-foreground">{row.category || 'General'}</div>
-          <div className="mt-1 text-xs text-muted-foreground">{row.description || 'No description added'}</div>
-        </div>
-      ),
-    },
+  const referralClientProjects = referralForm.clientId
+    ? projects.filter((project) => project.client?._id === referralForm.clientId || project.client === referralForm.clientId)
+    : projects;
+
+  const metrics = {
+    totalReceivable: financeRecords.reduce((sum, item) => sum + Number(item.balanceAmount || 0), 0),
+    totalPaid: financeRecords.reduce((sum, item) => sum + Number(item.totalPaidAmount || item.paidAmount || 0), 0),
+    openInvoices: invoices.filter((item) => !['Paid', 'Cancelled'].includes(item.status)).length,
+    overdue: overdueRecords.length,
+  };
+
+  const financeColumns = [
     {
       key: 'client',
       label: 'Client / Project',
       render: (row) => (
         <div className="min-w-0">
-          <div className="font-medium text-foreground">{row.client?.company || row.client?.name || 'Not linked'}</div>
-          <div className="mt-1 text-xs text-muted-foreground">{row.project?.name || 'No project'}</div>
+          <div className="font-semibold text-foreground">{row.clientName || row.clientId?.name || row.clientId?.company}</div>
+          <div className="mt-1 text-xs text-muted-foreground">{row.projectName || row.projectId?.name}</div>
         </div>
       ),
     },
     {
-      key: 'amount',
-      label: 'Amount',
+      key: 'serviceName',
+      label: 'Service',
+      render: (row) => row.serviceName,
+    },
+    {
+      key: 'amounts',
+      label: 'Amounts',
       render: (row) => (
-        <span className="font-semibold text-foreground">
-          {currencyFormatter.format(Number(row.amount || 0))}
-        </span>
+        <div className="text-sm">
+          <div className="font-semibold text-foreground">Total: {currency.format(Number(row.totalProjectAmount || 0))}</div>
+          <div className="text-muted-foreground">Paid: {currency.format(Number(row.totalPaidAmount || 0))}</div>
+          <div className="text-muted-foreground">Balance: {currency.format(Number(row.balanceAmount || 0))}</div>
+        </div>
       ),
     },
     {
-      key: 'date',
-      label: 'Date',
-      render: (row) => row.date ? new Date(row.date).toLocaleDateString() : 'Not set',
+      key: 'paymentStatus',
+      label: 'Payment Status',
+      render: (row) => <StatusBadge tone={paymentStatusTone[row.paymentStatus] || 'neutral'}>{row.paymentStatus}</StatusBadge>,
     },
     {
-      key: 'paymentMethod',
-      label: 'Payment',
-      render: (row) => row.paymentMethod || 'Not specified',
+      key: 'invoiceStatus',
+      label: 'Invoice Status',
+      render: (row) => <StatusBadge tone={invoiceStatusTone[row.invoiceStatus] || 'neutral'}>{row.invoiceStatus}</StatusBadge>,
     },
     {
-      key: 'status',
-      label: 'Status',
+      key: 'dueDate',
+      label: 'Due / Follow-up',
       render: (row) => (
-        <StatusBadge tone={financeStatusTone[row.status] || 'neutral'}>
-          {row.status || 'Unknown'}
-        </StatusBadge>
+        <div className="text-sm text-foreground">
+          <div>{row.paymentDueDate ? new Date(row.paymentDueDate).toLocaleDateString() : 'No due date'}</div>
+          <div className="text-xs text-muted-foreground">{row.nextFollowUpDate ? `Next: ${new Date(row.nextFollowUpDate).toLocaleDateString()}` : 'No follow-up'}</div>
+        </div>
       ),
     },
   ];
@@ -180,253 +220,386 @@ const Finance = () => {
       render: (row) => (
         <div className="min-w-0">
           <div className="font-semibold text-foreground">{row.invoiceNumber}</div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            Due {row.dueDate ? new Date(row.dueDate).toLocaleDateString() : 'not scheduled'}
-          </div>
+          <div className="mt-1 text-xs text-muted-foreground">{row.project?.name || row.projectName || 'No linked project'}</div>
         </div>
       ),
     },
     {
       key: 'client',
       label: 'Client',
-      render: (row) => (
-        <div className="min-w-0">
-          <div className="font-semibold text-foreground">{row.client?.name || 'Unknown client'}</div>
-          <div className="mt-1 text-xs text-muted-foreground">{row.client?.company || 'No company linked'}</div>
-        </div>
-      ),
+      render: (row) => row.client?.company || row.client?.name || row.clientDetails?.businessName || row.clientDetails?.name,
     },
     {
       key: 'amount',
       label: 'Amount',
       render: (row) => (
-        <span className="font-semibold text-foreground">
-          {currencyFormatter.format(Number(row.amount || 0))}
-        </span>
+        <div className="text-sm">
+          <div className="font-semibold text-foreground">Total: {currency.format(Number(row.totalAmount || row.amount || 0))}</div>
+          <div className="text-muted-foreground">Paid: {currency.format(Number(row.paidAmount || 0))}</div>
+          <div className="text-muted-foreground">Balance: {currency.format(Number(row.balanceAmount || 0))}</div>
+        </div>
       ),
     },
     {
       key: 'status',
       label: 'Status',
+      render: (row) => <StatusBadge tone={invoiceStatusTone[row.status] || 'neutral'}>{row.status}</StatusBadge>,
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
       render: (row) => (
-        <div className="flex items-center gap-2">
-          <StatusBadge tone={invoiceStatusTone[row.status] || 'neutral'}>
-            {row.status || 'Unknown'}
-          </StatusBadge>
-          {canManageBilling && row.status !== 'Paid' ? (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                markPaidMutation.mutate({ id: row._id });
-              }}
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-emerald-500/10 hover:text-emerald-600"
-              title="Mark paid"
-            >
-              <CheckCircle2 size={16} />
-            </button>
-          ) : null}
+        <div className="flex flex-wrap gap-2">
+          {canManage ? <Button size="sm" variant="outline" onClick={(event) => {
+            event.stopPropagation();
+            sendInvoice.mutate(row._id);
+          }}><Send size={14} className="mr-1" />Send</Button> : null}
+          {canManage ? <Button size="sm" variant="outline" onClick={(event) => {
+            event.stopPropagation();
+            markInvoicePaid.mutate({ id: row._id });
+          }}>Mark Paid</Button> : null}
         </div>
       ),
     },
   ];
 
-  const handleDeleteEntry = async () => {
-    if (!deleteEntryId) return;
-    await deleteEntryMutation.mutateAsync(deleteEntryId);
-    setDeleteEntryId(null);
+  const handleAddPaymentNote = async (recordId) => {
+    const form = paymentForms[recordId];
+    if (!form?.noteTitle) return;
+    await addPaymentNote.mutateAsync({ id: recordId, data: form });
+    setPaymentForms((current) => ({
+      ...current,
+      [recordId]: { noteTitle: '', noteDescription: '', amountPaid: '', paymentMode: 'UPI', paymentDate: '', nextFollowUpDate: '', visibleToClient: false },
+    }));
   };
 
-  const handleDeleteInvoice = async () => {
-    if (!deleteInvoiceId) return;
-    await deleteInvoiceMutation.mutateAsync(deleteInvoiceId);
-    setDeleteInvoiceId(null);
+  const handleAddFollowup = async (recordId) => {
+    const form = followupForms[recordId];
+    if (!form?.followUpNote) return;
+    await addInternalFinanceNote.mutateAsync({ id: recordId, data: form });
+    setFollowupForms((current) => ({
+      ...current,
+      [recordId]: { followUpNote: '', nextFollowUpDate: '', spokenWith: '', clientResponse: '', paymentPromiseDate: '', amountPromised: '' },
+    }));
+  };
+
+  const handleCreateCall = async () => {
+    await createCallHistory.mutateAsync(callForm);
+    setCallForm({
+      clientId: '',
+      projectId: '',
+      callType: 'Outgoing',
+      callPurpose: 'General Update',
+      callDate: new Date().toISOString().split('T')[0],
+      callTime: '',
+      spokenWith: '',
+      contactNumber: '',
+      callSummary: '',
+      clientResponse: '',
+      nextAction: '',
+      nextFollowUpDate: '',
+      visibleToClient: false,
+    });
+  };
+
+  const handleCreateReferral = async () => {
+    await createReferral.mutateAsync(referralForm);
+    setReferralForm({
+      clientId: '',
+      projectId: '',
+      referralSource: 'LinkedIn',
+      referralPersonName: '',
+      referralPersonContact: '',
+      referralPlatformLink: '',
+      campaignName: '',
+      leadQuality: 'Warm',
+      conversionStatus: 'Lead',
+      notes: '',
+    });
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Finance Workspace"
-        title="Track cash flow and billing with less friction."
-        description="Keep revenue, expenses, and invoice follow-up in one structured financial workspace that is easier to scan and manage."
+        eyebrow="Finance Operations"
+        title="Manage receivables, invoices, calls, and referral performance."
+        description="Track partial payments, private follow-ups, client-visible payment history, invoice status, client communication, and lead sources from one workspace."
         actions={(
-          <>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelectedEntry(null);
-                setShowAddEntryModal(true);
-              }}
-            >
-              <Plus size={16} className="mr-2" />
-              Add Entry
-            </Button>
-            {canManageBilling ? (
-              <Button
-                onClick={() => {
-                  setSelectedInvoice(null);
-                  setShowAddInvoiceModal(true);
-                }}
-              >
-                <Plus size={16} className="mr-2" />
-                Create Invoice
-              </Button>
-            ) : null}
-          </>
+          <div className="flex gap-3">
+            {canManage ? <Button variant="outline" onClick={() => { setSelectedRecord(null); setShowFinanceModal(true); }}><Plus size={16} className="mr-2" />Finance Record</Button> : null}
+            {canManage ? <Button onClick={() => { setSelectedInvoice(null); setShowInvoiceModal(true); }}><Plus size={16} className="mr-2" />Invoice</Button> : null}
+          </div>
         )}
       >
         <MetricGrid>
-          <MetricCard label="Income" value={currencyFormatter.format(incomeTotal)} helper="Visible payments and booked income" icon={ArrowUpCircle} tone="success" />
-          <MetricCard label="Expenses" value={currencyFormatter.format(expenseTotal)} helper="Tracked outgoing operational spend" icon={ArrowDownCircle} tone="danger" />
-          <MetricCard label="Pending Invoices" value={pendingInvoices} helper="Draft, sent, or overdue invoices needing action" icon={FileText} tone="warning" />
-          <MetricCard label="Payments" value={payments.length} helper="Recorded invoice payments" icon={Receipt} tone="primary" />
+          <MetricCard label="Outstanding" value={currency.format(metrics.totalReceivable)} helper="Pending receivable balance" icon={AlertCircle} tone={metrics.totalReceivable > 0 ? 'warning' : 'success'} />
+          <MetricCard label="Collected" value={currency.format(metrics.totalPaid)} helper="Total payments recorded" icon={CheckCircle2} tone="success" />
+          <MetricCard label="Open Invoices" value={metrics.openInvoices} helper="Draft, sent, viewed, or partial" icon={Receipt} tone="info" />
+          <MetricCard label="Overdue" value={metrics.overdue} helper="Finance records past due date" icon={FileText} tone={metrics.overdue ? 'danger' : 'neutral'} />
         </MetricGrid>
       </PageHeader>
 
+      <div className="flex items-center gap-1 rounded-2xl border border-border bg-card p-1.5">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+              activeTab === tab.id ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+            }`}
+          >
+            <tab.icon size={15} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <PageToolbar>
-        <SearchField
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder="Search categories, clients, invoice numbers, or payment methods..."
-        />
+        <SearchField value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search clients, projects, invoices, calls, or referrals..." />
         <div className="flex flex-wrap items-center gap-2">
-          <div className="app-pill">{filteredEntries.length} entries</div>
-          <div className="app-pill">{filteredInvoices.length} invoices</div>
+          <div className="app-pill">{financeRecords.length} finance records</div>
+          <div className="app-pill">{invoices.length} invoices</div>
+          <div className="app-pill">{payments.length} payments</div>
         </div>
       </PageToolbar>
 
-      {/* Finance Entries Section */}
-      {entriesLoading ? (
-        <SectionCard title="Finance Entries" description="Loading...">
-          <div className="py-12 text-center text-muted-foreground">Loading entries...</div>
-        </SectionCard>
-      ) : (
-        <SectionCard
-          title="Finance Entries"
-          description="Monitor income and expense activity without losing category or payment context."
-          action={(
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelectedEntry(null);
-                setShowAddEntryModal(true);
-              }}
-            >
-              <Plus size={16} className="mr-2" />
-              Add Entry
-            </Button>
-          )}
-        >
+      {activeTab === 'records' ? (
+        <SectionCard title="Finance Records" description="Track total amount, paid amount, balance, follow-up notes, and client-visible payment updates.">
           <DataTable
-            data={filteredEntries}
-            columns={entryColumns}
-            loading={entriesLoading}
-            onRowClick={(entry) => {
-              setSelectedEntry(entry);
-              setShowAddEntryModal(true);
+            data={financeRecords}
+            columns={financeColumns}
+            onRowClick={(row) => {
+              setSelectedRecord(row);
+              setShowFinanceModal(true);
             }}
-            onEdit={(entry) => {
-              setSelectedEntry(entry);
-              setShowAddEntryModal(true);
-            }}
-            onDelete={(id) => setDeleteEntryId(id)}
-            emptyTitle="No finance entries found"
-            emptyDescription="Add your first income or expense entry to start building a reliable cash-flow record."
+            onEdit={canManage ? (row) => {
+              setSelectedRecord(row);
+              setShowFinanceModal(true);
+            } : null}
+            onDelete={canDeleteFinance ? (id) => deleteFinanceRecord.mutate(id) : null}
+            emptyTitle="No finance records yet"
+            emptyDescription="Create a finance record for each client project to start tracking balance and follow-up."
           />
-        </SectionCard>
-      )}
 
-      {/* Invoices Section */}
-      {invoicesLoading ? (
-        <SectionCard title="Invoices" description="Loading...">
-          <div className="py-12 text-center text-muted-foreground">Loading invoices...</div>
+          <div className="mt-6 grid gap-4">
+            {financeRecords.map((record) => (
+              <div key={record._id} className="rounded-3xl border border-border bg-background p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground">{record.serviceName}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{record.clientName} • {record.projectName}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <StatusBadge tone={paymentStatusTone[record.paymentStatus] || 'neutral'}>{record.paymentStatus}</StatusBadge>
+                    <StatusBadge tone={invoiceStatusTone[record.invoiceStatus] || 'neutral'}>{record.invoiceStatus}</StatusBadge>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-2xl border border-border bg-card p-4">
+                    <p className="text-sm font-semibold text-foreground">Add Payment Note</p>
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      <input className="rounded-2xl border border-border bg-background px-4 py-3 text-sm" placeholder="Note title" value={paymentForms[record._id]?.noteTitle || ''} onChange={(event) => setPaymentForms((current) => ({ ...current, [record._id]: { ...current[record._id], noteTitle: event.target.value } }))} />
+                      <input className="rounded-2xl border border-border bg-background px-4 py-3 text-sm" type="number" placeholder="Amount paid" value={paymentForms[record._id]?.amountPaid || ''} onChange={(event) => setPaymentForms((current) => ({ ...current, [record._id]: { ...current[record._id], amountPaid: event.target.value } }))} />
+                      <select className="rounded-2xl border border-border bg-background px-4 py-3 text-sm" value={paymentForms[record._id]?.paymentMode || 'UPI'} onChange={(event) => setPaymentForms((current) => ({ ...current, [record._id]: { ...current[record._id], paymentMode: event.target.value } }))}>
+                        {['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque', 'Other'].map((mode) => <option key={mode}>{mode}</option>)}
+                      </select>
+                      <input className="rounded-2xl border border-border bg-background px-4 py-3 text-sm" type="date" value={paymentForms[record._id]?.paymentDate || ''} onChange={(event) => setPaymentForms((current) => ({ ...current, [record._id]: { ...current[record._id], paymentDate: event.target.value } }))} />
+                    </div>
+                    <textarea className="mt-3 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm" placeholder="Payment note description" value={paymentForms[record._id]?.noteDescription || ''} onChange={(event) => setPaymentForms((current) => ({ ...current, [record._id]: { ...current[record._id], noteDescription: event.target.value } }))} />
+                    <div className="mt-3 flex items-center gap-3">
+                      <label className="text-sm text-muted-foreground"><input type="checkbox" className="mr-2" checked={Boolean(paymentForms[record._id]?.visibleToClient)} onChange={(event) => setPaymentForms((current) => ({ ...current, [record._id]: { ...current[record._id], visibleToClient: event.target.checked } }))} />Visible to client</label>
+                      <Button type="button" onClick={() => handleAddPaymentNote(record._id)} disabled={addPaymentNote.isPending}>Save Payment Note</Button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-border bg-card p-4">
+                    <p className="text-sm font-semibold text-foreground">Internal Follow-up Note</p>
+                    <textarea className="mt-3 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm" placeholder="Follow-up summary, client promise, next action..." value={followupForms[record._id]?.followUpNote || ''} onChange={(event) => setFollowupForms((current) => ({ ...current, [record._id]: { ...current[record._id], followUpNote: event.target.value } }))} />
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      <input className="rounded-2xl border border-border bg-background px-4 py-3 text-sm" placeholder="Spoken with" value={followupForms[record._id]?.spokenWith || ''} onChange={(event) => setFollowupForms((current) => ({ ...current, [record._id]: { ...current[record._id], spokenWith: event.target.value } }))} />
+                      <input className="rounded-2xl border border-border bg-background px-4 py-3 text-sm" type="date" value={followupForms[record._id]?.nextFollowUpDate || ''} onChange={(event) => setFollowupForms((current) => ({ ...current, [record._id]: { ...current[record._id], nextFollowUpDate: event.target.value } }))} />
+                    </div>
+                    <Button type="button" className="mt-3" onClick={() => handleAddFollowup(record._id)} disabled={addInternalFinanceNote.isPending}>Save Follow-up</Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </SectionCard>
-      ) : (
-        <SectionCard
-          title="Invoices"
-          description="Keep billing follow-up, due dates, and client invoice status visible in one place."
-          action={canManageBilling ? (
-            <Button
-              onClick={() => {
-                setSelectedInvoice(null);
-                setShowAddInvoiceModal(true);
-              }}
-            >
-              <Plus size={16} className="mr-2" />
-              Create Invoice
-            </Button>
-          ) : null}
-        >
+      ) : null}
+
+      {activeTab === 'invoices' ? (
+        <SectionCard title="Invoices" description="Create invoices, send them to the client dashboard, and track partial or completed payment updates.">
           <DataTable
-            data={filteredInvoices}
+            data={invoices}
             columns={invoiceColumns}
-            loading={invoicesLoading}
-            onRowClick={canManageBilling ? (invoice) => {
-              setSelectedInvoice(invoice);
-              setShowAddInvoiceModal(true);
+            onRowClick={(row) => {
+              setSelectedInvoice(row);
+              setShowInvoiceModal(true);
+            }}
+            onEdit={canManage ? (row) => {
+              setSelectedInvoice(row);
+              setShowInvoiceModal(true);
             } : null}
-            onEdit={canManageBilling ? (invoice) => {
-              setSelectedInvoice(invoice);
-              setShowAddInvoiceModal(true);
-            } : null}
-            onDelete={canDeleteInvoices ? (id) => setDeleteInvoiceId(id) : null}
             emptyTitle="No invoices created yet"
-            emptyDescription="Create an invoice to start tracking billing, payment collection, and overdue follow-up."
+            emptyDescription="Create your first invoice to share payment details with the client."
           />
+
+          <div className="mt-6 grid gap-4">
+            {invoices.map((invoice) => (
+              <div key={invoice._id} className="rounded-3xl border border-border bg-background p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground">{invoice.invoiceNumber}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{invoice.client?.company || invoice.client?.name} • {invoice.project?.name || 'No linked project'}</p>
+                  </div>
+                  <StatusBadge tone={invoiceStatusTone[invoice.status] || 'neutral'}>{invoice.status}</StatusBadge>
+                </div>
+                <div className="mt-4 grid gap-4 md:grid-cols-3">
+                  <div className="rounded-2xl border border-border bg-card p-4 text-sm">
+                    <p className="font-semibold text-foreground">Total</p>
+                    <p className="mt-2 text-muted-foreground">{currency.format(Number(invoice.totalAmount || invoice.amount || 0))}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-card p-4 text-sm">
+                    <p className="font-semibold text-foreground">Paid</p>
+                    <p className="mt-2 text-muted-foreground">{currency.format(Number(invoice.paidAmount || 0))}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-card p-4 text-sm">
+                    <p className="font-semibold text-foreground">Balance</p>
+                    <p className="mt-2 text-muted-foreground">{currency.format(Number(invoice.balanceAmount || 0))}</p>
+                  </div>
+                </div>
+                {canManage && !['Paid', 'Cancelled'].includes(invoice.status) ? (
+                  <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+                    <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" type="number" placeholder="Partial payment amount" value={paymentForms[`invoice-${invoice._id}`]?.amountPaid || ''} onChange={(event) => setPaymentForms((current) => ({ ...current, [`invoice-${invoice._id}`]: { ...current[`invoice-${invoice._id}`], amountPaid: event.target.value } }))} />
+                    <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={paymentForms[`invoice-${invoice._id}`]?.paymentMode || 'UPI'} onChange={(event) => setPaymentForms((current) => ({ ...current, [`invoice-${invoice._id}`]: { ...current[`invoice-${invoice._id}`], paymentMode: event.target.value } }))}>
+                      {['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque', 'Other'].map((mode) => <option key={mode}>{mode}</option>)}
+                    </select>
+                    <Button type="button" onClick={() => addPartialPayment.mutate({ id: invoice._id, data: paymentForms[`invoice-${invoice._id}`] || {} })} disabled={addPartialPayment.isPending}>Add Partial Payment</Button>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
         </SectionCard>
-      )}
+      ) : null}
 
-      <AddFinanceModal
-        open={showAddEntryModal}
-        onOpenChange={setShowAddEntryModal}
-        entry={selectedEntry}
-      />
+      {activeTab === 'calls' ? (
+        <SectionCard title="Call History" description="Record every payment discussion, requirement call, approval follow-up, or rework conversation.">
+          {canManage ? (
+            <div className="mb-6 grid gap-3 rounded-3xl border border-border bg-background p-5 md:grid-cols-2 xl:grid-cols-4">
+              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={callForm.clientId} onChange={(event) => setCallForm((current) => ({ ...current, clientId: event.target.value, projectId: '' }))}>
+                <option value="">Select client</option>
+                {clients.map((client) => <option key={client._id} value={client._id}>{client.company || client.name}</option>)}
+              </select>
+              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={callForm.projectId} onChange={(event) => setCallForm((current) => ({ ...current, projectId: event.target.value }))}>
+                <option value="">Select project</option>
+                {selectedClientProjects.map((project) => <option key={project._id} value={project._id}>{project.name}</option>)}
+              </select>
+              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={callForm.callType} onChange={(event) => setCallForm((current) => ({ ...current, callType: event.target.value }))}>
+                {['Incoming', 'Outgoing', 'Missed', 'WhatsApp Call', 'Google Meet', 'Zoom', 'Direct Meeting'].map((item) => <option key={item}>{item}</option>)}
+              </select>
+              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={callForm.callPurpose} onChange={(event) => setCallForm((current) => ({ ...current, callPurpose: event.target.value }))}>
+                {['Payment Follow-up', 'Task Discussion', 'Requirement Collection', 'Approval Follow-up', 'Rework Discussion', 'General Update', 'Complaint', 'Other'].map((item) => <option key={item}>{item}</option>)}
+              </select>
+              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" type="date" value={callForm.callDate} onChange={(event) => setCallForm((current) => ({ ...current, callDate: event.target.value }))} />
+              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" type="time" value={callForm.callTime} onChange={(event) => setCallForm((current) => ({ ...current, callTime: event.target.value }))} />
+              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" placeholder="Spoken with" value={callForm.spokenWith} onChange={(event) => setCallForm((current) => ({ ...current, spokenWith: event.target.value }))} />
+              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" placeholder="Contact number" value={callForm.contactNumber} onChange={(event) => setCallForm((current) => ({ ...current, contactNumber: event.target.value }))} />
+              <textarea className="min-h-24 rounded-2xl border border-border bg-card px-4 py-3 text-sm md:col-span-2" placeholder="Call summary" value={callForm.callSummary} onChange={(event) => setCallForm((current) => ({ ...current, callSummary: event.target.value }))} />
+              <textarea className="min-h-24 rounded-2xl border border-border bg-card px-4 py-3 text-sm md:col-span-2" placeholder="Client response / next action" value={callForm.clientResponse} onChange={(event) => setCallForm((current) => ({ ...current, clientResponse: event.target.value }))} />
+              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" type="date" value={callForm.nextFollowUpDate} onChange={(event) => setCallForm((current) => ({ ...current, nextFollowUpDate: event.target.value }))} />
+              <label className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground"><input type="checkbox" checked={callForm.visibleToClient} onChange={(event) => setCallForm((current) => ({ ...current, visibleToClient: event.target.checked }))} />Visible to client</label>
+              <Button type="button" onClick={handleCreateCall} disabled={createCallHistory.isPending}>Add Call Note</Button>
+            </div>
+          ) : null}
 
-      <AddInvoiceModal
-        open={showAddInvoiceModal}
-        onOpenChange={setShowAddInvoiceModal}
-        invoice={selectedInvoice}
-      />
-
-      <AlertDialog open={!!deleteEntryId} onOpenChange={(open) => !open && setDeleteEntryId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Entry</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this finance entry? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex justify-end gap-3">
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteEntry}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
+          <div className="space-y-4">
+            {callHistory.map((call) => (
+              <div key={call._id} className="rounded-3xl border border-border bg-background p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold text-foreground">{call.clientId?.company || call.clientId?.name} • {call.projectId?.name || 'General'}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{new Date(call.callDate).toLocaleDateString()} {call.callTime ? `• ${call.callTime}` : ''} • {call.callType}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <StatusBadge tone="info">{call.callPurpose}</StatusBadge>
+                    {call.visibleToClient ? <StatusBadge tone="success">Client Visible</StatusBadge> : null}
+                  </div>
+                </div>
+                <p className="mt-3 text-sm text-foreground">{call.callSummary || 'No summary added.'}</p>
+                <p className="mt-2 text-sm text-muted-foreground">Spoken with: {call.spokenWith || 'Not specified'} {call.nextFollowUpDate ? `• Next follow-up: ${new Date(call.nextFollowUpDate).toLocaleDateString()}` : ''}</p>
+              </div>
+            ))}
           </div>
-        </AlertDialogContent>
-      </AlertDialog>
+        </SectionCard>
+      ) : null}
 
-      <AlertDialog open={!!deleteInvoiceId} onOpenChange={(open) => !open && setDeleteInvoiceId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this invoice? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex justify-end gap-3">
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteInvoice}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
+      {activeTab === 'referrals' ? (
+        <SectionCard title="Referral Tracking" description="Track source platforms, conversion quality, and revenue contribution from converted clients.">
+          {canManage ? (
+            <div className="mb-6 grid gap-3 rounded-3xl border border-border bg-background p-5 md:grid-cols-2 xl:grid-cols-4">
+              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={referralForm.clientId} onChange={(event) => setReferralForm((current) => ({ ...current, clientId: event.target.value, projectId: '' }))}>
+                <option value="">Select client</option>
+                {clients.map((client) => <option key={client._id} value={client._id}>{client.company || client.name}</option>)}
+              </select>
+              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={referralForm.projectId} onChange={(event) => setReferralForm((current) => ({ ...current, projectId: event.target.value }))}>
+                <option value="">Select project</option>
+                {referralClientProjects.map((project) => <option key={project._id} value={project._id}>{project.name}</option>)}
+              </select>
+              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={referralForm.referralSource} onChange={(event) => setReferralForm((current) => ({ ...current, referralSource: event.target.value }))}>
+                {['LinkedIn', 'Instagram', 'Facebook', 'WhatsApp', 'Website', 'Google Search', 'Google Ads', 'Existing Client Referral', 'Direct Call', 'Walk-in', 'Friend Referral', 'Partner Referral', 'Other'].map((item) => <option key={item}>{item}</option>)}
+              </select>
+              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={referralForm.leadQuality} onChange={(event) => setReferralForm((current) => ({ ...current, leadQuality: event.target.value }))}>
+                {['Hot', 'Warm', 'Cold'].map((item) => <option key={item}>{item}</option>)}
+              </select>
+              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" placeholder="Referral person name" value={referralForm.referralPersonName} onChange={(event) => setReferralForm((current) => ({ ...current, referralPersonName: event.target.value }))} />
+              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" placeholder="Referral contact" value={referralForm.referralPersonContact} onChange={(event) => setReferralForm((current) => ({ ...current, referralPersonContact: event.target.value }))} />
+              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" placeholder="Platform link" value={referralForm.referralPlatformLink} onChange={(event) => setReferralForm((current) => ({ ...current, referralPlatformLink: event.target.value }))} />
+              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" placeholder="Campaign name" value={referralForm.campaignName} onChange={(event) => setReferralForm((current) => ({ ...current, campaignName: event.target.value }))} />
+              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={referralForm.conversionStatus} onChange={(event) => setReferralForm((current) => ({ ...current, conversionStatus: event.target.value }))}>
+                {['Lead', 'Contacted', 'Proposal Sent', 'Converted', 'Not Converted'].map((item) => <option key={item}>{item}</option>)}
+              </select>
+              <textarea className="min-h-24 rounded-2xl border border-border bg-card px-4 py-3 text-sm md:col-span-2" placeholder="Referral notes" value={referralForm.notes} onChange={(event) => setReferralForm((current) => ({ ...current, notes: event.target.value }))} />
+              <Button type="button" onClick={handleCreateReferral} disabled={createReferral.isPending}>Save Referral</Button>
+            </div>
+          ) : null}
+
+          <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <MetricCard label="Total Leads" value={referralAnalytics.totalLeads || 0} helper="Tracked referral leads" icon={Users2} tone="info" />
+            <MetricCard label="Converted" value={referralAnalytics.convertedLeads || 0} helper="Converted referral clients" icon={CheckCircle2} tone="success" />
+            <MetricCard label="Pending" value={referralAnalytics.pendingLeads || 0} helper="Leads not converted yet" icon={AlertCircle} tone="warning" />
+            <MetricCard label="Revenue" value={currency.format(Number(referralAnalytics.totalRevenueFromConvertedClients || 0))} helper={referralAnalytics.bestPerformingReferralSource ? `Best source: ${referralAnalytics.bestPerformingReferralSource}` : 'No best source yet'} icon={IndianRupee} tone="primary" />
           </div>
-        </AlertDialogContent>
-      </AlertDialog>
+
+          <div className="space-y-4">
+            {filteredReferrals.map((item) => (
+              <div key={item._id} className="rounded-3xl border border-border bg-background p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold text-foreground">{item.client?.company || item.client?.name || item.referralPersonName || 'Referral record'}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{item.referralSource || 'Other'} • {item.campaignName || 'No campaign name'}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {item.leadQuality ? <StatusBadge tone={item.leadQuality === 'Hot' ? 'danger' : item.leadQuality === 'Warm' ? 'warning' : 'neutral'}>{item.leadQuality}</StatusBadge> : null}
+                    {item.conversionStatus ? <StatusBadge tone={item.conversionStatus === 'Converted' ? 'success' : 'info'}>{item.conversionStatus}</StatusBadge> : null}
+                  </div>
+                </div>
+                <p className="mt-3 text-sm text-foreground">{item.notes || 'No notes added.'}</p>
+                {canDeleteFinance ? (
+                  <div className="mt-3">
+                    <Button type="button" variant="outline" onClick={() => deleteReferral.mutate(item._id)}>Delete Referral</Button>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      ) : null}
+
+      <AddFinanceModal open={showFinanceModal} onOpenChange={setShowFinanceModal} entry={selectedRecord} />
+      <AddInvoiceModal open={showInvoiceModal} onOpenChange={setShowInvoiceModal} invoice={selectedInvoice} />
     </div>
   );
 };

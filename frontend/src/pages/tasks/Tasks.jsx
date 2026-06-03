@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { CheckCircle2, Clock, ListChecks, Plus, TimerReset } from 'lucide-react';
-import { useTasks, useDeleteTask, useUpdateTaskStatus } from '../../hooks/useTasks';
 import { AddTaskModal } from '../../components/modals/AddTaskModal';
 import { TaskDetailModal } from '../../components/ui/TaskDetailModal';
 import { DataTable } from '../../components/ui/DataTable';
@@ -16,13 +15,28 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useClients } from '../../hooks/useClients';
+import { useDeleteTask, useTasks, useUpdateTaskStatus } from '../../hooks/useTasks';
+import { useUsers } from '../../hooks/useUsers';
+import PortalTasks from '../portal/sections/PortalTasks';
+import {
+  CONTENT_TASK_TYPE_OPTIONS,
+  NON_CONTENT_TASK_TYPE_OPTIONS,
+  PRIORITY_OPTIONS,
+  TASK_STATUS_OPTIONS,
+  formatTaskTypeLabel,
+  normalizeTaskStatusLabel,
+} from '../../utils/taskFields';
 
 const statusTone = {
   'To Do': 'neutral',
-  'In Progress': 'info',
-  'In Review': 'warning',
-  Done: 'success',
-  Blocked: 'danger',
+  'On Process': 'info',
+  'Waiting for Client': 'warning',
+  Completed: 'success',
+  Rework: 'danger',
+  Approved: 'success',
+  'Rework Completed': 'info',
+  'Review Required': 'warning',
 };
 
 const priorityTone = {
@@ -32,26 +46,53 @@ const priorityTone = {
   Urgent: 'danger',
 };
 
+const ALL_TASK_TYPES = [...CONTENT_TASK_TYPE_OPTIONS, ...NON_CONTENT_TASK_TYPE_OPTIONS];
+
 const Tasks = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [showTaskDetail, setShowTaskDetail] = useState(false);
   const [deleteTaskId, setDeleteTaskId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [filters, setFilters] = useState({
+    search: '',
+    client: '',
+    assignedTo: '',
+    status: '',
+    taskType: '',
+    priority: '',
+    dueDate: '',
+  });
+
   const { user } = useSelector((state) => state.auth);
   const isEmployee = user?.role === 'employee';
-
-  const { data: tasks = [], isLoading } = useTasks({ search: searchTerm, status: statusFilter });
+  const isClient = user?.role === 'client';
+  const { data: tasks = [], isLoading } = useTasks(filters);
+  const { data: clients = [] } = useClients();
+  const { data: users = [] } = useUsers();
   const deleteTaskMutation = useDeleteTask();
   const updateStatusMutation = useUpdateTaskStatus();
 
+  const assignableUsers = useMemo(
+    () => users.filter((person) => ['superAdmin', 'manager', 'employee'].includes(person.role)),
+    [users],
+  );
+
+  const normalizedTasks = useMemo(
+    () => tasks.map((task) => ({
+      ...task,
+      status: normalizeTaskStatusLabel(task.status),
+    })),
+    [tasks],
+  );
+
   const taskMetrics = {
-    total: tasks.length,
-    inProgress: tasks.filter((task) => task.status === 'In Progress').length,
-    done: tasks.filter((task) => task.status === 'Done').length,
-    overdue: tasks.filter((task) => task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'Done').length,
+    total: normalizedTasks.length,
+    inProgress: normalizedTasks.filter((task) => task.status === 'On Process').length,
+    done: normalizedTasks.filter((task) => ['Completed', 'Approved'].includes(task.status)).length,
+    overdue: normalizedTasks.filter(
+      (task) => task.dueDate && new Date(task.dueDate) < new Date() && !['Completed', 'Approved'].includes(task.status),
+    ).length,
   };
 
   const columns = [
@@ -60,8 +101,33 @@ const Tasks = () => {
       label: 'Task',
       render: (row) => (
         <div className="min-w-0">
-          <div className="font-semibold text-foreground">{row.title}</div>
-          <div className="mt-1 text-xs text-muted-foreground">{row.project?.name || 'No project linked'}</div>
+          <div className="font-semibold text-foreground">{row.taskTitle || row.title}</div>
+          <div className="mt-1 text-xs text-muted-foreground">{row.client?.name || row.client?.company || row.clientName || 'No client linked'}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'category',
+      label: 'Category',
+      render: (row) => (
+        <StatusBadge tone={row.taskCategory === 'non_content' ? 'warning' : 'info'}>
+          {row.taskCategory === 'non_content' ? 'Non-Content' : 'Content'}
+        </StatusBadge>
+      ),
+    },
+    {
+      key: 'taskType',
+      label: 'Task Type',
+      render: (row) => formatTaskTypeLabel(row.taskType),
+    },
+    {
+      key: 'assignedTo',
+      label: 'Assigned Person',
+      render: (row) => (
+        <div className="text-sm text-foreground">
+          {Array.isArray(row.assignedTo) && row.assignedTo.length
+            ? row.assignedTo.map((assignee) => assignee.name).join(', ')
+            : row.assignedPersonName || 'Unassigned'}
         </div>
       ),
     },
@@ -69,59 +135,31 @@ const Tasks = () => {
       key: 'status',
       label: 'Status',
       render: (row) => (
-        <select
-          value={row.status}
-          onClick={(event) => event.stopPropagation()}
-          onChange={(event) => updateStatusMutation.mutate({ id: row._id, status: event.target.value })}
-          className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
-        >
-          <option>To Do</option>
-          <option>In Progress</option>
-          <option>In Review</option>
-          <option>Done</option>
-          <option>Blocked</option>
-        </select>
+        isEmployee ? (
+          <StatusBadge tone={statusTone[row.status] || 'neutral'}>{row.status}</StatusBadge>
+        ) : (
+          <select
+            value={row.status}
+            onClick={(event) => event.stopPropagation()}
+            onChange={(event) => updateStatusMutation.mutate({ id: row._id, status: event.target.value })}
+            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+          >
+            {TASK_STATUS_OPTIONS.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        )
       ),
     },
     {
       key: 'priority',
       label: 'Priority',
-      render: (row) => (
-        <StatusBadge tone={priorityTone[row.priority] || 'neutral'}>
-          {row.priority}
-        </StatusBadge>
-      ),
+      render: (row) => <StatusBadge tone={priorityTone[row.priority] || 'neutral'}>{row.priority}</StatusBadge>,
     },
     {
       key: 'dueDate',
       label: 'Due Date',
       render: (row) => row.dueDate ? new Date(row.dueDate).toLocaleDateString() : 'Not set',
-    },
-    {
-      key: 'assignedTo',
-      label: 'Assigned To',
-      render: (row) => (
-        row.assignedTo && row.assignedTo.length > 0 ? (
-          <div className="flex -space-x-2">
-            {row.assignedTo.slice(0, 3).map((assignee) => (
-              <div
-                key={assignee._id}
-                className="flex h-7 w-7 items-center justify-center rounded-full border border-card bg-primary/15 text-[11px] font-bold text-primary"
-                title={assignee.name}
-              >
-                {assignee.name?.charAt(0)}
-              </div>
-            ))}
-            {row.assignedTo.length > 3 ? (
-              <div className="flex h-7 w-7 items-center justify-center rounded-full border border-card bg-primary/15 text-[11px] font-bold text-primary">
-                +{row.assignedTo.length - 3}
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <span className="text-sm text-muted-foreground">Unassigned</span>
-        )
-      ),
     },
   ];
 
@@ -132,14 +170,22 @@ const Tasks = () => {
     }
   };
 
+  const updateFilter = (key, value) => {
+    setFilters((current) => ({ ...current, [key]: value }));
+  };
+
+  if (isClient) {
+    return <PortalTasks />;
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={isEmployee ? 'Personal Workflow' : 'Task Operations'}
-        title={isEmployee ? 'Stay on top of assigned work.' : 'Manage team delivery with clarity.'}
+        eyebrow={isEmployee ? 'Assigned Work' : 'Advanced Task Management'}
+        title={isEmployee ? 'Track and complete your assigned tasks.' : 'Create, assign, and monitor content and operational work.'}
         description={isEmployee
-          ? 'Review what is due, log progress, and keep momentum visible for the rest of the team.'
-          : 'Track task volume, assignment coverage, and progress updates without losing the operational picture.'}
+          ? 'See only the tasks assigned to you, update delivery status, upload completed files, and keep clients informed.'
+          : 'Manage content and non-content tasks with structured requirements, clear ownership, and client approval flow.'}
         actions={!isEmployee ? (
           <Button
             onClick={() => {
@@ -154,37 +200,84 @@ const Tasks = () => {
       >
         <MetricGrid>
           <MetricCard label="Assigned" value={taskMetrics.total} helper="Tasks in the current filtered view" icon={ListChecks} tone="info" />
-          <MetricCard label="In Progress" value={taskMetrics.inProgress} helper="Active work underway right now" icon={Clock} tone="warning" />
-          <MetricCard label="Completed" value={taskMetrics.done} helper="Closed tasks ready to archive" icon={CheckCircle2} tone="success" />
-          <MetricCard label="Overdue" value={taskMetrics.overdue} helper="Needs immediate attention" icon={TimerReset} tone={taskMetrics.overdue > 0 ? 'danger' : 'neutral'} />
+          <MetricCard label="On Process" value={taskMetrics.inProgress} helper="Work that is actively moving" icon={Clock} tone="warning" />
+          <MetricCard label="Completed" value={taskMetrics.done} helper="Completed or approved tasks" icon={CheckCircle2} tone="success" />
+          <MetricCard label="Overdue" value={taskMetrics.overdue} helper="Needs attention right away" icon={TimerReset} tone={taskMetrics.overdue > 0 ? 'danger' : 'neutral'} />
         </MetricGrid>
       </PageHeader>
 
       <PageToolbar>
         <SearchField
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder="Search tasks, projects, or assignees..."
+          value={filters.search}
+          onChange={(event) => updateFilter('search', event.target.value)}
+          placeholder="Search tasks, clients, requirements, or assignees..."
         />
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="app-pill">{tasks.length} tasks</div>
+        <div className="grid w-full gap-2 md:grid-cols-3 xl:grid-cols-6">
+          {!isEmployee && (
+            <select
+              value={filters.client}
+              onChange={(event) => updateFilter('client', event.target.value)}
+              className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+            >
+              <option value="">All clients</option>
+              {clients.map((client) => (
+                <option key={client._id} value={client._id}>{client.name}</option>
+              ))}
+            </select>
+          )}
+          {!isEmployee && (
+            <select
+              value={filters.assignedTo}
+              onChange={(event) => updateFilter('assignedTo', event.target.value)}
+              className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+            >
+              <option value="">All assignees</option>
+              {assignableUsers.map((person) => (
+                <option key={person._id} value={person._id}>{person.name}</option>
+              ))}
+            </select>
+          )}
           <select
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
+            value={filters.status}
+            onChange={(event) => updateFilter('status', event.target.value)}
             className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
           >
             <option value="">All statuses</option>
-            <option value="To Do">To Do</option>
-            <option value="In Progress">In Progress</option>
-            <option value="In Review">In Review</option>
-            <option value="Done">Done</option>
-            <option value="Blocked">Blocked</option>
+            {TASK_STATUS_OPTIONS.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
           </select>
+          <select
+            value={filters.taskType}
+            onChange={(event) => updateFilter('taskType', event.target.value)}
+            className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+          >
+            <option value="">All task types</option>
+            {ALL_TASK_TYPES.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+          <select
+            value={filters.priority}
+            onChange={(event) => updateFilter('priority', event.target.value)}
+            className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+          >
+            <option value="">All priorities</option>
+            {PRIORITY_OPTIONS.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+          <input
+            type="date"
+            value={filters.dueDate}
+            onChange={(event) => updateFilter('dueDate', event.target.value)}
+            className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+          />
         </div>
       </PageToolbar>
 
       <DataTable
-        data={tasks}
+        data={normalizedTasks}
         columns={columns}
         loading={isLoading}
         onRowClick={(task) => {
@@ -197,7 +290,7 @@ const Tasks = () => {
         }}
         onDelete={isEmployee ? null : (id) => setDeleteTaskId(id)}
         emptyTitle="No tasks match this view"
-        emptyDescription="Try a different search or create a new task to get work moving."
+        emptyDescription="Adjust filters or create a new task to keep delivery moving."
       />
 
       <TaskDetailModal

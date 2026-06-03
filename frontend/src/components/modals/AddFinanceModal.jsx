@@ -1,11 +1,7 @@
-// =============================================
-// ADD FINANCE ENTRY FORM - React Hook Form + Zod
-// =============================================
-
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -31,51 +27,45 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useCreateFinanceEntry, useUpdateFinanceEntry } from '../../hooks/useFinance';
+import { useCreateFinanceRecord, useUpdateFinanceRecord } from '../../hooks/useFinance';
 import { useClients } from '../../hooks/useClients';
 import { useProjects } from '../../hooks/useProjects';
 
-const financeFormSchema = z.object({
-  type: z.enum(['Income', 'Expense']).default('Expense'),
-  category: z.string().min(1, 'Category is required'),
-  amount: z.number().min(0, 'Amount must be positive'),
-  description: z.string().optional(),
-  date: z.string(),
-  paymentMethod: z.string().optional(),
-  status: z.enum(['Pending', 'Completed', 'Cancelled']).default('Completed'),
-  client: z.string().optional(),
-  project: z.string().optional(),
+const financeSchema = z.object({
+  clientId: z.string().min(1, 'Client is required'),
+  projectId: z.string().min(1, 'Project is required'),
+  serviceName: z.string().min(1, 'Service name is required'),
+  totalProjectAmount: z.coerce.number().min(0, 'Amount must be positive'),
+  paymentMode: z.string().default('Other'),
+  paymentDueDate: z.string().optional(),
+  nextFollowUpDate: z.string().optional(),
+  paymentNotesText: z.string().optional(),
+  invoiceStatus: z.string().default('Draft'),
+  allowAssignedPersonAccess: z.boolean().default(false),
 });
-
-
-const INCOME_CATEGORIES = ['Service Revenue', 'Product Sales', 'Consulting', 'Other Income'];
-const EXPENSE_CATEGORIES = ['Salary', 'Software', 'Utilities', 'Travel', 'Marketing', 'Office Supplies', 'Other Expense'];
 
 export const AddFinanceModal = ({ open, onOpenChange, entry = null }) => {
   const form = useForm({
-    resolver: zodResolver(financeFormSchema),
+    resolver: zodResolver(financeSchema),
     defaultValues: {
-      type: 'Expense',
-      category: '',
-      amount: 0,
-      description: '',
-      date: new Date().toISOString().split('T')[0],
-      paymentMethod: '',
-      status: 'Completed',
-      client: '',
-      project: '',
+      clientId: '',
+      projectId: '',
+      serviceName: '',
+      totalProjectAmount: 0,
+      paymentMode: 'Other',
+      paymentDueDate: '',
+      nextFollowUpDate: '',
+      paymentNotesText: '',
+      invoiceStatus: 'Draft',
+      allowAssignedPersonAccess: false,
     },
   });
 
   const { data: clients = [] } = useClients();
   const { data: projects = [] } = useProjects();
-  const createEntry = useCreateFinanceEntry();
-  const updateEntry = useUpdateFinanceEntry();
-  const isLoading = createEntry.isPending || updateEntry.isPending;
-
-  const entryType = form.watch('type');
-  const selectedClientId = form.watch('client');
-  const categories = entryType === 'Income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const createFinanceRecord = useCreateFinanceRecord();
+  const updateFinanceRecord = useUpdateFinanceRecord();
+  const selectedClientId = form.watch('clientId');
   const clientProjects = selectedClientId
     ? projects.filter((project) => project.client?._id === selectedClientId || project.client === selectedClientId)
     : projects;
@@ -83,183 +73,81 @@ export const AddFinanceModal = ({ open, onOpenChange, entry = null }) => {
   useEffect(() => {
     if (entry) {
       form.reset({
-        type: entry.type,
-        category: entry.category,
-        amount: entry.amount,
-        description: entry.description || '',
-        date: new Date(entry.date).toISOString().split('T')[0],
-        paymentMethod: entry.paymentMethod || '',
-        status: entry.status,
-        client: entry.client?._id || entry.client || '',
-        project: entry.project?._id || entry.project || '',
+        clientId: entry.clientId?._id || entry.clientId || '',
+        projectId: entry.projectId?._id || entry.projectId || '',
+        serviceName: entry.serviceName || '',
+        totalProjectAmount: Number(entry.totalProjectAmount || entry.totalAmount || 0),
+        paymentMode: entry.paymentMode || 'Other',
+        paymentDueDate: entry.paymentDueDate ? new Date(entry.paymentDueDate).toISOString().split('T')[0] : '',
+        nextFollowUpDate: entry.nextFollowUpDate ? new Date(entry.nextFollowUpDate).toISOString().split('T')[0] : '',
+        paymentNotesText: entry.paymentNotesText || '',
+        invoiceStatus: entry.invoiceStatus || 'Draft',
+        allowAssignedPersonAccess: Boolean(entry.allowAssignedPersonAccess),
       });
-    } else {
-      form.reset({
-        type: 'Expense',
-        category: '',
-        amount: 0,
-        description: '',
-        date: new Date().toISOString().split('T')[0],
-        paymentMethod: '',
-        status: 'Completed',
-        client: '',
-        project: '',
-      });
+      return;
     }
+
+    form.reset({
+      clientId: '',
+      projectId: '',
+      serviceName: '',
+      totalProjectAmount: 0,
+      paymentMode: 'Other',
+      paymentDueDate: '',
+      nextFollowUpDate: '',
+      paymentNotesText: '',
+      invoiceStatus: 'Draft',
+      allowAssignedPersonAccess: false,
+    });
   }, [entry, open, form]);
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (values) => {
     const payload = {
-      ...data,
-      amount: Number(data.amount),
+      ...values,
+      paymentDueDate: values.paymentDueDate || undefined,
+      nextFollowUpDate: values.nextFollowUpDate || undefined,
     };
-    if (!payload.client) delete payload.client;
-    if (!payload.project) delete payload.project;
 
-    if (entry) {
-      await updateEntry.mutateAsync({ id: entry._id, data: payload });
+    if (entry?._id) {
+      await updateFinanceRecord.mutateAsync({ id: entry._id, data: payload });
     } else {
-      await createEntry.mutateAsync(payload);
+      await createFinanceRecord.mutateAsync(payload);
     }
 
-    if (!createEntry.isError && !updateEntry.isError) {
-      form.reset();
-      onOpenChange(false);
-    }
+    onOpenChange(false);
   };
+
+  const isLoading = createFinanceRecord.isPending || updateFinanceRecord.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{entry ? 'Edit Finance Entry' : 'Add Finance Entry'}</DialogTitle>
+          <DialogTitle>{entry ? 'Edit Finance Record' : 'Create Finance Record'}</DialogTitle>
           <DialogDescription>
-            {entry ? 'Update the finance entry' : 'Record income or expense'}
+            Manage total amount, due date, finance visibility, and follow-up schedule for a client project.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
-                name="type"
+                name="clientId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Type *</FormLabel>
+                    <FormLabel>Client *</FormLabel>
                     <Select onValueChange={(value) => {
                       field.onChange(value);
-                      form.setValue('category', '');
+                      form.setValue('projectId', '');
                     }} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Income">Income</SelectItem>
-                        <SelectItem value="Expense">Expense</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="1000.00"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Date *</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="paymentMethod"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Payment Method</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Bank Transfer, Credit Card" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="client"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Client</FormLabel>
-                    <Select onValueChange={(value) => {
-                      field.onChange(value === 'none' ? '' : value);
-                      form.setValue('project', '');
-                    }} value={field.value || 'none'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select client" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">No client</SelectItem>
                         {clients.map((client) => (
-                          <SelectItem key={client._id} value={client._id}>
-                            {client.company || client.name}
-                          </SelectItem>
+                          <SelectItem key={client._id} value={client._id}>{client.company || client.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -270,48 +158,110 @@ export const AddFinanceModal = ({ open, onOpenChange, entry = null }) => {
 
               <FormField
                 control={form.control}
-                name="project"
+                name="projectId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Project</FormLabel>
-                    <Select onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} value={field.value || 'none'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select project" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">No project</SelectItem>
-                        {clientProjects.map((project) => (
-                          <SelectItem key={project._id} value={project._id}>
-                            {project.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
+                    <FormLabel>Project *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Completed">Completed</SelectItem>
-                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                        {clientProjects.map((project) => (
+                          <SelectItem key={project._id} value={project._id}>{project.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="serviceName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Service Name *</FormLabel>
+                    <FormControl><Input placeholder="Website Development" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="totalProjectAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Total Project Amount *</FormLabel>
+                    <FormControl><Input type="number" min="0" step="0.01" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="paymentMode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Payment Mode</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque', 'Other'].map((mode) => (
+                          <SelectItem key={mode} value={mode}>{mode}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="invoiceStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Invoice Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select invoice status" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {['Draft', 'Sent', 'Viewed', 'Partially Paid', 'Paid', 'Cancelled'].map((item) => (
+                          <SelectItem key={item} value={item}>{item}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="paymentDueDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Payment Due Date</FormLabel>
+                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="nextFollowUpDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Next Follow-up Date</FormLabel>
+                    <FormControl><Input type="date" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -320,30 +270,37 @@ export const AddFinanceModal = ({ open, onOpenChange, entry = null }) => {
 
             <FormField
               control={form.control}
-              name="description"
+              name="paymentNotesText"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Additional details..." {...field} />
-                  </FormControl>
+                  <FormLabel>Payment Notes</FormLabel>
+                  <FormControl><Textarea className="min-h-28" placeholder="Advance paid, balance pending, next client commitment..." {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="flex gap-3 justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isLoading}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Saving...' : entry ? 'Update Entry' : 'Add Entry'}
-              </Button>
+            <FormField
+              control={form.control}
+              name="allowAssignedPersonAccess"
+              render={({ field }) => (
+                <FormItem className="rounded-2xl border border-border bg-background px-4 py-3">
+                  <label className="flex items-center gap-3 text-sm font-medium text-foreground">
+                    <input
+                      type="checkbox"
+                      checked={field.value}
+                      onChange={(event) => field.onChange(event.target.checked)}
+                    />
+                    Allow assigned person to view finance and invoice status
+                  </label>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>Cancel</Button>
+              <Button type="submit" disabled={isLoading}>{isLoading ? 'Saving...' : entry ? 'Update Record' : 'Create Record'}</Button>
             </div>
           </form>
         </Form>

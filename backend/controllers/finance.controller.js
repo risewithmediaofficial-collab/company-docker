@@ -5,18 +5,25 @@
 import Invoice from '../models/invoice.model.js';
 import Expense from '../models/expense.model.js';
 import FinanceEntry from '../models/financeEntry.model.js';
+import Finance from '../models/finance.model.js';
+import PaymentNote from '../models/paymentNote.model.js';
 import Referral from '../models/referral.model.js';
 import Client from '../models/client.model.js';
 import Project from '../models/project.model.js';
 import Payment from '../models/payment.model.js';
+import CallHistory from '../models/callHistory.model.js';
+import Task from '../models/task.model.js';
 import { createNotification } from '../utils/notification.js';
 import { sendEmail } from '../utils/email.js';
 import { createActivityLog } from '../utils/activity.js';
+import { withWorkspaceScope } from '../middleware/auth.middleware.js';
 
 const invoiceStatusMap = {
   Draft: 'draft',
   Sent: 'sent',
+  Viewed: 'viewed',
   Pending: 'sent',
+  'Partially Paid': 'partially_paid',
   Paid: 'paid',
   Overdue: 'overdue',
   Cancelled: 'cancelled',
@@ -25,6 +32,8 @@ const invoiceStatusMap = {
 const invoiceStatusLabels = {
   draft: 'Draft',
   sent: 'Sent',
+  viewed: 'Viewed',
+  partially_paid: 'Partially Paid',
   paid: 'Paid',
   overdue: 'Overdue',
   cancelled: 'Cancelled',
@@ -32,14 +41,120 @@ const invoiceStatusLabels = {
 
 const normalizeStatus = (value = '') => invoiceStatusMap[value] || value.toString().toLowerCase();
 
+const financeRoles = ['superAdmin', 'manager', 'financeManager'];
+const paymentModes = ['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque', 'Other'];
+
+const toNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const normalizeBoolean = (value, fallback = false) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value === 'true';
+  return fallback;
+};
+
+const getTodayRange = () => {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+};
+
+const canManageFinance = (user) => financeRoles.includes(user?.role) || Boolean(user?.permissions?.canManageFinance);
+
+const getClientScopeForUser = async (user) => {
+  if (!user) return { clientIds: [], projectIds: [] };
+  if (canManageFinance(user) || user.role === 'superAdmin') return { unrestricted: true };
+
+  if (user.role === 'client') {
+    const client = await Client.findOne({ userId: user._id }).select('_id');
+    return { clientIds: client ? [client._id] : [], projectIds: [] };
+  }
+
+  const [clients, projects, tasks] = await Promise.all([
+    Client.find({ $or: [{ assignedManager: user._id }, { assignedTeam: user._id }] }).select('_id'),
+    Project.find({ $or: [{ manager: user._id }, { team: user._id }] }).select('_id client'),
+    Task.find({ assignedTo: user._id }).select('project client'),
+  ]);
+
+  return {
+    clientIds: [
+      ...clients.map((item) => item._id.toString()),
+      ...projects.map((item) => item.client?.toString()).filter(Boolean),
+      ...tasks.map((item) => item.client?.toString()).filter(Boolean),
+    ],
+    projectIds: [
+      ...projects.map((item) => item._id.toString()),
+      ...tasks.map((item) => item.project?.toString()).filter(Boolean),
+    ],
+  };
+};
+
+const buildScopedFilter = async (req, baseFilter = {}, { clientField = 'clientId', projectField = 'projectId', respectClientVisibility = false } = {}) => {
+  const scope = withWorkspaceScope(req, { ...baseFilter });
+  const access = await getClientScopeForUser(req.user);
+
+  if (access.unrestricted) {
+    if (req.user.role === 'client' && respectClientVisibility) {
+      return { ...scope, visibleToClient: true };
+    }
+    return scope;
+  }
+
+  if (req.user.role === 'client') {
+    const clientIds = access.clientIds || [];
+    return {
+      ...scope,
+      [clientField]: { $in: clientIds.length ? clientIds : [null] },
+      ...(respectClientVisibility ? { visibleToClient: true } : {}),
+    };
+  }
+
+  const clientIds = [...new Set((access.clientIds || []).filter(Boolean))];
+  const projectIds = [...new Set((access.projectIds || []).filter(Boolean))];
+
+  return {
+    ...scope,
+    $or: [
+      { [clientField]: { $in: clientIds.length ? clientIds : [null] } },
+      { [projectField]: { $in: projectIds.length ? projectIds : [null] } },
+    ],
+  };
+};
+
+const serializeFinanceRecord = (record) => {
+  const item = record?.toObject ? record.toObject() : record;
+  if (!item) return null;
+
+  return {
+    ...item,
+    totalAmount: item.totalProjectAmount,
+    paidAmount: item.totalPaidAmount,
+    clientName: item.clientName || item.clientId?.name || item.clientId?.company || '',
+    projectName: item.projectName || item.projectId?.name || '',
+  };
+};
+
+const serializePaymentNote = (note) => {
+  const item = note?.toObject ? note.toObject() : note;
+  if (!item) return null;
+  return item;
+};
+
 const serializeInvoice = (invoice) => {
   const item = invoice?.toObject ? invoice.toObject() : invoice;
   if (!item) return null;
 
   return {
     ...item,
-    amount: item.total,
-    description: item.lineItems?.[0]?.description || item.notes || '',
+    amount: item.totalAmount || item.total,
+    totalAmount: item.totalAmount || item.total,
+    balanceAmount: item.balanceAmount ?? Math.max(Number(item.totalAmount || item.total || 0) - Number(item.paidAmount || 0), 0),
+    description: item.lineItems?.[0]?.description || item.invoiceItems?.[0]?.description || item.notes || '',
+    invoiceStatus: invoiceStatusLabels[item.status] || item.status,
     status: invoiceStatusLabels[item.status] || item.status,
   };
 };
@@ -68,59 +183,135 @@ const resolveClientProject = async ({ clientId, projectId }) => {
   return { ok: true, client, project };
 };
 
+const recalculateFinanceRecord = async (financeId) => {
+  const finance = await Finance.findById(financeId);
+  if (!finance) return null;
+
+  const notes = await PaymentNote.find({ financeId: finance._id });
+  finance.totalPaidAmount = notes.reduce((sum, note) => sum + Number(note.amountPaid || 0), 0);
+  finance.advancePaid = finance.totalPaidAmount;
+  finance.balanceAmount = Math.max(Number(finance.totalProjectAmount || 0) - Number(finance.totalPaidAmount || 0), 0);
+
+  if (finance.balanceAmount === 0 && finance.totalProjectAmount > 0) {
+    finance.paymentStatus = 'Paid';
+    finance.invoiceStatus = finance.invoiceStatus === 'Cancelled' ? 'Cancelled' : 'Paid';
+  } else if (finance.totalPaidAmount > 0) {
+    finance.paymentStatus = 'Partially Paid';
+    if (finance.invoiceStatus !== 'Cancelled') finance.invoiceStatus = 'Partially Paid';
+  } else {
+    finance.paymentStatus = 'Not Paid';
+  }
+
+  if (finance.paymentDueDate && new Date(finance.paymentDueDate) < new Date() && finance.balanceAmount > 0) {
+    finance.paymentStatus = 'Overdue';
+  }
+
+  if (notes.length) {
+    const latestNote = notes.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate))[0];
+    finance.paymentMode = latestNote.paymentMode || finance.paymentMode;
+    finance.paymentDate = latestNote.paymentDate || finance.paymentDate;
+    finance.nextFollowUpDate = latestNote.nextFollowUpDate || finance.nextFollowUpDate;
+  }
+
+  await finance.save();
+  return finance;
+};
+
+const buildFinanceRecordPayload = async (req, body = {}, currentRecord = null) => {
+  const match = await resolveClientProject({
+    clientId: body.clientId || body.client || currentRecord?.clientId,
+    projectId: body.projectId || body.project || currentRecord?.projectId,
+  });
+  if (!match.ok) return match;
+
+  const record = {
+    serviceName: body.serviceName || currentRecord?.serviceName || '',
+    totalProjectAmount: toNumber(body.totalProjectAmount ?? body.totalAmount, currentRecord?.totalProjectAmount || 0),
+    advancePaid: toNumber(body.advancePaid, currentRecord?.advancePaid || 0),
+    totalPaidAmount: toNumber(body.paidAmount ?? body.totalPaidAmount, currentRecord?.totalPaidAmount || 0),
+    balanceAmount: 0,
+    paymentStatus: body.paymentStatus || currentRecord?.paymentStatus || 'Not Paid',
+    paymentMode: paymentModes.includes(body.paymentMode) ? body.paymentMode : (currentRecord?.paymentMode || 'Other'),
+    paymentDate: body.paymentDate || currentRecord?.paymentDate || undefined,
+    paymentDueDate: body.paymentDueDate || currentRecord?.paymentDueDate || undefined,
+    nextFollowUpDate: body.nextFollowUpDate || currentRecord?.nextFollowUpDate || undefined,
+    paymentNotesText: body.paymentNotes || body.paymentNotesText || currentRecord?.paymentNotesText || '',
+    invoiceStatus: body.invoiceStatus || currentRecord?.invoiceStatus || 'Draft',
+    allowAssignedPersonAccess: normalizeBoolean(body.allowAssignedPersonAccess, currentRecord?.allowAssignedPersonAccess || false),
+    clientId: match.client?._id,
+    projectId: match.project?._id,
+    clientName: match.client?.name || match.client?.company || '',
+    projectName: match.project?.name || '',
+    updatedBy: req.user._id,
+  };
+
+  record.balanceAmount = Math.max(record.totalProjectAmount - record.totalPaidAmount, 0);
+  return { ok: true, record, client: match.client, project: match.project };
+};
+
 const buildInvoicePayload = (body = {}) => {
-  const amount = Number(body.amount || body.total || 0);
+  const amount = Number(body.amount || body.total || body.totalAmount || 0);
+  const discount = Number(body.discount) || 0;
+  const taxRate = Number(body.taxRate || body.tax || 0) || 0;
+  const issueDate = body.issueDate || body.invoiceDate;
   const payload = {
     ...body,
     status: normalizeStatus(body.status || 'draft'),
-    taxRate: Number(body.taxRate) || 0,
-    discount: Number(body.discount) || 0,
+    taxRate,
+    discount,
     paidAmount: Number(body.paidAmount) || 0,
+    issueDate,
+    invoiceDate: issueDate,
+    paymentTerms: body.paymentTerms || body.terms || '',
+    serviceDetails: body.serviceDetails || body.description || '',
+    paymentLink: body.paymentLink || '',
+    allowAssignedPersonAccess: normalizeBoolean(body.allowAssignedPersonAccess),
   };
 
   if (!payload.invoiceNumber?.trim()) delete payload.invoiceNumber;
 
-  payload.lineItems = Array.isArray(body.lineItems) && body.lineItems.length
-    ? body.lineItems.map((item) => ({
-      description: item.description,
+  const sourceItems = Array.isArray(body.invoiceItems) && body.invoiceItems.length
+    ? body.invoiceItems
+    : Array.isArray(body.lineItems) && body.lineItems.length
+      ? body.lineItems
+      : null;
+
+  payload.lineItems = sourceItems
+    ? sourceItems.map((item) => ({
+      serviceName: item.serviceName || item.name || '',
+      description: item.description || item.serviceName || 'Service item',
       quantity: Number(item.quantity) || 1,
-      unitPrice: Number(item.unitPrice) || 0,
+      unitPrice: Number(item.unitPrice ?? item.rate ?? 0) || 0,
+      rate: Number(item.rate ?? item.unitPrice ?? 0) || 0,
+      amount: Number(item.amount || 0) || ((Number(item.quantity) || 1) * (Number(item.unitPrice ?? item.rate ?? 0) || 0)),
     }))
     : [{
+      serviceName: body.serviceName || 'Service',
       description: body.description || 'Professional services',
       quantity: 1,
       unitPrice: amount,
+      rate: amount,
+      amount,
     }];
+
+  payload.invoiceItems = payload.lineItems;
+  payload.balanceAmount = Math.max(amount - payload.paidAmount, 0);
 
   return payload;
 };
 
 const getClientForUser = async (userId) => Client.findOne({ userId }).select('_id name company assignedManager');
 
-const applyClientInvoiceScope = async (req, filter = {}) => {
-  if (req.user.role !== 'client') return filter;
-
-  const client = await getClientForUser(req.user._id);
-  if (!client) return { ...filter, _id: null };
-
-  return { ...filter, client: client._id };
-};
+const applyClientInvoiceScope = async (req, filter = {}) => buildScopedFilter(req, filter, {
+  clientField: 'client',
+  projectField: 'project',
+});
 
 const assertInvoiceAccess = async (req, invoice) => {
   if (!invoice) return { allowed: false, status: 404, message: 'Invoice not found' };
-  if (req.user.role === 'superAdmin') return { allowed: true };
-  if (req.user.role === 'manager') return { allowed: true };
-
-  if (req.user.role === 'client') {
-    const client = await getClientForUser(req.user._id);
-    if (client && invoice.client?.toString() === client._id.toString()) {
-      return { allowed: true };
-    }
-
-    return { allowed: false, status: 403, message: 'Access denied' };
-  }
-
-  return { allowed: false, status: 403, message: 'Access denied' };
+  const scopedFilter = await applyClientInvoiceScope(req, { _id: invoice._id });
+  const allowed = await Invoice.exists(scopedFilter);
+  return allowed ? { allowed: true } : { allowed: false, status: 403, message: 'Access denied' };
 };
 
 const recordPayment = async ({
@@ -178,6 +369,314 @@ const maybeCreateReferralEarning = async ({ invoice, io }) => {
   }
 
   return { referral, earnedAmount };
+};
+
+// ---- FINANCE RECORDS ----
+
+export const getFinanceRecords = async (req, res) => {
+  try {
+    const { clientId, projectId, paymentStatus, invoiceStatus, search } = req.query;
+    const filter = {};
+    if (clientId) filter.clientId = clientId;
+    if (projectId) filter.projectId = projectId;
+    if (paymentStatus) filter.paymentStatus = paymentStatus;
+    if (invoiceStatus) filter.invoiceStatus = invoiceStatus;
+    if (search) {
+      filter.$or = [
+        { serviceName: { $regex: search, $options: 'i' } },
+        { clientName: { $regex: search, $options: 'i' } },
+        { projectName: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const scopedFilter = await buildScopedFilter(req, filter);
+    const records = await Finance.find(scopedFilter)
+      .populate('clientId', 'name company email phone assignedManager assignedTeam')
+      .populate('projectId', 'name manager team')
+      .populate('createdBy', 'name')
+      .populate('updatedBy', 'name')
+      .sort({ updatedAt: -1, createdAt: -1 });
+
+    res.json({ success: true, records: records.map(serializeFinanceRecord) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getFinanceRecord = async (req, res) => {
+  try {
+    const scopedFilter = await buildScopedFilter(req, { _id: req.params.id });
+    const record = await Finance.findOne(scopedFilter)
+      .populate('clientId', 'name company email phone')
+      .populate('projectId', 'name status')
+      .populate('createdBy', 'name')
+      .populate('updatedBy', 'name');
+
+    if (!record) return res.status(404).json({ success: false, message: 'Finance record not found' });
+
+    const [paymentNotes, callHistory] = await Promise.all([
+      PaymentNote.find({ financeId: record._id })
+        .populate('addedBy', 'name')
+        .sort({ paymentDate: -1, createdAt: -1 }),
+      CallHistory.find(await buildScopedFilter(req, { clientId: record.clientId, projectId: record.projectId }, { respectClientVisibility: req.user.role === 'client' }))
+        .populate('addedBy', 'name')
+        .sort({ callDate: -1, createdAt: -1 })
+        .limit(10),
+    ]);
+
+    res.json({
+      success: true,
+      record: serializeFinanceRecord(record),
+      paymentNotes: paymentNotes.map(serializePaymentNote),
+      callHistory,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const createFinanceRecord = async (req, res) => {
+  try {
+    const payload = await buildFinanceRecordPayload(req, req.body);
+    if (!payload.ok) return res.status(payload.status).json({ success: false, message: payload.message });
+    if (!payload.record.serviceName?.trim()) {
+      return res.status(400).json({ success: false, message: 'Service name is required' });
+    }
+
+    const existing = await Finance.findOne(withWorkspaceScope(req, {
+      clientId: payload.record.clientId,
+      projectId: payload.record.projectId,
+      serviceName: payload.record.serviceName,
+    }));
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'A finance record already exists for this client, project, and service' });
+    }
+
+    const record = await Finance.create({
+      ...payload.record,
+      organizationId: req.user.organizationId,
+      brandId: req.headers['x-workspace-id'] || undefined,
+      createdBy: req.user._id,
+    });
+
+    await createActivityLog({
+      actor: req.user,
+      action: 'finance.record.created',
+      entityType: 'finance_record',
+      entityId: record._id,
+      title: 'Finance record created',
+      description: `${record.serviceName} finance record was created.`,
+      relatedClient: record.clientId,
+      relatedProject: record.projectId,
+      metadata: { totalProjectAmount: record.totalProjectAmount },
+    });
+
+    const populated = await Finance.findById(record._id)
+      .populate('clientId', 'name company')
+      .populate('projectId', 'name')
+      .populate('createdBy', 'name');
+
+    res.status(201).json({ success: true, record: serializeFinanceRecord(populated) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const updateFinanceRecord = async (req, res) => {
+  try {
+    const current = await Finance.findOne(await buildScopedFilter(req, { _id: req.params.id }));
+    if (!current) return res.status(404).json({ success: false, message: 'Finance record not found' });
+
+    const payload = await buildFinanceRecordPayload(req, req.body, current);
+    if (!payload.ok) return res.status(payload.status).json({ success: false, message: payload.message });
+
+    Object.assign(current, payload.record);
+    await current.save();
+    await recalculateFinanceRecord(current._id);
+
+    const populated = await Finance.findById(current._id)
+      .populate('clientId', 'name company')
+      .populate('projectId', 'name')
+      .populate('createdBy', 'name')
+      .populate('updatedBy', 'name');
+
+    await createActivityLog({
+      actor: req.user,
+      action: 'finance.record.updated',
+      entityType: 'finance_record',
+      entityId: current._id,
+      title: 'Finance record updated',
+      description: `${current.serviceName} finance record was updated.`,
+      relatedClient: current.clientId,
+      relatedProject: current.projectId,
+      metadata: { fields: Object.keys(req.body || {}) },
+    });
+
+    res.json({ success: true, record: serializeFinanceRecord(populated) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const deleteFinanceRecord = async (req, res) => {
+  try {
+    const record = await Finance.findOneAndDelete(await buildScopedFilter(req, { _id: req.params.id }));
+    if (!record) return res.status(404).json({ success: false, message: 'Finance record not found' });
+
+    await PaymentNote.deleteMany({ financeId: record._id });
+
+    await createActivityLog({
+      actor: req.user,
+      action: 'finance.record.deleted',
+      entityType: 'finance_record',
+      entityId: record._id,
+      title: 'Finance record deleted',
+      description: `${record.serviceName} finance record was deleted.`,
+      relatedClient: record.clientId,
+      relatedProject: record.projectId,
+    });
+
+    res.json({ success: true, message: 'Finance record deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getFinanceRecordsByClient = async (req, res) => {
+  req.query.clientId = req.params.clientId;
+  return getFinanceRecords(req, res);
+};
+
+export const getFinanceRecordsByProject = async (req, res) => {
+  req.query.projectId = req.params.projectId;
+  return getFinanceRecords(req, res);
+};
+
+export const addPaymentNote = async (req, res) => {
+  try {
+    const finance = await Finance.findOne(await buildScopedFilter(req, { _id: req.params.id }));
+    if (!finance) return res.status(404).json({ success: false, message: 'Finance record not found' });
+
+    if (!req.body.noteTitle?.trim()) {
+      return res.status(400).json({ success: false, message: 'Note title is required' });
+    }
+
+    const amountPaid = toNumber(req.body.amountPaid);
+    const nextBalance = Math.max(Number(finance.totalProjectAmount || 0) - (Number(finance.totalPaidAmount || 0) + amountPaid), 0);
+
+    const note = await PaymentNote.create({
+      organizationId: req.user.organizationId,
+      financeId: finance._id,
+      clientId: finance.clientId,
+      projectId: finance.projectId,
+      noteTitle: req.body.noteTitle,
+      noteDescription: req.body.noteDescription || '',
+      amountPaid,
+      paymentMode: paymentModes.includes(req.body.paymentMode) ? req.body.paymentMode : 'Other',
+      paymentDate: req.body.paymentDate || new Date(),
+      balanceAfterPayment: nextBalance,
+      nextFollowUpDate: req.body.nextFollowUpDate || undefined,
+      visibleToClient: normalizeBoolean(req.body.visibleToClient),
+      addedBy: req.user._id,
+    });
+
+    finance.paymentNotes.push(note._id);
+    if (req.body.nextFollowUpDate) finance.nextFollowUpDate = req.body.nextFollowUpDate;
+    if (req.body.paymentDate) finance.paymentDate = req.body.paymentDate;
+    if (req.body.paymentMode) finance.paymentMode = req.body.paymentMode;
+    await finance.save();
+    await recalculateFinanceRecord(finance._id);
+
+    const populated = await PaymentNote.findById(note._id).populate('addedBy', 'name');
+
+    const client = await Client.findById(finance.clientId).select('userId name assignedManager assignedTeam');
+    if (client?.userId && populated.visibleToClient) {
+      await createNotification({
+        recipient: client.userId,
+        sender: req.user._id,
+        type: 'invoice_paid',
+        title: 'Payment Updated',
+        message: `Payment status updated for ${client.name}.`,
+        link: '/portal/invoices',
+        metadata: { financeId: finance._id },
+      }, req.app.get('io'));
+    }
+
+    await createActivityLog({
+      actor: req.user,
+      action: 'finance.payment_note.created',
+      entityType: 'payment_note',
+      entityId: note._id,
+      title: 'Payment note added',
+      description: `${note.noteTitle} was added.`,
+      relatedClient: finance.clientId,
+      relatedProject: finance.projectId,
+      metadata: { amountPaid },
+    });
+
+    res.status(201).json({ success: true, note: serializePaymentNote(populated) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const getPaymentNotes = async (req, res) => {
+  try {
+    const finance = await Finance.findOne(await buildScopedFilter(req, { _id: req.params.id }));
+    if (!finance) return res.status(404).json({ success: false, message: 'Finance record not found' });
+
+    const notes = await PaymentNote.find({
+      financeId: finance._id,
+      ...(req.user.role === 'client' ? { visibleToClient: true } : {}),
+    })
+      .populate('addedBy', 'name')
+      .sort({ paymentDate: -1, createdAt: -1 });
+
+    res.json({ success: true, notes: notes.map(serializePaymentNote) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const addInternalFinanceNote = async (req, res) => {
+  try {
+    const finance = await Finance.findOne(await buildScopedFilter(req, { _id: req.params.id }));
+    if (!finance) return res.status(404).json({ success: false, message: 'Finance record not found' });
+
+    finance.internalNotes.push({
+      followUpNote: req.body.followUpNote || '',
+      followUpDate: req.body.followUpDate || new Date(),
+      nextFollowUpDate: req.body.nextFollowUpDate || undefined,
+      spokenWith: req.body.spokenWith || '',
+      clientResponse: req.body.clientResponse || '',
+      paymentPromiseDate: req.body.paymentPromiseDate || undefined,
+      amountPromised: toNumber(req.body.amountPromised),
+      addedBy: req.user._id,
+    });
+    if (req.body.nextFollowUpDate) finance.nextFollowUpDate = req.body.nextFollowUpDate;
+    await finance.save();
+
+    res.status(201).json({ success: true, record: serializeFinanceRecord(finance) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const getOverdueFinanceRecords = async (req, res) => {
+  try {
+    const filter = await buildScopedFilter(req, {
+      paymentDueDate: { $lt: new Date() },
+      balanceAmount: { $gt: 0 },
+    });
+    const records = await Finance.find(filter)
+      .populate('clientId', 'name company')
+      .populate('projectId', 'name')
+      .sort({ paymentDueDate: 1 });
+
+    res.json({ success: true, records: records.map(serializeFinanceRecord) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 // ---- FINANCE ENTRIES ----
@@ -394,9 +893,34 @@ export const createInvoice = async (req, res) => {
     const invoice = await Invoice.create({
       ...payload,
       issuedBy: req.user._id,
+      createdBy: req.user._id,
       client: client._id,
+      clientId: client._id,
       project: project?._id,
+      projectId: project?._id,
+      clientDetails: {
+        name: client.name || '',
+        businessName: client.company || '',
+        email: client.email || '',
+        phone: client.phone || '',
+        address: [
+          client.address?.street,
+          client.address?.city,
+          client.address?.state,
+          client.address?.country,
+          client.address?.zip,
+        ].filter(Boolean).join(', '),
+      },
     });
+
+    const existingFinance = project?._id
+      ? await Finance.findOne(withWorkspaceScope(req, { clientId: client._id, projectId: project._id }))
+      : null;
+    if (existingFinance) {
+      existingFinance.invoiceStatus = invoice.status === 'partially_paid' ? 'Partially Paid' : (invoiceStatusLabels[invoice.status] || 'Draft');
+      existingFinance.paymentDueDate = invoice.dueDate || existingFinance.paymentDueDate;
+      await existingFinance.save();
+    }
 
     if (invoice.status === 'paid') {
       invoice.paidDate = invoice.issueDate || new Date();
@@ -419,8 +943,8 @@ export const createInvoice = async (req, res) => {
         sender: req.user._id,
         type: 'invoice_sent',
         title: 'New Invoice Created',
-        message: `Invoice ${invoice.invoiceNumber} has been prepared for your account.`,
-        link: '/finance',
+        message: `New invoice has been generated for ${project?.name || payload.serviceDetails || 'your project'}. Please review your invoice.`,
+        link: '/portal/invoices',
       }, req.app.get('io'));
     }
 
@@ -523,9 +1047,15 @@ html: `<p>Dear ${invoice.client.name},</p><p>Your invoice <strong>${invoice.invo
         sender: req.user._id,
         type: 'invoice_sent',
         title: 'Invoice Sent',
-        message: `Invoice ${invoice.invoiceNumber} has been sent.`,
-        link: '/finance',
+        message: `New invoice has been generated for ${invoice.project?.name || 'your project'}. Please review your invoice.`,
+        link: '/portal/invoices',
       }, req.app.get('io'));
+    }
+
+    const finance = await Finance.findOne(withWorkspaceScope(req, { clientId: invoice.client?._id || invoice.client, projectId: invoice.project }));
+    if (finance) {
+      finance.invoiceStatus = 'Sent';
+      await finance.save();
     }
 
     await createActivityLog({
@@ -557,6 +1087,7 @@ export const markInvoicePaid = async (req, res) => {
     invoice.status = 'paid';
     invoice.paidDate = new Date();
     invoice.paidAmount = paidAmount;
+    invoice.balanceAmount = Math.max(Number(invoice.totalAmount || invoice.total || 0) - paidAmount, 0);
     invoice.paymentMethod = req.body.paymentMethod || invoice.paymentMethod || 'manual';
     invoice.paymentReference = req.body.paymentReference || invoice.paymentReference || '';
     await invoice.save();
@@ -574,14 +1105,20 @@ export const markInvoicePaid = async (req, res) => {
       maybeCreateReferralEarning({ invoice, io: req.app.get('io') }),
     ]);
 
+    const finance = await Finance.findOne(withWorkspaceScope(req, { clientId: invoice.client?._id || invoice.client, projectId: invoice.project }));
+    if (finance) {
+      finance.invoiceStatus = 'Paid';
+      await finance.save();
+    }
+
     if (invoice.client?.userId) {
       await createNotification({
         recipient: invoice.client.userId,
         sender: req.user._id,
         type: 'invoice_paid',
         title: 'Payment Received',
-        message: `Payment for invoice ${invoice.invoiceNumber} has been recorded.`,
-        link: '/finance',
+        message: `Payment status updated for ${invoice.client.name}.`,
+        link: '/portal/invoices',
       }, req.app.get('io'));
     }
 
@@ -602,6 +1139,105 @@ export const markInvoicePaid = async (req, res) => {
     });
 
     res.json({ success: true, message: 'Invoice marked as paid', invoice: serializeInvoice(invoice) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const addPartialPaymentToInvoice = async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id).populate('client', 'name userId assignedManager assignedTeam');
+    if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found' });
+
+    const amount = toNumber(req.body.amountPaid);
+    if (amount <= 0) {
+      return res.status(400).json({ success: false, message: 'Amount paid must be greater than zero' });
+    }
+
+    const nextPaidAmount = Number(invoice.paidAmount || 0) + amount;
+    invoice.paidAmount = nextPaidAmount;
+    invoice.balanceAmount = Math.max(Number(invoice.totalAmount || invoice.total || 0) - nextPaidAmount, 0);
+    invoice.paymentMethod = req.body.paymentMethod || invoice.paymentMethod || 'manual';
+    invoice.paymentReference = req.body.paymentReference || invoice.paymentReference || '';
+    invoice.paidDate = req.body.paymentDate || new Date();
+    invoice.status = invoice.balanceAmount === 0 ? 'paid' : 'partially_paid';
+    if (invoice.status === 'paid') invoice.viewedByClient = true;
+    await invoice.save();
+
+    await recordPayment({
+      invoice,
+      amount,
+      method: invoice.paymentMethod,
+      reference: invoice.paymentReference,
+      notes: req.body.notes || 'Partial payment',
+      recordedBy: req.user._id,
+    });
+
+    const finance = await Finance.findOne(withWorkspaceScope(req, { clientId: invoice.client?._id || invoice.client, projectId: invoice.project }));
+    if (finance) {
+      finance.invoiceStatus = invoice.status === 'paid' ? 'Paid' : 'Partially Paid';
+      await finance.save();
+    }
+
+    if (invoice.client?.userId) {
+      await createNotification({
+        recipient: invoice.client.userId,
+        sender: req.user._id,
+        type: 'invoice_paid',
+        title: 'Payment Updated',
+        message: `Payment status updated for ${invoice.client.name}.`,
+        link: '/portal/invoices',
+        metadata: { invoiceId: invoice._id, amountPaid: amount },
+      }, req.app.get('io'));
+    }
+
+    res.json({ success: true, invoice: serializeInvoice(invoice) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const markInvoiceViewed = async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id).populate('client', 'name assignedManager assignedTeam');
+    if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found' });
+
+    invoice.viewedByClient = true;
+    invoice.viewedAt = new Date();
+    if (invoice.status === 'sent') invoice.status = 'viewed';
+    await invoice.save();
+
+    const recipients = [
+      invoice.createdBy,
+      ...(invoice.client?.assignedTeam || []),
+      invoice.client?.assignedManager,
+    ].filter(Boolean);
+
+    await Promise.all(recipients.map((recipient) => createNotification({
+      recipient,
+      sender: req.user._id,
+      type: 'invoice_sent',
+      title: 'Invoice Viewed',
+      message: `Invoice ${invoice.invoiceNumber} was viewed by the client.`,
+      link: '/finance',
+      metadata: { invoiceId: invoice._id },
+    }, req.app.get('io'))));
+
+    res.json({ success: true, invoice: serializeInvoice(invoice) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getInvoiceByPublicLink = async (req, res) => {
+  try {
+    const invoice = await Invoice.findOne({ invoicePublicLink: req.params.publicLink })
+      .populate('client', 'name company email phone')
+      .populate('project', 'name');
+    if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found' });
+
+    const payments = await Payment.find({ invoice: invoice._id }).sort({ paidAt: -1 });
+    res.json({ success: true, invoice: serializeInvoice(invoice), payments });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -663,6 +1299,157 @@ export const getPayments = async (req, res) => {
       .limit(Number(limit));
 
     res.json({ success: true, total, payments });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ---- CALL HISTORY ----
+
+export const getCallHistory = async (req, res) => {
+  try {
+    const { clientId, projectId, callPurpose, callDate, addedBy } = req.query;
+    const filter = {};
+    if (clientId) filter.clientId = clientId;
+    if (projectId) filter.projectId = projectId;
+    if (callPurpose) filter.callPurpose = callPurpose;
+    if (addedBy) filter.addedBy = addedBy;
+    if (callDate) {
+      const date = new Date(callDate);
+      if (!Number.isNaN(date.getTime())) {
+        const start = new Date(date);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(date);
+        end.setHours(23, 59, 59, 999);
+        filter.callDate = { $gte: start, $lte: end };
+      }
+    }
+
+    const scopedFilter = await buildScopedFilter(req, filter, {
+      respectClientVisibility: req.user.role === 'client',
+    });
+
+    const calls = await CallHistory.find(scopedFilter)
+      .populate('clientId', 'name company')
+      .populate('projectId', 'name')
+      .populate('relatedTaskId', 'title taskTitle')
+      .populate('relatedInvoiceId', 'invoiceNumber')
+      .populate('addedBy', 'name')
+      .sort({ callDate: -1, createdAt: -1 });
+
+    res.json({ success: true, calls });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const addCallHistory = async (req, res) => {
+  try {
+    const match = await resolveClientProject({
+      clientId: req.body.clientId || req.body.client,
+      projectId: req.body.projectId || req.body.project,
+    });
+    if (!match.ok) return res.status(match.status).json({ success: false, message: match.message });
+
+    const call = await CallHistory.create({
+      organizationId: req.user.organizationId,
+      brandId: req.headers['x-workspace-id'] || undefined,
+      clientId: match.client._id,
+      projectId: match.project?._id,
+      callDate: req.body.callDate || new Date(),
+      callTime: req.body.callTime || '',
+      callType: req.body.callType || 'Outgoing',
+      spokenWith: req.body.spokenWith || '',
+      contactNumber: req.body.contactNumber || '',
+      callPurpose: req.body.callPurpose || 'General Update',
+      callSummary: req.body.callSummary || '',
+      clientResponse: req.body.clientResponse || '',
+      nextAction: req.body.nextAction || '',
+      nextFollowUpDate: req.body.nextFollowUpDate || undefined,
+      relatedTaskId: req.body.relatedTaskId || undefined,
+      relatedInvoiceId: req.body.relatedInvoiceId || undefined,
+      visibleToClient: normalizeBoolean(req.body.visibleToClient),
+      allowAssignedPersonAccess: normalizeBoolean(req.body.allowAssignedPersonAccess, true),
+      addedBy: req.user._id,
+    });
+
+    const populated = await CallHistory.findById(call._id)
+      .populate('clientId', 'name company')
+      .populate('projectId', 'name')
+      .populate('addedBy', 'name');
+
+    res.status(201).json({ success: true, call: populated });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const updateCallHistory = async (req, res) => {
+  try {
+    const call = await CallHistory.findOne(await buildScopedFilter(req, { _id: req.params.id }, { respectClientVisibility: req.user.role === 'client' }));
+    if (!call) return res.status(404).json({ success: false, message: 'Call history not found' });
+
+    Object.assign(call, {
+      callDate: req.body.callDate || call.callDate,
+      callTime: req.body.callTime ?? call.callTime,
+      callType: req.body.callType || call.callType,
+      spokenWith: req.body.spokenWith ?? call.spokenWith,
+      contactNumber: req.body.contactNumber ?? call.contactNumber,
+      callPurpose: req.body.callPurpose || call.callPurpose,
+      callSummary: req.body.callSummary ?? call.callSummary,
+      clientResponse: req.body.clientResponse ?? call.clientResponse,
+      nextAction: req.body.nextAction ?? call.nextAction,
+      nextFollowUpDate: req.body.nextFollowUpDate || call.nextFollowUpDate,
+      relatedTaskId: req.body.relatedTaskId || call.relatedTaskId,
+      relatedInvoiceId: req.body.relatedInvoiceId || call.relatedInvoiceId,
+      visibleToClient: req.body.visibleToClient !== undefined ? normalizeBoolean(req.body.visibleToClient) : call.visibleToClient,
+    });
+    await call.save();
+
+    const populated = await CallHistory.findById(call._id)
+      .populate('clientId', 'name company')
+      .populate('projectId', 'name')
+      .populate('addedBy', 'name');
+
+    res.json({ success: true, call: populated });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const deleteCallHistory = async (req, res) => {
+  try {
+    const call = await CallHistory.findOneAndDelete(await buildScopedFilter(req, { _id: req.params.id }));
+    if (!call) return res.status(404).json({ success: false, message: 'Call history not found' });
+    res.json({ success: true, message: 'Call history deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getCallHistoryByClient = async (req, res) => {
+  req.query.clientId = req.params.clientId;
+  return getCallHistory(req, res);
+};
+
+export const getCallHistoryByProject = async (req, res) => {
+  req.query.projectId = req.params.projectId;
+  return getCallHistory(req, res);
+};
+
+export const getTodayFollowUpCalls = async (req, res) => {
+  try {
+    const { start, end } = getTodayRange();
+    const scopedFilter = await buildScopedFilter(req, { nextFollowUpDate: { $gte: start, $lte: end } }, {
+      respectClientVisibility: req.user.role === 'client',
+    });
+    const calls = await CallHistory.find(scopedFilter)
+      .populate('clientId', 'name company')
+      .populate('projectId', 'name')
+      .populate('addedBy', 'name')
+      .sort({ nextFollowUpDate: 1 });
+
+    res.json({ success: true, calls });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

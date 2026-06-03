@@ -16,6 +16,7 @@ const notificationSchema = new mongoose.Schema(
         'project_created', 'project_updated',
         'invoice_sent', 'invoice_paid', 'invoice_overdue',
         'approval_request', 'approval_done',
+        'client_approved', 'client_rework_requested', 'client_feedback',
         'attendance_reminder', 'leave_approved', 'leave_rejected',
         'mention', 'system', 'general',
       ],

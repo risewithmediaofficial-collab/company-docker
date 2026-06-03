@@ -44,6 +44,7 @@ const projectFormSchema = z.object({
   startDate: z.string(),
   endDate: z.string(),
   budget: z.number().optional(),
+  proposalText: z.string().optional(),
   clientDiscussionNotes: z.string().optional(),
   nextMeetupDate: z.string().optional(),
 });
@@ -62,6 +63,7 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
       startDate: '',
       endDate: '',
       budget: undefined,
+      proposalText: '',
       clientDiscussionNotes: '',
       nextMeetupDate: '',
     },
@@ -84,6 +86,7 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
         startDate: project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : '',
         endDate: project.endDate ? new Date(project.endDate).toISOString().split('T')[0] : '',
         budget: project.budget || undefined,
+        proposalText: project.proposalText || '',
         clientDiscussionNotes: project.clientDiscussionNotes || '',
         nextMeetupDate: project.nextMeetupDate ? new Date(project.nextMeetupDate).toISOString().split('T')[0] : '',
       });
@@ -98,6 +101,7 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
         startDate: '',
         endDate: '',
         budget: undefined,
+        proposalText: '',
         clientDiscussionNotes: '',
         nextMeetupDate: '',
       });
@@ -325,6 +329,24 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
                   <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea placeholder="Project description and details..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="proposalText"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Proposal Text</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Write the proposal text that the client can download as a PDF..."
+                      className="min-h-40"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -5,9 +5,12 @@
 import Referral from '../models/referral.model.js';
 import Lead from '../models/lead.model.js';
 import Client from '../models/client.model.js';
+import Project from '../models/project.model.js';
 import User from '../models/user.model.js';
 import { createNotification } from '../utils/notification.js';
 import { createActivityLog } from '../utils/activity.js';
+import Invoice from '../models/invoice.model.js';
+import { withWorkspaceScope } from '../middleware/auth.middleware.js';
 
 const normalizeLeadPayload = (body = {}) => ({
   name: body.name?.trim(),
@@ -23,6 +26,43 @@ const normalizeLeadPayload = (body = {}) => ({
 });
 
 const getClientForUser = async (userId) => Client.findOne({ userId }).select('_id name company');
+
+const referralSources = ['LinkedIn', 'Instagram', 'Facebook', 'WhatsApp', 'Website', 'Google Search', 'Google Ads', 'Existing Client Referral', 'Direct Call', 'Walk-in', 'Friend Referral', 'Partner Referral', 'Other'];
+
+const normalizeBoolean = (value) => value === true || value === 'true';
+
+const canManageReferralAdmin = (user) => ['superAdmin', 'manager'].includes(user?.role);
+
+const buildReferralScope = async (req, baseFilter = {}) => {
+  const filter = withWorkspaceScope(req, { ...baseFilter });
+  if (canManageReferralAdmin(req.user)) return filter;
+
+  if (req.user.role === 'client') {
+    const client = await getClientForUser(req.user._id);
+    return { ...filter, clientId: client?._id || null };
+  }
+
+  if (req.user.role === 'employee') {
+    const [clients, projects] = await Promise.all([
+      Client.find({ $or: [{ assignedManager: req.user._id }, { assignedTeam: req.user._id }] }).select('_id'),
+      Project.find({ $or: [{ manager: req.user._id }, { team: req.user._id }] }).select('_id client'),
+    ]);
+
+    return {
+      ...filter,
+      $or: [
+        { clientId: { $in: clients.map((item) => item._id) } },
+        { projectId: { $in: projects.map((item) => item._id) } },
+      ],
+    };
+  }
+
+  if (req.user.role === 'referral') {
+    return { ...filter, referrer: req.user._id };
+  }
+
+  return { ...filter, _id: null };
+};
 
 export const getReferrals = async (req, res) => {
   try {
@@ -64,6 +104,138 @@ export const getReferrals = async (req, res) => {
         totalPaidOut,
         conversionRate,
         totalReferrals: referrals.length,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const createReferral = async (req, res) => {
+  try {
+    if (!req.body.clientId && !req.body.client) {
+      return res.status(400).json({ success: false, message: 'Client is required' });
+    }
+
+    const client = await Client.findById(req.body.clientId || req.body.client).select('_id name company userId');
+    if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
+
+    const project = req.body.projectId
+      ? await Project.findById(req.body.projectId).select('_id name client')
+      : null;
+    if (req.body.projectId && !project) return res.status(404).json({ success: false, message: 'Project not found' });
+    if (project && project.client?.toString() !== client._id.toString()) {
+      return res.status(400).json({ success: false, message: 'Selected project does not belong to the selected client' });
+    }
+
+    const referral = await Referral.create({
+      organizationId: req.user.organizationId,
+      brandId: req.headers['x-workspace-id'] || undefined,
+      referrer: req.user._id,
+      referrerModel: 'User',
+      client: client._id,
+      clientId: client._id,
+      projectId: project?._id,
+      referralSource: referralSources.includes(req.body.referralSource) ? req.body.referralSource : 'Other',
+      referralPersonName: req.body.referralPersonName || '',
+      referralPersonContact: req.body.referralPersonContact || '',
+      referralPlatformLink: req.body.referralPlatformLink || '',
+      campaignName: req.body.campaignName || '',
+      leadQuality: req.body.leadQuality || '',
+      conversionStatus: req.body.conversionStatus || 'Lead',
+      notes: req.body.notes || '',
+      addedBy: req.user._id,
+      status: req.body.conversionStatus === 'Converted' ? 'converted' : 'pending',
+    });
+
+    res.status(201).json({ success: true, referral });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const updateReferral = async (req, res) => {
+  try {
+    const referral = await Referral.findOne(await buildReferralScope(req, { _id: req.params.id }));
+    if (!referral) return res.status(404).json({ success: false, message: 'Referral not found' });
+
+    Object.assign(referral, {
+      referralSource: req.body.referralSource || referral.referralSource,
+      referralPersonName: req.body.referralPersonName ?? referral.referralPersonName,
+      referralPersonContact: req.body.referralPersonContact ?? referral.referralPersonContact,
+      referralPlatformLink: req.body.referralPlatformLink ?? referral.referralPlatformLink,
+      campaignName: req.body.campaignName ?? referral.campaignName,
+      leadQuality: req.body.leadQuality ?? referral.leadQuality,
+      conversionStatus: req.body.conversionStatus ?? referral.conversionStatus,
+      notes: req.body.notes ?? referral.notes,
+      status: req.body.conversionStatus === 'Converted' ? 'converted' : referral.status,
+    });
+    await referral.save();
+
+    res.json({ success: true, referral });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const deleteReferral = async (req, res) => {
+  try {
+    const referral = await Referral.findOneAndDelete(await buildReferralScope(req, { _id: req.params.id }));
+    if (!referral) return res.status(404).json({ success: false, message: 'Referral not found' });
+    res.json({ success: true, message: 'Referral deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getReferralByClient = async (req, res) => {
+  try {
+    const referrals = await Referral.find(await buildReferralScope(req, { clientId: req.params.clientId }))
+      .populate('client', 'name company')
+      .populate('projectId', 'name')
+      .populate('addedBy', 'name')
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, referrals });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getReferralAnalytics = async (req, res) => {
+  try {
+    const referrals = await Referral.find(await buildReferralScope(req))
+      .populate('client', 'name company')
+      .lean();
+
+    const clientIds = referrals.filter((item) => item.clientId).map((item) => item.clientId);
+    const paidInvoices = clientIds.length
+      ? await Invoice.find({ clientId: { $in: clientIds }, status: 'paid' }).select('clientId paidAmount totalAmount total')
+      : [];
+
+    const bySource = referrals.reduce((acc, item) => {
+      const source = item.referralSource || 'Other';
+      acc[source] = (acc[source] || 0) + 1;
+      return acc;
+    }, {});
+
+    const sourceLeaderboard = Object.entries(bySource).sort((a, b) => b[1] - a[1]);
+    const totalRevenue = paidInvoices.reduce((sum, item) => sum + Number(item.paidAmount || item.totalAmount || item.total || 0), 0);
+    const convertedLeads = referrals.filter((item) => item.conversionStatus === 'Converted').length;
+    const pendingLeads = referrals.filter((item) => item.conversionStatus !== 'Converted').length;
+
+    res.json({
+      success: true,
+      analytics: {
+        totalLeads: referrals.length,
+        linkedInLeads: bySource.LinkedIn || 0,
+        instagramLeads: bySource.Instagram || 0,
+        websiteLeads: bySource.Website || 0,
+        convertedLeads,
+        pendingLeads,
+        totalRevenueFromConvertedClients: totalRevenue,
+        bestPerformingReferralSource: sourceLeaderboard[0]?.[0] || 'N/A',
+        bySource,
       },
     });
   } catch (error) {

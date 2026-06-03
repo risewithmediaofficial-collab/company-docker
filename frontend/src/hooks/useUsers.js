@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { toast } from 'sonner';
 
-export const useUsers = () => {
+export const useUsers = (options = {}) => {
   return useQuery({
     queryKey: ['users'],
     queryFn: async () => {
@@ -16,6 +16,7 @@ export const useUsers = () => {
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: 'always',
+    ...options,
   });
 };
 

@@ -1,33 +1,39 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import {
+  addDays,
   addMonths,
+  addWeeks,
   eachDayOfInterval,
+  endOfDay,
   endOfMonth,
   endOfWeek,
   format,
-  isBefore,
   isSameDay,
   isSameMonth,
   isToday,
   startOfDay,
   startOfMonth,
   startOfWeek,
+  subDays,
   subMonths,
+  subWeeks,
 } from 'date-fns';
 import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  CheckCircle2,
   Clock3,
   LayoutGrid,
   List,
+  PanelTop,
   Plus,
-  Sparkles,
+  Rows3,
+  TimerReset,
 } from 'lucide-react';
-import api from '../../api';
-import { toast } from 'sonner';
 import { AddTaskModal } from '../../components/modals/AddTaskModal';
+import { ClientTaskResponsePanel } from '../../components/tasks/ClientTaskResponsePanel';
 import { TaskDetailModal } from '../../components/ui/TaskDetailModal';
 import { Button } from '../../components/ui/button';
 import {
@@ -47,536 +53,952 @@ import {
   SectionCard,
   StatusBadge,
 } from '../../components/ui/page';
+import { useClients } from '../../hooks/useClients';
+import { useProjects } from '../../hooks/useProjects';
+import { useTaskCalendar } from '../../hooks/useTasks';
+import { useUsers } from '../../hooks/useUsers';
+import {
+  CONTENT_TASK_TYPE_OPTIONS,
+  NON_CONTENT_TASK_TYPE_OPTIONS,
+  PRIORITY_OPTIONS,
+  TASK_CATEGORY_OPTIONS,
+  TASK_STATUS_OPTIONS,
+  formatTaskTypeLabel,
+  getClientTaskStatusMeta,
+  normalizeTaskStatusLabel,
+} from '../../utils/taskFields';
 import { cn } from '../../utils/cn';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const VIEW_OPTIONS = [
+  { value: 'month', label: 'Monthly', icon: LayoutGrid },
+  { value: 'week', label: 'Weekly', icon: Rows3 },
+  { value: 'day', label: 'Daily', icon: PanelTop },
+  { value: 'list', label: 'List', icon: List },
+];
 
 const statusTone = {
   'To Do': 'neutral',
-  'In Progress': 'info',
-  'In Review': 'warning',
+  'On Process': 'info',
+  'Waiting for Client': 'warning',
+  Completed: 'success',
+  Rework: 'danger',
   Approved: 'success',
-  Done: 'success',
-  Blocked: 'danger',
+  'Rework Completed': 'info',
+  'Review Required': 'warning',
 };
 
-const taskTypeTone = {
-  content: 'primary',
-  website_content: 'primary',
-  reel: 'violet',
-  poster: 'info',
-  video: 'warning',
+const priorityTone = {
+  Low: 'neutral',
+  Medium: 'info',
+  High: 'warning',
+  Urgent: 'danger',
 };
 
-const formatTaskType = (value) => {
-  if (!value) return 'Content';
-  return String(value)
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+const categoryTone = {
+  content: 'info',
+  non_content: 'warning',
 };
 
-const ContentCalendar = () => {
+const ALL_TASK_TYPES = [...CONTENT_TASK_TYPE_OPTIONS, ...NON_CONTENT_TASK_TYPE_OPTIONS];
+
+const DEFAULT_DOS = [
+  'Confirm the brief, due time, and assignee before starting work.',
+  'Check attachments, reference links, and client-visible notes first.',
+  'Update status as work moves from received to in progress to review.',
+];
+
+const DEFAULT_DONTS = [
+  'Do not start production without reviewing the latest requirement.',
+  'Do not deliver files without checking quality and required formats.',
+  'Do not close the task without updating notes or response status.',
+];
+
+const DEFAULT_PROCESS = [
+  'Review task scope and required files.',
+  'Start execution with status update.',
+  'Upload work progress or completed files.',
+  'Move task to review, waiting for client, or approved state.',
+];
+
+const CONTENT_DOS = [
+  'Follow brand tone, caption style, and editing guide exactly.',
+  'Validate script, CTA, duration, and format before editing.',
+  'Keep export names and platform dimensions organized.',
+];
+
+const CONTENT_DONTS = [
+  'Do not ignore editor guide, music direction, or logo placement notes.',
+  'Do not publish or mark complete before caption and creative review.',
+  'Do not use unapproved inspiration assets in final delivery.',
+];
+
+const CONTENT_PROCESS = [
+  'Review script, caption, reference, and attachments.',
+  'Draft content and prepare edit flow.',
+  'Upload preview or final files for review.',
+  'Collect client response and close or rework the task.',
+];
+
+const WEBSITE_DOS = [
+  'Validate page scope, features, and credentials before development.',
+  'Check hosting, domain, branding, and content availability early.',
+  'Keep login, dashboard, and integration requirements documented.',
+];
+
+const WEBSITE_DONTS = [
+  'Do not change approved page scope without confirmation.',
+  'Do not deploy without checking forms, buttons, and responsive layout.',
+  'Do not share admin credentials in client-visible notes.',
+];
+
+const WEBSITE_PROCESS = [
+  'Review website requirements, pages, and credentials.',
+  'Build or update the required pages and features.',
+  'Run QA for forms, responsiveness, and integrations.',
+  'Send for review and collect approval or rework.',
+];
+
+const OPERATIONS_DOS = [
+  'Confirm the exact operational outcome expected from the task.',
+  'Keep communication and status updates clear for the client.',
+  'Attach proof of work, reports, or final documents when done.',
+];
+
+const OPERATIONS_DONTS = [
+  'Do not leave the task without notes when external follow-up is needed.',
+  'Do not mark completed if client action is still pending.',
+  'Do not skip evidence files for reports, setup, or support work.',
+];
+
+const OPERATIONS_PROCESS = [
+  'Review task description and external dependencies.',
+  'Complete the setup, support, or follow-up action.',
+  'Attach supporting files or notes.',
+  'Move the task to completed, waiting for client, or approved.',
+];
+
+const getRangeForView = (date, view) => {
+  if (view === 'week') {
+    return {
+      start: startOfWeek(date, { weekStartsOn: 0 }),
+      end: endOfWeek(date, { weekStartsOn: 0 }),
+    };
+  }
+
+  if (view === 'day') {
+    return {
+      start: startOfDay(date),
+      end: endOfDay(date),
+    };
+  }
+
+  return {
+    start: startOfMonth(date),
+    end: endOfMonth(date),
+  };
+};
+
+const shiftDateByView = (date, view, direction) => {
+  if (view === 'week') return direction > 0 ? addWeeks(date, 1) : subWeeks(date, 1);
+  if (view === 'day') return direction > 0 ? addDays(date, 1) : subDays(date, 1);
+  return direction > 0 ? addMonths(date, 1) : subMonths(date, 1);
+};
+
+const buildGuidanceForDate = (tasksForDate = []) => {
+  if (!tasksForDate.length) {
+    return {
+      dos: DEFAULT_DOS,
+      donts: DEFAULT_DONTS,
+      process: DEFAULT_PROCESS,
+    };
+  }
+
+  const hasContent = tasksForDate.some((task) => task.taskCategory !== 'non_content');
+  const hasWebsite = tasksForDate.some((task) => ['website_development', 'website_update', 'landing_page'].includes(task.taskType));
+
+  if (hasWebsite) {
+    return {
+      dos: WEBSITE_DOS,
+      donts: WEBSITE_DONTS,
+      process: WEBSITE_PROCESS,
+    };
+  }
+
+  if (hasContent) {
+    return {
+      dos: CONTENT_DOS,
+      donts: CONTENT_DONTS,
+      process: CONTENT_PROCESS,
+    };
+  }
+
+  return {
+    dos: OPERATIONS_DOS,
+    donts: OPERATIONS_DONTS,
+    process: OPERATIONS_PROCESS,
+  };
+};
+
+const FileLinks = ({ files = [], emptyMessage = 'No files available.' }) => {
+  if (!files.length) {
+    return <p className="text-sm text-muted-foreground">{emptyMessage}</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {files.map((file, index) => (
+        <a
+          key={`${file.url || file.name}-${index}`}
+          href={file.url}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center justify-between rounded-2xl border border-border bg-background px-3 py-2 text-sm transition-colors hover:bg-secondary/40"
+        >
+          <span className="truncate">{file.name || 'File'}</span>
+          <span className="ml-3 text-xs text-muted-foreground">{file.type || 'Attachment'}</span>
+        </a>
+      ))}
+    </div>
+  );
+};
+
+const ClientTaskDialog = ({ task, open, onOpenChange, onSubmitted }) => {
+  const statusMeta = getClientTaskStatusMeta(task?.status);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{task?.taskTitle || task?.title || 'Task details'}</DialogTitle>
+          <DialogDescription>
+            Review task details, delivery files, and confirm your response when action is needed.
+          </DialogDescription>
+        </DialogHeader>
+
+        {task ? (
+          <div className="space-y-5">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-border bg-background p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Task Category</p>
+                <p className="mt-2 text-sm font-semibold text-foreground">
+                  {task.taskCategory === 'non_content' ? 'Non-Content Task' : 'Content Task'}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-background p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Task Type</p>
+                <p className="mt-2 text-sm font-semibold text-foreground">{formatTaskTypeLabel(task.taskType)}</p>
+              </div>
+              <div className="rounded-2xl border border-border bg-background p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Assigned Person</p>
+                <p className="mt-2 text-sm font-semibold text-foreground">
+                  {task.assignedPersonName || task.assignedTo?.map((item) => item.name).join(', ') || 'Unassigned'}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-background p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Current Status</p>
+                <p className="mt-2 text-sm font-semibold text-foreground">{statusMeta.label}</p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-background p-4 text-sm text-foreground">
+              <p className="font-semibold">Progress Alert</p>
+              <p className="mt-2 text-muted-foreground">{statusMeta.alert}</p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-border bg-background p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Requirements</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+                  {task.description || task.websiteRequirements || 'No requirements shared yet.'}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-background p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Notes Visible To You</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+                  {task.clientVisibleNotes || 'No client-visible notes available.'}
+                </p>
+              </div>
+            </div>
+
+            {task.taskCategory !== 'non_content' ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-border bg-background p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Script / Script Link</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+                    {task.scriptText || task.scriptLink || 'No script shared.'}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border bg-background p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Caption / Editor Guide</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{task.caption || 'No caption shared.'}</p>
+                  {task.editorGuide ? <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">{task.editorGuide}</p> : null}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-border bg-background p-4">
+                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Attachments</p>
+                <FileLinks files={task.attachments || []} />
+              </div>
+              <div className="rounded-2xl border border-border bg-background p-4">
+                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Completed Files</p>
+                <FileLinks files={task.completedFiles || []} />
+              </div>
+            </div>
+
+            <ClientTaskResponsePanel task={task} onSubmitted={onSubmitted} compact />
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const TaskSummaryCard = ({ task, onOpen }) => {
+  const normalizedStatus = normalizeTaskStatusLabel(task.status);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(task)}
+      className="w-full rounded-[24px] border border-border bg-card p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-md"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge tone={categoryTone[task.taskCategory] || 'neutral'}>
+              {task.taskCategory === 'non_content' ? 'Non-Content' : 'Content'}
+            </StatusBadge>
+            <StatusBadge tone={statusTone[normalizedStatus] || 'neutral'}>
+              {normalizedStatus}
+            </StatusBadge>
+            <StatusBadge tone={priorityTone[task.priority] || 'neutral'}>
+              {task.priority}
+            </StatusBadge>
+            {task.isOverdue ? <StatusBadge tone="danger">Overdue</StatusBadge> : null}
+          </div>
+          <h3 className="mt-3 text-base font-bold text-foreground">{task.taskTitle || task.title}</h3>
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
+            {task.description || task.websiteRequirements || task.scriptText || 'No requirements added yet.'}
+          </p>
+        </div>
+        <div className="rounded-2xl bg-secondary px-3 py-2 text-right">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Due</p>
+          <p className="mt-1 text-sm font-semibold text-foreground">
+            {task.dueDate ? format(new Date(task.dueDate), 'MMM d, yyyy') : 'No date'}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="rounded-2xl border border-border bg-secondary/20 px-3 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Client</p>
+          <p className="mt-2 text-sm font-semibold text-foreground">{task.client?.name || task.client?.company || task.clientName || 'No client linked'}</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-secondary/20 px-3 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Assigned To</p>
+          <p className="mt-2 text-sm font-semibold text-foreground">
+            {task.assignedPersonName || task.assignedTo?.map((item) => item.name).join(', ') || 'Unassigned'}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-border bg-secondary/20 px-3 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Project</p>
+          <p className="mt-2 text-sm font-semibold text-foreground">{task.project?.name || task.projectName || 'No project linked'}</p>
+        </div>
+      </div>
+    </button>
+  );
+};
+
+const ContentCalendar = ({ embedded = false }) => {
+  const { user } = useSelector((state) => state.auth);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('calendar');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [view, setView] = useState('month');
+  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState({
+    client: '',
+    assignedTo: '',
+    taskCategory: '',
+    taskType: '',
+    status: '',
+    priority: '',
+    project: '',
+    startDate: '',
+    endDate: '',
+  });
   const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [draftDueDate, setDraftDueDate] = useState('');
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [showTaskDetail, setShowTaskDetail] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [draftDueDate, setDraftDueDate] = useState('');
-  const { user } = useSelector((state) => state.auth);
-  const canManageContent = ['superAdmin', 'manager'].includes(user?.role);
+  const [showClientDetail, setShowClientDetail] = useState(false);
+  const [activeTask, setActiveTask] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [showDayDialog, setShowDayDialog] = useState(false);
 
-  const fetchTasks = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get('/tasks', { params: { parent: 'all' } });
-      const allTasks = res.data.tasks || [];
-      const contentTasks = allTasks
-        .filter((task) => ['reel', 'poster', 'video', 'content', 'website_content'].includes(task.taskType))
-        .sort((a, b) => new Date(a.dueDate || 0) - new Date(b.dueDate || 0));
-      setTasks(contentTasks);
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to load content calendar');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const isClient = user?.role === 'client';
+  const canManageCalendar = ['superAdmin', 'manager'].includes(user?.role);
+  const canFilterAssignee = ['superAdmin', 'manager'].includes(user?.role);
+  const canFilterClientProject = !isClient;
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
+  const visibleRange = useMemo(() => getRangeForView(currentDate, view), [currentDate, view]);
 
-  const filteredTasks = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
+  const queryFilters = useMemo(() => ({
+    ...filters,
+    search,
+    parent: 'all',
+    startDate: filters.startDate || format(visibleRange.start, 'yyyy-MM-dd'),
+    endDate: filters.endDate || format(visibleRange.end, 'yyyy-MM-dd'),
+  }), [filters, search, visibleRange]);
 
-    if (!query) return tasks;
+  const { data: calendarData, isLoading, refetch } = useTaskCalendar(queryFilters);
+  const { data: clients = [] } = useClients({}, { enabled: canFilterClientProject });
+  const { data: projects = [] } = useProjects({}, { enabled: canFilterClientProject });
+  const { data: users = [] } = useUsers({ enabled: canFilterAssignee });
 
-    return tasks.filter((task) => {
-      const haystack = [
-        task.title,
-        task.description,
-        task.client?.name,
-        task.client?.company,
-        task.project?.name,
-        task.taskType,
-        task.status,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-
-      return haystack.includes(query);
-    });
-  }, [tasks, searchTerm]);
-
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
-  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
-  const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-
-  const getTasksForDate = (date) => filteredTasks.filter((task) => task.dueDate && isSameDay(new Date(task.dueDate), date));
-
-  const selectedDateTasks = useMemo(
-    () => (selectedDate ? getTasksForDate(selectedDate) : []),
-    [selectedDate, filteredTasks],
+  const tasks = useMemo(
+    () => (calendarData?.tasks || []).map((task) => ({ ...task, status: normalizeTaskStatusLabel(task.status) })),
+    [calendarData],
   );
 
-  const scheduledThisMonth = filteredTasks.filter(
-    (task) => task.dueDate && isSameMonth(new Date(task.dueDate), currentDate),
-  ).length;
-  const inReviewCount = filteredTasks.filter((task) => task.status === 'In Review').length;
-  const overdueCount = filteredTasks.filter(
-    (task) => task.dueDate && isBefore(startOfDay(new Date(task.dueDate)), startOfDay(new Date())) && !['Done', 'Approved'].includes(task.status),
-  ).length;
-  const readyThisWeek = filteredTasks.filter((task) => {
-    if (!task.dueDate) return false;
-    const dueDate = startOfDay(new Date(task.dueDate));
-    const today = startOfDay(new Date());
-    const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
-    return dueDate >= today && dueDate <= weekEnd;
-  }).length;
+  const summary = calendarData?.summary || {
+    total: tasks.length,
+    overdue: tasks.filter((task) => task.isOverdue).length,
+    waitingForClient: tasks.filter((task) => task.status === 'Waiting for Client').length,
+    completed: tasks.filter((task) => ['Completed', 'Approved'].includes(task.status)).length,
+  };
+
+  const daysInView = useMemo(() => {
+    if (view === 'week') {
+      return eachDayOfInterval({ start: visibleRange.start, end: visibleRange.end });
+    }
+
+    if (view === 'day') {
+      return [visibleRange.start];
+    }
+
+    const calendarStart = startOfWeek(visibleRange.start, { weekStartsOn: 0 });
+    const calendarEnd = endOfWeek(visibleRange.end, { weekStartsOn: 0 });
+    return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  }, [view, visibleRange]);
+
+  const tasksByDate = useMemo(() => {
+    const map = new Map();
+    tasks.forEach((task) => {
+      if (!task.dueDate) return;
+      const key = format(new Date(task.dueDate), 'yyyy-MM-dd');
+      const current = map.get(key) || [];
+      current.push(task);
+      map.set(key, current);
+    });
+    return map;
+  }, [tasks]);
+
+  const selectedDateTasks = useMemo(() => {
+    if (!selectedDate) return [];
+    return tasksByDate.get(format(selectedDate, 'yyyy-MM-dd')) || [];
+  }, [selectedDate, tasksByDate]);
+
+  const selectedDateGuidance = useMemo(
+    () => buildGuidanceForDate(selectedDateTasks),
+    [selectedDateTasks],
+  );
+
+  const assignableUsers = useMemo(
+    () => users.filter((person) => ['superAdmin', 'manager', 'employee'].includes(person.role)),
+    [users],
+  );
+
+  const listTasks = useMemo(
+    () => [...tasks].sort((a, b) => new Date(a.dueDate || 0) - new Date(b.dueDate || 0)),
+    [tasks],
+  );
+
+  const toolbarTitle = useMemo(() => {
+    if (view === 'week') {
+      return `${format(visibleRange.start, 'MMM d')} - ${format(visibleRange.end, 'MMM d, yyyy')}`;
+    }
+    if (view === 'day') {
+      return format(visibleRange.start, 'EEEE, MMM d, yyyy');
+    }
+    return format(currentDate, 'MMMM yyyy');
+  }, [currentDate, view, visibleRange]);
+
+  const handleOpenTask = (task) => {
+    if (isClient) {
+      setActiveTask(task);
+      setShowClientDetail(true);
+      return;
+    }
+
+    setSelectedTaskId(task._id);
+    setShowTaskDetail(true);
+  };
 
   const openDateDetails = (date) => {
-    const dateTasks = getTasksForDate(date);
+    const key = format(date, 'yyyy-MM-dd');
+    const dayTasks = tasksByDate.get(key) || [];
 
-    if (dateTasks.length === 0) {
-      if (canManageContent) {
-        setSelectedTask(null);
-        setDraftDueDate(format(date, 'yyyy-MM-dd'));
-        setShowAddModal(true);
-      }
+    if (!dayTasks.length && canManageCalendar) {
+      setSelectedTask(null);
+      setDraftDueDate(format(date, 'yyyy-MM-dd'));
+      setShowAddModal(true);
       return;
     }
 
     setSelectedDate(date);
-    setShowDetailModal(true);
+    setShowDayDialog(true);
   };
 
-  const handleEditTask = (task) => {
-    setDraftDueDate('');
-    setSelectedTask(task);
-    setShowDetailModal(false);
-    setShowAddModal(true);
-  };
+  const renderMonthView = () => (
+    <div className="overflow-hidden rounded-[24px] border border-border">
+      <div className="grid grid-cols-7 border-b border-border bg-secondary/40">
+        {DAY_NAMES.map((day) => (
+          <div key={day} className="px-2 py-3 text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:text-sm">
+            {day}
+          </div>
+        ))}
+      </div>
 
-  const handleCreateTask = () => {
-    setSelectedTask(null);
-    setDraftDueDate('');
-    setShowAddModal(true);
-  };
+      <div className="grid grid-cols-7">
+        {daysInView.map((day) => {
+          const key = format(day, 'yyyy-MM-dd');
+          const dayTasks = tasksByDate.get(key) || [];
+          const inCurrentMonth = isSameMonth(day, currentDate);
 
-  const handleViewTaskDetail = (task) => {
-    setSelectedTaskId(task._id);
-    setShowDetailModal(false);
-    setShowTaskDetail(true);
-  };
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => openDateDetails(day)}
+              className={cn(
+                'min-h-[160px] border-b border-r border-border p-3 text-left align-top transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20',
+                !inCurrentMonth && 'bg-secondary/20 text-muted-foreground',
+                isToday(day) && 'bg-primary/5',
+                dayTasks.length ? 'hover:bg-secondary/35' : 'hover:bg-secondary/20',
+              )}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div
+                  className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold',
+                    isToday(day) ? 'bg-primary text-primary-foreground' : 'bg-transparent text-foreground',
+                  )}
+                >
+                  {format(day, 'd')}
+                </div>
+                {dayTasks.length ? (
+                  <span className="rounded-full bg-secondary px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+                    {dayTasks.length}
+                  </span>
+                ) : null}
+              </div>
 
-  const listTasks = useMemo(
-    () => [...filteredTasks].sort((a, b) => new Date(a.dueDate || 0) - new Date(b.dueDate || 0)),
-    [filteredTasks],
+              <div className="mt-3 space-y-2">
+                {dayTasks.slice(0, 3).map((task) => (
+                  <div
+                    key={task._id}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleOpenTask(task);
+                    }}
+                    className="rounded-2xl border border-border bg-background/90 px-2.5 py-2 text-left shadow-sm transition-all hover:border-primary/30 hover:bg-background"
+                  >
+                    <p className="truncate text-xs font-semibold text-foreground">{task.taskTitle || task.title}</p>
+                    <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                      {task.client?.name || task.clientName || formatTaskTypeLabel(task.taskType)}
+                    </p>
+                  </div>
+                ))}
+
+                {dayTasks.length > 3 ? (
+                  <div className="text-xs font-semibold text-primary">+{dayTasks.length - 3} more tasks</div>
+                ) : null}
+
+                {!dayTasks.length ? (
+                  <div className="pt-6 text-xs leading-5 text-muted-foreground">
+                    {canManageCalendar ? 'Click to schedule a task for this day.' : 'No tasks due on this date.'}
+                  </div>
+                ) : null}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const renderWeekOrDayView = () => (
+    <div className="grid gap-4 lg:grid-cols-7">
+      {daysInView.map((day) => {
+        const key = format(day, 'yyyy-MM-dd');
+        const dayTasks = tasksByDate.get(key) || [];
+
+        return (
+          <div key={key} className={cn('rounded-[24px] border border-border bg-card p-4 shadow-sm', view === 'day' && 'lg:col-span-7')}>
+            <button type="button" onClick={() => openDateDetails(day)} className="w-full text-left">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    {format(day, 'EEEE')}
+                  </p>
+                  <h3 className="mt-1 text-lg font-bold text-foreground">{format(day, 'MMM d')}</h3>
+                </div>
+                {isToday(day) ? <StatusBadge tone="info">Today</StatusBadge> : null}
+              </div>
+            </button>
+
+            <div className="mt-4 space-y-3">
+              {dayTasks.length ? (
+                dayTasks.map((task) => (
+                  <TaskSummaryCard key={task._id} task={task} onOpen={handleOpenTask} />
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-10 text-center text-sm text-muted-foreground">
+                  {canManageCalendar ? 'No tasks here yet. Click the date above to add one.' : 'No tasks scheduled.'}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 
   return (
-    <div className="space-y-6">
+    <div className={cn('space-y-6', embedded && 'p-6')}>
       <PageHeader
-        eyebrow="Content Operations"
-        title="Plan content delivery without losing schedule clarity."
-        description="Manage reels, posters, videos, and production tasks in a calendar that gives deadlines, review stages, and workload a clearer structure."
+        eyebrow={isClient ? 'Client Task Calendar' : user?.role === 'employee' ? 'Assigned Task Calendar' : 'Task Calendar'}
+        title={isClient
+          ? 'Review your scheduled tasks, delivery progress, and approvals.'
+          : user?.role === 'employee'
+            ? 'Stay on top of your assigned delivery schedule.'
+            : 'See every task on the calendar with role-based visibility.'}
+        description={isClient
+          ? 'Track only your own tasks with client-visible details, alerts, and approval actions.'
+          : 'Switch between monthly, weekly, daily, and list views to manage deadlines, priorities, and follow-ups.'}
         actions={(
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <div className="inline-flex items-center rounded-2xl border border-border bg-card p-1 shadow-sm">
-              <button
-                onClick={() => setView('calendar')}
-                className={cn(
-                  'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all',
-                  view === 'calendar'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-                )}
-              >
-                <LayoutGrid size={16} />
-                Calendar
-              </button>
-              <button
-                onClick={() => setView('list')}
-                className={cn(
-                  'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all',
-                  view === 'list'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-                )}
-              >
-                <List size={16} />
-                List
-              </button>
+              {VIEW_OPTIONS.map(({ value, label, icon: Icon }) => (
+                <button
+                  key={value}
+                  onClick={() => setView(value)}
+                  className={cn(
+                    'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all',
+                    view === value
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+                  )}
+                >
+                  <Icon size={16} />
+                  {label}
+                </button>
+              ))}
             </div>
 
-            {canManageContent ? (
-              <Button onClick={handleCreateTask} className="w-full justify-center sm:w-auto">
+            {canManageCalendar ? (
+              <Button
+                onClick={() => {
+                  setSelectedTask(null);
+                  setDraftDueDate('');
+                  setShowAddModal(true);
+                }}
+                className="w-full justify-center sm:w-auto"
+              >
                 <Plus size={16} className="mr-2" />
-                Schedule Content
+                Create Task
               </Button>
             ) : null}
           </div>
         )}
       >
         <MetricGrid>
-          <MetricCard label="Scheduled Items" value={filteredTasks.length} helper="Visible in the current search scope" icon={CalendarDays} tone="primary" />
-          <MetricCard label="This Month" value={scheduledThisMonth} helper={`Scheduled in ${format(currentDate, 'MMMM')}`} icon={Sparkles} tone="info" />
-          <MetricCard label="In Review" value={inReviewCount} helper="Waiting on approval or next revision" icon={Clock3} tone="warning" />
-          <MetricCard label="Overdue" value={overdueCount} helper={`${readyThisWeek} more due this week`} icon={CalendarDays} tone={overdueCount > 0 ? 'danger' : 'success'} />
+          <MetricCard label="Visible Tasks" value={summary.total} helper="Within your current calendar scope" icon={CalendarDays} tone="primary" />
+          <MetricCard label="Waiting for Client" value={summary.waitingForClient} helper="Needs client action or feedback" icon={Clock3} tone="warning" />
+          <MetricCard label="Completed / Approved" value={summary.completed} helper="Finished work in this view" icon={CheckCircle2} tone="success" />
+          <MetricCard label="Overdue" value={summary.overdue} helper="Tasks that need immediate attention" icon={TimerReset} tone={summary.overdue > 0 ? 'danger' : 'neutral'} />
         </MetricGrid>
       </PageHeader>
 
       <PageToolbar>
         <SearchField
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder="Search content titles, clients, projects, types, or statuses..."
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search task titles, clients, scripts, website requirements, or notes..."
         />
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="app-pill">{view === 'calendar' ? 'Calendar view' : 'List view'}</div>
-          <div className="app-pill">{filteredTasks.length} scheduled items</div>
+        <div className="grid w-full gap-2 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
+          {canFilterClientProject ? (
+            <select
+              value={filters.client}
+              onChange={(event) => setFilters((current) => ({ ...current, client: event.target.value }))}
+              className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+            >
+              <option value="">All clients</option>
+              {clients.map((client) => (
+                <option key={client._id} value={client._id}>{client.name || client.company}</option>
+              ))}
+            </select>
+          ) : null}
+
+          {canFilterClientProject ? (
+            <select
+              value={filters.project}
+              onChange={(event) => setFilters((current) => ({ ...current, project: event.target.value }))}
+              className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+            >
+              <option value="">All projects</option>
+              {projects.map((project) => (
+                <option key={project._id} value={project._id}>{project.name}</option>
+              ))}
+            </select>
+          ) : null}
+
+          {canFilterAssignee ? (
+            <select
+              value={filters.assignedTo}
+              onChange={(event) => setFilters((current) => ({ ...current, assignedTo: event.target.value }))}
+              className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+            >
+              <option value="">All assignees</option>
+              {assignableUsers.map((person) => (
+                <option key={person._id} value={person._id}>{person.name}</option>
+              ))}
+            </select>
+          ) : null}
+
+          <select
+            value={filters.taskCategory}
+            onChange={(event) => setFilters((current) => ({ ...current, taskCategory: event.target.value, taskType: '' }))}
+            className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+          >
+            <option value="">All categories</option>
+            {TASK_CATEGORY_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+
+          <select
+            value={filters.taskType}
+            onChange={(event) => setFilters((current) => ({ ...current, taskType: event.target.value }))}
+            className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+          >
+            <option value="">All task types</option>
+            {(filters.taskCategory === 'content'
+              ? CONTENT_TASK_TYPE_OPTIONS
+              : filters.taskCategory === 'non_content'
+                ? NON_CONTENT_TASK_TYPE_OPTIONS
+                : ALL_TASK_TYPES
+            ).map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+
+          <select
+            value={filters.status}
+            onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
+            className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+          >
+            <option value="">All statuses</option>
+            {TASK_STATUS_OPTIONS.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+
+          <select
+            value={filters.priority}
+            onChange={(event) => setFilters((current) => ({ ...current, priority: event.target.value }))}
+            className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+          >
+            <option value="">All priorities</option>
+            {PRIORITY_OPTIONS.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+
+          <input
+            type="date"
+            value={filters.startDate}
+            onChange={(event) => setFilters((current) => ({ ...current, startDate: event.target.value }))}
+            className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+          />
+
+          <input
+            type="date"
+            value={filters.endDate}
+            onChange={(event) => setFilters((current) => ({ ...current, endDate: event.target.value }))}
+            className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+          />
         </div>
       </PageToolbar>
 
-      {view === 'calendar' ? (
-        <SectionCard
-          title={format(currentDate, 'MMMM yyyy')}
-          description="Click a day to review scheduled items. Empty days can be used to schedule new content."
-          action={(
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
-                <ChevronLeft size={16} />
-              </Button>
-              <Button variant="outline" onClick={() => setCurrentDate(new Date())}>
-                Today
-              </Button>
-              <Button variant="outline" size="icon" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
-                <ChevronRight size={16} />
-              </Button>
-            </div>
-          )}
-        >
-          {loading ? (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {[1, 2, 3, 4, 5, 6].map((item) => (
-                <div key={item} className="h-40 animate-pulse rounded-[24px] border border-border bg-secondary/50" />
-              ))}
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-[24px] border border-border">
-              <div className="grid grid-cols-7 border-b border-border bg-secondary/40">
-                {DAY_NAMES.map((day) => (
-                  <div key={day} className="px-2 py-3 text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:text-sm">
-                    {day}
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-7">
-                {days.map((day) => {
-                  const dayTasks = getTasksForDate(day);
-                  const isCurrentMonth = isSameMonth(day, currentDate);
-
-                  return (
-                    <button
-                      key={day.toISOString()}
-                      type="button"
-                      onClick={() => openDateDetails(day)}
-                      className={cn(
-                        'min-h-[152px] border-b border-r border-border p-3 text-left align-top transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20',
-                        !isCurrentMonth && 'bg-secondary/20 text-muted-foreground',
-                        isToday(day) && 'bg-primary/5',
-                        dayTasks.length > 0 ? 'hover:bg-secondary/35' : 'hover:bg-secondary/20',
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div
-                          className={cn(
-                            'flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold',
-                            isToday(day) ? 'bg-primary text-primary-foreground' : 'bg-transparent text-foreground',
-                          )}
-                        >
-                          {format(day, 'd')}
-                        </div>
-                        {dayTasks.length > 0 ? (
-                          <span className="rounded-full bg-secondary px-2 py-1 text-[11px] font-semibold text-muted-foreground">
-                            {dayTasks.length}
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <div className="mt-3 space-y-2">
-                        {dayTasks.slice(0, 2).map((task) => (
-                          <div
-                            key={task._id}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleViewTaskDetail(task);
-                            }}
-                            className="rounded-2xl border border-border bg-background/90 px-2.5 py-2 text-left shadow-sm transition-all hover:border-primary/30 hover:bg-background"
-                          >
-                            <p className="truncate text-xs font-semibold text-foreground">{task.title}</p>
-                            <p className="mt-1 truncate text-[11px] text-muted-foreground">
-                              {task.client?.name || task.project?.name || formatTaskType(task.taskType)}
-                            </p>
-                          </div>
-                        ))}
-
-                        {dayTasks.length > 2 ? (
-                          <div className="text-xs font-semibold text-primary">
-                            +{dayTasks.length - 2} more scheduled
-                          </div>
-                        ) : null}
-
-                        {dayTasks.length === 0 ? (
-                          <div className="pt-6 text-xs leading-5 text-muted-foreground">
-                            {canManageContent ? 'Click to schedule content for this day.' : 'No scheduled content.'}
-                          </div>
-                        ) : null}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </SectionCard>
-      ) : (
-        <SectionCard
-          title="Scheduled Content"
-          description="A clean list view for scanning upcoming deliverables, client context, and production status."
-          action={<div className="app-pill">{listTasks.length} items</div>}
-        >
-          {loading ? (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {[1, 2, 3, 4].map((item) => (
-                <div key={item} className="h-44 animate-pulse rounded-[24px] border border-border bg-secondary/50" />
-              ))}
-            </div>
-          ) : listTasks.length > 0 ? (
+      <SectionCard
+        title={toolbarTitle}
+        description={isClient
+          ? 'Only your own tasks and client-visible information are shown here.'
+          : 'Open any task for details, progress, files, and status updates based on your role.'}
+        action={(
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={() => setCurrentDate((current) => shiftDateByView(current, view, -1))}>
+              <ChevronLeft size={16} />
+            </Button>
+            <Button variant="outline" onClick={() => setCurrentDate(new Date())}>Today</Button>
+            <Button variant="outline" size="icon" onClick={() => setCurrentDate((current) => shiftDateByView(current, view, 1))}>
+              <ChevronRight size={16} />
+            </Button>
+          </div>
+        )}
+      >
+        {isLoading ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((item) => (
+              <div key={item} className="h-40 animate-pulse rounded-[24px] border border-border bg-secondary/50" />
+            ))}
+          </div>
+        ) : view === 'list' ? (
+          listTasks.length ? (
             <div className="grid gap-4 xl:grid-cols-2">
               {listTasks.map((task) => (
-                <article
-                  key={task._id}
-                  onClick={() => handleViewTaskDetail(task)}
-                  className="group cursor-pointer rounded-[24px] border border-border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-md"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <StatusBadge tone={taskTypeTone[task.taskType] || 'neutral'}>
-                          {formatTaskType(task.taskType)}
-                        </StatusBadge>
-                        <StatusBadge tone={statusTone[task.status] || 'neutral'}>
-                          {task.status}
-                        </StatusBadge>
-                      </div>
-                      <h3 className="mt-4 text-lg font-bold text-foreground transition-colors group-hover:text-primary">
-                        {task.title}
-                      </h3>
-                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
-                        {task.description || 'No detailed brief has been added yet.'}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl bg-secondary px-3 py-2 text-right">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Due</p>
-                      <p className="mt-1 text-sm font-semibold text-foreground">
-                        {task.dueDate ? format(new Date(task.dueDate), 'MMM d, yyyy') : 'Unscheduled'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-border bg-secondary/20 px-4 py-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Client</p>
-                      <p className="mt-2 text-sm font-semibold text-foreground">{task.client?.name || 'No client linked'}</p>
-                    </div>
-                    <div className="rounded-2xl border border-border bg-secondary/20 px-4 py-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Assigned To</p>
-                      <p className="mt-2 text-sm font-semibold text-foreground">
-                        {Array.isArray(task.assignedTo)
-                          ? task.assignedTo.map((assignee) => assignee.name).join(', ') || 'Unassigned'
-                          : task.assignedTo?.name || 'Unassigned'}
-                      </p>
-                    </div>
-                  </div>
-                </article>
+                <TaskSummaryCard key={task._id} task={task} onOpen={handleOpenTask} />
               ))}
             </div>
           ) : (
             <EmptyState
-              title="No scheduled content found"
-              description="Try a broader search or schedule a new item to start building a cleaner delivery calendar."
-              action={canManageContent ? (
-                <Button onClick={handleCreateTask}>
+              title="No tasks found for this list view"
+              description="Adjust your filters or date range to surface the tasks you want to review."
+              action={canManageCalendar ? (
+                <Button
+                  onClick={() => {
+                    setSelectedTask(null);
+                    setDraftDueDate('');
+                    setShowAddModal(true);
+                  }}
+                >
                   <Plus size={16} className="mr-2" />
-                  Schedule Content
+                  Create Task
                 </Button>
               ) : null}
             />
-          )}
-        </SectionCard>
-      )}
+          )
+        ) : view === 'month' ? (
+          renderMonthView()
+        ) : (
+          renderWeekOrDayView()
+        )}
+      </SectionCard>
 
       <AddTaskModal
         open={showAddModal}
         onOpenChange={(open) => {
           setShowAddModal(open);
-
           if (!open) {
             setSelectedTask(null);
             setDraftDueDate('');
-            fetchTasks();
+            refetch();
           }
         }}
         task={selectedTask}
         initialValues={{
-          taskType: 'content',
+          dueDate: draftDueDate,
           status: 'To Do',
           isClientVisible: true,
-          dueDate: draftDueDate,
         }}
       />
 
-      <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
-        <DialogContent className="max-h-[85vh] overflow-hidden p-0 sm:max-w-3xl">
+      <Dialog open={showDayDialog} onOpenChange={setShowDayDialog}>
+        <DialogContent className="max-h-[88vh] overflow-hidden p-0 sm:max-w-4xl">
           <div className="border-b border-border bg-gradient-to-br from-background via-background to-secondary/60 px-6 py-5">
             <DialogHeader className="mb-0">
               <DialogTitle className="text-2xl tracking-tight">
-                {selectedDate ? format(selectedDate, 'EEEE, MMMM d') : 'Scheduled Content'}
+                {selectedDate ? format(selectedDate, 'EEEE, MMMM d, yyyy') : 'Tasks'}
               </DialogTitle>
               <DialogDescription>
-                {selectedDateTasks.length} scheduled {selectedDateTasks.length === 1 ? 'item' : 'items'} for this day.
+                {selectedDateTasks.length} scheduled {selectedDateTasks.length === 1 ? 'task' : 'tasks'} for this date.
               </DialogDescription>
             </DialogHeader>
           </div>
 
-          <div className="max-h-[calc(85vh-112px)] overflow-y-auto px-6 py-5">
-            {selectedDateTasks.length > 0 ? (
-              <div className="space-y-4">
-                {selectedDateTasks.map((task) => (
-                  <article key={task._id} className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <StatusBadge tone={taskTypeTone[task.taskType] || 'neutral'}>
-                            {formatTaskType(task.taskType)}
-                          </StatusBadge>
-                          <StatusBadge tone={statusTone[task.status] || 'neutral'}>
-                            {task.status}
-                          </StatusBadge>
-                        </div>
-                        <h3 className="mt-4 text-lg font-bold text-foreground">{task.title}</h3>
-                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                          {task.description || 'No description added yet.'}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 sm:justify-end">
-                        <Button variant="outline" onClick={() => handleViewTaskDetail(task)}>
-                          View Details
-                        </Button>
-                        {canManageContent ? (
-                          <Button variant="outline" onClick={() => handleEditTask(task)}>
-                            Edit Task
-                          </Button>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div className="mt-5 grid gap-3 md:grid-cols-2">
-                      <div className="rounded-2xl border border-border bg-secondary/20 px-4 py-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Client</p>
-                        <p className="mt-2 text-sm font-semibold text-foreground">{task.client?.name || 'No client linked'}</p>
-                      </div>
-                      <div className="rounded-2xl border border-border bg-secondary/20 px-4 py-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Project</p>
-                        <p className="mt-2 text-sm font-semibold text-foreground">{task.project?.name || 'No project linked'}</p>
-                      </div>
-                      <div className="rounded-2xl border border-border bg-secondary/20 px-4 py-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Assigned To</p>
-                        <p className="mt-2 text-sm font-semibold text-foreground">
-                          {Array.isArray(task.assignedTo)
-                            ? task.assignedTo.map((assignee) => assignee.name).join(', ') || 'Unassigned'
-                            : task.assignedTo?.name || 'Unassigned'}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-border bg-secondary/20 px-4 py-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Due Date</p>
-                        <p className="mt-2 text-sm font-semibold text-foreground">
-                          {task.dueDate ? format(new Date(task.dueDate), 'MMM d, yyyy') : 'Not scheduled'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {task.tags && task.tags.length > 0 ? (
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {task.tags.map((tag, index) => (
-                          <span key={`${tag}-${index}`} className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
+          <div className="max-h-[calc(88vh-112px)] overflow-y-auto px-6 py-5">
+            <div className="grid gap-5 xl:grid-cols-[1.35fr_0.95fr]">
+              <div>
+                {selectedDateTasks.length ? (
+                  <div className="space-y-4">
+                    {selectedDateTasks.map((task) => (
+                      <TaskSummaryCard key={task._id} task={task} onOpen={handleOpenTask} />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    title="No tasks due on this date"
+                    description="This date does not currently have any scheduled tasks."
+                    action={canManageCalendar ? (
+                      <Button
+                        onClick={() => {
+                          setShowDayDialog(false);
+                          setSelectedTask(null);
+                          setDraftDueDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '');
+                          setShowAddModal(true);
+                        }}
+                      >
+                        <Plus size={16} className="mr-2" />
+                        Create Task
+                      </Button>
                     ) : null}
-                  </article>
-                ))}
+                  />
+                )}
               </div>
-            ) : (
-              <EmptyState
-                title="Nothing scheduled for this day"
-                description="This date does not have any content tasks yet."
-                action={canManageContent ? (
-                  <Button
-                    onClick={() => {
-                      setShowDetailModal(false);
-                      setSelectedTask(null);
-                      setDraftDueDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '');
-                      setShowAddModal(true);
-                    }}
-                  >
-                    <Plus size={16} className="mr-2" />
-                    Schedule Content
-                  </Button>
-                ) : null}
-              />
-            )}
+
+              <div className="space-y-4">
+                <div className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Do</p>
+                  <ul className="mt-3 space-y-3 text-sm text-foreground">
+                    {selectedDateGuidance.dos.map((item) => (
+                      <li key={item} className="rounded-2xl border border-emerald-100 bg-emerald-50/80 px-3 py-3">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Don't</p>
+                  <ul className="mt-3 space-y-3 text-sm text-foreground">
+                    {selectedDateGuidance.donts.map((item) => (
+                      <li key={item} className="rounded-2xl border border-rose-100 bg-rose-50/80 px-3 py-3">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Work Process</p>
+                  <ol className="mt-3 space-y-3 text-sm text-foreground">
+                    {selectedDateGuidance.process.map((item, index) => (
+                      <li key={item} className="flex items-start gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/80 px-3 py-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">
+                          {index + 1}
+                        </span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      <TaskDetailModal
-        taskId={selectedTaskId}
-        open={showTaskDetail}
-        onOpenChange={setShowTaskDetail}
+      <TaskDetailModal taskId={selectedTaskId} open={showTaskDetail} onOpenChange={setShowTaskDetail} />
+
+      <ClientTaskDialog
+        task={activeTask}
+        open={showClientDetail}
+        onOpenChange={setShowClientDetail}
+        onSubmitted={refetch}
       />
     </div>
   );

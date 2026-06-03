@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { toast } from 'sonner';
 
-export const useProjects = (filters = {}) => {
+export const useProjects = (filters = {}, options = {}) => {
   return useQuery({
     queryKey: ['projects', filters],
     queryFn: async () => {
@@ -14,6 +14,7 @@ export const useProjects = (filters = {}) => {
       return response.data.projects;
     },
     staleTime: 5 * 60 * 1000,
+    ...options,
   });
 };
 
