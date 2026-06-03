@@ -13,6 +13,7 @@ import {
   TEAM_STATUS_OPTIONS,
   uploadFiles,
 } from '../../utils/taskFields';
+import { getAssetUrl } from '../../utils/assetUrl';
 
 const Section = ({ title, children }) => (
   <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
@@ -51,23 +52,38 @@ const FileList = ({ files = [], emptyMessage }) => {
 
   return (
     <div className="space-y-3">
-      {files.map((file, index) => (
+      {files.map((file, index) => {
+        const fileUrl = getAssetUrl(file.url);
+        const isImage = file.type?.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(file.url || file.name || '');
+
+        return (
         <a
           key={`${file.url || file.name}-${index}`}
-          href={file.url}
+          href={fileUrl}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center justify-between rounded-2xl border border-border bg-background px-4 py-3 transition-colors hover:bg-secondary/40"
+          className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-background px-4 py-3 transition-colors hover:bg-secondary/40"
         >
-          <div>
+          <div className="flex min-w-0 items-center gap-3">
+            {isImage ? (
+              <img
+                src={fileUrl}
+                alt={file.name || 'Attachment preview'}
+                className="h-14 w-14 shrink-0 rounded-xl border border-border object-cover"
+                loading="lazy"
+              />
+            ) : null}
+            <div className="min-w-0">
             <p className="font-semibold text-foreground">{file.name || 'Attachment'}</p>
             <p className="text-xs text-muted-foreground">{file.type || 'File'}</p>
+            </div>
           </div>
-          <span className="text-xs text-muted-foreground">
+          <span className="shrink-0 text-xs text-muted-foreground">
             {file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString() : 'Recently added'}
           </span>
         </a>
-      ))}
+      );
+      })}
     </div>
   );
 };

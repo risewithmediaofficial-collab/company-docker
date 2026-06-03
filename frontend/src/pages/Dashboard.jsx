@@ -161,7 +161,7 @@ const Dashboard = () => {
     return (
       <div className="space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-3">
               <div className="hidden sm:flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -173,9 +173,15 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+          <Link to="/calendar" className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90">
+            <Calendar size={16} />
+            Content Calendar
+          </Link>
           <div className="flex items-center space-x-2 bg-card p-1 rounded-xl border border-border shadow-sm">
             <button className="px-3 py-1.5 text-xs font-medium rounded-lg bg-secondary text-foreground">Overview</button>
             <button className="px-3 py-1.5 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground transition-colors">Analytics</button>
+          </div>
           </div>
         </div>
 
@@ -368,14 +374,20 @@ const Dashboard = () => {
   const renderEmployeeStats = () => {
     return (
       <div className="space-y-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Personal Dashboard</h1>
             <p className="text-muted-foreground text-sm">Welcome, {user.name}. Here's your focus for today.</p>
           </div>
-          <div className="bg-primary/10 text-primary px-4 py-2 rounded-xl flex items-center">
-            <Calendar size={18} className="mr-2" />
-            <span className="text-sm font-bold">{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</span>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link to="/calendar" className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90">
+              <Calendar size={18} />
+              Content Calendar
+            </Link>
+            <div className="bg-primary/10 text-primary px-4 py-2 rounded-xl flex items-center justify-center">
+              <Calendar size={18} className="mr-2" />
+              <span className="text-sm font-bold">{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</span>
+            </div>
           </div>
         </div>
 
@@ -439,6 +451,7 @@ const Dashboard = () => {
                 )}
               </div>
               <div className="space-y-3">
+                <Link to="/calendar" className="block w-full text-center py-2.5 rounded-xl bg-primary text-white text-sm font-bold transition-colors hover:bg-primary/90">Open Content Calendar</Link>
                 <Link to="/attendance" className="block w-full text-center py-2.5 rounded-xl border border-border hover:bg-secondary text-sm font-medium transition-colors">Submit EOD Report</Link>
                 <Link to="/chat" className="block w-full text-center py-2.5 rounded-xl border border-border hover:bg-secondary text-sm font-medium transition-colors">Message Manager</Link>
               </div>
@@ -463,9 +476,15 @@ const Dashboard = () => {
     const invoices = data.invoices || [];
     return (
       <div className="space-y-8">
-        <div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
           <h1 className="text-2xl font-bold tracking-tight">Client Portal</h1>
           <p className="text-muted-foreground text-sm">Project progress and recent billing for {data.client?.company || data.client?.name || user.name}.</p>
+          </div>
+          <Link to="/calendar" className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90">
+            <Calendar size={16} />
+            Content Calendar
+          </Link>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           {[
@@ -547,6 +566,10 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
+            <Link to="/calendar" className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
+              <Calendar size={16} />
+              Content Calendar
+            </Link>
             <button
               onClick={copyRefCode}
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold hover:bg-secondary transition-colors"

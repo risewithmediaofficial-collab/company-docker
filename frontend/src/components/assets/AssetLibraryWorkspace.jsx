@@ -10,6 +10,7 @@ import { useClients } from '../../hooks/useClients';
 import { useProjects } from '../../hooks/useProjects';
 import { useAssets, useCreateAsset, useDeleteAsset, useUpdateAsset } from '../../hooks/useAssets';
 import { uploadFiles } from '../../utils/taskFields';
+import { getAssetUrl } from '../../utils/assetUrl';
 
 export const assetCategories = [
   { value: 'logo', label: 'Logo' },
@@ -342,22 +343,33 @@ export const AssetLibraryWorkspace = ({
                   {(selectedAsset.files || []).map((file, index) => {
                     const fileType = file.type || '';
                     const Icon = fileType.startsWith('image') ? ImageIcon : fileType.startsWith('video') ? Video : FileText;
+                    const fileUrl = getAssetUrl(file.url);
+                    const isImage = fileType.startsWith('image') || /\.(png|jpe?g|gif|webp|svg)$/i.test(file.url || file.name || '');
                     return (
                       <a
                         key={`${file.url}-${index}`}
-                        href={file.url}
+                        href={fileUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center justify-between rounded-2xl border border-border bg-background px-4 py-3 transition-colors hover:bg-secondary/40"
+                        className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-background px-4 py-3 transition-colors hover:bg-secondary/40"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="rounded-xl bg-primary/10 p-2 text-primary"><Icon size={16} /></div>
-                          <div>
+                        <div className="flex min-w-0 items-center gap-3">
+                          {isImage ? (
+                            <img
+                              src={fileUrl}
+                              alt={file.name || 'Asset preview'}
+                              className="h-14 w-14 shrink-0 rounded-xl border border-border object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="rounded-xl bg-primary/10 p-2 text-primary"><Icon size={16} /></div>
+                          )}
+                          <div className="min-w-0">
                             <p className="font-semibold text-foreground">{file.name}</p>
                             <p className="text-xs text-muted-foreground">{file.type || 'File'}</p>
                           </div>
                         </div>
-                        <span className="inline-flex items-center gap-2 text-sm font-medium text-primary">
+                        <span className="inline-flex shrink-0 items-center gap-2 text-sm font-medium text-primary">
                           <Download size={15} />
                           Download
                         </span>

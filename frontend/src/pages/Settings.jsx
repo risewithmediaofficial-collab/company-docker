@@ -12,6 +12,7 @@ import {
   Phone,
   Save,
   Shield,
+  Trash2,
   User,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -25,6 +26,7 @@ import {
   useUpdateProfileSettings,
   useUploadProfileAvatar,
 } from '../hooks/useSettings';
+import { getAssetUrl } from '../utils/assetUrl';
 
 const sections = [
   { id: 'profile', label: 'Profile Info', icon: User },
@@ -110,6 +112,14 @@ const Settings = () => {
     });
     dispatch(updateCurrentUser(saved));
     return saved;
+  };
+
+  const removeAvatar = async () => {
+    const saved = await updateProfile.mutateAsync({ avatar: '' });
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    setAvatarPreview('');
+    setCurrentAvatar('');
+    dispatch(updateCurrentUser(saved));
   };
 
   const handleAvatarUpload = async (event) => {
@@ -244,7 +254,7 @@ const Settings = () => {
                       onChange={handleAvatarUpload}
                     />
                     <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-white text-3xl font-black shadow-xl overflow-hidden">
-                      {avatarPreview || currentAvatar ? <img src={avatarPreview || currentAvatar} alt="" className="h-full w-full object-cover" /> : profileUser?.name?.charAt(0)}
+                      {avatarPreview || currentAvatar ? <img src={getAssetUrl(avatarPreview || currentAvatar)} alt="" className="h-full w-full object-cover" /> : profileUser?.name?.charAt(0)}
                     </div>
                     <label
                       htmlFor="profile-avatar-upload"
@@ -275,6 +285,17 @@ const Settings = () => {
                       <Camera size={16} className="mr-2" />
                       {currentAvatar ? 'Change Profile Picture' : 'Add Profile Picture'}
                     </label>
+                    {currentAvatar ? (
+                      <button
+                        type="button"
+                        onClick={removeAvatar}
+                        disabled={updateProfile.isPending}
+                        className="ml-2 mt-4 inline-flex items-center rounded-xl border border-destructive/20 px-4 py-2 text-sm font-bold text-destructive transition-all hover:bg-destructive/10 disabled:opacity-60"
+                      >
+                        <Trash2 size={16} className="mr-2" />
+                        Remove
+                      </button>
+                    ) : null}
                   </div>
                 </div>
 

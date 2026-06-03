@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../../api';
 import { motion } from 'framer-motion';
 import {
   FileCheck, BarChart3, CheckCircle2, Clock, FolderKanban,
   Receipt, TrendingUp, TrendingDown, AlertCircle, ArrowUpRight,
-  Layers, Star, Activity
+  Layers, Star, Activity, Calendar
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSocket } from '../../../context/SocketContext';
@@ -120,13 +121,20 @@ export default function PortalDashboard({ dark, user, setPendingCount }) {
         style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)' }}>
         <div className="absolute inset-0 opacity-10"
           style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, #fff 0%, transparent 60%)' }} />
-        <div className="relative flex items-center justify-between">
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-indigo-200 text-sm font-medium mb-1">Welcome back 👋</p>
             <h2 className="text-white text-2xl font-black mb-1">{client.name || user?.name || 'Client'}</h2>
             <p className="text-indigo-200 text-sm">{client.company || ''}</p>
+            <Link
+              to="/calendar"
+              className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-black text-indigo-700 shadow-lg shadow-indigo-950/20 transition-all hover:bg-indigo-50"
+            >
+              <Calendar size={16} />
+              Content Calendar
+            </Link>
           </div>
-          <div className="text-right">
+          <div className="text-left sm:text-right">
             <div className="text-white/80 text-xs mb-1">Onboarding Progress</div>
             <div className="text-white text-3xl font-black">{onboardingPct}%</div>
             <div className="w-32 h-1.5 rounded-full bg-white/20 mt-1">

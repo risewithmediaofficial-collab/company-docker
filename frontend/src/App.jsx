@@ -173,7 +173,7 @@ const App = () => {
             </ProtectedRoute>
           } />
           <Route path="/calendar" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client', 'referral']}>
               <ContentCalendar />
             </ProtectedRoute>
           } />

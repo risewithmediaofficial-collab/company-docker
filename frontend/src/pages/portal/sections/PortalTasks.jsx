@@ -7,6 +7,7 @@ import {
   getClientTaskStatusMeta,
   normalizeTaskStatusLabel,
 } from '../../../utils/taskFields';
+import { getAssetUrl } from '../../../utils/assetUrl';
 
 const AlertBox = ({ tone, message }) => {
   const styles = {
@@ -28,18 +29,33 @@ const FileLinks = ({ files = [] }) => {
 
   return (
     <div className="space-y-2">
-      {files.map((file, index) => (
+      {files.map((file, index) => {
+        const fileUrl = getAssetUrl(file.url);
+        const isImage = file.type?.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(file.url || file.name || '');
+
+        return (
         <a
           key={`${file.url || file.name}-${index}`}
-          href={file.url}
+          href={fileUrl}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center justify-between rounded-xl border border-border bg-background px-3 py-2 text-sm hover:bg-secondary/40"
+          className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2 text-sm hover:bg-secondary/40"
         >
-          <span>{file.name || 'File'}</span>
-          <span className="text-xs text-muted-foreground">{file.type || 'Attachment'}</span>
+          <span className="flex min-w-0 items-center gap-3">
+            {isImage ? (
+              <img
+                src={fileUrl}
+                alt={file.name || 'Attachment preview'}
+                className="h-12 w-12 shrink-0 rounded-lg border border-border object-cover"
+                loading="lazy"
+              />
+            ) : null}
+            <span className="truncate">{file.name || 'File'}</span>
+          </span>
+          <span className="shrink-0 text-xs text-muted-foreground">{file.type || 'Attachment'}</span>
         </a>
-      ))}
+        );
+      })}
     </div>
   );
 };

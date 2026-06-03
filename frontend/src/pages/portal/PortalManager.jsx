@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { TableSkeleton } from '../../components/ui/Skeleton';
+import { getAssetUrl } from '../../utils/assetUrl';
 
 const STATUSES = ['Draft','Editing','Send to Client','Revision Requested','Approved','Scheduled','Posted','Done'];
 const PLATFORMS = ['Instagram','Facebook','LinkedIn','Twitter','TikTok','YouTube','Blog','Email','Other'];
@@ -430,7 +431,7 @@ export default function PortalManager() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="h-8 w-8 rounded-full bg-indigo-500/20 flex items-center justify-center font-bold text-indigo-400">
-                              {request.requester?.avatar ? <img src={request.requester.avatar} alt="" className="rounded-full" /> : request.requester?.name?.charAt(0)}
+                              {request.requester?.avatar ? <img src={getAssetUrl(request.requester.avatar)} alt="" className="rounded-full" /> : request.requester?.name?.charAt(0)}
                             </div>
                             <div>
                               <p className="font-bold text-white">{request.requester?.name}</p>

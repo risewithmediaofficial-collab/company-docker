@@ -93,6 +93,7 @@ const Sidebar = () => {
     employee: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
       { name: 'My Tasks', icon: CheckSquare, path: '/tasks' },
+      { name: 'Content Calendar', icon: Calendar, path: '/calendar' },
       { name: 'Client Follow-ups', icon: PhoneCall, path: '/client-followups' },
       { name: 'Client Vault', icon: KeyRound, path: '/client-vault' },
       { name: 'Attendance', icon: Clock, path: '/attendance' },
@@ -113,6 +114,7 @@ const Sidebar = () => {
     referral: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
       { name: 'Leads', icon: TrendingUp, path: '/crm/leads' },
+      { name: 'Content Calendar', icon: Calendar, path: '/calendar' },
       { name: 'Earnings', icon: Award, path: '/referral' },
     ],
   };

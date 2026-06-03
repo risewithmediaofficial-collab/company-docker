@@ -68,6 +68,7 @@ import {
   normalizeTaskStatusLabel,
 } from '../../utils/taskFields';
 import { cn } from '../../utils/cn';
+import { getAssetUrl } from '../../utils/assetUrl';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const VIEW_OPTIONS = [
@@ -247,18 +248,33 @@ const FileLinks = ({ files = [], emptyMessage = 'No files available.' }) => {
 
   return (
     <div className="space-y-2">
-      {files.map((file, index) => (
+      {files.map((file, index) => {
+        const fileUrl = getAssetUrl(file.url);
+        const isImage = file.type?.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(file.url || file.name || '');
+
+        return (
         <a
           key={`${file.url || file.name}-${index}`}
-          href={file.url}
+          href={fileUrl}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center justify-between rounded-2xl border border-border bg-background px-3 py-2 text-sm transition-colors hover:bg-secondary/40"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-background px-3 py-2 text-sm transition-colors hover:bg-secondary/40"
         >
-          <span className="truncate">{file.name || 'File'}</span>
-          <span className="ml-3 text-xs text-muted-foreground">{file.type || 'Attachment'}</span>
+          <span className="flex min-w-0 items-center gap-3">
+            {isImage ? (
+              <img
+                src={fileUrl}
+                alt={file.name || 'Attachment preview'}
+                className="h-12 w-12 shrink-0 rounded-xl border border-border object-cover"
+                loading="lazy"
+              />
+            ) : null}
+            <span className="truncate">{file.name || 'File'}</span>
+          </span>
+          <span className="shrink-0 text-xs text-muted-foreground">{file.type || 'Attachment'}</span>
         </a>
-      ))}
+      );
+      })}
     </div>
   );
 };
@@ -441,7 +457,7 @@ const ContentCalendar = ({ embedded = false }) => {
   const isClient = user?.role === 'client';
   const canManageCalendar = ['superAdmin', 'manager'].includes(user?.role);
   const canFilterAssignee = ['superAdmin', 'manager'].includes(user?.role);
-  const canFilterClientProject = !isClient;
+  const canFilterClientProject = ['superAdmin', 'manager', 'employee'].includes(user?.role);
 
   const visibleRange = useMemo(() => getRangeForView(currentDate, view), [currentDate, view]);
 
@@ -553,7 +569,8 @@ const ContentCalendar = ({ embedded = false }) => {
   };
 
   const renderMonthView = () => (
-    <div className="overflow-hidden rounded-[24px] border border-border">
+    <div className="overflow-x-auto rounded-[24px] border border-border">
+      <div className="min-w-[760px]">
       <div className="grid grid-cols-7 border-b border-border bg-secondary/40">
         {DAY_NAMES.map((day) => (
           <div key={day} className="px-2 py-3 text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:text-sm">
@@ -574,7 +591,7 @@ const ContentCalendar = ({ embedded = false }) => {
               type="button"
               onClick={() => openDateDetails(day)}
               className={cn(
-                'min-h-[160px] border-b border-r border-border p-3 text-left align-top transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20',
+                'min-h-[132px] border-b border-r border-border p-2 text-left align-top transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 sm:min-h-[160px] sm:p-3',
                 !inCurrentMonth && 'bg-secondary/20 text-muted-foreground',
                 isToday(day) && 'bg-primary/5',
                 dayTasks.length ? 'hover:bg-secondary/35' : 'hover:bg-secondary/20',
@@ -627,6 +644,7 @@ const ContentCalendar = ({ embedded = false }) => {
           );
         })}
       </div>
+      </div>
     </div>
   );
 
@@ -668,7 +686,7 @@ const ContentCalendar = ({ embedded = false }) => {
   );
 
   return (
-    <div className={cn('space-y-6', embedded && 'p-6')}>
+    <div className={cn('space-y-6', embedded && 'p-4 sm:p-6')}>
       <PageHeader
         eyebrow={isClient ? 'Client Task Calendar' : user?.role === 'employee' ? 'Assigned Task Calendar' : 'Task Calendar'}
         title={isClient
@@ -681,20 +699,20 @@ const ContentCalendar = ({ embedded = false }) => {
           : 'Switch between monthly, weekly, daily, and list views to manage deadlines, priorities, and follow-ups.'}
         actions={(
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <div className="inline-flex items-center rounded-2xl border border-border bg-card p-1 shadow-sm">
+            <div className="grid grid-cols-4 rounded-2xl border border-border bg-card p-1 shadow-sm sm:inline-flex">
               {VIEW_OPTIONS.map(({ value, label, icon: Icon }) => (
                 <button
                   key={value}
                   onClick={() => setView(value)}
                   className={cn(
-                    'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all',
+                    'inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all',
                     view === value
                       ? 'bg-primary text-primary-foreground shadow-sm'
                       : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
                   )}
                 >
                   <Icon size={16} />
-                  {label}
+                  <span className="hidden sm:inline">{label}</span>
                 </button>
               ))}
             </div>
@@ -840,7 +858,7 @@ const ContentCalendar = ({ embedded = false }) => {
           ? 'Only your own tasks and client-visible information are shown here.'
           : 'Open any task for details, progress, files, and status updates based on your role.'}
         action={(
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="icon" onClick={() => setCurrentDate((current) => shiftDateByView(current, view, -1))}>
               <ChevronLeft size={16} />
             </Button>

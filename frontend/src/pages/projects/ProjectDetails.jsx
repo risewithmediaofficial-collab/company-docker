@@ -27,6 +27,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { AddTaskModal } from '../../components/modals/AddTaskModal';
 import { AddProjectModal } from '../../components/modals/AddProjectModal';
+import { getAssetUrl } from '../../utils/assetUrl';
 
 const statuses = ['todo', 'in_progress', 'review', 'approved', 'rejected', 'done'];
 
@@ -238,7 +239,7 @@ const ProjectDetails = () => {
                         className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border-2 border-card bg-secondary text-[8px] font-bold shadow-sm"
                         title={member.name}
                       >
-                        {member.avatar ? <img src={member.avatar} alt="" /> : member.name?.charAt(0)}
+                        {member.avatar ? <img src={getAssetUrl(member.avatar)} alt="" /> : member.name?.charAt(0)}
                       </div>
                     ))}
                   </div>
@@ -340,28 +341,42 @@ const ProjectDetails = () => {
       </div>
 
       <div className="space-y-3">
-        {files.length ? files.map((file, index) => (
+        {files.length ? files.map((file, index) => {
+          const fileUrl = getAssetUrl(file.url);
+          const isImage = file.type?.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(file.url || file.name || '');
+
+          return (
           <a
             key={`${file.url}-${index}`}
-            href={file.url}
+            href={fileUrl}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-between rounded-2xl border border-border bg-secondary/20 p-4 transition-colors hover:bg-secondary/40"
+            className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-secondary/20 p-4 transition-colors hover:bg-secondary/40"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Paperclip size={18} />
-              </div>
-              <div>
+            <div className="flex min-w-0 items-center gap-3">
+              {isImage ? (
+                <img
+                  src={fileUrl}
+                  alt={file.name || 'File preview'}
+                  className="h-12 w-12 shrink-0 rounded-xl border border-border object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Paperclip size={18} />
+                </div>
+              )}
+              <div className="min-w-0">
                 <p className="font-semibold">{file.name || 'Untitled file'}</p>
                 <p className="text-xs text-muted-foreground">{file.source}</p>
               </div>
             </div>
-            <span className="text-xs text-muted-foreground">
+            <span className="shrink-0 text-xs text-muted-foreground">
               {file.createdAt ? new Date(file.createdAt).toLocaleDateString() : 'Recently added'}
             </span>
           </a>
-        )) : (
+          );
+        }) : (
           <div className="rounded-2xl border border-dashed border-border bg-secondary/10 p-12 text-center text-sm text-muted-foreground">
             No project files or task attachments have been uploaded yet.
           </div>
@@ -388,7 +403,7 @@ const ProjectDetails = () => {
             <div key={member._id} className="flex items-center justify-between rounded-2xl border border-border p-4 hover:bg-secondary/10 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center font-bold">
-                  {member.avatar ? <img src={member.avatar} alt="" className="rounded-full" /> : member.name?.charAt(0)}
+                  {member.avatar ? <img src={getAssetUrl(member.avatar)} alt="" className="rounded-full" /> : member.name?.charAt(0)}
                 </div>
                 <div>
                   <p className="text-sm font-bold">{member.name}</p>
@@ -409,7 +424,7 @@ const ProjectDetails = () => {
               <div key={request._id} className="flex items-center justify-between rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center font-bold">
-                    {request.requester.avatar ? <img src={request.requester.avatar} alt="" className="rounded-full" /> : request.requester.name?.charAt(0)}
+                    {request.requester.avatar ? <img src={getAssetUrl(request.requester.avatar)} alt="" className="rounded-full" /> : request.requester.name?.charAt(0)}
                   </div>
                   <div>
                     <p className="text-sm font-bold">{request.requester.name}</p>
@@ -539,7 +554,7 @@ const ProjectDetails = () => {
                   className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border-2 border-card bg-secondary text-xs font-bold shadow-sm"
                   title={member.name}
                 >
-                  {member.avatar ? <img src={member.avatar} alt="" /> : member.name.charAt(0)}
+                  {member.avatar ? <img src={getAssetUrl(member.avatar)} alt="" /> : member.name.charAt(0)}
                 </div>
               ))}
               {user?.role !== 'client' && (

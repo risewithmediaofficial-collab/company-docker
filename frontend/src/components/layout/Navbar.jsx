@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { toggleDarkMode, toggleSidebar } from '../../store/slices/uiSlice';
 import { logout } from '../../store/slices/authSlice';
 import api from '../../api';
+import { getAssetUrl } from '../../utils/assetUrl';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -150,7 +151,7 @@ const Navbar = () => {
             <DropdownMenuTrigger className="flex min-w-0 items-center gap-2 rounded-full p-1.5 transition-colors hover:bg-secondary focus:outline-none">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-primary to-blue-500 text-xs font-semibold text-white shadow-md shadow-primary/20">
                 {user?.avatar ? (
-                  <img src={user.avatar} alt={user.name} className="w-full h-8 rounded-full object-cover" />
+                  <img src={getAssetUrl(user.avatar)} alt={user.name} className="w-full h-8 rounded-full object-cover" />
                 ) : (
                   user?.name?.charAt(0).toUpperCase() || 'U'
                 )}

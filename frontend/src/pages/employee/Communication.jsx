@@ -21,6 +21,7 @@ import {
   useUpdateCommunication,
 } from '../../hooks/useCommunications';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getAssetUrl } from '../../utils/assetUrl';
 
 const statusStyles = {
   new: 'bg-indigo-500/10 text-indigo-400',
@@ -244,7 +245,7 @@ const Communication = () => {
                         <div className="flex items-center gap-2 mb-1.5 px-1">
                           {!isMe && (
                              <div className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center text-[9px] font-black text-indigo-400 overflow-hidden shadow-inner border border-white/5">
-                                {msg.sender?.avatar ? <img src={msg.sender.avatar} alt="" /> : msg.sender?.name?.charAt(0) || '?'}
+                                {msg.sender?.avatar ? <img src={getAssetUrl(msg.sender.avatar)} alt="" /> : msg.sender?.name?.charAt(0) || '?'}
                              </div>
                           )}
                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
