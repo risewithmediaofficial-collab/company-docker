@@ -132,11 +132,11 @@ const getLeadValue = (lead) => {
   try {
     return new Intl.NumberFormat(undefined, {
       style: 'currency',
-      currency: lead?.currency || 'USD',
+      currency: lead?.currency || 'INR',
       maximumFractionDigits: 0,
     }).format(amount);
   } catch {
-    return `${lead?.currency || 'USD'} ${amount}`;
+    return `${lead?.currency || 'INR'} ${amount}`;
   }
 };
 
@@ -269,7 +269,7 @@ const LeadActivityDialog = ({ open, onOpenChange, lead, onSave, saving }) => {
 
 const Leads = () => {
   const [searchParams] = useSearchParams();
-  const [view, setView] = useState('kanban');
+  const [view, setView] = useState('list');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [deleteLeadId, setDeleteLeadId] = useState(null);
@@ -701,6 +701,7 @@ const Leads = () => {
                       <th className="px-4 py-4 font-semibold sm:px-6">Company</th>
                       <th className="px-4 py-4 font-semibold sm:px-6">Email</th>
                       <th className="px-4 py-4 font-semibold sm:px-6">Interest</th>
+                      <th className="px-4 py-4 font-semibold sm:px-6">Value</th>
                       <th className="px-4 py-4 font-semibold sm:px-6">Follow-up</th>
                       <th className="px-4 py-4 font-semibold sm:px-6">Stage</th>
                       <th className="px-4 py-4 font-semibold sm:px-6">Owner</th>
@@ -712,7 +713,14 @@ const Leads = () => {
                       const stageInfo = STAGE_META[lead.stage] || STAGE_META.new;
 
                       return (
-                        <tr key={lead._id} className="group transition-colors hover:bg-secondary/20">
+                        <tr 
+                          key={lead._id} 
+                          className="group cursor-pointer transition-colors hover:bg-secondary/20"
+                          onClick={() => {
+                            setSelectedLead(lead);
+                            setShowAddModal(true);
+                          }}
+                        >
                           <td className="px-4 py-4 sm:px-6">
                             <div className="font-semibold text-foreground">{lead.name}</div>
                             <div className="mt-1 text-xs text-muted-foreground">{lead.phone || 'No phone added'}</div>
@@ -724,6 +732,10 @@ const Leads = () => {
                             {lead.decisionMaker ? (
                               <div className="mt-1 text-xs text-muted-foreground">DM: {lead.decisionMaker}</div>
                             ) : null}
+                          </td>
+                          <td className="px-4 py-4 sm:px-6">
+                            <div className="font-semibold text-foreground">{getLeadValue(lead) || 'No value'}</div>
+                            <div className="mt-1 text-xs text-muted-foreground">Deal value</div>
                           </td>
                           <td className="px-4 py-4 sm:px-6">
                             <span className={`text-xs font-semibold ${getFollowUpTone(lead.followUpDate || lead.expectedCloseDate)}`}>
@@ -749,14 +761,18 @@ const Leads = () => {
                           <td className="px-4 py-4 text-right sm:px-6">
                             <div className="flex justify-end gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
                               <button
-                                onClick={() => setActivityLead(lead)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActivityLead(lead);
+                                }}
                                 className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                                 aria-label={`Add follow-up note for ${lead.name}`}
                               >
                                 <MessageSquarePlus size={16} />
                               </button>
                               <button
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setSelectedLead(lead);
                                   setShowAddModal(true);
                                 }}
@@ -766,7 +782,10 @@ const Leads = () => {
                                 <Edit2 size={16} />
                               </button>
                               <button
-                                onClick={() => setDeleteLeadId(lead._id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteLeadId(lead._id);
+                                }}
                                 className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                                 aria-label={`Delete ${lead.name}`}
                               >
