@@ -56,7 +56,9 @@ export const getClients = async (req, res) => {
       ];
     }
 
-    if (req.user.role === 'manager') filter.assignedManager = req.user._id;
+    // SuperAdmin and Manager can see all clients
+    // Employee can see clients they're assigned to
+    // Client can only see their own data
     if (req.user.role === 'employee') filter.assignedTeam = req.user._id;
     if (req.user.role === 'client') filter.userId = req.user._id;
 

@@ -79,7 +79,10 @@ export const getProjects = async (req, res) => {
     if (status) filter.status = projectStatusMap[status] || status;
     if (client) filter.client = client;
     if (search) filter.name = { $regex: search, $options: 'i' };
-    if (req.user.role === 'manager') filter.manager = req.user._id;
+    
+    // SuperAdmin and Manager can see all projects (for task creation)
+    // Employee can see projects they're assigned to
+    // Client can only see their own projects
     if (req.user.role === 'employee') filter.team = req.user._id;
     if (req.user.role === 'client') {
       const clientRecord = await Client.findOne({ userId: req.user._id }).select('_id');
