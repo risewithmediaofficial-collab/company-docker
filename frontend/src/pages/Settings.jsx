@@ -54,6 +54,8 @@ const Settings = () => {
     department: '',
     position: '',
   });
+  const [currentAvatar, setCurrentAvatar] = useState('');
+  const [avatarPreview, setAvatarPreview] = useState('');
 
   const [preferences, setPreferences] = useState({
     notifications: {},
@@ -75,7 +77,14 @@ const Settings = () => {
       department: profileUser.department || '',
       position: profileUser.position || '',
     });
+    setCurrentAvatar(profileUser.avatar || '');
   }, [profileUser]);
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    };
+  }, [avatarPreview]);
 
   useEffect(() => {
     if (!settings) return;
@@ -114,9 +123,30 @@ const Settings = () => {
       return;
     }
 
-    const uploadResult = await uploadProfileAvatar.mutateAsync(file);
-    const saved = await updateProfile.mutateAsync({ avatar: uploadResult.url });
-    dispatch(updateCurrentUser(saved));
+    const previewUrl = URL.createObjectURL(file);
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    setAvatarPreview(previewUrl);
+
+    try {
+      const uploadResult = await uploadProfileAvatar.mutateAsync(file);
+      const uploadedUrl = uploadResult.url || uploadResult.file?.url || uploadResult.data?.url;
+
+      if (!uploadedUrl) {
+        toast.error('Profile picture uploaded, but the image URL was missing');
+        setAvatarPreview('');
+        URL.revokeObjectURL(previewUrl);
+        return;
+      }
+
+      const saved = await updateProfile.mutateAsync({ avatar: uploadedUrl });
+      setCurrentAvatar(saved.avatar || uploadedUrl);
+      setAvatarPreview('');
+      URL.revokeObjectURL(previewUrl);
+      dispatch(updateCurrentUser(saved));
+    } catch (_error) {
+      setAvatarPreview('');
+      URL.revokeObjectURL(previewUrl);
+    }
   };
 
   const handlePasswordFieldChange = (event) => {
@@ -214,7 +244,7 @@ const Settings = () => {
                       onChange={handleAvatarUpload}
                     />
                     <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-white text-3xl font-black shadow-xl overflow-hidden">
-                      {profileUser?.avatar ? <img src={profileUser.avatar} alt="" className="h-full w-full object-cover" /> : profileUser?.name?.charAt(0)}
+                      {avatarPreview || currentAvatar ? <img src={avatarPreview || currentAvatar} alt="" className="h-full w-full object-cover" /> : profileUser?.name?.charAt(0)}
                     </div>
                     <label
                       htmlFor="profile-avatar-upload"
@@ -232,8 +262,19 @@ const Settings = () => {
                     <h3 className="text-xl font-bold">{profileUser?.name}</h3>
                     <p className="text-sm text-muted-foreground capitalize">{profileUser?.role} / {profileUser?.department || 'Operations'}</p>
                     <p className="mt-2 text-xs text-muted-foreground">
-                      {uploadProfileAvatar.isPending ? 'Uploading profile picture...' : 'Email changes are restricted to administrators.'}
+                      {uploadProfileAvatar.isPending || updateProfile.isPending ? 'Uploading profile picture...' : 'Email changes are restricted to administrators.'}
                     </p>
+                    <label
+                      htmlFor="profile-avatar-upload"
+                      className={`mt-4 inline-flex items-center rounded-xl border border-border px-4 py-2 text-sm font-bold transition-all ${
+                        uploadProfileAvatar.isPending || updateProfile.isPending
+                          ? 'pointer-events-none opacity-60'
+                          : 'cursor-pointer hover:border-primary hover:text-primary'
+                      }`}
+                    >
+                      <Camera size={16} className="mr-2" />
+                      {currentAvatar ? 'Change Profile Picture' : 'Add Profile Picture'}
+                    </label>
                   </div>
                 </div>
 

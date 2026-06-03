@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, FileCheck, Calendar, BarChart3, Download,
+  LayoutDashboard, Calendar, BarChart3, Download,
   Palette, Receipt, HeadphonesIcon, BookOpen, Bell, Moon, Sun,
   Menu, X, ChevronRight, LogOut, Settings, User
 } from 'lucide-react';
 import PortalDashboard from './sections/PortalDashboard';
-import ContentReview from './sections/ContentReview';
 import ContentCalendarView from './sections/ContentCalendarView';
 import PortalReports from './sections/PortalReports';
 import PortalDownloads from './sections/PortalDownloads';
@@ -18,7 +17,6 @@ import PortalGuidelines from './sections/PortalGuidelines';
 
 const NAV_ITEMS = [
   { id: 'dashboard',  label: 'Dashboard',       icon: LayoutDashboard, color: '#6366f1' },
-  { id: 'review',     label: 'Content Review',   icon: FileCheck,       color: '#f59e0b', badge: true },
   { id: 'calendar',   label: 'Content Calendar', icon: Calendar,        color: '#10b981' },
   { id: 'reports',    label: 'Reports',          icon: BarChart3,       color: '#3b82f6' },
   { id: 'downloads',  label: 'Downloads',        icon: Download,        color: '#8b5cf6' },
@@ -30,7 +28,6 @@ const NAV_ITEMS = [
 
 const SECTION_MAP = {
   dashboard:  PortalDashboard,
-  review:     ContentReview,
   calendar:   ContentCalendarView,
   reports:    PortalReports,
   downloads:  PortalDownloads,

@@ -26,7 +26,6 @@ import Tasks from './pages/tasks/Tasks';
 import ContentCalendar from './pages/tasks/ContentCalendar';
 import Finance from './pages/finance/Finance';
 import HR from './pages/hr/HR';
-import Automations from './pages/automations/Automations';
 import Reports from './pages/reports/Reports';
 import Attendance from './pages/employee/Attendance';
 import Communication from './pages/employee/Communication';
@@ -37,7 +36,6 @@ import Settings from './pages/Settings';
 import NotFound from './pages/NotFound';
 import PortalManager from './pages/portal/PortalManager';
 import PortalDashboard from './pages/portal/sections/PortalDashboard';
-import ContentReview from './pages/portal/sections/ContentReview';
 import PortalReports from './pages/portal/sections/PortalReports';
 import PortalDownloads from './pages/portal/sections/PortalDownloads';
 import BrandAssets from './pages/portal/sections/BrandAssets';
@@ -194,13 +192,6 @@ const App = () => {
             </ProtectedRoute>
           } />
 
-          {/* Automations — admin/manager only */}
-          <Route path="/automations" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
-              <Automations />
-            </ProtectedRoute>
-          } />
-
           {/* Reports — admin/manager only */}
           <Route path="/reports" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
@@ -245,11 +236,6 @@ const App = () => {
           <Route path="/settings" element={<Settings />} />
 
           {/* Client Portal Sections */}
-          <Route path="/portal/review" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
-              <ContentReview dark={false} />
-            </ProtectedRoute>
-          } />
           <Route path="/portal/reports" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
               <PortalReports dark={false} />
