@@ -45,6 +45,7 @@ const leadFormSchema = z.object({
   status: z.enum(['New', 'Contacted', 'Qualified', 'Meeting Booked', 'Proposal', 'Negotiation', 'Won', 'Lost', 'Refollow Later']).default('New'),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
   budget: z.number().optional(),
+  currency: z.string().default('INR'),
   expectedCloseDate: z.string().optional(),
   refollowDate: z.string().optional(),
   proposalStatus: z.enum(['Not Sent', 'Sent', 'Viewed', 'Revision Needed', 'Accepted', 'Rejected']).default('Not Sent'),
@@ -67,6 +68,7 @@ export const AddLeadModal = ({ open, onOpenChange, lead = null }) => {
       source: 'Other',
       status: 'New',
       priority: 'medium',
+      currency: 'INR',
       proposalStatus: 'Not Sent',
       notes: '',
     },
@@ -90,6 +92,7 @@ export const AddLeadModal = ({ open, onOpenChange, lead = null }) => {
         status: lead.status,
         priority: lead.priority || 'medium',
         budget: lead.budget || 0,
+        currency: lead.currency || 'INR',
         expectedCloseDate: lead.expectedCloseDate ? new Date(lead.expectedCloseDate).toISOString().split('T')[0] : '',
         refollowDate: lead.refollowDate ? new Date(lead.refollowDate).toISOString().split('T')[0] : '',
         proposalStatus: lead.proposalStatusLabel || 'Not Sent',
@@ -107,6 +110,7 @@ export const AddLeadModal = ({ open, onOpenChange, lead = null }) => {
       ...data,
       email: data.email || undefined,
       budget: data.budget ? Number(data.budget) : undefined,
+      currency: data.currency || 'INR',
       expectedCloseDate: data.expectedCloseDate ? new Date(data.expectedCloseDate) : undefined,
       refollowDate: data.refollowDate ? new Date(data.refollowDate) : undefined,
     };
@@ -314,6 +318,30 @@ export const AddLeadModal = ({ open, onOpenChange, lead = null }) => {
                         onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : '')}
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="currency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Currency</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || 'INR'}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="INR">₹ Indian Rupees (INR)</SelectItem>
+                        <SelectItem value="USD">$ US Dollars (USD)</SelectItem>
+                        <SelectItem value="EUR">€ Euros (EUR)</SelectItem>
+                        <SelectItem value="GBP">£ British Pounds (GBP)</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
