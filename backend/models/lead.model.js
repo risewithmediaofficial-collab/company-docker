@@ -47,7 +47,7 @@ const leadSchema = new mongoose.Schema(
       default: 'medium',
     },
     value: { type: Number, default: 0 }, // estimated deal value
-    currency: { type: String, default: 'USD' },
+    currency: { type: String, default: 'INR' },
     serviceInterest: { type: String, trim: true },
     decisionMaker: { type: String, trim: true },
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

@@ -93,6 +93,7 @@ const normalizeLeadPayload = (body = {}) => {
   if (payload.priority && !['low', 'medium', 'high', 'urgent'].includes(payload.priority)) {
     payload.priority = 'medium';
   }
+  if (!payload.currency) payload.currency = 'INR';
 
   return payload;
 };

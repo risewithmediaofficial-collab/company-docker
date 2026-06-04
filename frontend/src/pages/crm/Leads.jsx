@@ -20,6 +20,7 @@ import {
 import { motion } from 'framer-motion';
 import { useAddLeadActivity, useLeadsKanban, useLeads, useUpdateLeadStage, useDeleteLead } from '../../hooks/useLeads';
 import { AddLeadModal } from '../../components/modals/AddLeadModal';
+import { formatINR } from '../../utils/currency';
 import { TableSkeleton } from '../../components/ui/Skeleton';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -128,16 +129,7 @@ const getFollowUpTone = (value) => {
 const getLeadValue = (lead) => {
   const amount = lead?.budget ?? lead?.value;
   if (!amount) return null;
-
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: lead?.currency || 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `${lead?.currency || 'INR'} ${amount}`;
-  }
+  return formatINR(amount);
 };
 
 const LeadActivityDialog = ({ open, onOpenChange, lead, onSave, saving }) => {
