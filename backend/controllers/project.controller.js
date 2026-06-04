@@ -56,6 +56,7 @@ const normalizeProjectPayload = (body) => {
     delete payload.endDate;
   }
   if (payload.team && !Array.isArray(payload.team)) payload.team = [payload.team];
+  if (!payload.currency) payload.currency = 'INR';
   return payload;
 };
 

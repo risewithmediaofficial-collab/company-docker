@@ -36,7 +36,7 @@ const projectSchema = new mongoose.Schema(
     completedAt: { type: Date },
     budget: { type: Number, default: 0 },
     budgetSpent: { type: Number, default: 0 },
-    currency: { type: String, default: 'USD' },
+    currency: { type: String, default: 'INR' },
     category: {
       type: String,
       enum: ['social_media', 'seo', 'paid_ads', 'web_design', 'web_development', 'video_content', 'content', 'branding', 'video', 'graphic_design', 'mobile_app', 'e_commerce', 'other'],

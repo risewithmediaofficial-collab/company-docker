@@ -1,5 +1,6 @@
-import { DollarSign, TrendingUp, FileText, AlertCircle } from 'lucide-react';
+import { IndianRupee, TrendingUp, FileText, AlertCircle } from 'lucide-react';
 import { useClientProjectsFinance } from '../../hooks/useProjectFinance';
+import { formatINR } from '../../utils/currency';
 import { Badge } from './badge';
 
 /**
@@ -7,13 +8,6 @@ import { Badge } from './badge';
  */
 const ClientFinancialSummary = ({ clientId, clientName, clientTier = 'growth' }) => {
   const { data: financeData, isLoading } = useClientProjectsFinance(clientId);
-
-  const currencyFormatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
 
   const getHealthStatus = (margin) => {
     const m = parseFloat(margin);
@@ -63,10 +57,10 @@ const ClientFinancialSummary = ({ clientId, clientName, clientTier = 'growth' })
         <div className="p-4 rounded-lg bg-green-500/10 border border-green-200 dark:border-green-800">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground">TOTAL INCOME</span>
-            <DollarSign size={16} className="text-green-600 dark:text-green-400" />
+            <IndianRupee size={16} className="text-green-600 dark:text-green-400" />
           </div>
           <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-            {currencyFormatter.format(financeData.totalIncome)}
+            {formatINR(financeData.totalIncome)}
           </div>
           <div className="text-xs text-muted-foreground mt-2">{financeData.projects.length} projects</div>
         </div>
@@ -78,7 +72,7 @@ const ClientFinancialSummary = ({ clientId, clientName, clientTier = 'growth' })
             <TrendingUp size={16} className="text-red-600 dark:text-red-400" />
           </div>
           <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-            {currencyFormatter.format(financeData.totalExpenses)}
+            {formatINR(financeData.totalExpenses)}
           </div>
           <div className="text-xs text-muted-foreground mt-2">
             {financeData.totalBudget > 0
@@ -94,7 +88,7 @@ const ClientFinancialSummary = ({ clientId, clientName, clientTier = 'growth' })
             <TrendingUp size={16} className="text-blue-600 dark:text-blue-400" />
           </div>
           <div className={`text-2xl font-bold ${financeData.totalProfit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
-            {currencyFormatter.format(financeData.totalProfit)}
+            {formatINR(financeData.totalProfit)}
           </div>
           <div className="text-xs text-muted-foreground mt-2">
             {financeData.activeProjects} active
@@ -121,13 +115,13 @@ const ClientFinancialSummary = ({ clientId, clientName, clientTier = 'growth' })
         {/* Budget Overview */}
         <div className="space-y-3">
           <h4 className="font-semibold text-sm flex items-center gap-2">
-            <DollarSign size={16} />
+            <IndianRupee size={16} />
             Budget Overview
           </h4>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Total Budget</span>
-              <span className="font-semibold">{currencyFormatter.format(financeData.totalBudget)}</span>
+              <span className="font-semibold">{formatINR(financeData.totalBudget)}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Utilized</span>
@@ -140,7 +134,7 @@ const ClientFinancialSummary = ({ clientId, clientName, clientTier = 'growth' })
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Remaining</span>
               <span className={`font-semibold ${financeData.totalBudget - financeData.totalExpenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {currencyFormatter.format(Math.max(0, financeData.totalBudget - financeData.totalExpenses))}
+                {formatINR(Math.max(0, financeData.totalBudget - financeData.totalExpenses))}
               </span>
             </div>
           </div>
@@ -187,7 +181,7 @@ const ClientFinancialSummary = ({ clientId, clientName, clientTier = 'growth' })
                 <div key={project._id} className="p-2 rounded-lg bg-secondary/50 flex items-center justify-between">
                   <div className="min-w-0">
                     <p className="font-medium text-sm truncate">{project.name}</p>
-                    <p className="text-xs text-muted-foreground">{currencyFormatter.format(project.profit)} profit</p>
+                    <p className="text-xs text-muted-foreground">{formatINR(project.profit)} profit</p>
                   </div>
                   <span className="text-sm font-semibold text-green-600 whitespace-nowrap ml-2">
                     {project.profitMargin}%

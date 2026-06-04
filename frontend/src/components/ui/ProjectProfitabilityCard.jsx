@@ -1,4 +1,5 @@
-import { TrendingUp, TrendingDown, DollarSign, Target } from 'lucide-react';
+import { TrendingUp, TrendingDown, IndianRupee, Target } from 'lucide-react';
+import { formatINR } from '../../utils/currency';
 import { Badge } from './badge';
 
 /**
@@ -17,13 +18,6 @@ const ProjectProfitabilityCard = ({
 }) => {
   const isPositive = profit >= 0;
   const isBudgetHealthy = budgetUtilization <= 100;
-
-  const currencyFormatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
 
   const getROIColor = (roiValue) => {
     const roi = parseFloat(roiValue);
@@ -44,16 +38,16 @@ const ProjectProfitabilityCard = ({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="p-3 rounded-lg bg-secondary/50 border border-border">
           <div className="text-xs text-muted-foreground mb-1">Income</div>
-          <div className="text-lg font-bold text-green-600">{currencyFormatter.format(income)}</div>
+          <div className="text-lg font-bold text-green-600">{formatINR(income)}</div>
         </div>
         <div className="p-3 rounded-lg bg-secondary/50 border border-border">
           <div className="text-xs text-muted-foreground mb-1">Expenses</div>
-          <div className="text-lg font-bold text-red-600">{currencyFormatter.format(expenses)}</div>
+          <div className="text-lg font-bold text-red-600">{formatINR(expenses)}</div>
         </div>
         <div className="p-3 rounded-lg bg-secondary/50 border border-border">
           <div className="text-xs text-muted-foreground mb-1">Profit</div>
           <div className={`text-lg font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-            {currencyFormatter.format(profit)}
+            {formatINR(profit)}
           </div>
         </div>
         <div className="p-3 rounded-lg bg-secondary/50 border border-border">
@@ -87,10 +81,10 @@ const ProjectProfitabilityCard = ({
         <div className="p-4 rounded-lg bg-green-500/10 border border-green-200 dark:border-green-800">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground">INCOME</span>
-            <DollarSign size={16} className="text-green-600 dark:text-green-400" />
+            <IndianRupee size={16} className="text-green-600 dark:text-green-400" />
           </div>
           <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-            {currencyFormatter.format(income)}
+            {formatINR(income)}
           </div>
         </div>
 
@@ -101,7 +95,7 @@ const ProjectProfitabilityCard = ({
             <TrendingDown size={16} className="text-red-600 dark:text-red-400" />
           </div>
           <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-            {currencyFormatter.format(expenses)}
+            {formatINR(expenses)}
           </div>
         </div>
 
@@ -116,7 +110,7 @@ const ProjectProfitabilityCard = ({
             )}
           </div>
           <div className={`text-2xl font-bold ${isPositive ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
-            {currencyFormatter.format(profit)}
+            {formatINR(profit)}
           </div>
         </div>
 
@@ -160,7 +154,7 @@ const ProjectProfitabilityCard = ({
         <div className="pt-4 border-t border-border space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground">Budget Utilization</span>
-            <span className="text-xs font-bold">{currencyFormatter.format(expenses)} / {currencyFormatter.format(budget)}</span>
+            <span className="text-xs font-bold">{formatINR(expenses)} / {formatINR(budget)}</span>
           </div>
           <div className="w-full h-2 rounded-full bg-secondary overflow-hidden">
             <div

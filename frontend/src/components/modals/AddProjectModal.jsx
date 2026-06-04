@@ -44,6 +44,7 @@ const projectFormSchema = z.object({
   startDate: z.string(),
   endDate: z.string(),
   budget: z.number().optional(),
+  currency: z.string().default('INR'),
   proposalText: z.string().optional(),
   clientDiscussionNotes: z.string().optional(),
   nextMeetupDate: z.string().optional(),
@@ -63,6 +64,7 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
       startDate: '',
       endDate: '',
       budget: undefined,
+      currency: 'INR',
       proposalText: '',
       clientDiscussionNotes: '',
       nextMeetupDate: '',
@@ -86,6 +88,7 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
         startDate: project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : '',
         endDate: project.endDate ? new Date(project.endDate).toISOString().split('T')[0] : '',
         budget: project.budget || undefined,
+        currency: project.currency || 'INR',
         proposalText: project.proposalText || '',
         clientDiscussionNotes: project.clientDiscussionNotes || '',
         nextMeetupDate: project.nextMeetupDate ? new Date(project.nextMeetupDate).toISOString().split('T')[0] : '',
@@ -101,6 +104,7 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
         startDate: '',
         endDate: '',
         budget: undefined,
+        currency: 'INR',
         proposalText: '',
         clientDiscussionNotes: '',
         nextMeetupDate: '',
@@ -112,6 +116,7 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
     const payload = {
       ...data,
       budget: data.budget ? Number(data.budget) : undefined,
+      currency: data.currency || 'INR',
     };
 
     if (project) {
@@ -292,7 +297,7 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
                 name="budget"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Budget</FormLabel>
+                    <FormLabel>Budget (₹ INR)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"

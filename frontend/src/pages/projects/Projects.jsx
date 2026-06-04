@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { formatINR } from '../../utils/currency';
 
 const projectStatusTone = {
   Completed: 'success',
@@ -79,7 +80,7 @@ const Projects = () => {
     {
       key: 'budget',
       label: 'Budget',
-      render: (row) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(row.budget || 0)),
+      render: (row) => formatINR(row.budget),
     },
     {
       key: 'progress',

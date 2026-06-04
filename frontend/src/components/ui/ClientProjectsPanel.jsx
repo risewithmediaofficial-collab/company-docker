@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
-import { FolderOpen, Plus, TrendingUp, DollarSign } from 'lucide-react';
+import { FolderOpen, IndianRupee, Plus, TrendingUp } from 'lucide-react';
 import { useProjects } from '../../hooks/useProjects';
+import { formatINR } from '../../utils/currency';
 import { Button } from './button';
 import { Badge } from './badge';
 
@@ -26,14 +27,7 @@ const ClientProjectsPanel = ({ clientId, clientName, onAddProject }) => {
     urgent: 'text-red-600 dark:text-red-400',
   };
 
-  const currencyFormatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
-
-  const activeProjects = projects.filter((p) => p.status === 'active');
+  const activeProjects = projects.filter((p) => p.status === 'active' || p.status === 'In Progress');
   const completedProjects = projects.filter((p) => p.status === 'completed');
   const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
 
@@ -78,7 +72,7 @@ const ClientProjectsPanel = ({ clientId, clientName, onAddProject }) => {
         </div>
         <div className="p-3 rounded-lg bg-secondary/50 border border-border">
           <div className="text-xs text-muted-foreground mb-1">Total Budget</div>
-          <div className="text-lg font-bold truncate">{currencyFormatter.format(totalBudget)}</div>
+          <div className="text-lg font-bold truncate">{formatINR(totalBudget)}</div>
         </div>
       </div>
 
@@ -113,8 +107,8 @@ const ClientProjectsPanel = ({ clientId, clientName, onAddProject }) => {
                 <div className="flex items-center gap-3">
                   {project.budget > 0 && (
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <DollarSign size={14} />
-                      <span>{currencyFormatter.format(project.budget)}</span>
+                      <IndianRupee size={14} />
+                      <span>{formatINR(project.budget)}</span>
                     </div>
                   )}
                   {project.progress > 0 && (
