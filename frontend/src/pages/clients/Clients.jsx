@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Briefcase, Building2, CircleDollarSign, Plus, Users } from 'lucide-react';
+import { Briefcase, Building2, IndianRupee, Plus, Users } from 'lucide-react';
 import { useClients, useDeleteClient } from '../../hooks/useClients';
 import { AddClientModal } from '../../components/modals/AddClientModal';
 import { DataTable } from '../../components/ui/DataTable';
@@ -155,7 +155,7 @@ const Clients = () => {
             label="Tracked Revenue"
             value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(totalRevenue)}
             helper="Combined revenue attached to visible clients"
-            icon={CircleDollarSign}
+            icon={IndianRupee}
             tone="primary"
           />
         </MetricGrid>

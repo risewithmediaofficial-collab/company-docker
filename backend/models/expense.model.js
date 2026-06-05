@@ -8,7 +8,7 @@ const expenseSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
     amount: { type: Number, required: true, min: 0 },
-    currency: { type: String, default: 'USD' },
+    currency: { type: String, default: 'INR' },
     category: {
       type: String,
       enum: ['salary', 'tools', 'advertising', 'travel', 'office', 'freelance', 'misc'],

@@ -326,7 +326,7 @@ const recordPayment = async ({
   client: invoice.client,
   project: invoice.project,
   amount,
-  currency: invoice.currency || 'USD',
+  currency: invoice.currency || 'INR',
   status: 'paid',
   method: method || 'manual',
   reference: reference || '',

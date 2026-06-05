@@ -2,32 +2,32 @@ import { useEffect, useState } from 'react';
 import api from '../../../api';
 import { motion } from 'framer-motion';
 import {
-  TrendingUp, TrendingDown, DollarSign, Users, Phone,
+  TrendingUp, TrendingDown, IndianRupee, Users, Phone,
   UserPlus, Wallet, BarChart3, Download, RefreshCw
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
+import { formatINR } from '../../../utils/currency';
+import { CardSkeleton, ChartSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const KPI_CONFIG = [
-  { key: 'adSpend',       label: 'Ad Spend',           icon: DollarSign, color: '#f59e0b', prefix: '$' },
-  { key: 'optIns',        label: 'Opt-Ins',            icon: Users,      color: '#6366f1', prefix: ''  },
-  { key: 'callsBooked',   label: 'Calls Booked',       icon: Phone,      color: '#10b981', prefix: ''  },
-  { key: 'newClients',    label: 'New Clients',         icon: UserPlus,   color: '#3b82f6', prefix: ''  },
-  { key: 'cashCollected', label: 'Cash Collected',      icon: Wallet,     color: '#8b5cf6', prefix: '$' },
-  { key: 'totalRevenue',  label: 'Contracted Revenue',  icon: BarChart3,  color: '#ec4899', prefix: '$' },
+  { key: 'adSpend',       label: 'Ad Spend',           icon: IndianRupee, color: '#f59e0b', currency: true },
+  { key: 'optIns',        label: 'Opt-Ins',            icon: Users,       color: '#6366f1', currency: false },
+  { key: 'callsBooked',   label: 'Calls Booked',       icon: Phone,       color: '#10b981', currency: false },
+  { key: 'newClients',    label: 'New Clients',        icon: UserPlus,    color: '#3b82f6', currency: false },
+  { key: 'cashCollected', label: 'Cash Collected',     icon: Wallet,      color: '#8b5cf6', currency: true },
+  { key: 'totalRevenue',  label: 'Contracted Revenue', icon: BarChart3,   color: '#ec4899', currency: true },
 ];
 
-function fmt(n, prefix = '') {
-  if (n === undefined || n === null) return `${prefix}0`;
-  if (prefix === '$') return `$${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  return n.toLocaleString();
+function fmt(n, currency = false) {
+  if (n === undefined || n === null) return currency ? formatINR(0) : '0';
+  if (currency) return formatINR(n);
+  return Number(n).toLocaleString('en-IN');
 }
-
-import { CardSkeleton, ChartSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
 
 export default function PortalReports({ dark }) {
   const [data, setData]       = useState(null);
@@ -144,10 +144,10 @@ export default function PortalReports({ dark }) {
                       </div>
                     )}
                   </div>
-                  <p className={`text-xl font-black mt-1 ${txt}`}>{fmt(val, k.prefix)}</p>
+                  <p className={`text-xl font-black mt-1 ${txt}`}>{fmt(val, k.currency)}</p>
                   <p className={`text-[10px] font-medium mt-0.5 ${sub}`}>{k.label}</p>
                   <p className="text-[10px] text-slate-500 mt-0.5">
-                    Latest: {fmt(latestVal, k.prefix)}
+                    Latest: {fmt(latestVal, k.currency)}
                   </p>
                 </motion.button>
               );
@@ -219,23 +219,23 @@ export default function PortalReports({ dark }) {
                       <td className={`px-4 py-2.5 font-bold ${txt}`}>
                         {MONTHS[parseInt(e.month?.split('-')[1]||1)-1]} {e.month?.split('-')[0]}
                       </td>
-                      <td className="px-4 py-2.5 text-amber-400 font-semibold">{fmt(e.adSpend,'$')}</td>
+                      <td className="px-4 py-2.5 text-amber-400 font-semibold">{fmt(e.adSpend, true)}</td>
                       <td className={`px-4 py-2.5 ${txt}`}>{fmt(e.optIns)}</td>
                       <td className={`px-4 py-2.5 ${txt}`}>{fmt(e.callsBooked)}</td>
                       <td className={`px-4 py-2.5 ${txt}`}>{fmt(e.newClients)}</td>
-                      <td className="px-4 py-2.5 text-emerald-400 font-semibold">{fmt(e.cashCollected,'$')}</td>
-                      <td className="px-4 py-2.5 text-pink-400 font-semibold">{fmt(e.totalRevenue,'$')}</td>
+                      <td className="px-4 py-2.5 text-emerald-400 font-semibold">{fmt(e.cashCollected, true)}</td>
+                      <td className="px-4 py-2.5 text-pink-400 font-semibold">{fmt(e.totalRevenue, true)}</td>
                     </tr>
                   ))}
                   {/* Totals row */}
                   <tr style={{ background: dark ? 'rgba(99,102,241,0.08)' : '#f0f4ff', borderTop: '2px solid #6366f130' }}>
                     <td className={`px-4 py-2.5 font-black ${txt}`}>TOTAL</td>
-                    <td className="px-4 py-2.5 text-amber-400 font-black">{fmt(data.totals?.adSpend,'$')}</td>
+                    <td className="px-4 py-2.5 text-amber-400 font-black">{fmt(data.totals?.adSpend, true)}</td>
                     <td className={`px-4 py-2.5 font-black ${txt}`}>{fmt(data.totals?.optIns)}</td>
                     <td className={`px-4 py-2.5 font-black ${txt}`}>{fmt(data.totals?.callsBooked)}</td>
                     <td className={`px-4 py-2.5 font-black ${txt}`}>{fmt(data.totals?.newClients)}</td>
-                    <td className="px-4 py-2.5 text-emerald-400 font-black">{fmt(data.totals?.cashCollected,'$')}</td>
-                    <td className="px-4 py-2.5 text-pink-400 font-black">{fmt(data.totals?.totalRevenue,'$')}</td>
+                    <td className="px-4 py-2.5 text-emerald-400 font-black">{fmt(data.totals?.cashCollected, true)}</td>
+                    <td className="px-4 py-2.5 text-pink-400 font-black">{fmt(data.totals?.totalRevenue, true)}</td>
                   </tr>
                 </tbody>
               </table>

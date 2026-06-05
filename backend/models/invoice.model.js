@@ -50,7 +50,7 @@ const invoiceSchema = new mongoose.Schema(
     discount: { type: Number, default: 0 },
     total: { type: Number, default: 0 },
     totalAmount: { type: Number, default: 0 },
-    currency: { type: String, default: 'USD' },
+    currency: { type: String, default: 'INR' },
     issueDate: { type: Date, default: Date.now },
     invoiceDate: { type: Date },
     dueDate: { type: Date },

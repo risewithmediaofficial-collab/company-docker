@@ -6,7 +6,7 @@ import {
   ArrowUpRight, 
   Copy, 
   CheckCircle2, 
-  DollarSign, 
+  IndianRupee, 
   Briefcase,
   History,
   Send,
@@ -15,6 +15,7 @@ import {
   Clock
 } from 'lucide-react';
 import api from '../../api';
+import { formatINR } from '../../utils/currency';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useSelector } from 'react-redux';
@@ -104,8 +105,8 @@ const ReferralDashboard = () => {
 
   const statsPayload = data?.stats || {};
   const stats = [
-    { label: 'Total Earnings', value: `$${Number(statsPayload.totalEarnings || 0).toLocaleString()}`, icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: 'Pending Payout', value: `$${Number(statsPayload.pendingEarnings || 0).toLocaleString()}`, icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Total Earnings', value: formatINR(statsPayload.totalEarnings || 0), icon: IndianRupee, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: 'Pending Payout', value: formatINR(statsPayload.pendingEarnings || 0), icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { label: 'Total Referrals', value: statsPayload.totalReferrals || data.referrals.length, icon: Users, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
     { label: 'Conv. Rate', value: `${Number(statsPayload.conversionRate || 0)}%`, icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10' },
   ];
@@ -222,14 +223,14 @@ const ReferralDashboard = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="font-bold text-emerald-600">
-                      ${ref.commissionType === 'percentage' ? ref.commissionAmount.toLocaleString() : ref.monthlyAmount.toLocaleString()}
+                      {formatINR(ref.commissionType === 'percentage' ? ref.commissionAmount : ref.monthlyAmount)}
                     </div>
                     <div className="text-[10px] text-muted-foreground capitalize">
                       {ref.commissionType}
                     </div>
                   </td>
                   <td className="px-6 py-4 font-medium">
-                    ${(ref.totalPaid || 0).toLocaleString()}
+                    {formatINR(ref.totalPaid || 0)}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center text-xs font-medium">

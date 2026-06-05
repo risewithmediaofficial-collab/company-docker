@@ -6,7 +6,6 @@ import {
   Users, 
   Briefcase, 
   CheckSquare, 
-  DollarSign, 
   Users2, 
   Settings, 
   ChevronLeft, 
@@ -29,8 +28,6 @@ import {
 } from 'lucide-react';
 import { toggleSidebar } from '../../store/slices/uiSlice';
 import { motion } from 'framer-motion';
-import WorkspaceSwitcher from './WorkspaceSwitcher';
-
 const Sidebar = () => {
   const location = useLocation();
   const dispatch = useDispatch();
@@ -164,8 +161,6 @@ const Sidebar = () => {
             </motion.div>
           )}
         </div>
-
-        <WorkspaceSwitcher sidebarOpen={sidebarOpen || isMobile} />
 
         {/* Navigation Links */}
         <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">

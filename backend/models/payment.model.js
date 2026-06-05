@@ -6,7 +6,7 @@ const paymentSchema = new mongoose.Schema(
     client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: true },
     project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
     amount: { type: Number, required: true, min: 0 },
-    currency: { type: String, default: 'USD' },
+    currency: { type: String, default: 'INR' },
     status: {
       type: String,
       enum: ['pending', 'paid', 'failed', 'refunded'],

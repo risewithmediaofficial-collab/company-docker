@@ -18,7 +18,7 @@ const organizationSchema = new mongoose.Schema(
     logo: { type: String, default: '' },
     isActive: { type: Boolean, default: true },
     settings: {
-      defaultCurrency: { type: String, default: 'USD' },
+      defaultCurrency: { type: String, default: 'INR' },
       timezone: { type: String, default: 'UTC' },
     },
   },

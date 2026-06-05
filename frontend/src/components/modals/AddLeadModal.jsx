@@ -337,9 +337,6 @@ export const AddLeadModal = ({ open, onOpenChange, lead = null }) => {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="INR">₹ Indian Rupees (INR)</SelectItem>
-                        <SelectItem value="USD">$ US Dollars (USD)</SelectItem>
-                        <SelectItem value="EUR">€ Euros (EUR)</SelectItem>
-                        <SelectItem value="GBP">£ British Pounds (GBP)</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

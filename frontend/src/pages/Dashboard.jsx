@@ -12,7 +12,7 @@ import {
   Calendar,
   CheckSquare,
   Award,
-  DollarSign,
+  IndianRupee,
   ShieldCheck,
   Target,
   ClipboardList,
@@ -35,6 +35,7 @@ import {
   Pie
 } from 'recharts';
 import api from '../api';
+import { formatINR } from '../utils/currency';
 import { motion } from 'framer-motion';
 import { useSocket } from '../context/SocketContext';
 
@@ -139,7 +140,7 @@ const Dashboard = () => {
       },
       {
         label: isManager ? 'Client Avg. Value' : 'Revenue / Active Client',
-        value: `₹${avgRevenuePerClient.toLocaleString()}`,
+        value: formatINR(avgRevenuePerClient),
         detail: 'Monthly average from paid invoices',
         color: 'bg-indigo-500',
       },
@@ -152,7 +153,7 @@ const Dashboard = () => {
     ];
 
     const stats = [
-      { label: isManager ? 'Managed Revenue' : 'Total Revenue', value: `₹${data.stats.monthRevenue.toLocaleString()}`, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', trend: `${data.stats.revenueGrowth}%`, up: data.stats.revenueGrowth >= 0 },
+      { label: isManager ? 'Managed Revenue' : 'Total Revenue', value: formatINR(data.stats.monthRevenue), icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', trend: `${data.stats.revenueGrowth}%`, up: data.stats.revenueGrowth >= 0 },
       { label: isManager ? 'Active Clients' : 'Total Clients', value: data.stats.totalClients, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10', trend: 'Active', up: true },
       { label: isManager ? 'Projects In Delivery' : 'Active Projects', value: data.stats.activeProjects, icon: Briefcase, color: 'text-indigo-500', bg: 'bg-indigo-500/10', trend: 'In Delivery', up: true },
       { label: isManager ? 'Team Tasks' : 'Conversion Rate', value: isManager ? data.stats.totalTasks : `${data.stats.conversionRate}%`, icon: isManager ? ClipboardList : CheckCircle2, color: 'text-amber-500', bg: 'bg-amber-500/10', trend: isManager ? `${data.stats.overdueTasks} Overdue` : 'Won Deals', up: !isManager || data.stats.overdueTasks === 0 },
@@ -489,7 +490,7 @@ const Dashboard = () => {
         <div className="grid gap-4 md:grid-cols-3">
           {[
             ['Active Projects', projects.filter((project) => project.status === 'active').length || projects.length, Briefcase],
-            ['Open Invoices', invoices.filter((invoice) => invoice.status !== 'paid').length, DollarSign],
+            ['Open Invoices', invoices.filter((invoice) => invoice.status !== 'paid').length, IndianRupee],
             ['Average Progress', projects.length ? `${Math.round(projects.reduce((sum, project) => sum + (project.progress || 0), 0) / projects.length)}%` : '0%', CheckCircle2],
           ].map(([label, value, Icon]) => (
             <div key={label} className="bg-card rounded-2xl border border-border p-5 shadow-sm">
@@ -525,7 +526,7 @@ const Dashboard = () => {
                     <span className="font-semibold">{invoice.invoiceNumber}</span>
                     <span className="capitalize text-muted-foreground">{invoice.status}</span>
                   </div>
-                  <p className="mt-2 text-xl font-bold">${Number(invoice.total || 0).toLocaleString()}</p>
+                  <p className="mt-2 text-xl font-bold">{formatINR(invoice.total || 0)}</p>
                 </div>
               )) : <p className="text-sm text-muted-foreground">No invoices found.</p>}
             </div>
@@ -542,8 +543,8 @@ const Dashboard = () => {
     const conversionRate = referrals.length ? Math.round((converted / referrals.length) * 100) : 0;
     const recentReferrals = referrals.slice(0, 5);
     const stats = [
-      { label: 'Total Earnings', value: `₹${Number(data.totalEarnings || 0).toLocaleString()}`, icon: Wallet, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-      { label: 'Pending Payouts', value: `₹${Number(data.pendingEarnings || 0).toLocaleString()}`, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+      { label: 'Total Earnings', value: formatINR(data.totalEarnings || 0), icon: Wallet, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+      { label: 'Pending Payouts', value: formatINR(data.pendingEarnings || 0), icon: IndianRupee, color: 'text-blue-500', bg: 'bg-blue-500/10' },
       { label: 'Submitted Leads', value: referrals.length, icon: Users, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
       { label: 'Conversion Rate', value: `${conversionRate}%`, icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-500/10' },
     ];
@@ -622,7 +623,7 @@ const Dashboard = () => {
                     }`}>
                       {referral.status}
                     </span>
-                    <span className="text-sm font-bold text-emerald-600">${Number(referral.commissionAmount || 0).toLocaleString()}</span>
+                    <span className="text-sm font-bold text-emerald-600">{formatINR(referral.commissionAmount || 0)}</span>
                   </div>
                 </div>
               )) : (

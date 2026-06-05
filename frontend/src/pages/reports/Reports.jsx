@@ -12,6 +12,7 @@ import { useAdminReport } from '../../hooks/useReports';
 import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
 import { toast } from 'sonner';
+import { formatINR } from '../../utils/currency';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
@@ -75,12 +76,12 @@ const Reports = () => {
   const totalLeads = leadFunnel.reduce((s, i) => s + i.count, 0);
   const wonLeads = leadFunnel.find(l => l.stage.toLowerCase() === 'won')?.count || 0;
   const convRate = totalLeads > 0 ? ((wonLeads / totalLeads) * 100).toFixed(1) : 0;
-  const formatCurrency = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
-  const formatCompactCurrency = (value) => (
-    value >= 1000
-      ? `Rs. ${(value / 1000).toFixed(0)}k`
-      : `Rs. ${Number(value || 0).toLocaleString('en-IN')}`
-  );
+  const formatCurrency = (value) => formatINR(value);
+  const formatCompactCurrency = (value) => {
+    const num = Number(value || 0);
+    if (num >= 1000) return `₹${(num / 1000).toFixed(0)}k`;
+    return formatINR(num);
+  };
 
   const kpiCards = [
     {

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useSelector } from 'react-redux';
 import api from '../../api';
 import {
-  ChevronLeft, Building2, Phone, Mail, Globe, DollarSign,
+  ChevronLeft, Building2, Phone, Mail, Globe, IndianRupee,
   Briefcase, CheckCircle2, Clock, AlertCircle, Users,
   FileText, TrendingUp, MoreHorizontal, Edit2, MessageSquare
 } from 'lucide-react';
@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { AddClientModal } from '../../components/modals/AddClientModal';
 import ClientFinancialSummary from '../../components/ui/ClientFinancialSummary';
 import ClientProjectsPanel from '../../components/ui/ClientProjectsPanel';
+import { formatINR } from '../../utils/currency';
 
 const onboardingStepLabels = {
   welcomeEmailSent: 'Welcome Email Sent',
@@ -84,7 +85,7 @@ const ClientDetails = () => {
   const paymentNotes = financeRecords.flatMap((record) => record.paymentHistory || []);
 
   const stats = [
-    { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: 'Total Revenue', value: formatINR(totalRevenue), icon: IndianRupee, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
     { label: 'Active Projects', value: projects.filter(p => p.status === 'active').length, icon: Briefcase, color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { label: 'Paid Invoices', value: paidInvoices.length, icon: CheckCircle2, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
     { label: 'Pending Invoices', value: pendingInvoices.length, icon: AlertCircle, color: 'text-amber-500', bg: 'bg-amber-500/10' },
@@ -93,7 +94,7 @@ const ClientDetails = () => {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
     { id: 'projects', label: `Projects (${projects.length})`, icon: Briefcase },
-    { id: 'finance', label: `Finance (${financeRecords.length})`, icon: DollarSign },
+    { id: 'finance', label: `Finance (${financeRecords.length})`, icon: IndianRupee },
     { id: 'invoices', label: `Invoices (${invoices.length})`, icon: FileText },
     { id: 'paymentNotes', label: 'Payment Notes', icon: AlertCircle },
     { id: 'callHistory', label: `Call History (${callHistory.length})`, icon: Phone },
@@ -216,7 +217,7 @@ const ClientDetails = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm">
                 {[
                   ['Type / Sector', client.industry || 'Not set'],
-                  ['Contract Value', client.contractValue ? `$${Number(client.contractValue).toLocaleString()}` : '—'],
+                  ['Contract Value', client.contractValue ? formatINR(client.contractValue) : '—'],
                   ['Billing Cycle', client.billingCycle || '—'],
                   ['Contract Start', client.contractStartDate ? new Date(client.contractStartDate).toLocaleDateString() : '—'],
                   ['Contract End', client.contractEndDate ? new Date(client.contractEndDate).toLocaleDateString() : '—'],
@@ -316,7 +317,7 @@ const ClientDetails = () => {
                 {invoices.length > 0 ? invoices.map(inv => (
                   <tr key={inv._id} className="hover:bg-secondary/20 transition-colors">
                     <td className="px-6 py-4 font-bold">{inv.invoiceNumber}</td>
-                    <td className="px-6 py-4 font-bold text-emerald-600">${Number(inv.total || inv.amount || 0).toLocaleString()}</td>
+                    <td className="px-6 py-4 font-bold text-emerald-600">{formatINR(inv.total || inv.amount || 0)}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                         inv.status?.toLowerCase() === 'paid' ? 'bg-emerald-500/10 text-emerald-600' :

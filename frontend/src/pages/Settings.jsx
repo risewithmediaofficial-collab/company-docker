@@ -398,7 +398,7 @@ const Settings = () => {
                     {[
                       ['language', 'Language', ['en-US', 'en-GB', 'es-ES', 'fr-FR']],
                       ['timezone', 'Timezone', ['Asia/Calcutta', 'UTC', 'America/New_York', 'Europe/London']],
-                      ['currency', 'Currency', ['USD', 'INR', 'EUR', 'GBP']],
+                      ['currency', 'Currency', ['INR']],
                     ].map(([key, label, options]) => (
                       <label key={key} className="space-y-2">
                         <span className="text-xs font-bold text-muted-foreground uppercase">{label}</span>

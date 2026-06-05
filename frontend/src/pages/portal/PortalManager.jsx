@@ -10,6 +10,7 @@ import {
 import toast from 'react-hot-toast';
 import { TableSkeleton } from '../../components/ui/Skeleton';
 import { getAssetUrl } from '../../utils/assetUrl';
+import { formatINR } from '../../utils/currency';
 
 const STATUSES = ['Draft','Editing','Send to Client','Revision Requested','Approved','Scheduled','Posted','Done'];
 const PLATFORMS = ['Instagram','Facebook','LinkedIn','Twitter','TikTok','YouTube','Blog','Email','Other'];
@@ -378,12 +379,12 @@ export default function PortalManager() {
                           <td className="px-4 py-3 font-bold text-white">
                             {MONTH_NAMES[parseInt(m||1)-1]} {y}
                           </td>
-                          <td className="px-4 py-3 text-amber-400">${(entry.adSpend||0).toLocaleString()}</td>
+                          <td className="px-4 py-3 text-amber-400">{formatINR(entry.adSpend || 0)}</td>
                           <td className="px-4 py-3 text-white">{entry.optIns||0}</td>
                           <td className="px-4 py-3 text-white">{entry.callsBooked||0}</td>
                           <td className="px-4 py-3 text-white">{entry.newClients||0}</td>
-                          <td className="px-4 py-3 text-emerald-400">${(entry.cashCollected||0).toLocaleString()}</td>
-                          <td className="px-4 py-3 text-pink-400">${(entry.totalRevenue||0).toLocaleString()}</td>
+                          <td className="px-4 py-3 text-emerald-400">{formatINR(entry.cashCollected || 0)}</td>
+                          <td className="px-4 py-3 text-pink-400">{formatINR(entry.totalRevenue || 0)}</td>
                           <td className="px-4 py-3">
                             <div className="flex gap-2">
                               <button onClick={() => openEditReport(entry)}
@@ -580,12 +581,12 @@ export default function PortalManager() {
                 </select>
               </FormField>
               {[
-                {key:'adSpend',label:'Ad Spend ($)'},
+                {key:'adSpend',label:'Ad Spend (₹)'},
                 {key:'optIns',label:'Opt-Ins'},
                 {key:'callsBooked',label:'Calls Booked'},
                 {key:'newClients',label:'New Clients'},
-                {key:'cashCollected',label:'Cash Collected ($)'},
-                {key:'totalRevenue',label:'Contracted Revenue ($)'},
+                {key:'cashCollected',label:'Cash Collected (₹)'},
+                {key:'totalRevenue',label:'Contracted Revenue (₹)'},
               ].map(f => (
                 <FormField key={f.key} label={f.label}>
                   <input type="number" min="0" value={reportForm[f.key]}

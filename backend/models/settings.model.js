@@ -18,7 +18,7 @@ const settingsSchema = new mongoose.Schema(
     regional: {
       language: { type: String, default: 'en-US' },
       timezone: { type: String, default: 'Asia/Calcutta' },
-      currency: { type: String, default: 'USD' },
+      currency: { type: String, default: 'INR' },
     },
   },
   { timestamps: true }
