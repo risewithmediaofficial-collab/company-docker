@@ -39,22 +39,10 @@ const Projects = () => {
   const [deleteProjectId, setDeleteProjectId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [startDateFrom, setStartDateFrom] = useState('');
-  const [startDateTo, setStartDateTo] = useState('');
-  const [endDateFrom, setEndDateFrom] = useState('');
-  const [endDateTo, setEndDateTo] = useState('');
-  const [createdFrom, setCreatedFrom] = useState('');
-  const [createdTo, setCreatedTo] = useState('');
 
   const filters = {
     search: searchTerm,
     ...(statusFilter ? { status: statusFilter } : {}),
-    ...(startDateFrom ? { startDateFrom } : {}),
-    ...(startDateTo ? { startDateTo } : {}),
-    ...(endDateFrom ? { endDateFrom } : {}),
-    ...(endDateTo ? { endDateTo } : {}),
-    ...(createdFrom ? { createdFrom } : {}),
-    ...(createdTo ? { createdTo } : {}),
   };
 
   const { data: projects = [], isLoading } = useProjects(filters);
@@ -62,12 +50,6 @@ const Projects = () => {
   const clearFilters = () => {
     setSearchTerm('');
     setStatusFilter('');
-    setStartDateFrom('');
-    setStartDateTo('');
-    setEndDateFrom('');
-    setEndDateTo('');
-    setCreatedFrom('');
-    setCreatedTo('');
   };
   const deleteProjectMutation = useDeleteProject();
 
@@ -163,17 +145,12 @@ const Projects = () => {
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
           placeholder="Search project or client name..."
+          className="lg:min-w-[320px]"
         />
-        <select className="app-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+        <select className="app-input lg:w-56" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">All statuses</option>
           {['Planning', 'In Progress', 'On Hold', 'Completed', 'Cancelled'].map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
-        <input type="date" className="app-input" title="Start from" value={startDateFrom} onChange={(e) => setStartDateFrom(e.target.value)} />
-        <input type="date" className="app-input" title="Start to" value={startDateTo} onChange={(e) => setStartDateTo(e.target.value)} />
-        <input type="date" className="app-input" title="End from" value={endDateFrom} onChange={(e) => setEndDateFrom(e.target.value)} />
-        <input type="date" className="app-input" title="End to" value={endDateTo} onChange={(e) => setEndDateTo(e.target.value)} />
-        <input type="date" className="app-input" title="Created from" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} />
-        <input type="date" className="app-input" title="Created to" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
         <Button type="button" variant="outline" onClick={clearFilters}>Clear</Button>
         <div className="app-pill">{projects.length} projects</div>
       </PageToolbar>
