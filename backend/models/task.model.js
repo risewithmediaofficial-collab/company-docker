@@ -32,6 +32,21 @@ const taskSchema = new mongoose.Schema(
       enum: ['content', 'non_content'],
       default: 'content',
     },
+    contentType: {
+      type: String,
+      enum: ['videos', 'posts', 'captions', 'designs', 'blogs', 'custom', ''],
+      default: '',
+    },
+    videoType: {
+      type: String,
+      enum: ['shorts', 'youtube', 'reels', 'long_video', 'custom', ''],
+      default: '',
+    },
+    nonContentCategory: {
+      type: String,
+      enum: ['website', 'crm', 'seo', 'ads_setup', 'client_followup', 'design_correction', 'development_task', 'bug_fix', 'custom', ''],
+      default: '',
+    },
     taskType: {
       type: String,
       enum: [
@@ -66,9 +81,9 @@ const taskSchema = new mongoose.Schema(
     },
     clientName: { type: String, default: '' },
     assignedPersonName: { type: String, default: '' },
-    project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+    project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
     client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
-    parent: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null }, // for subtasks
+    parent: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
     assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     status: {
@@ -96,16 +111,29 @@ const taskSchema = new mongoose.Schema(
     },
     dueDate: { type: Date },
     startDate: { type: Date },
-    actualStartDate: { type: Date }, // when work actually started
+    actualStartDate: { type: Date },
     completedAt: { type: Date },
     deadline: { type: Date },
     estimatedHours: { type: Number, default: 0 },
     loggedHours: { type: Number, default: 0 },
+    // Content-specific fields
+    contentTitle: { type: String, default: '' }, // For reels/videos - different from task title
     scriptText: { type: String, default: '' },
     scriptLink: { type: String, default: '' },
     caption: { type: String, default: '' },
+    hashtags: { type: String, default: '' },
+    keywords: { type: String, default: '' },
     referenceLink: { type: String, default: '' },
+    contentIdea: { type: String, default: '' },
+    audioReference: { type: String, default: '' },
+    shootInstructions: { type: String, default: '' },
+    editingInstructions: { type: String, default: '' },
     editorGuide: { type: String, default: '' },
+    // Non-content fields
+    requirementDetails: { type: String, default: '' },
+    pageModuleName: { type: String, default: '' },
+    loginAccessDetails: { type: String, default: '' },
+    // Website fields
     websiteType: { type: String, default: '' },
     websiteRequirements: { type: String, default: '' },
     pagesNeeded: [{ type: String }],
@@ -137,9 +165,9 @@ const taskSchema = new mongoose.Schema(
         uploadedAt: { type: Date, default: Date.now },
       },
     ],
-    orderIndex: { type: Number, default: 0 }, // kanban column position
+    orderIndex: { type: Number, default: 0 },
     isRecurring: { type: Boolean, default: false },
-    recurringPattern: { type: String }, // daily, weekly, monthly
+    recurringPattern: { type: String },
     approvalRequired: { type: Boolean, default: false },
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     approvedAt: { type: Date },
@@ -158,7 +186,7 @@ const taskSchema = new mongoose.Schema(
       enum: ['pending', 'approved', 'rework_requested'],
       default: 'pending',
     },
-    milestone: { type: mongoose.Schema.Types.ObjectId }, // reference to project milestone id
+    milestone: { type: mongoose.Schema.Types.ObjectId },
     timeEntries: [
       {
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -177,7 +205,7 @@ const taskSchema = new mongoose.Schema(
         uploadedAt: { type: Date, default: Date.now },
       },
     ],
-    progressUpdates: [progressUpdateSchema], // track work completion progress
+    progressUpdates: [progressUpdateSchema],
   },
   { timestamps: true }
 );

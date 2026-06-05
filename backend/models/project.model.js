@@ -12,6 +12,25 @@ const milestoneSchema = new mongoose.Schema({
   completedAt: { type: Date },
 });
 
+const budgetSchema = new mongoose.Schema({
+  marketingAmount: { type: Number, default: 0 },
+  adsAmount: { type: Number, default: 0 },
+  contentAmount: { type: Number, default: 0 },
+  designAmount: { type: Number, default: 0 },
+  developmentAmount: { type: Number, default: 0 },
+  printingAmount: { type: Number, default: 0 },
+  otherExpenses: { type: Number, default: 0 },
+  totalBudget: { type: Number, default: 0 },
+  amountReceived: { type: Number, default: 0 },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'partial', 'paid'],
+    default: 'pending',
+  },
+  budgetNotes: { type: String, default: '' },
+  updatedAt: { type: Date, default: Date.now },
+});
+
 const projectSchema = new mongoose.Schema(
   {
     organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization' },
@@ -19,6 +38,7 @@ const projectSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     description: { type: String, default: '' },
     client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: true },
+    acceptedProposalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Proposal' },
     manager: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     team: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     status: {
@@ -37,19 +57,20 @@ const projectSchema = new mongoose.Schema(
     budget: { type: Number, default: 0 },
     budgetSpent: { type: Number, default: 0 },
     currency: { type: String, default: 'INR' },
+    budgetDetails: budgetSchema,
     category: {
       type: String,
       enum: ['social_media', 'seo', 'paid_ads', 'web_design', 'web_development', 'video_content', 'content', 'branding', 'video', 'graphic_design', 'mobile_app', 'e_commerce', 'other'],
       default: 'other',
     },
     proposalText: { type: String, default: '' },
-    clientDiscussionNotes: { type: String, default: '' }, // Notes about what was discussed with client
-    nextMeetupDate: { type: Date }, // Date of next scheduled meetup with client
+    clientDiscussionNotes: { type: String, default: '' },
+    nextMeetupDate: { type: Date },
     tags: [{ type: String }],
     milestones: [milestoneSchema],
-    color: { type: String, default: '#6366f1' }, // for visual differentiation
+    color: { type: String, default: '#6366f1' },
     coverImage: { type: String, default: '' },
-    progress: { type: Number, default: 0, min: 0, max: 100 }, // calculated field
+    progress: { type: Number, default: 0, min: 0, max: 100 },
     revisionCount: { type: Number, default: 0 },
     maxRevisions: { type: Number, default: 3 },
     files: [
