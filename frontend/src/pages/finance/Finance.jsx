@@ -12,6 +12,15 @@ import {
   Users2,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { AddFinanceModal } from '../../components/modals/AddFinanceModal';
 import { AddInvoiceModal } from '../../components/modals/AddInvoiceModal';
 import { DataTable } from '../../components/ui/DataTable';
@@ -34,6 +43,7 @@ import {
   useCreateCallHistory,
   useCreateReferral,
   useDeleteFinanceRecord,
+  useDeleteInvoice,
   useDeleteReferral,
   useFinanceRecords,
   useFinanceSummary,
@@ -84,6 +94,7 @@ const Finance = () => {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [deleteInvoiceId, setDeleteInvoiceId] = useState(null);
   const [paymentForms, setPaymentForms] = useState({});
   const [followupForms, setFollowupForms] = useState({});
   const [callForm, setCallForm] = useState({
@@ -116,6 +127,7 @@ const Finance = () => {
 
   const canManage = ['superAdmin', 'manager'].includes(user?.role) || user?.permissions?.canManageFinance;
   const canDeleteFinance = ['superAdmin', 'manager'].includes(user?.role);
+  const canDeleteInvoice = user?.role === 'superAdmin';
 
   const { data: clients = [] } = useClients({}, { enabled: canManage });
   const { data: projects = [] } = useProjects({}, { enabled: canManage });
@@ -133,6 +145,7 @@ const Finance = () => {
   const createCallHistory = useCreateCallHistory();
   const createReferral = useCreateReferral();
   const deleteFinanceRecord = useDeleteFinanceRecord();
+  const deleteInvoice = useDeleteInvoice();
   const markInvoicePaid = useMarkInvoicePaid();
   const addPartialPayment = useAddPartialPayment();
   const sendInvoice = useSendInvoice();
@@ -442,6 +455,7 @@ const Finance = () => {
               setSelectedInvoice(row);
               setShowInvoiceModal(true);
             } : null}
+            onDelete={canDeleteInvoice ? (id) => setDeleteInvoiceId(id) : null}
             emptyTitle="No invoices created yet"
             emptyDescription="Create your first invoice to share payment details with the client."
           />
@@ -597,6 +611,31 @@ const Finance = () => {
           </div>
         </SectionCard>
       ) : null}
+
+      <AlertDialog open={!!deleteInvoiceId} onOpenChange={(open) => !open && setDeleteInvoiceId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this invoice? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-3">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (deleteInvoiceId) {
+                  await deleteInvoice.mutateAsync(deleteInvoiceId);
+                  setDeleteInvoiceId(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AddFinanceModal open={showFinanceModal} onOpenChange={setShowFinanceModal} entry={selectedRecord} />
       <AddInvoiceModal open={showInvoiceModal} onOpenChange={setShowInvoiceModal} invoice={selectedInvoice} />

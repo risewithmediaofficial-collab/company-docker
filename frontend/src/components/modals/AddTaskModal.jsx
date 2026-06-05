@@ -34,6 +34,8 @@ import {
   BRANDING_AVAILABILITY_OPTIONS,
   CONTENT_AVAILABILITY_OPTIONS,
   CONTENT_TASK_TYPE_OPTIONS,
+  CONTENT_MEDIA_TYPE_OPTIONS,
+  VIDEO_TYPE_OPTIONS,
   NON_CONTENT_TASK_TYPE_OPTIONS,
   PAGE_OPTIONS,
   PRIORITY_OPTIONS,
@@ -51,9 +53,12 @@ const EMPTY_INITIAL_VALUES = {};
 const taskFormSchema = z.object({
   taskTitle: z.string().min(2, 'Task title is required'),
   taskCategory: z.enum(['content', 'non_content']),
+  contentType: z.string().optional(),
+  videoType: z.string().optional(),
+  contentTitle: z.string().optional(),
   taskType: z.string().min(1, 'Task type is required'),
   client: z.string().min(1, 'Client is required'),
-  project: z.string().optional(),
+  project: z.string().min(1, 'Select a project first'),
   assignedTo: z.string().min(1, 'Assigned person is required'),
   priority: z.enum(PRIORITY_OPTIONS),
   dueDate: z.string().optional(),
@@ -64,6 +69,12 @@ const taskFormSchema = z.object({
   caption: z.string().optional(),
   referenceLink: z.string().optional(),
   editorGuide: z.string().optional(),
+  hashtags: z.string().optional(),
+  keywords: z.string().optional(),
+  contentIdea: z.string().optional(),
+  audioReference: z.string().optional(),
+  shootInstructions: z.string().optional(),
+  editingInstructions: z.string().optional(),
   websiteType: z.string().optional(),
   websiteRequirements: z.string().optional(),
   pagesNeeded: z.array(z.string()).default([]),
@@ -104,6 +115,9 @@ const taskFormSchema = z.object({
 const buildDefaultValues = (initialValues = {}) => ({
   taskTitle: '',
   taskCategory: 'content',
+  contentType: 'videos',
+  videoType: 'reels',
+  contentTitle: '',
   taskType: 'reel',
   client: '',
   project: '',
@@ -117,6 +131,12 @@ const buildDefaultValues = (initialValues = {}) => ({
   caption: '',
   referenceLink: '',
   editorGuide: '',
+  hashtags: '',
+  keywords: '',
+  contentIdea: '',
+  audioReference: '',
+  shootInstructions: '',
+  editingInstructions: '',
   websiteType: '',
   websiteRequirements: '',
   pagesNeeded: [],
@@ -140,7 +160,7 @@ const deriveTaskCategory = (task) => {
     : 'content';
 };
 
-export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = EMPTY_INITIAL_VALUES }) => {
+export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = EMPTY_INITIAL_VALUES, pageMode = false }) => {
   const form = useForm({
     resolver: zodResolver(taskFormSchema),
     defaultValues: buildDefaultValues(initialValues),
@@ -157,8 +177,11 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
   const [existingAttachments, setExistingAttachments] = useState([]);
 
   const taskCategory = form.watch('taskCategory');
+  const contentType = form.watch('contentType');
+  const videoType = form.watch('videoType');
   const taskType = form.watch('taskType');
   const selectedClientId = form.watch('client');
+  const isVideoReelFlow = taskCategory === 'content' && contentType === 'videos';
 
   const filteredProjects = useMemo(() => {
     if (!selectedClientId) return projects;
@@ -170,6 +193,9 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
       form.reset({
         taskTitle: task.taskTitle || task.title || '',
         taskCategory: deriveTaskCategory(task),
+        contentType: task.contentType || 'videos',
+        videoType: task.videoType || 'reels',
+        contentTitle: task.contentTitle || '',
         taskType: task.taskType || 'reel',
         client: task.client?._id || task.client || '',
         project: task.project?._id || task.project || '',
@@ -183,6 +209,12 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
         caption: task.caption || '',
         referenceLink: task.referenceLink || '',
         editorGuide: task.editorGuide || '',
+        hashtags: task.hashtags || '',
+        keywords: task.keywords || '',
+        contentIdea: task.contentIdea || '',
+        audioReference: task.audioReference || '',
+        shootInstructions: task.shootInstructions || '',
+        editingInstructions: task.editingInstructions || '',
         websiteType: task.websiteType || '',
         websiteRequirements: task.websiteRequirements || '',
         pagesNeeded: task.pagesNeeded || [],
@@ -297,15 +329,14 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
         name="project"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Project</FormLabel>
-            <Select onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} value={field.value || 'none'}>
+            <FormLabel>Project *</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value || undefined}>
               <FormControl>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select project" />
+                  <SelectValue placeholder="Select project first" />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                <SelectItem value="none">No linked project</SelectItem>
                 {filteredProjects.map((project) => (
                   <SelectItem key={project._id} value={project._id}>
                     {project.name}
@@ -405,20 +436,71 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
     </div>
   );
 
+  const SectionHeader = ({ title, subtitle }) => (
+    <div className="border-b border-border/70 pb-2">
+      <h4 className="text-sm font-bold text-foreground">{title}</h4>
+      {subtitle ? <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p> : null}
+    </div>
+  );
+
   const renderContentFields = () => (
-    <div className="space-y-4 rounded-2xl border border-border bg-secondary/20 p-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div className="space-y-6 rounded-2xl border border-border bg-secondary/20 p-5">
+      <SectionHeader title="Content Task Setup" subtitle="Select content type, then video format if applicable." />
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <FormField
+          control={form.control}
+          name="contentType"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Content Type *</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value || 'videos'}>
+                <FormControl>
+                  <SelectTrigger><SelectValue placeholder="Select content type" /></SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {CONTENT_MEDIA_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {isVideoReelFlow && (
+          <FormField
+            control={form.control}
+            name="videoType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Video Type *</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || 'reels'}>
+                  <FormControl>
+                    <SelectTrigger><SelectValue placeholder="Select video type" /></SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {VIDEO_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
         <FormField
           control={form.control}
           name="taskType"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Content Type *</FormLabel>
+              <FormLabel>Task Format</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select content type" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select format" /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {CONTENT_TASK_TYPE_OPTIONS.map((option) => (
@@ -430,81 +512,227 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
             </FormItem>
           )}
         />
-
-        <FormField
-          control={form.control}
-          name="referenceLink"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Reference Link</FormLabel>
-              <FormControl>
-                <Input placeholder="Inspiration / brand / sample link" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
       </div>
 
-      <FormField
-        control={form.control}
-        name="scriptText"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Script Input</FormLabel>
-            <FormControl>
-              <Textarea className="min-h-28" placeholder="Enter script text..." {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      {isVideoReelFlow && (
+        <>
+          <SectionHeader title="Reel / Video Brief" subtitle="Structured fields for editors and creators." />
 
-      <FormField
-        control={form.control}
-        name="scriptLink"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Script Link</FormLabel>
-            <FormControl>
-              <Input placeholder="Google Doc / external file link" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+          <FormField
+            control={form.control}
+            name="contentTitle"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Reel / Video Title</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. Product launch hook reel" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-      <FormField
-        control={form.control}
-        name="caption"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Caption *</FormLabel>
-            <FormControl>
-              <Textarea className="min-h-24" placeholder="Enter caption..." {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="contentIdea"
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Content Idea</FormLabel>
+                  <FormControl>
+                    <Textarea className="min-h-20" placeholder="Core idea, hook, angle..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-      <FormField
-        control={form.control}
-        name="editorGuide"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Editor Guide</FormLabel>
-            <FormControl>
-              <Textarea
-                className="min-h-28"
-                placeholder="Video style, color theme, font style, transitions, music, CTA, duration..."
-                {...field}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+            <FormField
+              control={form.control}
+              name="scriptText"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Script</FormLabel>
+                  <FormControl>
+                    <Textarea className="min-h-28" placeholder="Full script or talking points..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="scriptLink"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Script Link</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Google Doc / Notion link" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="editorGuide"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Editor Guide</FormLabel>
+                  <FormControl>
+                    <Textarea className="min-h-24" placeholder="Style, fonts, transitions, pacing..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="editingInstructions"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Editing Instructions</FormLabel>
+                  <FormControl>
+                    <Textarea className="min-h-24" placeholder="Cuts, overlays, text placement..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="shootInstructions"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Shoot Instructions</FormLabel>
+                  <FormControl>
+                    <Textarea className="min-h-24" placeholder="Location, framing, props, talent notes..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="keywords"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Keywords</FormLabel>
+                  <FormControl>
+                    <Input placeholder="SEO / topic keywords" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="referenceLink"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reference Links</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Inspiration / sample video link" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="audioReference"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Audio / Music Reference</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Track name or audio link" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="caption"
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Caption *</FormLabel>
+                  <FormControl>
+                    <Textarea className="min-h-24" placeholder="Post caption for this reel..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="hashtags"
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Hashtags</FormLabel>
+                  <FormControl>
+                    <Input placeholder="#brand #reels #marketing" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </>
+      )}
+
+      {!isVideoReelFlow && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="referenceLink"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Reference Link</FormLabel>
+                <FormControl>
+                  <Input placeholder="Inspiration / brand / sample link" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="scriptText"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Script / Copy</FormLabel>
+                <FormControl>
+                  <Textarea className="min-h-28" placeholder="Enter script or copy..." {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="caption"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Caption *</FormLabel>
+                <FormControl>
+                  <Textarea className="min-h-24" placeholder="Enter caption..." {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      )}
 
       <FormField
         control={form.control}
@@ -513,7 +741,7 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
           <FormItem>
             <FormLabel>Notes</FormLabel>
             <FormControl>
-              <Textarea className="min-h-24" placeholder="Additional notes for the content task..." {...field} />
+              <Textarea className="min-h-20" placeholder="Additional notes..." {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -794,13 +1022,7 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
     </div>
   );
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{task ? 'Edit Task' : 'Create Advanced Task'}</DialogTitle>
-        </DialogHeader>
-
+  const formBody = (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -956,6 +1178,20 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
             </div>
           </form>
         </Form>
+  );
+
+  if (pageMode) {
+    if (!open) return null;
+    return formBody;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{task ? 'Edit Task' : 'Create Advanced Task'}</DialogTitle>
+        </DialogHeader>
+        {formBody}
       </DialogContent>
     </Dialog>
   );

@@ -5,6 +5,23 @@ export const TASK_CATEGORY_OPTIONS = [
   { value: 'non_content', label: 'Non-Content Task' },
 ];
 
+export const CONTENT_MEDIA_TYPE_OPTIONS = [
+  { value: 'videos', label: 'Videos' },
+  { value: 'posts', label: 'Posts' },
+  { value: 'captions', label: 'Captions' },
+  { value: 'designs', label: 'Designs' },
+  { value: 'blogs', label: 'Blogs' },
+  { value: 'custom', label: 'Custom' },
+];
+
+export const VIDEO_TYPE_OPTIONS = [
+  { value: 'shorts', label: 'Shorts' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'reels', label: 'Reels' },
+  { value: 'long_video', label: 'Long Video' },
+  { value: 'custom', label: 'Custom' },
+];
+
 export const CONTENT_TASK_TYPE_OPTIONS = [
   { value: 'reel', label: 'Reel' },
   { value: 'poster', label: 'Poster' },

@@ -29,8 +29,28 @@ const Clients = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [deleteClientId, setDeleteClientId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [serviceFilter, setServiceFilter] = useState('');
+  const [createdFrom, setCreatedFrom] = useState('');
+  const [createdTo, setCreatedTo] = useState('');
 
-  const { data: clients = [], isLoading } = useClients({ search: searchTerm });
+  const filters = {
+    search: searchTerm,
+    ...(statusFilter ? { status: statusFilter } : {}),
+    ...(serviceFilter ? { service: serviceFilter } : {}),
+    ...(createdFrom ? { createdFrom } : {}),
+    ...(createdTo ? { createdTo } : {}),
+  };
+
+  const { data: clients = [], isLoading } = useClients(filters);
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('');
+    setServiceFilter('');
+    setCreatedFrom('');
+    setCreatedTo('');
+  };
   const deleteClientMutation = useDeleteClient();
 
   const activeClients = clients.filter((client) => client.status === 'Active').length;
@@ -145,8 +165,21 @@ const Clients = () => {
         <SearchField
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder="Search clients, companies, or email addresses..."
+          placeholder="Search by name, email, phone, or company..."
         />
+        <select className="app-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="">All statuses</option>
+          {['Active', 'Prospect', 'Inactive', 'Churned'].map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select className="app-input" value={serviceFilter} onChange={(e) => setServiceFilter(e.target.value)}>
+          <option value="">All services</option>
+          {['Social Media', 'Website', 'Branding', 'SEO', 'Ads', 'Video Editing', 'Content Creation', 'Custom'].map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <input type="date" className="app-input" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} />
+        <input type="date" className="app-input" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
+        <Button type="button" variant="outline" onClick={clearFilters}>Clear</Button>
         <div className="app-pill">{clients.length} clients</div>
       </PageToolbar>
 

@@ -16,6 +16,13 @@ import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import Leads from './pages/crm/Leads';
+import LeadDetails from './pages/crm/LeadDetails';
+import SOPDashboard from './pages/sop/SOPDashboard';
+import Proposals from './pages/proposals/Proposals';
+import ProposalDetails from './pages/proposals/ProposalDetails';
+import ClientProposals from './pages/proposals/ClientProposals';
+import AddTask from './pages/tasks/AddTask';
+import TaskDetails from './pages/tasks/TaskDetails';
 import Projects from './pages/projects/Projects';
 import ProjectDetails from './pages/projects/ProjectDetails';
 import Clients from './pages/clients/Clients';
@@ -124,6 +131,38 @@ const App = () => {
               <Leads />
             </ProtectedRoute>
           } />
+          <Route path="/crm/leads/:id" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'referral']}>
+              <LeadDetails />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/sop" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+              <SOPDashboard />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/proposals" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+              <Proposals />
+            </ProtectedRoute>
+          } />
+          <Route path="/proposals/new" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+              <ProposalDetails />
+            </ProtectedRoute>
+          } />
+          <Route path="/proposals/:id" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'client']}>
+              <ProposalDetails />
+            </ProtectedRoute>
+          } />
+          <Route path="/client/proposals" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client']}>
+              <ClientProposals />
+            </ProtectedRoute>
+          } />
 
           {/* Projects */}
           <Route path="/projects" element={
@@ -170,6 +209,16 @@ const App = () => {
           <Route path="/tasks" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
               <Tasks />
+            </ProtectedRoute>
+          } />
+          <Route path="/tasks/new" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+              <AddTask />
+            </ProtectedRoute>
+          } />
+          <Route path="/tasks/:id" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+              <TaskDetails />
             </ProtectedRoute>
           } />
           <Route path="/calendar" element={

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Plus,
   Search,
@@ -260,6 +260,8 @@ const LeadActivityDialog = ({ open, onOpenChange, lead, onSave, saving }) => {
 };
 
 const Leads = () => {
+  const navigate = useNavigate();
+  const dragLeadRef = useRef(false);
   const [searchParams] = useSearchParams();
   const [view, setView] = useState('list');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -423,8 +425,23 @@ const Leads = () => {
                             layoutId={lead._id}
                             key={lead._id}
                             draggable
-                            onDragStart={(e) => e.dataTransfer.setData('leadId', lead._id)}
-                            className="group cursor-grab rounded-2xl border border-border/80 bg-background/95 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/60 active:cursor-grabbing"
+                            onDragStart={(e) => {
+                              dragLeadRef.current = true;
+                              e.dataTransfer.setData('leadId', lead._id);
+                            }}
+                            onDragEnd={() => { dragLeadRef.current = false; }}
+                            onClick={() => {
+                              if (!dragLeadRef.current) navigate(`/crm/leads/${lead._id}`);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                navigate(`/crm/leads/${lead._id}`);
+                              }
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            className="group cursor-pointer rounded-2xl border border-border/80 bg-background/95 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/60 active:cursor-grabbing"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex flex-wrap items-center gap-2">
@@ -439,14 +456,15 @@ const Leads = () => {
                               </div>
                               <div className="flex gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
                                 <button
-                                  onClick={() => setActivityLead(lead)}
+                                  onClick={(e) => { e.stopPropagation(); setActivityLead(lead); }}
                                   className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                                   aria-label={`Add follow-up note for ${lead.name}`}
                                 >
                                   <MessageSquarePlus size={14} />
                                 </button>
                                 <button
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     setSelectedLead(lead);
                                     setShowAddModal(true);
                                   }}
@@ -456,7 +474,7 @@ const Leads = () => {
                                   <Edit2 size={14} />
                                 </button>
                                 <button
-                                  onClick={() => setDeleteLeadId(lead._id)}
+                                  onClick={(e) => { e.stopPropagation(); setDeleteLeadId(lead._id); }}
                                   className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                                   aria-label={`Delete ${lead.name}`}
                                 >
@@ -708,10 +726,7 @@ const Leads = () => {
                         <tr 
                           key={lead._id} 
                           className="group cursor-pointer transition-colors hover:bg-secondary/20"
-                          onClick={() => {
-                            setSelectedLead(lead);
-                            setShowAddModal(true);
-                          }}
+                          onClick={() => navigate(`/crm/leads/${lead._id}`)}
                         >
                           <td className="px-4 py-4 sm:px-6">
                             <div className="font-semibold text-foreground">{lead.name}</div>

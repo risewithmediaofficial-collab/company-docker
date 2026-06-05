@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { CheckCircle2, Clock, ListChecks, Plus, TimerReset } from 'lucide-react';
 import { AddTaskModal } from '../../components/modals/AddTaskModal';
@@ -49,6 +50,7 @@ const priorityTone = {
 const ALL_TASK_TYPES = [...CONTENT_TASK_TYPE_OPTIONS, ...NON_CONTENT_TASK_TYPE_OPTIONS];
 
 const Tasks = () => {
+  const navigate = useNavigate();
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
@@ -188,10 +190,7 @@ const Tasks = () => {
           : 'Manage content and non-content tasks with structured requirements, clear ownership, and client approval flow.'}
         actions={!isEmployee ? (
           <Button
-            onClick={() => {
-              setSelectedTask(null);
-              setShowAddModal(true);
-            }}
+            onClick={() => navigate('/tasks/new')}
           >
             <Plus size={16} className="mr-2" />
             Add Task
@@ -280,10 +279,7 @@ const Tasks = () => {
         data={normalizedTasks}
         columns={columns}
         loading={isLoading}
-        onRowClick={(task) => {
-          setSelectedTaskId(task._id);
-          setShowTaskDetail(true);
-        }}
+        onRowClick={(task) => navigate(`/tasks/${task._id}`)}
         onEdit={isEmployee ? null : (task) => {
           setSelectedTask(task);
           setShowAddModal(true);

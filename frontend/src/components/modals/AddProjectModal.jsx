@@ -6,6 +6,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect } from 'react';
+import { useAcceptedProposals } from '../../hooks/useProposals';
+import { formatINR } from '../../utils/currency';
 import {
   Dialog,
   DialogContent,
@@ -45,9 +47,19 @@ const projectFormSchema = z.object({
   endDate: z.string(),
   budget: z.number().optional(),
   currency: z.string().default('INR'),
-  proposalText: z.string().optional(),
-  clientDiscussionNotes: z.string().optional(),
+  acceptedProposalId: z.string().optional(),
   nextMeetupDate: z.string().optional(),
+  marketingAmount: z.number().optional(),
+  adsAmount: z.number().optional(),
+  contentAmount: z.number().optional(),
+  designAmount: z.number().optional(),
+  developmentAmount: z.number().optional(),
+  printingAmount: z.number().optional(),
+  otherExpenses: z.number().optional(),
+  totalBudget: z.number().optional(),
+  amountReceived: z.number().optional(),
+  paymentStatus: z.enum(['pending', 'partial', 'paid']).optional(),
+  budgetNotes: z.string().optional(),
 });
 
 
@@ -65,12 +77,24 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
       endDate: '',
       budget: undefined,
       currency: 'INR',
-      proposalText: '',
-      clientDiscussionNotes: '',
+      acceptedProposalId: '',
       nextMeetupDate: '',
+      marketingAmount: undefined,
+      adsAmount: undefined,
+      contentAmount: undefined,
+      designAmount: undefined,
+      developmentAmount: undefined,
+      printingAmount: undefined,
+      otherExpenses: undefined,
+      totalBudget: undefined,
+      amountReceived: undefined,
+      paymentStatus: 'pending',
+      budgetNotes: '',
     },
   });
 
+  const selectedClientId = form.watch('client');
+  const { data: acceptedProposals = [] } = useAcceptedProposals(selectedClientId);
   const { data: clients = [] } = useClients();
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();
@@ -89,9 +113,19 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
         endDate: project.endDate ? new Date(project.endDate).toISOString().split('T')[0] : '',
         budget: project.budget || undefined,
         currency: project.currency || 'INR',
-        proposalText: project.proposalText || '',
-        clientDiscussionNotes: project.clientDiscussionNotes || '',
+        acceptedProposalId: project.acceptedProposalId?._id || project.acceptedProposalId || '',
         nextMeetupDate: project.nextMeetupDate ? new Date(project.nextMeetupDate).toISOString().split('T')[0] : '',
+        marketingAmount: project.budgetDetails?.marketingAmount,
+        adsAmount: project.budgetDetails?.adsAmount,
+        contentAmount: project.budgetDetails?.contentAmount,
+        designAmount: project.budgetDetails?.designAmount,
+        developmentAmount: project.budgetDetails?.developmentAmount,
+        printingAmount: project.budgetDetails?.printingAmount,
+        otherExpenses: project.budgetDetails?.otherExpenses,
+        totalBudget: project.budgetDetails?.totalBudget || project.budget,
+        amountReceived: project.budgetDetails?.amountReceived,
+        paymentStatus: project.budgetDetails?.paymentStatus || 'pending',
+        budgetNotes: project.budgetDetails?.budgetNotes || '',
       });
     } else {
       form.reset({
@@ -105,19 +139,61 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
         endDate: '',
         budget: undefined,
         currency: 'INR',
-        proposalText: '',
-        clientDiscussionNotes: '',
+        acceptedProposalId: '',
         nextMeetupDate: '',
+        marketingAmount: undefined,
+        adsAmount: undefined,
+        contentAmount: undefined,
+        designAmount: undefined,
+        developmentAmount: undefined,
+        printingAmount: undefined,
+        otherExpenses: undefined,
+        totalBudget: undefined,
+        amountReceived: undefined,
+        paymentStatus: 'pending',
+        budgetNotes: '',
       });
     }
   }, [project, open, form]);
 
   const onSubmit = async (data) => {
+    const subtotal = [
+      data.marketingAmount, data.adsAmount, data.contentAmount, data.designAmount,
+      data.developmentAmount, data.printingAmount, data.otherExpenses,
+    ].reduce((sum, val) => sum + (Number(val) || 0), 0);
+    const totalBudget = Number(data.totalBudget) || subtotal || Number(data.budget) || 0;
+    const amountReceived = Number(data.amountReceived) || 0;
+
     const payload = {
       ...data,
-      budget: data.budget ? Number(data.budget) : undefined,
+      budget: totalBudget || undefined,
       currency: data.currency || 'INR',
+      acceptedProposalId: data.acceptedProposalId || undefined,
+      budgetDetails: {
+        marketingAmount: Number(data.marketingAmount) || 0,
+        adsAmount: Number(data.adsAmount) || 0,
+        contentAmount: Number(data.contentAmount) || 0,
+        designAmount: Number(data.designAmount) || 0,
+        developmentAmount: Number(data.developmentAmount) || 0,
+        printingAmount: Number(data.printingAmount) || 0,
+        otherExpenses: Number(data.otherExpenses) || 0,
+        totalBudget,
+        amountReceived,
+        paymentStatus: data.paymentStatus || 'pending',
+        budgetNotes: data.budgetNotes || '',
+      },
     };
+    delete payload.marketingAmount;
+    delete payload.adsAmount;
+    delete payload.contentAmount;
+    delete payload.designAmount;
+    delete payload.developmentAmount;
+    delete payload.printingAmount;
+    delete payload.otherExpenses;
+    delete payload.totalBudget;
+    delete payload.amountReceived;
+    delete payload.paymentStatus;
+    delete payload.budgetNotes;
 
     if (project) {
       await updateProject.mutateAsync({ id: project._id, data: payload });
@@ -340,37 +416,98 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="proposalText"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Proposal Text</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Write the proposal text that the client can download as a PDF..."
-                      className="min-h-40"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {selectedClientId ? (
+              <FormField
+                control={form.control}
+                name="acceptedProposalId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Accepted Proposal (optional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={acceptedProposals.length ? 'Select accepted proposal' : 'No accepted proposals for this client'} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {acceptedProposals.map((proposal) => (
+                          <SelectItem key={proposal._id} value={proposal._id}>
+                            {proposal.title} — {formatINR(proposal.amount)} — {proposal.acceptedAt ? new Date(proposal.acceptedAt).toLocaleDateString() : 'Accepted'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
 
-            <FormField
-              control={form.control}
-              name="clientDiscussionNotes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Client Discussion Notes</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Notes about what was discussed with the client, requirements, expectations, etc..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="rounded-2xl border border-border p-4 space-y-4">
+              <p className="font-semibold text-sm">Budget Details (₹ INR)</p>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {[
+                  ['marketingAmount', 'Marketing Amount'],
+                  ['adsAmount', 'Ads Budget'],
+                  ['contentAmount', 'Content Budget'],
+                  ['designAmount', 'Design Budget'],
+                  ['developmentAmount', 'Development Budget'],
+                  ['printingAmount', 'Printing Budget'],
+                  ['otherExpenses', 'Other Expenses'],
+                  ['totalBudget', 'Total Project Budget'],
+                  ['amountReceived', 'Amount Received'],
+                ].map(([name, label]) => (
+                  <FormField
+                    key={name}
+                    control={form.control}
+                    name={name}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{label}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                ))}
+                <FormField
+                  control={form.control}
+                  name="paymentStatus"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="partial">Partial</SelectItem>
+                          <SelectItem value="paid">Paid</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="budgetNotes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Budget Notes</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Budget notes..." {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="flex gap-3 justify-end">
               <Button

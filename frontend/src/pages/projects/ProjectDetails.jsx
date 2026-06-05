@@ -21,7 +21,11 @@ import {
   CheckCircle2,
   XCircle,
   Lock,
+  IndianRupee,
+  FileText,
 } from 'lucide-react';
+import { formatINR } from '../../utils/currency';
+import { useUpdateProject } from '../../hooks/useProjects';
 import api from '../../api';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -63,6 +67,9 @@ const ProjectDetails = () => {
   const [accessRequests, setAccessRequests] = useState([]);
   const [isRequesting, setIsRequesting] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
+  const [editingBudget, setEditingBudget] = useState(false);
+  const [budgetForm, setBudgetForm] = useState({});
+  const updateProject = useUpdateProject();
 
   const fetchProjectData = async () => {
     try {
@@ -458,6 +465,210 @@ const ProjectDetails = () => {
     return (project.team || []).some(m => m._id === user._id) || project.manager?._id === user._id;
   }, [project.team, project.manager, user._id, user.role]);
 
+  const syncBudgetForm = () => {
+    const b = project.budgetDetails || {};
+    setBudgetForm({
+      marketingAmount: b.marketingAmount ?? 0,
+      adsAmount: b.adsAmount ?? 0,
+      contentAmount: b.contentAmount ?? 0,
+      designAmount: b.designAmount ?? 0,
+      developmentAmount: b.developmentAmount ?? 0,
+      printingAmount: b.printingAmount ?? 0,
+      otherExpenses: b.otherExpenses ?? 0,
+      totalBudget: b.totalBudget ?? project.budget ?? 0,
+      amountReceived: b.amountReceived ?? 0,
+      paymentStatus: b.paymentStatus || 'pending',
+      budgetNotes: b.budgetNotes || '',
+    });
+  };
+
+  const handleSaveBudget = async () => {
+    const subtotal = [
+      budgetForm.marketingAmount, budgetForm.adsAmount, budgetForm.contentAmount,
+      budgetForm.designAmount, budgetForm.developmentAmount, budgetForm.printingAmount,
+      budgetForm.otherExpenses,
+    ].reduce((sum, val) => sum + (Number(val) || 0), 0);
+    const totalBudget = Number(budgetForm.totalBudget) || subtotal;
+    const amountReceived = Number(budgetForm.amountReceived) || 0;
+
+    await updateProject.mutateAsync({
+      id: project._id,
+      data: {
+        budget: totalBudget,
+        budgetDetails: {
+          ...budgetForm,
+          marketingAmount: Number(budgetForm.marketingAmount) || 0,
+          adsAmount: Number(budgetForm.adsAmount) || 0,
+          contentAmount: Number(budgetForm.contentAmount) || 0,
+          designAmount: Number(budgetForm.designAmount) || 0,
+          developmentAmount: Number(budgetForm.developmentAmount) || 0,
+          printingAmount: Number(budgetForm.printingAmount) || 0,
+          otherExpenses: Number(budgetForm.otherExpenses) || 0,
+          totalBudget,
+          amountReceived,
+        },
+      },
+    });
+    setEditingBudget(false);
+    fetchProjectData();
+  };
+
+  const renderProposalPanel = () => {
+    const proposal = project.acceptedProposalId;
+    if (!proposal || typeof proposal === 'string') {
+      return (
+        <div className="rounded-3xl border border-dashed border-border bg-card p-12 text-center">
+          <FileText size={40} className="mx-auto mb-3 text-muted-foreground/40" />
+          <p className="font-semibold">No accepted proposal linked</p>
+          <p className="mt-2 text-sm text-muted-foreground">Link an accepted proposal when editing the project, or create one from the Proposals Dashboard.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold">{proposal.title}</h2>
+            <p className="text-sm text-muted-foreground">{proposal.proposalNumber}</p>
+          </div>
+          <Link to={`/proposals/${proposal._id}`} className="text-sm font-semibold text-primary hover:underline">
+            View full proposal →
+          </Link>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-border bg-secondary/20 p-4">
+            <p className="text-xs text-muted-foreground">Proposal Amount</p>
+            <p className="mt-1 text-lg font-bold">{formatINR(proposal.amount)}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-secondary/20 p-4">
+            <p className="text-xs text-muted-foreground">Status</p>
+            <p className="mt-1 text-lg font-bold capitalize">{proposal.status}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-secondary/20 p-4 md:col-span-2">
+            <p className="text-xs text-muted-foreground">Accepted Date & Time</p>
+            <p className="mt-1 text-lg font-bold">
+              {proposal.acceptedAt ? new Date(proposal.acceptedAt).toLocaleString() : '—'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderBudgetPanel = () => {
+    const b = project.budgetDetails || {};
+    const total = b.totalBudget ?? project.budget ?? 0;
+    const received = b.amountReceived ?? 0;
+    const pending = Math.max(0, total - received);
+
+    const budgetFields = [
+      ['marketingAmount', 'Marketing'],
+      ['adsAmount', 'Ads Budget'],
+      ['contentAmount', 'Content'],
+      ['designAmount', 'Design'],
+      ['developmentAmount', 'Development'],
+      ['printingAmount', 'Printing'],
+      ['otherExpenses', 'Other Expenses'],
+    ];
+
+    if (editingBudget) {
+      return (
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold">Edit Budget</h2>
+            <div className="flex gap-2">
+              <button onClick={() => setEditingBudget(false)} className="rounded-xl border border-border px-4 py-2 text-sm">Cancel</button>
+              <button onClick={handleSaveBudget} disabled={updateProject.isPending} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+                Save Budget
+              </button>
+            </div>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {budgetFields.map(([key, label]) => (
+              <label key={key} className="space-y-1">
+                <span className="text-xs font-semibold text-muted-foreground">{label}</span>
+                <input
+                  type="number"
+                  className="app-input w-full"
+                  value={budgetForm[key] ?? ''}
+                  onChange={(e) => setBudgetForm((c) => ({ ...c, [key]: e.target.value }))}
+                />
+              </label>
+            ))}
+            <label className="space-y-1">
+              <span className="text-xs font-semibold text-muted-foreground">Total Project Budget</span>
+              <input type="number" className="app-input w-full" value={budgetForm.totalBudget ?? ''} onChange={(e) => setBudgetForm((c) => ({ ...c, totalBudget: e.target.value }))} />
+            </label>
+            <label className="space-y-1">
+              <span className="text-xs font-semibold text-muted-foreground">Amount Received</span>
+              <input type="number" className="app-input w-full" value={budgetForm.amountReceived ?? ''} onChange={(e) => setBudgetForm((c) => ({ ...c, amountReceived: e.target.value }))} />
+            </label>
+            <label className="space-y-1">
+              <span className="text-xs font-semibold text-muted-foreground">Payment Status</span>
+              <select className="app-input w-full" value={budgetForm.paymentStatus} onChange={(e) => setBudgetForm((c) => ({ ...c, paymentStatus: e.target.value }))}>
+                <option value="pending">Pending</option>
+                <option value="partial">Partial</option>
+                <option value="paid">Paid</option>
+              </select>
+            </label>
+          </div>
+          <textarea
+            className="app-input w-full min-h-24"
+            placeholder="Budget notes..."
+            value={budgetForm.budgetNotes || ''}
+            onChange={(e) => setBudgetForm((c) => ({ ...c, budgetNotes: e.target.value }))}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold flex items-center gap-2"><IndianRupee size={18} /> Project Budget</h2>
+          {user?.role !== 'client' && (
+            <button
+              onClick={() => { syncBudgetForm(); setEditingBudget(true); }}
+              className="rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-secondary"
+            >
+              Edit Budget
+            </button>
+          )}
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-border bg-emerald-500/5 p-4">
+            <p className="text-xs text-muted-foreground">Total Budget</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-700">{formatINR(total)}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-blue-500/5 p-4">
+            <p className="text-xs text-muted-foreground">Amount Received</p>
+            <p className="mt-1 text-2xl font-bold text-blue-700">{formatINR(received)}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-amber-500/5 p-4">
+            <p className="text-xs text-muted-foreground">Pending Amount</p>
+            <p className="mt-1 text-2xl font-bold text-amber-700">{formatINR(pending)}</p>
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {budgetFields.map(([key, label]) => (
+            <div key={key} className="rounded-xl border border-border/70 bg-secondary/15 px-3 py-2">
+              <p className="text-[11px] text-muted-foreground">{label}</p>
+              <p className="text-sm font-semibold">{formatINR(b[key] || 0)}</p>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-3 text-sm">
+          <span className="font-semibold">Payment Status:</span>
+          <span className="rounded-full bg-secondary px-3 py-1 text-xs font-bold capitalize">{b.paymentStatus || 'pending'}</span>
+        </div>
+        {b.budgetNotes ? (
+          <div className="rounded-xl border border-border bg-secondary/10 p-4 text-sm whitespace-pre-wrap">{b.budgetNotes}</div>
+        ) : null}
+      </div>
+    );
+  };
+
   const renderActivity = () => (
     <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
       <div className="mb-5 flex items-center justify-between">
@@ -590,6 +801,8 @@ const ProjectDetails = () => {
             { id: 'list', label: 'List View', icon: List },
             { id: 'files', label: 'Files', icon: Paperclip },
             { id: 'activity', label: 'Activity', icon: Clock },
+            { id: 'proposal', label: 'Proposal', icon: FileText },
+            { id: 'budget', label: 'Budget', icon: IndianRupee },
             (user.role === 'superAdmin' || user.role === 'manager') && { id: 'access', label: 'Access', icon: ShieldCheck },
           ].filter(Boolean).map((tab) => (
             <button
@@ -621,6 +834,8 @@ const ProjectDetails = () => {
           {activeTab === 'list' && renderList()}
           {activeTab === 'files' && renderFiles()}
           {activeTab === 'activity' && renderActivity()}
+          {activeTab === 'proposal' && renderProposalPanel()}
+          {activeTab === 'budget' && renderBudgetPanel()}
           {activeTab === 'access' && renderAccessManagement()}
         </motion.div>
       </AnimatePresence>

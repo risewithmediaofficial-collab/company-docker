@@ -44,15 +44,24 @@ const assertClientAccess = (req, client) => {
 
 export const getClients = async (req, res) => {
   try {
-    const { status, search, page = 1, limit = 20 } = req.query;
+    const { status, search, service, createdFrom, createdTo, page = 1, limit = 20 } = req.query;
     const filter = {};
 
     if (status) filter.status = statusMap[status] || status;
+    if (service) {
+      filter.services = { $elemMatch: { $regex: service, $options: 'i' } };
+    }
+    if (createdFrom || createdTo) {
+      filter.createdAt = {};
+      if (createdFrom) filter.createdAt.$gte = new Date(createdFrom);
+      if (createdTo) filter.createdAt.$lte = new Date(`${createdTo}T23:59:59.999Z`);
+    }
     if (search) {
       filter.$or = [
         { name: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
         { company: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } },
       ];
     }
 

@@ -74,12 +74,50 @@ const assertProjectAccess = async (req, project) => {
 
 export const getProjects = async (req, res) => {
   try {
-    const { status, client, search, page = 1, limit = 20 } = req.query;
+    const {
+      status,
+      client,
+      search,
+      startDateFrom,
+      startDateTo,
+      endDateFrom,
+      endDateTo,
+      createdFrom,
+      createdTo,
+      page = 1,
+      limit = 20,
+    } = req.query;
     const filter = {};
 
     if (status) filter.status = projectStatusMap[status] || status;
     if (client) filter.client = client;
-    if (search) filter.name = { $regex: search, $options: 'i' };
+    if (startDateFrom || startDateTo) {
+      filter.startDate = {};
+      if (startDateFrom) filter.startDate.$gte = new Date(startDateFrom);
+      if (startDateTo) filter.startDate.$lte = new Date(`${startDateTo}T23:59:59.999Z`);
+    }
+    if (endDateFrom || endDateTo) {
+      filter.dueDate = {};
+      if (endDateFrom) filter.dueDate.$gte = new Date(endDateFrom);
+      if (endDateTo) filter.dueDate.$lte = new Date(`${endDateTo}T23:59:59.999Z`);
+    }
+    if (createdFrom || createdTo) {
+      filter.createdAt = {};
+      if (createdFrom) filter.createdAt.$gte = new Date(createdFrom);
+      if (createdTo) filter.createdAt.$lte = new Date(`${createdTo}T23:59:59.999Z`);
+    }
+    if (search) {
+      const matchingClients = await Client.find({
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { company: { $regex: search, $options: 'i' } },
+        ],
+      }).select('_id');
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { client: { $in: matchingClients.map((item) => item._id) } },
+      ];
+    }
     
     // SuperAdmin and Manager can see all projects (for task creation)
     // Employee can see projects they're assigned to
@@ -95,6 +133,7 @@ export const getProjects = async (req, res) => {
     const total = await Project.countDocuments(scopedFilter);
     const projects = await Project.find(scopedFilter)
       .populate('client', 'name email logo company')
+      .populate('acceptedProposalId', 'title amount acceptedAt proposalNumber status')
       .populate('manager', 'name avatar')
       .populate('team', 'name avatar')
       .sort({ createdAt: -1 })
@@ -111,6 +150,7 @@ export const getProject = async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
       .populate('client', 'name email logo company')
+      .populate('acceptedProposalId', 'title amount acceptedAt proposalNumber status currency')
       .populate('manager', 'name email avatar')
       .populate('team', 'name email avatar');
 

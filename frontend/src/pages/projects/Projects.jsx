@@ -38,8 +38,37 @@ const Projects = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [deleteProjectId, setDeleteProjectId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [startDateFrom, setStartDateFrom] = useState('');
+  const [startDateTo, setStartDateTo] = useState('');
+  const [endDateFrom, setEndDateFrom] = useState('');
+  const [endDateTo, setEndDateTo] = useState('');
+  const [createdFrom, setCreatedFrom] = useState('');
+  const [createdTo, setCreatedTo] = useState('');
 
-  const { data: projects = [], isLoading } = useProjects({ search: searchTerm });
+  const filters = {
+    search: searchTerm,
+    ...(statusFilter ? { status: statusFilter } : {}),
+    ...(startDateFrom ? { startDateFrom } : {}),
+    ...(startDateTo ? { startDateTo } : {}),
+    ...(endDateFrom ? { endDateFrom } : {}),
+    ...(endDateTo ? { endDateTo } : {}),
+    ...(createdFrom ? { createdFrom } : {}),
+    ...(createdTo ? { createdTo } : {}),
+  };
+
+  const { data: projects = [], isLoading } = useProjects(filters);
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('');
+    setStartDateFrom('');
+    setStartDateTo('');
+    setEndDateFrom('');
+    setEndDateTo('');
+    setCreatedFrom('');
+    setCreatedTo('');
+  };
   const deleteProjectMutation = useDeleteProject();
 
   const inDelivery = projects.filter((project) => project.status === 'In Progress').length;
@@ -133,8 +162,19 @@ const Projects = () => {
         <SearchField
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder="Search projects, clients, or delivery themes..."
+          placeholder="Search project or client name..."
         />
+        <select className="app-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="">All statuses</option>
+          {['Planning', 'In Progress', 'On Hold', 'Completed', 'Cancelled'].map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <input type="date" className="app-input" title="Start from" value={startDateFrom} onChange={(e) => setStartDateFrom(e.target.value)} />
+        <input type="date" className="app-input" title="Start to" value={startDateTo} onChange={(e) => setStartDateTo(e.target.value)} />
+        <input type="date" className="app-input" title="End from" value={endDateFrom} onChange={(e) => setEndDateFrom(e.target.value)} />
+        <input type="date" className="app-input" title="End to" value={endDateTo} onChange={(e) => setEndDateTo(e.target.value)} />
+        <input type="date" className="app-input" title="Created from" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} />
+        <input type="date" className="app-input" title="Created to" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
+        <Button type="button" variant="outline" onClick={clearFilters}>Clear</Button>
         <div className="app-pill">{projects.length} projects</div>
       </PageToolbar>
 
