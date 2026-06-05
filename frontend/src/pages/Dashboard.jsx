@@ -404,7 +404,7 @@ const Dashboard = () => {
               </div>
               <div className="divide-y divide-border">
                 {data.myTasks.length > 0 ? data.myTasks.map((task) => (
-                  <div key={task._id} className="p-4 hover:bg-secondary/30 transition-colors flex items-center justify-between group">
+                  <Link key={task._id} to={`/tasks?open=${task._id}`} className="p-4 hover:bg-secondary/30 transition-colors flex items-center justify-between group">
                     <div className="flex items-center space-x-4">
                       <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                         <CheckSquare size={20} />
@@ -426,7 +426,7 @@ const Dashboard = () => {
                         {task.priority}
                       </span>
                     </div>
-                  </div>
+                  </Link>
                 )) : (
                   <div className="p-8 text-center text-muted-foreground">No tasks assigned today. Take a break!</div>
                 )}

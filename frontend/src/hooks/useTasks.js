@@ -26,6 +26,7 @@ export const useTask = (id) => {
       return response.data.task;
     },
     enabled: !!id,
+    retry: false,
   });
 };
 

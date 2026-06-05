@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { ChevronLeft, Edit2, X } from 'lucide-react';
@@ -20,18 +20,31 @@ const TaskDetails = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const [editing, setEditing] = useState(false);
-  const { data: task, isLoading, refetch } = useTask(id);
+  const { data: task, isLoading, isError, error, refetch } = useTask(id);
 
   const canEdit = ['superAdmin', 'manager'].includes(user?.role);
+
+  useEffect(() => {
+    if (user?.role === 'employee' && id) {
+      navigate(`/tasks?open=${id}`, { replace: true });
+    }
+  }, [user?.role, id, navigate]);
+
+  if (user?.role === 'employee') {
+    return null;
+  }
 
   if (isLoading) {
     return <div className="animate-pulse h-64 rounded-3xl bg-card border border-border" />;
   }
 
   if (!task) {
+    const message = error?.response?.status === 403
+      ? 'You do not have access to this task.'
+      : 'Task not found';
     return (
       <div className="text-center py-20">
-        <p className="text-muted-foreground">Task not found</p>
+        <p className="text-muted-foreground">{isError ? message : 'Task not found'}</p>
         <Button className="mt-4" onClick={() => navigate('/tasks')}>Back to Tasks</Button>
       </div>
     );

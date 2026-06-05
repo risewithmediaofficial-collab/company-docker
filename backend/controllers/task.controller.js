@@ -95,7 +95,16 @@ const toArray = (value) => {
   return Array.isArray(value) ? value : [value];
 };
 
-const uniqueIds = (items = []) => [...new Set(items.filter(Boolean).map((item) => item.toString()))];
+const toIdString = (value) => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (value._id) return value._id.toString();
+  return value.toString();
+};
+
+const uniqueIds = (items = []) => [...new Set(items.filter(Boolean).map(toIdString))];
+
+const isEmployeeLikeRole = (role) => ['employee', 'intern', 'editor', 'designer', 'adsManager'].includes(role);
 
 const isTaskOverdue = (item) => {
   if (!item?.dueDate) return false;
@@ -190,10 +199,13 @@ const buildScopedTaskFilter = async (req, baseFilter = {}) => {
     return baseOr ? { ...filter, $and: [{ $or: baseOr }, { $or: scopedOr }] } : { ...filter, $or: scopedOr };
   }
 
-  if (req.user.role === 'employee') {
+  if (isEmployeeLikeRole(req.user.role)) {
+    const teamProjects = await Project.find({ team: req.user._id }).select('_id');
+    const projectIds = teamProjects.map((project) => project._id);
     const scopedOr = [
       { assignedTo: req.user._id },
       { createdBy: req.user._id },
+      ...(projectIds.length ? [{ project: { $in: projectIds } }] : []),
     ];
     return baseOr ? { ...filter, $and: [{ $or: baseOr }, { $or: scopedOr }] } : { ...filter, $or: scopedOr };
   }
@@ -218,17 +230,31 @@ const assertTaskAccess = async (req, task) => {
   if (!task) return { allowed: false, status: 404, message: 'Task not found' };
   if (req.user.role === 'superAdmin') return { allowed: true };
 
-  if (req.user.role === 'employee') {
-    const isAssigned = task.assignedTo?.some((userId) => userId.toString() === req.user._id.toString());
-    const isCreator = task.createdBy?.toString() === req.user._id.toString();
-    return isAssigned || isCreator
-      ? { allowed: true }
-      : { allowed: false, status: 403, message: 'Access denied' };
+  const userId = req.user._id.toString();
+  const assigneeIds = toArray(task.assignedTo).map(toIdString);
+  const isAssigned = assigneeIds.includes(userId);
+  const isCreator = toIdString(task.createdBy) === userId;
+
+  if (isEmployeeLikeRole(req.user.role)) {
+    if (isAssigned || isCreator) {
+      return { allowed: true };
+    }
+
+    const projectId = toIdString(task.project);
+    if (projectId) {
+      const project = await Project.findById(projectId).select('team');
+      const isTeamMember = toArray(project?.team).some((member) => toIdString(member) === userId);
+      if (isTeamMember) {
+        return { allowed: true };
+      }
+    }
+
+    return { allowed: false, status: 403, message: 'Access denied' };
   }
 
   if (req.user.role === 'client') {
     const client = await getClientRecordForUser(req.user._id);
-    if (client && task.client?.toString() === client._id.toString() && task.isClientVisible) {
+    if (client && toIdString(task.client) === client._id.toString() && task.isClientVisible) {
       return { allowed: true };
     }
 
@@ -236,17 +262,18 @@ const assertTaskAccess = async (req, task) => {
   }
 
   if (req.user.role === 'manager') {
-    if (task.createdBy?.toString() === req.user._id.toString()) {
+    if (isCreator || isAssigned) {
       return { allowed: true };
     }
 
     const [project, client] = await Promise.all([
-      task.project ? Project.findById(task.project).select('manager') : null,
-      task.client ? Client.findById(task.client).select('assignedManager') : null,
+      task.project ? Project.findById(toIdString(task.project)).select('manager team') : null,
+      task.client ? Client.findById(toIdString(task.client)).select('assignedManager') : null,
     ]);
 
-    if (project?.manager?.toString() === req.user._id.toString()) return { allowed: true };
-    if (client?.assignedManager?.toString() === req.user._id.toString()) return { allowed: true };
+    if (toIdString(project?.manager) === userId) return { allowed: true };
+    if (toArray(project?.team).some((member) => toIdString(member) === userId)) return { allowed: true };
+    if (toIdString(client?.assignedManager) === userId) return { allowed: true };
 
     return { allowed: false, status: 403, message: 'Access denied' };
   }
@@ -273,11 +300,14 @@ const syncTaskDerivedFields = async (task) => {
     }
   }
 
-  if (Array.isArray(task.assignedTo) && task.assignedTo.length) {
-    const assignees = await User.find({ _id: { $in: task.assignedTo } }).select('name');
+  const assigneeIds = uniqueIds(toArray(task.assignedTo));
+  if (assigneeIds.length) {
+    const assignees = await User.find({ _id: { $in: assigneeIds } }).select('name');
     task.assignedPersonName = assignees.map((user) => user.name).filter(Boolean).join(', ');
+    task.assignedTo = assigneeIds;
   } else {
     task.assignedPersonName = '';
+    task.assignedTo = [];
   }
 
   task.taskTitle = task.title;
@@ -448,6 +478,19 @@ export const getTasks = async (req, res) => {
 export const getTask = async (req, res) => {
   try {
     const task = await hydrateTask(req.params.id);
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    if (
+      req.user.role !== 'superAdmin'
+      && req.user.organizationId
+      && task.organizationId
+      && task.organizationId.toString() !== req.user.organizationId.toString()
+    ) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
     const access = await assertTaskAccess(req, task);
     if (!access.allowed) {
       return res.status(access.status).json({ success: false, message: access.message });
@@ -517,6 +560,8 @@ export const createTask = async (req, res) => {
 
     const task = await Task.create({
       ...payload,
+      organizationId: req.user.organizationId,
+      brandId: req.user.brandId,
       createdBy: req.user._id,
     });
     await syncTaskDerivedFields(task);

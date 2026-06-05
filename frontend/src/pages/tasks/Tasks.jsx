@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { CheckCircle2, Clock, ListChecks, Plus, TimerReset } from 'lucide-react';
 import { AddTaskModal } from '../../components/modals/AddTaskModal';
@@ -51,6 +51,7 @@ const ALL_TASK_TYPES = [...CONTENT_TASK_TYPE_OPTIONS, ...NON_CONTENT_TASK_TYPE_O
 
 const Tasks = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
@@ -176,6 +177,28 @@ const Tasks = () => {
     setFilters((current) => ({ ...current, [key]: value }));
   };
 
+  const openTaskDetail = (taskId) => {
+    setSelectedTaskId(taskId);
+    setShowTaskDetail(true);
+  };
+
+  const handleRowClick = (task) => {
+    if (isEmployee) {
+      openTaskDetail(task._id);
+      return;
+    }
+    navigate(`/tasks/${task._id}`);
+  };
+
+  useEffect(() => {
+    const openTaskId = searchParams.get('open');
+    if (!openTaskId) return;
+    openTaskDetail(openTaskId);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('open');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   if (isClient) {
     return <PortalTasks />;
   }
@@ -279,7 +302,7 @@ const Tasks = () => {
         data={normalizedTasks}
         columns={columns}
         loading={isLoading}
-        onRowClick={(task) => navigate(`/tasks/${task._id}`)}
+        onRowClick={handleRowClick}
         onEdit={isEmployee ? null : (task) => {
           setSelectedTask(task);
           setShowAddModal(true);
