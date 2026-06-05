@@ -68,7 +68,7 @@ export const MetricCard = ({ label, value, icon: Icon, tone = 'primary', classNa
 
 export const PageToolbar = ({ children, className }) => (
   <div className={cn('rounded-[24px] border border-border/80 bg-card/85 p-3 shadow-sm backdrop-blur-sm', className)}>
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-center">{children}</div>
+    <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">{children}</div>
   </div>
 );
 

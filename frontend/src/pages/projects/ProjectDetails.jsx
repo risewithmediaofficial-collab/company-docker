@@ -153,6 +153,12 @@ const ProjectDetails = () => {
     return [...projectFiles, ...taskFiles];
   }, [allTasks, project]);
 
+  const isTeamMember = useMemo(() => {
+    if (!user) return false;
+    if (user.role === 'superAdmin' || user.role === 'manager') return true;
+    return (project?.team || []).some((member) => member._id === user._id) || project?.manager?._id === user._id;
+  }, [project?.manager?._id, project?.team, user]);
+
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center text-muted-foreground animate-pulse">
@@ -459,11 +465,6 @@ const ProjectDetails = () => {
       )}
     </div>
   );
-
-  const isTeamMember = useMemo(() => {
-    if (user.role === 'superAdmin' || user.role === 'manager') return true;
-    return (project.team || []).some(m => m._id === user._id) || project.manager?._id === user._id;
-  }, [project.team, project.manager, user._id, user.role]);
 
   const syncBudgetForm = () => {
     const b = project.budgetDetails || {};
