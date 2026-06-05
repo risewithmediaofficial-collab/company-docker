@@ -63,7 +63,8 @@ const normalizeProjectPayload = (body) => {
 const assertProjectAccess = async (req, project) => {
   if (!project) return { allowed: false, status: 404, message: 'Project not found' };
   if (req.user.role === 'superAdmin') return { allowed: true };
-  if (req.user.role === 'manager' && project.manager?.toString() === req.user._id.toString()) return { allowed: true };
+  // Keep detail access aligned with the project list: managers can review all projects.
+  if (req.user.role === 'manager') return { allowed: true };
   if (req.user.role === 'employee' && project.team?.some((member) => member.toString() === req.user._id.toString())) return { allowed: true };
   if (req.user.role === 'client') {
     const client = await Client.findOne({ userId: req.user._id }).select('_id');
