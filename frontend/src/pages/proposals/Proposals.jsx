@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { FileText, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { DataTable } from '../../components/ui/DataTable';
 import { PageHeader, PageToolbar, SearchField, StatusBadge } from '../../components/ui/page';
+import { AddProposalModal } from '../../components/modals/AddProposalModal';
 import { useProposals } from '../../hooks/useProposals';
 import { formatINR } from '../../utils/currency';
 
@@ -23,6 +24,8 @@ const Proposals = () => {
   const canManage = ['superAdmin', 'manager'].includes(user?.role);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedProposal, setSelectedProposal] = useState(null);
 
   const { data: proposals = [], isLoading } = useProposals(statusFilter ? { status: statusFilter } : {});
 
@@ -83,7 +86,7 @@ const Proposals = () => {
         title="Proposals Dashboard"
         description="Create and manage client proposals. Accepted proposals can be linked when creating projects."
         actions={canManage ? (
-          <Button onClick={() => navigate('/proposals/new')}>
+          <Button onClick={() => { setSelectedProposal(null); setShowCreateModal(true); }}>
             <Plus size={16} className="mr-2" />
             Create Proposal
           </Button>
@@ -106,8 +109,24 @@ const Proposals = () => {
         columns={columns}
         loading={isLoading}
         onRowClick={(row) => navigate(`/proposals/${row._id}`)}
+        onEdit={canManage ? (row) => { setSelectedProposal(row); setShowCreateModal(true); } : null}
         emptyTitle="No proposals yet"
         emptyDescription="Create a proposal to send to your client."
+        emptyAction={canManage ? (
+          <Button onClick={() => { setSelectedProposal(null); setShowCreateModal(true); }}>
+            <Plus size={16} className="mr-2" />
+            Create Proposal
+          </Button>
+        ) : null}
+      />
+
+      <AddProposalModal
+        open={showCreateModal}
+        onOpenChange={(open) => {
+          setShowCreateModal(open);
+          if (!open) setSelectedProposal(null);
+        }}
+        proposal={selectedProposal}
       />
     </div>
   );
