@@ -636,7 +636,7 @@ const ContentCalendar = ({ embedded = false }) => {
 
                 {!dayTasks.length ? (
                   <div className="pt-6 text-xs leading-5 text-muted-foreground">
-                    {canManageCalendar ? 'Click to schedule a task for this day.' : 'No tasks due on this date.'}
+                   
                   </div>
                 ) : null}
               </div>
