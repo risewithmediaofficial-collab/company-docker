@@ -67,3 +67,18 @@ export const useUpdateUserApproval = () => {
     },
   });
 };
+
+export const useAdminChangeUserPassword = () => {
+  return useMutation({
+    mutationFn: async ({ id, newPassword }) => {
+      const response = await api.put(`/users/${id}/password`, { newPassword });
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Password updated');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to update password');
+    },
+  });
+};

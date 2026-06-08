@@ -141,6 +141,40 @@ router.put('/:id', authorize('superAdmin'), async (req, res) => {
   }
 });
 
+router.put('/:id/password', authorize('superAdmin'), async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json({ success: false, message: 'New password is required' });
+    }
+
+    if (String(newPassword).length < 6) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+    }
+
+    const user = await User.findById(req.params.id).select('+password');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    user.password = newPassword;
+    await user.save();
+
+    await createActivityLog({
+      actor: req.user,
+      action: 'user.password.updated',
+      entityType: 'user',
+      entityId: user._id,
+      title: 'User password changed',
+      description: `${user.name}'s password was changed by an admin.`,
+      relatedUser: user._id,
+    });
+
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
 router.patch('/:id/approval', authorize('superAdmin'), async (req, res) => {
   try {
     const { approvalStatus } = req.body;

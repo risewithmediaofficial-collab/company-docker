@@ -88,6 +88,7 @@ const invoiceStatusTone = {
 
 const Finance = () => {
   const { user } = useSelector((state) => state.auth);
+  const isManager = user?.role === 'manager';
   const [activeTab, setActiveTab] = useState('records');
   const [search, setSearch] = useState('');
   const [showFinanceModal, setShowFinanceModal] = useState(false);
@@ -125,20 +126,22 @@ const Finance = () => {
     notes: '',
   });
 
-  const canManage = ['superAdmin', 'manager'].includes(user?.role) || user?.permissions?.canManageFinance;
-  const canDeleteFinance = ['superAdmin', 'manager'].includes(user?.role);
+  const canViewFinanceDetails = user?.role === 'superAdmin' || (!!user?.permissions?.canManageFinance && !isManager);
+  const canManage = canViewFinanceDetails;
+  const canDeleteFinance = user?.role === 'superAdmin';
   const canDeleteInvoice = user?.role === 'superAdmin';
 
   const { data: clients = [] } = useClients({}, { enabled: canManage });
   const { data: projects = [] } = useProjects({}, { enabled: canManage });
-  const { data: financeRecords = [] } = useFinanceRecords({ search });
-  const { data: invoices = [] } = useInvoices({ search });
-  const { data: callHistory = [] } = useCallHistory({ search });
-  const { data: referrals = [] } = useReferrals();
-  const { data: referralAnalytics = {} } = useReferralAnalytics();
-  const { data: financeSummary = {} } = useFinanceSummary({ enabled: canManage });
-  const { data: payments = [] } = usePayments();
-  const { data: overdueRecords = [] } = useOverdueFinanceRecords();
+  const { data: managerProjects = [] } = useProjects({ search }, { enabled: isManager });
+  const { data: financeRecords = [] } = useFinanceRecords({ search }, { enabled: canViewFinanceDetails });
+  const { data: invoices = [] } = useInvoices({ search }, { enabled: canViewFinanceDetails });
+  const { data: callHistory = [] } = useCallHistory({ search }, { enabled: canViewFinanceDetails });
+  const { data: referrals = [] } = useReferrals({ search }, { enabled: canViewFinanceDetails });
+  const { data: referralAnalytics = {} } = useReferralAnalytics({ enabled: canViewFinanceDetails });
+  useFinanceSummary({ enabled: canManage });
+  const { data: payments = [] } = usePayments({ search }, { enabled: canViewFinanceDetails });
+  const { data: overdueRecords = [] } = useOverdueFinanceRecords({ enabled: canViewFinanceDetails });
 
   const addPaymentNote = useAddPaymentNote();
   const addInternalFinanceNote = useAddInternalFinanceNote();
@@ -330,6 +333,72 @@ const Finance = () => {
       notes: '',
     });
   };
+
+  const adsBudgetProjects = useMemo(() => managerProjects.map((project) => {
+    const adsBudget = Number(project.budgetDetails?.adsAmount || 0);
+    return {
+      ...project,
+      adsBudget,
+    };
+  }), [managerProjects]);
+
+  const totalAdsBudget = adsBudgetProjects.reduce((sum, project) => sum + project.adsBudget, 0);
+
+  if (isManager) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Ads Budget"
+          title="View ads budgets across all projects."
+          description="Managers can review ad budget allocations here without seeing full finance totals, invoices, or payment details."
+        >
+          <MetricGrid>
+            <MetricCard label="Projects" value={adsBudgetProjects.length} helper="Visible in the current search" icon={FileText} tone="info" />
+            <MetricCard label="Total Ads Budget" value={currency.format(totalAdsBudget)} helper="Combined ads allocation only" icon={IndianRupee} tone="primary" />
+            <MetricCard label="Active Projects" value={adsBudgetProjects.filter((project) => project.status === 'In Progress' || project.status === 'active').length} helper="Projects currently in delivery" icon={CheckCircle2} tone="success" />
+            <MetricCard label="No Ads Budget" value={adsBudgetProjects.filter((project) => project.adsBudget <= 0).length} helper="Projects missing ads allocation" icon={AlertCircle} tone="warning" />
+          </MetricGrid>
+        </PageHeader>
+
+        <PageToolbar>
+          <SearchField value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search projects or clients..." />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="app-pill">{adsBudgetProjects.length} projects</div>
+          </div>
+        </PageToolbar>
+
+        <SectionCard title="Project Ads Budgets" description="Only ads budget allocations are visible for the manager role.">
+          <DataTable
+            data={adsBudgetProjects}
+            columns={[
+              {
+                key: 'project',
+                label: 'Project',
+                render: (row) => (
+                  <div className="min-w-0">
+                    <div className="font-semibold text-foreground">{row.name}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{row.client?.company || row.client?.name || 'No client linked'}</div>
+                  </div>
+                ),
+              },
+              {
+                key: 'status',
+                label: 'Status',
+                render: (row) => <StatusBadge tone="neutral">{row.status}</StatusBadge>,
+              },
+              {
+                key: 'adsBudget',
+                label: 'Ads Budget',
+                render: (row) => currency.format(row.adsBudget),
+              },
+            ]}
+            emptyTitle="No projects found"
+            emptyDescription="Projects with ads budgets will appear here."
+          />
+        </SectionCard>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

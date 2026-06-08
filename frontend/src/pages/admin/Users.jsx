@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { CheckCircle2, Clock, RefreshCw, Search, ShieldCheck, UserCog, XCircle } from 'lucide-react';
-import { useUpdateUser, useUpdateUserApproval, useUsers } from '../../hooks/useUsers';
+import { CheckCircle2, Clock, KeyRound, RefreshCw, Search, ShieldCheck, UserCog, XCircle } from 'lucide-react';
+import { useAdminChangeUserPassword, useUpdateUser, useUpdateUserApproval, useUsers } from '../../hooks/useUsers';
 import { Button } from '../../components/ui/button';
 import UserPermissionsModal from './UserPermissionsModal';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { toast } from 'sonner';
 
 const roles = [
   { value: 'superAdmin', label: 'Super Admin' },
@@ -30,8 +32,11 @@ const Users = () => {
   const { data: users = [], isLoading, isFetching, refetch } = useUsers();
   const updateUser = useUpdateUser();
   const updateApproval = useUpdateUserApproval();
+  const adminChangeUserPassword = useAdminChangeUserPassword();
   const [searchTerm, setSearchTerm] = useState('');
   const [permissionsUser, setPermissionsUser] = useState(null);
+  const [passwordUser, setPasswordUser] = useState(null);
+  const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
 
   const filteredUsers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -70,6 +75,49 @@ const Users = () => {
 
   const handleApprovalChange = (targetUser, approvalStatus) => {
     updateApproval.mutate({ id: targetUser._id, approvalStatus });
+  };
+
+  const openPasswordDialog = (targetUser) => {
+    setPasswordUser(targetUser);
+    setPasswordForm({ newPassword: '', confirmPassword: '' });
+  };
+
+  const closePasswordDialog = (open) => {
+    if (!open) {
+      setPasswordUser(null);
+      setPasswordForm({ newPassword: '', confirmPassword: '' });
+    }
+  };
+
+  const handlePasswordSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!passwordUser) return;
+
+    if (!passwordForm.newPassword || !passwordForm.confirmPassword) {
+      toast.error('Fill in both password fields');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    try {
+      await adminChangeUserPassword.mutateAsync({
+        id: passwordUser._id,
+        newPassword: passwordForm.newPassword,
+      });
+      closePasswordDialog(false);
+    } catch (_) {
+      // handled by mutation toast
+    }
   };
 
   return (
@@ -278,6 +326,16 @@ const Users = () => {
                           )}
                           {!isSelf && (
                             <Button
+                              variant="outline"
+                              onClick={() => openPasswordDialog(user)}
+                              className="h-9 px-3"
+                            >
+                              <KeyRound size={14} className="mr-2" />
+                              Password
+                            </Button>
+                          )}
+                          {!isSelf && (
+                            <Button
                               variant="secondary"
                               onClick={() => setPermissionsUser(user)}
                               className="h-9 px-3 bg-secondary text-foreground hover:bg-secondary/80"
@@ -304,6 +362,46 @@ const Users = () => {
           }} 
         />
       )}
+      <Dialog open={!!passwordUser} onOpenChange={closePasswordDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change User Password</DialogTitle>
+            <DialogDescription>
+              {passwordUser ? `Set a new password for ${passwordUser.name}.` : 'Set a new password for this user.'}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">New password</label>
+              <input
+                type="password"
+                value={passwordForm.newPassword}
+                onChange={(event) => setPasswordForm((current) => ({ ...current, newPassword: event.target.value }))}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                placeholder="Enter new password"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Confirm password</label>
+              <input
+                type="password"
+                value={passwordForm.confirmPassword}
+                onChange={(event) => setPasswordForm((current) => ({ ...current, confirmPassword: event.target.value }))}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                placeholder="Confirm new password"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => closePasswordDialog(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={adminChangeUserPassword.isPending}>
+                {adminChangeUserPassword.isPending ? 'Updating...' : 'Update Password'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

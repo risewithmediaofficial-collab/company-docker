@@ -12,6 +12,7 @@ import User from '../models/user.model.js';
 
 export const getAdminDashboard = async (req, res) => {
   try {
+    const isManager = req.user?.role === 'manager';
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -23,6 +24,7 @@ export const getAdminDashboard = async (req, res) => {
       totalProjects, activeProjects,
       totalTasks, overdueTasks,
       monthRevenue, lastMonthRevenue,
+      adBudgetTotals,
       totalUsers,
     ] = await Promise.all([
       Lead.countDocuments(),
@@ -36,6 +38,14 @@ export const getAdminDashboard = async (req, res) => {
       Task.countDocuments({ dueDate: { $lt: now }, status: { $nin: ['done', 'approved'] } }),
       Invoice.aggregate([{ $match: { status: 'paid', paidDate: { $gte: startOfMonth } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
       Invoice.aggregate([{ $match: { status: 'paid', paidDate: { $gte: startOfLastMonth, $lte: endOfLastMonth } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
+      Project.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalAdsBudget: { $sum: { $ifNull: ['$budgetDetails.adsAmount', 0] } },
+          },
+        },
+      ]),
       User.countDocuments({ isActive: true }),
     ]);
 
@@ -60,6 +70,7 @@ export const getAdminDashboard = async (req, res) => {
     const thisMonthRev = monthRevenue[0]?.total || 0;
     const lastMonthRev = lastMonthRevenue[0]?.total || 0;
     const revenueGrowth = lastMonthRev > 0 ? (((thisMonthRev - lastMonthRev) / lastMonthRev) * 100).toFixed(1) : 0;
+    const totalAdsBudget = adBudgetTotals[0]?.totalAdsBudget || 0;
 
     res.json({
       success: true,
@@ -69,11 +80,12 @@ export const getAdminDashboard = async (req, res) => {
         totalClients, activeClients,
         totalProjects, activeProjects,
         totalTasks, overdueTasks,
-        monthRevenue: thisMonthRev,
-        revenueGrowth,
+        monthRevenue: isManager ? 0 : thisMonthRev,
+        revenueGrowth: isManager ? 0 : revenueGrowth,
+        totalAdsBudget,
         totalUsers,
       },
-      charts: { stageFunnel, revenueChart, taskBreakdown },
+      charts: { stageFunnel, revenueChart: isManager ? [] : revenueChart, taskBreakdown },
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

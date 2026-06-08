@@ -121,9 +121,9 @@ const Dashboard = () => {
     const pipelineLeads = stageFunnel.reduce((sum, item) => sum + item.count, 0);
     const wonLeads = stageFunnel.find((item) => item._id === 'won')?.count || 0;
     const isManager = user.role === 'manager';
-    const roleTitle = isManager ? 'Manager Workspace' : 'Executive Dashboard';
+    const roleTitle = isManager ? 'Admin Manager Workspace' : 'Executive Dashboard';
     const roleSubtitle = isManager
-      ? 'Team delivery, client health, and work requiring your attention.'
+      ? 'See delivery, projects, and team activity with ad budgets only.'
       : "Company-wide revenue, pipeline, operations, and user health.";
     const analyticsCards = [
       {
@@ -139,9 +139,9 @@ const Dashboard = () => {
         color: 'bg-blue-500',
       },
       {
-        label: isManager ? 'Client Avg. Value' : 'Revenue / Active Client',
-        value: formatINR(avgRevenuePerClient),
-        detail: 'Monthly average from paid invoices',
+        label: isManager ? 'Ads Budget' : 'Revenue / Active Client',
+        value: isManager ? formatINR(data.stats.totalAdsBudget || 0) : formatINR(avgRevenuePerClient),
+        detail: isManager ? 'Visible across all managed projects' : 'Monthly average from paid invoices',
         color: 'bg-indigo-500',
       },
       {
@@ -153,7 +153,7 @@ const Dashboard = () => {
     ];
 
     const stats = [
-      { label: isManager ? 'Managed Revenue' : 'Total Revenue', value: formatINR(data.stats.monthRevenue), icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', trend: `${data.stats.revenueGrowth}%`, up: data.stats.revenueGrowth >= 0 },
+      { label: isManager ? 'Ads Budget' : 'Total Revenue', value: isManager ? formatINR(data.stats.totalAdsBudget || 0) : formatINR(data.stats.monthRevenue), icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', trend: isManager ? 'Project budget only' : `${data.stats.revenueGrowth}%`, up: isManager ? true : data.stats.revenueGrowth >= 0 },
       { label: isManager ? 'Active Clients' : 'Total Clients', value: data.stats.totalClients, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10', trend: 'Active', up: true },
       { label: isManager ? 'Projects In Delivery' : 'Active Projects', value: data.stats.activeProjects, icon: Briefcase, color: 'text-indigo-500', bg: 'bg-indigo-500/10', trend: 'In Delivery', up: true },
       { label: isManager ? 'Team Tasks' : 'Conversion Rate', value: isManager ? data.stats.totalTasks : `${data.stats.conversionRate}%`, icon: isManager ? ClipboardList : CheckCircle2, color: 'text-amber-500', bg: 'bg-amber-500/10', trend: isManager ? `${data.stats.overdueTasks} Overdue` : 'Won Deals', up: !isManager || data.stats.overdueTasks === 0 },
@@ -217,7 +217,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-card p-6 rounded-2xl border border-border shadow-sm">
             <div className="flex items-center justify-between mb-6">
-            <h3 className="font-bold">{isManager ? 'Delivery Revenue' : 'Revenue Growth'}</h3>
+            <h3 className="font-bold">{isManager ? 'Task Productivity' : 'Revenue Growth'}</h3>
               <select className="bg-secondary/50 border-none text-xs rounded-lg px-2 py-1 focus:ring-0">
                 <option>Last 6 months</option>
                 <option>Last 12 months</option>
@@ -225,31 +225,47 @@ const Dashboard = () => {
             </div>
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.charts.revenueChart}>
-                  <defs>
-                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="_id" 
-                    tickFormatter={(val) => `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][val.month - 1]}`}
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                  />
-                  <YAxis 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px' }}
-                  />
-                  <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
-                </AreaChart>
+                {isManager ? (
+                  <BarChart data={taskBreakdown}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="_id"
+                      tickFormatter={(value) => String(value).replace(/_/g, ' ')}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px' }} />
+                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                ) : (
+                  <AreaChart data={data.charts.revenueChart}>
+                    <defs>
+                      <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="_id" 
+                      tickFormatter={(val) => `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][val.month - 1]}`}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <YAxis 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px' }}
+                    />
+                    <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                  </AreaChart>
+                )}
               </ResponsiveContainer>
             </div>
           </div>
@@ -295,7 +311,7 @@ const Dashboard = () => {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-2">
             <div>
               <h2 className="text-xl font-bold tracking-tight">Analytics</h2>
-              <p className="text-sm text-muted-foreground">Operational health across revenue, pipeline, and delivery.</p>
+              <p className="text-sm text-muted-foreground">{isManager ? 'Operational health across tasks, pipeline, and ad budgets.' : 'Operational health across revenue, pipeline, and delivery.'}</p>
             </div>
             <span className="text-xs font-semibold text-muted-foreground bg-card border border-border rounded-full px-3 py-1">
               Live MongoDB data

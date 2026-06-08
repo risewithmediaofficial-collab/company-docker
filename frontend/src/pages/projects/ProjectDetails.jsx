@@ -559,6 +559,7 @@ const ProjectDetails = () => {
 
   const renderBudgetPanel = () => {
     const b = project.budgetDetails || {};
+    const isManager = user?.role === 'manager';
     const total = b.totalBudget ?? project.budget ?? 0;
     const received = b.amountReceived ?? 0;
     const pending = Math.max(0, total - received);
@@ -572,6 +573,24 @@ const ProjectDetails = () => {
       ['printingAmount', 'Printing'],
       ['otherExpenses', 'Other Expenses'],
     ];
+
+    if (isManager) {
+      return (
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold flex items-center gap-2"><IndianRupee size={18} /> Ads Budget</h2>
+            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-bold text-muted-foreground">Manager View</span>
+          </div>
+          <div className="rounded-2xl border border-border bg-emerald-500/5 p-4">
+            <p className="text-xs text-muted-foreground">Project Ads Budget</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-700">{formatINR(b.adsAmount || 0)}</p>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Full finance totals, received payments, and pending balances are hidden for the manager role.
+          </p>
+        </div>
+      );
+    }
 
     if (editingBudget) {
       return (

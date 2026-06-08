@@ -20,7 +20,7 @@ export const useFinanceEntries = (filters = {}) => {
 
 export const useFinance = useFinanceEntries;
 
-export const useFinanceRecords = (filters = {}) => {
+export const useFinanceRecords = (filters = {}, options = {}) => {
   return useQuery({
     queryKey: ['finance-records', filters],
     queryFn: async () => {
@@ -28,6 +28,7 @@ export const useFinanceRecords = (filters = {}) => {
       return response.data?.records || [];
     },
     staleTime: 2 * 60 * 1000,
+    ...options,
   });
 };
 
@@ -134,7 +135,7 @@ export const useAddInternalFinanceNote = () => {
   });
 };
 
-export const useOverdueFinanceRecords = () => {
+export const useOverdueFinanceRecords = (options = {}) => {
   return useQuery({
     queryKey: ['finance-overdue'],
     queryFn: async () => {
@@ -142,6 +143,7 @@ export const useOverdueFinanceRecords = () => {
       return response.data?.records || [];
     },
     staleTime: 60 * 1000,
+    ...options,
   });
 };
 
@@ -202,7 +204,7 @@ export const useDeleteFinanceEntry = () => {
 };
 
 // Invoices
-export const useInvoices = (filters = {}) => {
+export const useInvoices = (filters = {}, options = {}) => {
   return useQuery({
     queryKey: ['invoices', filters],
     queryFn: async () => {
@@ -210,6 +212,7 @@ export const useInvoices = (filters = {}) => {
       return response.data?.invoices || response.data?.data || [];
     },
     staleTime: 5 * 60 * 1000,
+    ...options,
   });
 };
 
@@ -333,7 +336,7 @@ export const useAddPartialPayment = () => {
   });
 };
 
-export const usePayments = (filters = {}) => {
+export const usePayments = (filters = {}, options = {}) => {
   return useQuery({
     queryKey: ['payments', filters],
     queryFn: async () => {
@@ -341,10 +344,11 @@ export const usePayments = (filters = {}) => {
       return response.data?.payments || [];
     },
     staleTime: 5 * 60 * 1000,
+    ...options,
   });
 };
 
-export const useCallHistory = (filters = {}) => {
+export const useCallHistory = (filters = {}, options = {}) => {
   return useQuery({
     queryKey: ['call-history', filters],
     queryFn: async () => {
@@ -352,6 +356,7 @@ export const useCallHistory = (filters = {}) => {
       return response.data?.calls || [];
     },
     staleTime: 2 * 60 * 1000,
+    ...options,
   });
 };
 
@@ -416,7 +421,7 @@ export const useTodayFollowupCalls = () => {
   });
 };
 
-export const useReferrals = (filters = {}) => {
+export const useReferrals = (filters = {}, options = {}) => {
   return useQuery({
     queryKey: ['referrals', filters],
     queryFn: async () => {
@@ -424,10 +429,11 @@ export const useReferrals = (filters = {}) => {
       return response.data?.referrals || [];
     },
     staleTime: 2 * 60 * 1000,
+    ...options,
   });
 };
 
-export const useReferralAnalytics = () => {
+export const useReferralAnalytics = (options = {}) => {
   return useQuery({
     queryKey: ['referral-analytics'],
     queryFn: async () => {
@@ -435,6 +441,7 @@ export const useReferralAnalytics = () => {
       return response.data?.analytics || {};
     },
     staleTime: 2 * 60 * 1000,
+    ...options,
   });
 };
 

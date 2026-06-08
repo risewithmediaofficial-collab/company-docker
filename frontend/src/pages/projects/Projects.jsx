@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Briefcase, Gauge, Plus, Target, TrendingUp } from 'lucide-react';
 import { useProjects, useDeleteProject } from '../../hooks/useProjects';
 import { AddProjectModal } from '../../components/modals/AddProjectModal';
@@ -34,6 +35,7 @@ const projectPriorityTone = {
 
 const Projects = () => {
   const navigate = useNavigate();
+  const { user } = useSelector((state) => state.auth);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [deleteProjectId, setDeleteProjectId] = useState(null);
@@ -59,6 +61,7 @@ const Projects = () => {
     ? Math.round(projects.reduce((sum, project) => sum + Number(project.progress || 0), 0) / projects.length)
     : 0;
 
+  const isManager = user?.role === 'manager';
   const columns = [
     {
       key: 'name',
@@ -89,9 +92,9 @@ const Projects = () => {
       ),
     },
     {
-      key: 'budget',
-      label: 'Budget',
-      render: (row) => formatINR(row.budget),
+      key: isManager ? 'adsBudget' : 'budget',
+      label: isManager ? 'Ads Budget' : 'Budget',
+      render: (row) => formatINR(isManager ? row.budgetDetails?.adsAmount || 0 : row.budget),
     },
     {
       key: 'progress',
