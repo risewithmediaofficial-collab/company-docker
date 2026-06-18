@@ -5,7 +5,7 @@ import { useClients, useDeleteClient } from '../../hooks/useClients';
 import { AddClientModal } from '../../components/modals/AddClientModal';
 import { DataTable } from '../../components/ui/DataTable';
 import { Button } from '../../components/ui/button';
-import { MetricCard, MetricGrid, PageHeader, PageToolbar, SearchField, StatusBadge } from '../../components/ui/page';
+import { MetricCard, MetricGrid, PageHeader, SearchField, StatusBadge } from '../../components/ui/page';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -148,41 +148,40 @@ const Clients = () => {
             tone="primary"
           />
         </MetricGrid>
+        <div className="mt-5 pt-5 border-t border-border flex flex-wrap items-center gap-2">
+          <SearchField
+            className="w-full sm:w-auto sm:min-w-[240px]"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Search by name, email, phone, or company..."
+          />
+          <select className="app-input h-10 text-xs" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="">All statuses</option>
+            {['Active', 'Prospect', 'Inactive', 'Churned'].map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select className="app-input h-10 text-xs" value={serviceFilter} onChange={(e) => setServiceFilter(e.target.value)}>
+            <option value="">All services</option>
+            {['Social Media', 'Website', 'Branding', 'SEO', 'Ads', 'Video Editing', 'Content Creation', 'Custom'].map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+          <input type="date" className="app-input h-10 text-xs" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} />
+          <input type="date" className="app-input h-10 text-xs" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
+          <Button type="button" variant="outline" size="sm" onClick={clearFilters}>Clear</Button>
+          <div className="app-pill text-xs">{clients.length} clients</div>
+          <Button
+            size="sm"
+            className="ml-auto"
+            onClick={() => {
+              setSelectedClient(null);
+              setShowAddModal(true);
+            }}
+          >
+            <Plus size={16} className="mr-2" />
+            Add Client
+          </Button>
+        </div>
       </PageHeader>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <SearchField
-          className="w-full sm:w-auto sm:min-w-[240px]"
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder="Search by name, email, phone, or company..."
-        />
-        <select className="app-input h-10 text-xs" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">All statuses</option>
-          {['Active', 'Prospect', 'Inactive', 'Churned'].map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <select className="app-input h-10 text-xs" value={serviceFilter} onChange={(e) => setServiceFilter(e.target.value)}>
-          <option value="">All services</option>
-          {['Social Media', 'Website', 'Branding', 'SEO', 'Ads', 'Video Editing', 'Content Creation', 'Custom'].map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-        <input type="date" className="app-input h-10 text-xs" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} />
-        <input type="date" className="app-input h-10 text-xs" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
-        <Button type="button" variant="outline" size="sm" onClick={clearFilters}>Clear</Button>
-        <div className="app-pill text-xs">{clients.length} clients</div>
-        <Button
-          size="sm"
-          className="ml-auto"
-          onClick={() => {
-            setSelectedClient(null);
-            setShowAddModal(true);
-          }}
-        >
-          <Plus size={16} className="mr-2" />
-          Add Client
-        </Button>
-      </div>
 
       <DataTable
         data={clients}
