@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { 
-  Users, 
-  Briefcase, 
-  TrendingUp, 
-  CheckCircle2, 
+import {
+  Users,
+  Briefcase,
+  TrendingUp,
+  CheckCircle2,
   Clock,
   ArrowUpRight,
   ArrowDownRight,
@@ -18,8 +18,12 @@ import {
   ClipboardList,
   Wallet,
   Send,
-  Copy
+  Copy,
+  FileText,
+  AlertCircle
 } from 'lucide-react';
+import { EODReportModal } from '../components/modals/EODReportModal';
+import { useEodReports } from '../hooks/useEodReports';
 import { 
   AreaChart, 
   Area, 
@@ -43,8 +47,11 @@ const Dashboard = () => {
   const { user } = useSelector((state) => state.auth);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showEodModal, setShowEodModal] = useState(false);
 
   const socket = useSocket();
+  const { data: eodData } = useEodReports(7);
+  const eodReports = eodData?.records || [];
 
   const fetchStats = async () => {
     setLoading(true);
@@ -384,6 +391,67 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* EOD Reports Section */}
+        <div className="space-y-5">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-2">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">Team EOD Reports</h2>
+              <p className="text-sm text-muted-foreground">Recent end-of-day reports from employees and interns.</p>
+            </div>
+            <span className="text-xs font-semibold text-muted-foreground bg-card border border-border rounded-full px-3 py-1">
+              Last 7 days
+            </span>
+          </div>
+
+          {eodReports.length > 0 ? (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {eodReports.slice(0, 6).map((report) => (
+                <div key={report._id} className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                        <FileText size={18} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{report.user?.name || 'Unknown'}</p>
+                        <p className="text-xs text-muted-foreground">{report.user?.department || report.user?.position || 'Employee'}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(report.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-foreground line-clamp-2">{report.eodReport?.summary}</p>
+                    {report.eodReport?.tasksCompleted?.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {report.eodReport.tasksCompleted.slice(0, 3).map((task, i) => (
+                          <span key={i} className="text-[10px] bg-secondary px-2 py-0.5 rounded-full">{task}</span>
+                        ))}
+                        {report.eodReport.tasksCompleted.length > 3 && (
+                          <span className="text-[10px] bg-secondary px-2 py-0.5 rounded-full">+{report.eodReport.tasksCompleted.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+                    {report.eodReport?.blockers && (
+                      <div className="flex items-start gap-1.5 text-xs text-amber-600 bg-amber-500/10 rounded-lg px-2 py-1.5">
+                        <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                        <span className="line-clamp-1">{report.eodReport.blockers}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-card rounded-2xl border border-border p-8 text-center">
+              <FileText size={32} className="mx-auto text-muted-foreground/50 mb-3" />
+              <h3 className="font-semibold">No EOD reports yet</h3>
+              <p className="text-sm text-muted-foreground mt-1">Team members haven't submitted any end-of-day reports recently.</p>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -469,7 +537,7 @@ const Dashboard = () => {
               </div>
               <div className="space-y-3">
                 <Link to="/calendar" className="block w-full text-center py-2.5 rounded-xl bg-primary text-white text-sm font-bold transition-colors hover:bg-primary/90">Open Content Calendar</Link>
-                <Link to="/attendance" className="block w-full text-center py-2.5 rounded-xl border border-border hover:bg-secondary text-sm font-medium transition-colors">Submit EOD Report</Link>
+                <button onClick={() => setShowEodModal(true)} className="block w-full text-center py-2.5 rounded-xl border border-border hover:bg-secondary text-sm font-medium transition-colors">Submit EOD Report</button>
                 <Link to="/chat" className="block w-full text-center py-2.5 rounded-xl border border-border hover:bg-secondary text-sm font-medium transition-colors">Message Manager</Link>
               </div>
             </div>
@@ -682,6 +750,7 @@ const Dashboard = () => {
           : user.role === 'referral'
             ? renderReferralStats()
             : renderEmployeeStats()}
+      <EODReportModal open={showEodModal} onOpenChange={setShowEodModal} />
     </div>
   );
 };

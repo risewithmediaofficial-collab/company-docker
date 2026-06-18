@@ -106,3 +106,24 @@ export const getTeamAttendance = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getEodReports = async (req, res) => {
+  try {
+    const { days = 7 } = req.query;
+    const since = new Date();
+    since.setDate(since.getDate() - Number(days));
+    since.setHours(0, 0, 0, 0);
+
+    const records = await Attendance.find({
+      date: { $gte: since },
+      'eodReport.submittedAt': { $exists: true },
+    })
+      .populate('user', 'name avatar department position')
+      .sort({ date: -1 })
+      .limit(100);
+
+    res.json({ success: true, records });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
