@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Briefcase, 
-  CheckSquare, 
-  Users2, 
-  Settings, 
-  ChevronLeft, 
+import {
+  LayoutDashboard,
+  Users,
+  Briefcase,
+  CheckSquare,
+  Users2,
+  Settings,
+  ChevronLeft,
   ChevronRight,
   TrendingUp,
   FileText,
@@ -28,6 +28,12 @@ import {
 } from 'lucide-react';
 import { toggleSidebar } from '../../store/slices/uiSlice';
 import { motion } from 'framer-motion';
+import { useSidebarBadges } from '../../hooks/useSidebarBadges';
+const badgePaths = {
+  'Portal Manager': 'accessRequests',
+  'Users': 'pendingUsers',
+};
+
 const Sidebar = () => {
   const location = useLocation();
   const dispatch = useDispatch();
@@ -35,6 +41,9 @@ const Sidebar = () => {
   const { user } = useSelector((state) => state.auth);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  const canViewBadges = ['superAdmin', 'manager'].includes(user?.role);
+  const { data: badgeCounts } = useSidebarBadges(canViewBadges);
 
   useEffect(() => {
     const handleResize = () => {
@@ -164,29 +173,45 @@ const Sidebar = () => {
 
         {/* Navigation Links */}
         <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          {currentMenu.map((item) => (
-            <Link
-              key={item.name}
-              to={item.path}
-              onClick={() => isMobile && dispatch(toggleSidebar())}
-              className={`flex items-center p-3 rounded-xl transition-all duration-200 group ${
-                location.pathname === item.path 
-                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' 
-                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-              }`}
-            >
-              <item.icon size={22} className={`${location.pathname === item.path ? '' : 'group-hover:scale-110 transition-transform'}`} />
-              {(sidebarOpen || isMobile) && (
-                <motion.span 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="ml-3 font-medium text-sm"
-                >
-                  {item.name}
-                </motion.span>
-              )}
-            </Link>
-          ))}
+          {currentMenu.map((item) => {
+            const badgeKey = badgePaths[item.name];
+            const count = badgeKey ? (badgeCounts?.[badgeKey] || 0) : 0;
+            return (
+              <Link
+                key={item.name}
+                to={item.path}
+                onClick={() => isMobile && dispatch(toggleSidebar())}
+                className={`flex items-center p-3 rounded-xl transition-all duration-200 group ${
+                  location.pathname === item.path
+                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                }`}
+              >
+                <div className="relative">
+                  <item.icon size={22} className={`${location.pathname === item.path ? '' : 'group-hover:scale-110 transition-transform'}`} />
+                  {count > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-[3px] bg-red-500 text-white rounded-full text-[9px] font-bold flex items-center justify-center border-2 border-card">
+                      {Math.min(count, 9)}
+                    </span>
+                  )}
+                </div>
+                {(sidebarOpen || isMobile) && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="ml-3 font-medium text-sm flex-1"
+                  >
+                    {item.name}
+                  </motion.span>
+                )}
+                {(sidebarOpen || isMobile) && count > 0 && (
+                  <span className="ml-auto min-w-[18px] h-[18px] px-1 bg-red-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center">
+                    {count}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Footer Section */}

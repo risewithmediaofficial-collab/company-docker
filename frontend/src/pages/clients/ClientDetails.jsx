@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AddClientModal } from '../../components/modals/AddClientModal';
+import { AddProjectModal } from '../../components/modals/AddProjectModal';
 import ClientFinancialSummary from '../../components/ui/ClientFinancialSummary';
 import ClientProjectsPanel from '../../components/ui/ClientProjectsPanel';
 import { formatINR } from '../../utils/currency';
@@ -34,6 +35,7 @@ const ClientDetails = () => {
   const { user } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('overview');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['client', id],
@@ -204,10 +206,7 @@ const ClientDetails = () => {
           <ClientProjectsPanel
             clientId={client._id}
             clientName={client.name}
-            onAddProject={() => {
-              // Add project handler
-              console.log('Add project for client');
-            }}
+            onAddProject={() => setShowProjectModal(true)}
           />
 
           <div className="grid gap-6 lg:grid-cols-3">
@@ -495,11 +494,18 @@ const ClientDetails = () => {
       )}
 
       {user?.role !== 'client' && (
-        <AddClientModal
-          open={showEditModal}
-          onOpenChange={setShowEditModal}
-          client={client}
-        />
+        <>
+          <AddClientModal
+            open={showEditModal}
+            onOpenChange={setShowEditModal}
+            client={client}
+          />
+          <AddProjectModal
+            open={showProjectModal}
+            onOpenChange={setShowProjectModal}
+            defaultClientId={client._id}
+          />
+        </>
       )}
     </div>
   );

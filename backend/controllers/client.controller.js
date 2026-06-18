@@ -123,6 +123,24 @@ export const createClient = async (req, res) => {
     const payload = normalizeClientPayload(req.body);
     const client = await Client.create(payload);
 
+    // Auto-create client portal user account
+    let portalUser = null;
+    if (client.email && client.phone) {
+      portalUser = await User.create({
+        name: client.name,
+        email: client.email,
+        password: client.phone,
+        role: 'client',
+        clientId: client._id,
+        isActive: true,
+        approvalStatus: 'approved',
+      });
+
+      client.userId = portalUser._id;
+      client.portalEnabled = true;
+      await client.save();
+    }
+
     await createActivityLog({
       actor: req.user,
       action: 'client.created',
@@ -138,7 +156,13 @@ export const createClient = async (req, res) => {
       io.emit('clientCreated', client);
     }
 
-    res.status(201).json({ success: true, client: serializeClient(client) });
+    res.status(201).json({
+      success: true,
+      client: serializeClient(client),
+      portalCredentials: portalUser
+        ? { email: portalUser.email, password: client.phone }
+        : null,
+    });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }

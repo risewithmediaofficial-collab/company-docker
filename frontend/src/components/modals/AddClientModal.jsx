@@ -32,6 +32,9 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateClient, useUpdateClient } from '../../hooks/useClients';
+import { toast } from 'sonner';
+
+const DRAFT_KEY = 'draft:client-modal';
 
 const CLIENT_SECTORS = [
   'Real Estate',
@@ -129,18 +132,39 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
         status: client.status || 'Active',
         notes: client.notes || '',
       });
-    } else {
-      form.reset({
-        name: '',
-        company: '',
-        email: '',
-        phone: '',
-        website: '',
-        industry: undefined,
-        services: [],
-        status: 'Active',
-        notes: '',
-      });
+    } else if (open) {
+      const draft = localStorage.getItem(DRAFT_KEY);
+      if (draft) {
+        try {
+          const parsed = JSON.parse(draft);
+          form.reset(parsed);
+          toast.info('Draft restored');
+        } catch {
+          form.reset({
+            name: '',
+            company: '',
+            email: '',
+            phone: '',
+            website: '',
+            industry: undefined,
+            services: [],
+            status: 'Active',
+            notes: '',
+          });
+        }
+      } else {
+        form.reset({
+          name: '',
+          company: '',
+          email: '',
+          phone: '',
+          website: '',
+          industry: undefined,
+          services: [],
+          status: 'Active',
+          notes: '',
+        });
+      }
     }
   }, [client, open, form]);
 
@@ -160,13 +184,27 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
 
     if (!createClient.isError && !updateClient.isError) {
       form.reset();
+      localStorage.removeItem(DRAFT_KEY);
       onOpenChange(false);
     }
   };
 
+  const handleClose = () => {
+    if (!client && form.formState.isDirty) {
+      const data = form.getValues();
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+      toast.info('Saved as draft');
+    }
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{client ? 'Edit Client' : 'Add New Client'}</DialogTitle>
           <DialogDescription>
@@ -356,7 +394,7 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={handleClose}
                 disabled={isLoading}
               >
                 Cancel

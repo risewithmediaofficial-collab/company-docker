@@ -35,6 +35,9 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateProject, useUpdateProject } from '../../hooks/useProjects';
 import { useClients } from '../../hooks/useClients';
+import { toast } from 'sonner';
+
+const DRAFT_KEY = 'draft:project-modal';
 
 const projectFormSchema = z.object({
   name: z.string().min(2, 'Project name is required'),
@@ -63,14 +66,14 @@ const projectFormSchema = z.object({
 });
 
 
-export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
+export const AddProjectModal = ({ open, onOpenChange, project = null, defaultClientId = '' }) => {
   const form = useForm({
     resolver: zodResolver(projectFormSchema),
     defaultValues: {
       name: '',
       description: '',
       category: '',
-      client: '',
+      client: defaultClientId || '',
       status: 'Planning',
       priority: 'Medium',
       startDate: '',
@@ -127,34 +130,69 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
         paymentStatus: project.budgetDetails?.paymentStatus || 'pending',
         budgetNotes: project.budgetDetails?.budgetNotes || '',
       });
-    } else {
-      form.reset({
-        name: '',
-        description: '',
-        category: '',
-        client: '',
-        status: 'Planning',
-        priority: 'Medium',
-        startDate: '',
-        endDate: '',
-        budget: undefined,
-        currency: 'INR',
-        acceptedProposalId: '',
-        nextMeetupDate: '',
-        marketingAmount: undefined,
-        adsAmount: undefined,
-        contentAmount: undefined,
-        designAmount: undefined,
-        developmentAmount: undefined,
-        printingAmount: undefined,
-        otherExpenses: undefined,
-        totalBudget: undefined,
-        amountReceived: undefined,
-        paymentStatus: 'pending',
-        budgetNotes: '',
-      });
+    } else if (open) {
+      const draft = localStorage.getItem(DRAFT_KEY);
+      if (draft && !defaultClientId) {
+        try {
+          const parsed = JSON.parse(draft);
+          form.reset(parsed);
+          toast.info('Draft restored');
+        } catch {
+          form.reset({
+            name: '',
+            description: '',
+            category: '',
+            client: defaultClientId || '',
+            status: 'Planning',
+            priority: 'Medium',
+            startDate: '',
+            endDate: '',
+            budget: undefined,
+            currency: 'INR',
+            acceptedProposalId: '',
+            nextMeetupDate: '',
+            marketingAmount: undefined,
+            adsAmount: undefined,
+            contentAmount: undefined,
+            designAmount: undefined,
+            developmentAmount: undefined,
+            printingAmount: undefined,
+            otherExpenses: undefined,
+            totalBudget: undefined,
+            amountReceived: undefined,
+            paymentStatus: 'pending',
+            budgetNotes: '',
+          });
+        }
+      } else {
+        form.reset({
+          name: '',
+          description: '',
+          category: '',
+          client: defaultClientId || '',
+          status: 'Planning',
+          priority: 'Medium',
+          startDate: '',
+          endDate: '',
+          budget: undefined,
+          currency: 'INR',
+          acceptedProposalId: '',
+          nextMeetupDate: '',
+          marketingAmount: undefined,
+          adsAmount: undefined,
+          contentAmount: undefined,
+          designAmount: undefined,
+          developmentAmount: undefined,
+          printingAmount: undefined,
+          otherExpenses: undefined,
+          totalBudget: undefined,
+          amountReceived: undefined,
+          paymentStatus: 'pending',
+          budgetNotes: '',
+        });
+      }
     }
-  }, [project, open, form]);
+  }, [project, open, form, defaultClientId]);
 
   const onSubmit = async (data) => {
     const subtotal = [
@@ -203,13 +241,27 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
 
     if (!createProject.isError && !updateProject.isError) {
       form.reset();
+      localStorage.removeItem(DRAFT_KEY);
       onOpenChange(false);
     }
   };
 
+  const handleClose = () => {
+    if (!project && form.formState.isDirty) {
+      const data = form.getValues();
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+      toast.info('Saved as draft');
+    }
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{project ? 'Edit Project' : 'Create New Project'}</DialogTitle>
           <DialogDescription>
@@ -513,7 +565,7 @@ export const AddProjectModal = ({ open, onOpenChange, project = null }) => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={handleClose}
                 disabled={isLoading}
               >
                 Cancel

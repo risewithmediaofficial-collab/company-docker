@@ -135,17 +135,6 @@ const Clients = () => {
         eyebrow="Client Operations"
         title="Keep every client relationship organized."
         description="Track contacts, commercial value, and lifecycle status in one cleaner operational view."
-        actions={(
-          <Button
-            onClick={() => {
-              setSelectedClient(null);
-              setShowAddModal(true);
-            }}
-          >
-            <Plus size={16} className="mr-2" />
-            Add Client
-          </Button>
-        )}
       >
         <MetricGrid>
           <MetricCard label="Client Records" value={clients.length} helper="Visible in the current search scope" icon={Users} tone="info" />
@@ -161,27 +150,39 @@ const Clients = () => {
         </MetricGrid>
       </PageHeader>
 
-      <PageToolbar>
+      <div className="flex flex-wrap items-center gap-2">
         <SearchField
+          className="w-full sm:w-auto sm:min-w-[240px]"
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
           placeholder="Search by name, email, phone, or company..."
         />
-        <select className="app-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+        <select className="app-input h-10 text-xs" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">All statuses</option>
           {['Active', 'Prospect', 'Inactive', 'Churned'].map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
-        <select className="app-input" value={serviceFilter} onChange={(e) => setServiceFilter(e.target.value)}>
+        <select className="app-input h-10 text-xs" value={serviceFilter} onChange={(e) => setServiceFilter(e.target.value)}>
           <option value="">All services</option>
           {['Social Media', 'Website', 'Branding', 'SEO', 'Ads', 'Video Editing', 'Content Creation', 'Custom'].map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
-        <input type="date" className="app-input" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} />
-        <input type="date" className="app-input" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
-        <Button type="button" variant="outline" onClick={clearFilters}>Clear</Button>
-        <div className="app-pill">{clients.length} clients</div>
-      </PageToolbar>
+        <input type="date" className="app-input h-10 text-xs" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} />
+        <input type="date" className="app-input h-10 text-xs" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
+        <Button type="button" variant="outline" size="sm" onClick={clearFilters}>Clear</Button>
+        <div className="app-pill text-xs">{clients.length} clients</div>
+        <Button
+          size="sm"
+          className="ml-auto"
+          onClick={() => {
+            setSelectedClient(null);
+            setShowAddModal(true);
+          }}
+        >
+          <Plus size={16} className="mr-2" />
+          Add Client
+        </Button>
+      </div>
 
       <DataTable
         data={clients}
