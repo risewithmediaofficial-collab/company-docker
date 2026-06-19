@@ -250,6 +250,11 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                             {item.completedAt ? new Date(item.completedAt).toLocaleString() : 'Just now'}
                           </span>
                         </div>
+                        {item.workDate ? (
+                          <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                            Work Date: {new Date(item.workDate).toLocaleDateString()}
+                          </p>
+                        ) : null}
                         {item.workNotes && <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{item.workNotes}</p>}
                         {item.hours ? <p className="mt-2 text-xs text-muted-foreground">{item.hours}h logged</p> : null}
                         {item.attachments?.length ? (

@@ -7,6 +7,7 @@ export const ProgressUpdateForm = ({ taskId, onSuccess }) => {
   const [description, setDescription] = useState('');
   const [hours, setHours] = useState('');
   const [workNotes, setWorkNotes] = useState('');
+  const [workDate, setWorkDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [files, setFiles] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const addProgress = useAddProgressUpdate();
@@ -23,6 +24,7 @@ export const ProgressUpdateForm = ({ taskId, onSuccess }) => {
           description: description.trim(),
           hours: Number(hours) || 0,
           workNotes: workNotes.trim(),
+          workDate,
           attachments,
         },
       });
@@ -30,6 +32,7 @@ export const ProgressUpdateForm = ({ taskId, onSuccess }) => {
       setDescription('');
       setHours('');
       setWorkNotes('');
+      setWorkDate(new Date().toISOString().split('T')[0]);
       setFiles([]);
       setShowForm(false);
       onSuccess?.();
@@ -87,6 +90,16 @@ export const ProgressUpdateForm = ({ taskId, onSuccess }) => {
               placeholder="0"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="text-sm font-semibold text-foreground">Work Date</label>
+          <input
+            type="date"
+            value={workDate}
+            onChange={(event) => setWorkDate(event.target.value)}
+            className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+          />
         </div>
 
         <div>

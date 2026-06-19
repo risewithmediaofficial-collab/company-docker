@@ -25,6 +25,7 @@ import {
   ChevronRight,
   CheckCircle2,
   Clock3,
+  Download,
   LayoutGrid,
   List,
   PanelTop,
@@ -34,6 +35,7 @@ import {
 } from 'lucide-react';
 import { AddTaskModal } from '../../components/modals/AddTaskModal';
 import { ClientTaskResponsePanel } from '../../components/tasks/ClientTaskResponsePanel';
+import { DailyTaskUpdateDialog } from '../../components/tasks/DailyTaskUpdateDialog';
 import { TaskDetailModal } from '../../components/ui/TaskDetailModal';
 import { Button } from '../../components/ui/button';
 import {
@@ -55,7 +57,7 @@ import {
 } from '../../components/ui/page';
 import { useClients } from '../../hooks/useClients';
 import { useProjects } from '../../hooks/useProjects';
-import { useTaskCalendar } from '../../hooks/useTasks';
+import { useTaskCalendar, useTasks, useWeeklyTaskReport } from '../../hooks/useTasks';
 import { useUsers } from '../../hooks/useUsers';
 import {
   CONTENT_TASK_TYPE_OPTIONS,
@@ -69,6 +71,7 @@ import {
 } from '../../utils/taskFields';
 import { cn } from '../../utils/cn';
 import { getAssetUrl } from '../../utils/assetUrl';
+import jsPDF from 'jspdf';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const VIEW_OPTIONS = [
@@ -102,6 +105,7 @@ const categoryTone = {
 };
 
 const ALL_TASK_TYPES = [...CONTENT_TASK_TYPE_OPTIONS, ...NON_CONTENT_TASK_TYPE_OPTIONS];
+const EMPLOYEE_ROLES = ['employee', 'intern', 'editor', 'designer', 'adsManager'];
 
 const DEFAULT_DOS = [
   'Confirm the brief, due time, and assignee before starting work.',
@@ -239,6 +243,75 @@ const buildGuidanceForDate = (tasksForDate = []) => {
     donts: OPERATIONS_DONTS,
     process: OPERATIONS_PROCESS,
   };
+};
+
+const downloadWeeklyReportPdf = ({ report, range, employeeName }) => {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 14;
+  const contentWidth = pageWidth - margin * 2;
+  let y = margin;
+
+  const ensureSpace = (height = 8) => {
+    if (y + height <= pageHeight - margin) return;
+    doc.addPage();
+    y = margin;
+  };
+
+  const addWrappedText = (text, indent = 0) => {
+    const lines = doc.splitTextToSize(text || '-', contentWidth - indent);
+    lines.forEach((line) => {
+      ensureSpace(6);
+      doc.text(line, margin + indent, y);
+      y += 5;
+    });
+  };
+
+  doc.setFontSize(18);
+  doc.setTextColor(30, 41, 59);
+  doc.text('Weekly Task Report', margin, y);
+  y += 8;
+
+  doc.setFontSize(10);
+  doc.setTextColor(100, 116, 139);
+  doc.text(`${employeeName} • ${format(range.start, 'MMM d, yyyy')} to ${format(range.end, 'MMM d, yyyy')}`, margin, y);
+  y += 10;
+
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(margin, y, contentWidth, 24, 4, 4, 'F');
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(11);
+  doc.text(`Updates: ${report.summary?.totalUpdates || 0}`, margin + 4, y + 8);
+  doc.text(`Hours: ${Number(report.summary?.totalHours || 0).toFixed(2)}`, margin + 4, y + 15);
+  doc.text(`Tasks: ${report.summary?.uniqueTasks || 0}`, margin + contentWidth / 2, y + 8);
+  doc.text(`Employees: ${report.summary?.uniqueEmployees || 0}`, margin + contentWidth / 2, y + 15);
+  y += 32;
+
+  (report.rows || []).forEach((row, index) => {
+    ensureSpace(28);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(margin, y, contentWidth, 24, 3, 3);
+    doc.setFontSize(11);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${index + 1}. ${row.taskTitle}`, margin + 4, y + 7);
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text(`${format(new Date(row.workDate), 'EEE, MMM d')} • ${row.employeeName} • ${Number(row.hours || 0).toFixed(2)}h`, margin + 4, y + 13);
+    doc.text(`${row.clientName || 'No client'} • ${row.projectName || 'No project'}`, margin + 4, y + 18);
+    y += 24;
+    doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
+    addWrappedText(row.description);
+    if (row.workNotes) {
+      doc.setTextColor(100, 116, 139);
+      addWrappedText(`Notes: ${row.workNotes}`, 2);
+    }
+    y += 3;
+  });
+
+  const filename = `weekly-task-report-${format(range.start, 'yyyy-MM-dd')}-to-${format(range.end, 'yyyy-MM-dd')}.pdf`;
+  doc.save(filename);
 };
 
 const FileLinks = ({ files = [], emptyMessage = 'No files available.' }) => {
@@ -453,11 +526,14 @@ const ContentCalendar = ({ embedded = false }) => {
   const [activeTask, setActiveTask] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [showDayDialog, setShowDayDialog] = useState(false);
+  const [showDailyUpdateDialog, setShowDailyUpdateDialog] = useState(false);
 
   const isClient = user?.role === 'client';
   const canManageCalendar = ['superAdmin', 'manager'].includes(user?.role);
   const canFilterAssignee = ['superAdmin', 'manager'].includes(user?.role);
   const canFilterClientProject = ['superAdmin', 'manager', 'employee'].includes(user?.role);
+  const canLogDailyUpdates = EMPLOYEE_ROLES.includes(user?.role);
+  const canDownloadWeeklyReport = canLogDailyUpdates || canManageCalendar;
 
   const visibleRange = useMemo(() => getRangeForView(currentDate, view), [currentDate, view]);
 
@@ -470,6 +546,10 @@ const ContentCalendar = ({ embedded = false }) => {
   }), [filters, search, visibleRange]);
 
   const { data: calendarData, isLoading, refetch } = useTaskCalendar(queryFilters);
+  const { data: employeeTasks = [] } = useTasks(
+    { assignedTo: user?._id, parent: 'all', limit: 300 },
+    { enabled: canLogDailyUpdates && !!user?._id },
+  );
   const { data: clients = [] } = useClients({}, { enabled: canFilterClientProject });
   const { data: projects = [] } = useProjects({}, { enabled: canFilterClientProject });
   const { data: users = [] } = useUsers({ enabled: canFilterAssignee });
@@ -485,6 +565,22 @@ const ContentCalendar = ({ embedded = false }) => {
     waitingForClient: tasks.filter((task) => task.status === 'Waiting for Client').length,
     completed: tasks.filter((task) => ['Completed', 'Approved'].includes(task.status)).length,
   };
+
+  const weeklyRange = useMemo(() => ({
+    start: startOfWeek(currentDate, { weekStartsOn: 1 }),
+    end: endOfWeek(currentDate, { weekStartsOn: 1 }),
+  }), [currentDate]);
+
+  const weeklyReportFilters = useMemo(() => ({
+    startDate: format(weeklyRange.start, 'yyyy-MM-dd'),
+    endDate: format(weeklyRange.end, 'yyyy-MM-dd'),
+    assignedTo: canManageCalendar ? filters.assignedTo || undefined : user?._id,
+  }), [weeklyRange, canManageCalendar, filters.assignedTo, user?._id]);
+
+  const { data: weeklyReport, isFetching: isWeeklyReportLoading } = useWeeklyTaskReport(
+    weeklyReportFilters,
+    { enabled: canDownloadWeeklyReport && (!!user?._id || !!filters.assignedTo) },
+  );
 
   const daysInView = useMemo(() => {
     if (view === 'week') {
@@ -532,6 +628,15 @@ const ContentCalendar = ({ embedded = false }) => {
     [tasks],
   );
 
+  const dailyUpdateTasks = useMemo(
+    () => (canLogDailyUpdates ? employeeTasks : []),
+    [canLogDailyUpdates, employeeTasks],
+  );
+
+  const weeklyReportOwnerLabel = canManageCalendar
+    ? (assignableUsers.find((person) => person._id === filters.assignedTo)?.name || 'All visible team members')
+    : (user?.name || 'Employee');
+
   const toolbarTitle = useMemo(() => {
     if (view === 'week') {
       return `${format(visibleRange.start, 'MMM d')} - ${format(visibleRange.end, 'MMM d, yyyy')}`;
@@ -541,6 +646,15 @@ const ContentCalendar = ({ embedded = false }) => {
     }
     return format(currentDate, 'MMMM yyyy');
   }, [currentDate, view, visibleRange]);
+
+  const handleDownloadWeeklyReport = () => {
+    if (!weeklyReport?.rows?.length) return;
+    downloadWeeklyReportPdf({
+      report: weeklyReport,
+      range: weeklyRange,
+      employeeName: weeklyReportOwnerLabel,
+    });
+  };
 
   const handleOpenTask = (task) => {
     if (isClient) {
@@ -852,6 +966,95 @@ const ContentCalendar = ({ embedded = false }) => {
         </div>
       </PageToolbar>
 
+      {canDownloadWeeklyReport ? (
+        <SectionCard
+          title="Weekly Work Report"
+          description={`Daily work logs saved from ${format(weeklyRange.start, 'MMM d')} to ${format(weeklyRange.end, 'MMM d, yyyy')}.`}
+          action={(
+            <div className="flex flex-wrap items-center gap-2">
+              {canLogDailyUpdates ? (
+                <Button onClick={() => setShowDailyUpdateDialog(true)}>
+                  <Plus size={16} className="mr-2" />
+                  Log Daily Update
+                </Button>
+              ) : null}
+              <Button
+                variant="outline"
+                onClick={handleDownloadWeeklyReport}
+                disabled={!weeklyReport?.rows?.length || isWeeklyReportLoading}
+              >
+                <Download size={16} className="mr-2" />
+                {isWeeklyReportLoading ? 'Preparing...' : 'Download Weekly Report'}
+              </Button>
+            </div>
+          )}
+        >
+          <div className="grid gap-4 lg:grid-cols-4">
+            <div className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Report Owner</p>
+              <p className="mt-3 text-lg font-bold text-foreground">{weeklyReportOwnerLabel}</p>
+            </div>
+            <div className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Total Updates</p>
+              <p className="mt-3 text-3xl font-bold text-foreground">{weeklyReport?.summary?.totalUpdates || 0}</p>
+            </div>
+            <div className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Hours Logged</p>
+              <p className="mt-3 text-3xl font-bold text-foreground">{Number(weeklyReport?.summary?.totalHours || 0).toFixed(2)}</p>
+            </div>
+            <div className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Unique Tasks</p>
+              <p className="mt-3 text-3xl font-bold text-foreground">{weeklyReport?.summary?.uniqueTasks || 0}</p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+            <div className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Daily Breakdown</p>
+              <div className="mt-4 space-y-3">
+                {(weeklyReport?.dailyBreakdown || []).length ? (
+                  weeklyReport.dailyBreakdown.map((item) => (
+                    <div key={item.date} className="flex items-center justify-between rounded-2xl border border-border bg-background px-4 py-3">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{format(new Date(item.date), 'EEE, MMM d')}</p>
+                        <p className="text-xs text-muted-foreground">{item.updates} updates</p>
+                      </div>
+                      <p className="text-sm font-bold text-foreground">{Number(item.hours || 0).toFixed(2)}h</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-8 text-center text-sm text-muted-foreground">
+                    No daily updates saved for this week yet.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Recent Logged Work</p>
+              <div className="mt-4 space-y-3">
+                {(weeklyReport?.rows || []).length ? (
+                  weeklyReport.rows.slice(0, 5).map((row, index) => (
+                    <div key={`${row.taskId}-${row.workDate}-${index}`} className="rounded-2xl border border-border bg-background px-4 py-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-foreground">{row.taskTitle}</p>
+                        <p className="text-xs text-muted-foreground">{format(new Date(row.workDate), 'MMM d')} • {Number(row.hours || 0).toFixed(2)}h</p>
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">{row.description}</p>
+                      <p className="mt-2 text-xs text-muted-foreground">{row.clientName || 'No client'} • {row.projectName || 'No project'}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-8 text-center text-sm text-muted-foreground">
+                    Weekly exports will populate once the team starts logging daily updates.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+      ) : null}
+
       <SectionCard
         title={toolbarTitle}
         description={isClient
@@ -923,6 +1126,14 @@ const ContentCalendar = ({ embedded = false }) => {
           status: 'To Do',
           isClientVisible: true,
         }}
+      />
+
+      <DailyTaskUpdateDialog
+        open={showDailyUpdateDialog}
+        onOpenChange={setShowDailyUpdateDialog}
+        tasks={dailyUpdateTasks}
+        defaultDate={format(new Date(), 'yyyy-MM-dd')}
+        onSubmitted={refetch}
       />
 
       <Dialog open={showDayDialog} onOpenChange={setShowDayDialog}>

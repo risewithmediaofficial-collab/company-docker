@@ -15,6 +15,7 @@ const commentSchema = new mongoose.Schema({
 const progressUpdateSchema = new mongoose.Schema({
   description: { type: String, required: true }, // what work was completed
   hours: { type: Number, default: 0 }, // hours spent on this update
+  workDate: { type: Date, default: Date.now }, // the work day the update belongs to
   completedAt: { type: Date, default: Date.now }, // when this progress was logged
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // who logged this
   workNotes: { type: String, default: '' },

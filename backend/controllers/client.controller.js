@@ -28,10 +28,37 @@ const serializeClient = (client) => {
   return { ...item, status: label };
 };
 
-const normalizeClientPayload = (body) => ({
-  ...body,
-  status: body.status ? (statusMap[body.status] || body.status) : body.status,
-});
+const normalizeClientPayload = (body) => {
+  const payload = {
+    ...body,
+    status: body.status ? (statusMap[body.status] || body.status) : body.status,
+  };
+
+  if (Object.prototype.hasOwnProperty.call(body, 'referredBy')) {
+    payload.referredBy = body.referredBy || null;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, 'referredByManual')) {
+    payload.referredByManual = body.referredByManual?.toString?.().trim?.() || '';
+  }
+
+  if (payload.referredBy) {
+    payload.referredByManual = '';
+  }
+
+  if (payload.referredByManual) {
+    payload.referredBy = null;
+  }
+
+  return payload;
+};
+
+const clientPopulate = [
+  { path: 'assignedManager', select: 'name avatar email' },
+  { path: 'assignedTeam', select: 'name avatar email' },
+  { path: 'userId', select: 'email lastLogin isActive' },
+  { path: 'referredBy', select: 'name email role referralCode' },
+];
 
 const assertClientAccess = (req, client) => {
   if (!client) return { allowed: false, status: 404, message: 'Client not found' };
@@ -73,9 +100,7 @@ export const getClients = async (req, res) => {
 
     const total = await Client.countDocuments(filter);
     const clients = await Client.find(filter)
-      .populate('assignedManager', 'name avatar')
-      .populate('assignedTeam', 'name avatar')
-      .populate('userId', 'email lastLogin isActive')
+      .populate(clientPopulate)
       .sort({ createdAt: -1 })
       .skip((Number(page) - 1) * Number(limit))
       .limit(Number(limit));
@@ -89,9 +114,7 @@ export const getClients = async (req, res) => {
 export const getClient = async (req, res) => {
   try {
     const client = await Client.findById(req.params.id)
-      .populate('assignedManager', 'name email avatar')
-      .populate('assignedTeam', 'name email avatar')
-      .populate('userId', 'email lastLogin isActive')
+      .populate(clientPopulate)
       .populate('convertedFromLead', 'name source value');
 
     const access = assertClientAccess(req, client);
@@ -156,9 +179,11 @@ export const createClient = async (req, res) => {
       io.emit('clientCreated', client);
     }
 
+    const populatedClient = await Client.findById(client._id).populate(clientPopulate);
+
     res.status(201).json({
       success: true,
-      client: serializeClient(client),
+      client: serializeClient(populatedClient),
       portalCredentials: portalUser
         ? { email: portalUser.email, password: client.phone }
         : null,
@@ -171,8 +196,7 @@ export const createClient = async (req, res) => {
 export const updateClient = async (req, res) => {
   try {
     const client = await Client.findByIdAndUpdate(req.params.id, normalizeClientPayload(req.body), { new: true, runValidators: true })
-      .populate('assignedManager', 'name avatar')
-      .populate('assignedTeam', 'name avatar');
+      .populate(clientPopulate);
 
     if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
 

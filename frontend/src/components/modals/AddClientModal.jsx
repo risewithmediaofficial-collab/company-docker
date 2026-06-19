@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateClient, useUpdateClient } from '../../hooks/useClients';
+import { useUsers } from '../../hooks/useUsers';
 import { toast } from 'sonner';
 
 const DRAFT_KEY = 'draft:client-modal';
@@ -95,7 +96,18 @@ const clientFormSchema = z.object({
   industry: z.string().optional(),
   services: z.array(z.string()).default([]),
   status: z.enum(['Active', 'Inactive', 'Prospect', 'Churned']).default('Active'),
+  referredByMode: z.enum(['none', 'dropdown', 'manual']).default('none'),
+  referredBy: z.string().optional(),
+  referredByManual: z.string().optional(),
   notes: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.referredByMode === 'dropdown' && !data.referredBy) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['referredBy'], message: 'Select who referred this client' });
+  }
+
+  if (data.referredByMode === 'manual' && !data.referredByManual?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['referredByManual'], message: 'Enter the referral name' });
+  }
 });
 
 
@@ -111,13 +123,18 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
       industry: undefined,
       services: [],
       status: 'Active',
+      referredByMode: 'none',
+      referredBy: '',
+      referredByManual: '',
       notes: '',
     },
   });
 
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
+  const { data: users = [] } = useUsers();
   const isLoading = createClient.isPending || updateClient.isPending;
+  const referralOptions = users.filter((user) => user.role !== 'client');
 
   useEffect(() => {
     if (client) {
@@ -130,6 +147,9 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
         industry: client.industry || undefined,
         services: Array.isArray(client.services) ? client.services : [],
         status: client.status || 'Active',
+        referredByMode: client.referredByManual ? 'manual' : client.referredBy ? 'dropdown' : 'none',
+        referredBy: client.referredBy?._id || client.referredBy || '',
+        referredByManual: client.referredByManual || '',
         notes: client.notes || '',
       });
     } else if (open) {
@@ -149,6 +169,9 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
             industry: undefined,
             services: [],
             status: 'Active',
+            referredByMode: 'none',
+            referredBy: '',
+            referredByManual: '',
             notes: '',
           });
         }
@@ -160,11 +183,14 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
           phone: '',
           website: '',
           industry: undefined,
-          services: [],
-          status: 'Active',
-          notes: '',
-        });
-      }
+            services: [],
+            status: 'Active',
+            referredByMode: 'none',
+            referredBy: '',
+            referredByManual: '',
+            notes: '',
+          });
+        }
     }
   }, [client, open, form]);
 
@@ -174,6 +200,8 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
       website: data.website || '',
       industry: data.industry || '',
       services: data.services || [],
+      referredBy: data.referredByMode === 'dropdown' ? (data.referredBy || null) : null,
+      referredByManual: data.referredByMode === 'manual' ? data.referredByManual?.trim() || '' : '',
     };
 
     if (client) {
@@ -333,6 +361,72 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
                   </FormItem>
                 )}
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="referredByMode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Referred By Mode</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select input mode" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No referral</SelectItem>
+                        <SelectItem value="dropdown">Choose from dropdown</SelectItem>
+                        <SelectItem value="manual">Enter manually</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {form.watch('referredByMode') === 'dropdown' ? (
+                <FormField
+                  control={form.control}
+                  name="referredBy"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Referred By</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a user" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {referralOptions.map((user) => (
+                            <SelectItem key={user._id} value={user._id}>
+                              {user.name} {user.role ? `- ${user.role}` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="referredByManual"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Referral Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter referral name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
 
             <FormField

@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { toast } from 'sonner';
 
-export const useTasks = (filters = {}) => {
+export const useTasks = (filters = {}, options = {}) => {
   return useQuery({
     queryKey: ['tasks', filters],
     queryFn: async () => {
@@ -14,6 +14,7 @@ export const useTasks = (filters = {}) => {
       return response.data.tasks;
     },
     staleTime: 5 * 60 * 1000,
+    ...options,
   });
 };
 
@@ -38,6 +39,17 @@ export const useTaskCalendar = (filters = {}) => {
       return response.data;
     },
     staleTime: 2 * 60 * 1000,
+  });
+};
+
+export const useWeeklyTaskReport = (filters = {}, options = {}) => {
+  return useQuery({
+    queryKey: ['task-weekly-report', filters],
+    queryFn: async () => {
+      const response = await api.get('/tasks/weekly-report', { params: filters });
+      return response.data;
+    },
+    ...options,
   });
 };
 
@@ -168,6 +180,7 @@ export const useAddProgressUpdate = () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task-calendar'] });
       queryClient.invalidateQueries({ queryKey: ['task', data._id] });
+      queryClient.invalidateQueries({ queryKey: ['task-weekly-report'] });
       toast.success('Progress updated successfully!');
     },
     onError: (error) => {

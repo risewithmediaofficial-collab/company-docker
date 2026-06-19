@@ -394,6 +394,40 @@ const applyDateFilter = (filter, field, startValue, endValue) => {
   }
 };
 
+const normalizeReportDate = (value, endOfDay = false) => {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return null;
+  if (endOfDay) {
+    date.setHours(23, 59, 59, 999);
+  } else {
+    date.setHours(0, 0, 0, 0);
+  }
+  return date;
+};
+
+const getWeekRange = ({ startDate, endDate } = {}) => {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const defaultStart = new Date(now);
+  defaultStart.setDate(now.getDate() + diffToMonday);
+  defaultStart.setHours(0, 0, 0, 0);
+  const defaultEnd = new Date(defaultStart);
+  defaultEnd.setDate(defaultStart.getDate() + 6);
+  defaultEnd.setHours(23, 59, 59, 999);
+
+  return {
+    start: normalizeReportDate(startDate) || defaultStart,
+    end: normalizeReportDate(endDate, true) || defaultEnd,
+  };
+};
+
+const formatReportDay = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(0, 10);
+};
+
 export const getTasks = async (req, res) => {
   try {
     const {
@@ -892,7 +926,7 @@ export const logTime = async (req, res) => {
 
 export const addProgressUpdate = async (req, res) => {
   try {
-    const { description, hours, workNotes, attachments } = req.body;
+    const { description, hours, workNotes, attachments, workDate } = req.body;
     
     if (!description?.trim()) {
       return res.status(400).json({ success: false, message: 'Progress description is required' });
@@ -904,6 +938,11 @@ export const addProgressUpdate = async (req, res) => {
       return res.status(access.status).json({ success: false, message: access.message });
     }
 
+    const parsedWorkDate = normalizeReportDate(workDate || new Date());
+    if (!parsedWorkDate) {
+      return res.status(400).json({ success: false, message: 'A valid work date is required' });
+    }
+
     // If work is just starting and actualStartDate is not set, set it now
     if (!task.actualStartDate && task.status === 'todo') {
       task.actualStartDate = new Date();
@@ -913,6 +952,7 @@ export const addProgressUpdate = async (req, res) => {
     const progressEntry = {
       description: description.trim(),
       hours: Number(hours) || 0,
+      workDate: parsedWorkDate,
       completedAt: new Date(),
       updatedBy: req.user._id,
       workNotes: workNotes?.trim?.() || '',
@@ -938,7 +978,7 @@ export const addProgressUpdate = async (req, res) => {
       relatedClient: task.client,
       relatedProject: task.project,
       relatedTask: task._id,
-      metadata: { hours: Number(hours) || 0, description: description.trim() },
+      metadata: { hours: Number(hours) || 0, description: description.trim(), workDate: parsedWorkDate },
     });
 
     const updated = await hydrateTask(task._id);
@@ -955,6 +995,104 @@ export const addProgressUpdate = async (req, res) => {
     res.json({ success: true, task: serializeTask(updated) });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const getWeeklyTaskReport = async (req, res) => {
+  try {
+    const { startDate, endDate, assignedTo } = req.query;
+    const { start, end } = getWeekRange({ startDate, endDate });
+    const requestedUserId = assignedTo || (isEmployeeLikeRole(req.user.role) ? req.user._id.toString() : '');
+
+    const filter = {
+      $or: [
+        { 'progressUpdates.workDate': { $gte: start, $lte: end } },
+        { 'progressUpdates.completedAt': { $gte: start, $lte: end } },
+      ],
+    };
+
+    const scopedFilter = withWorkspaceScope(req, await buildScopedTaskFilter(req, filter));
+
+    const tasks = await Task.find(scopedFilter)
+      .populate('assignedTo', 'name email role')
+      .populate('project', 'name')
+      .populate('client', 'name company')
+      .populate('progressUpdates.updatedBy', 'name email role');
+
+    const rows = tasks.flatMap((task) => (
+      (task.progressUpdates || [])
+        .filter((entry) => {
+          const entryDate = normalizeReportDate(entry.workDate || entry.completedAt);
+          if (!entryDate) return false;
+          const isInRange = entryDate >= start && entryDate <= end;
+          const matchesUser = requestedUserId ? toIdString(entry.updatedBy) === requestedUserId : true;
+          return isInRange && matchesUser;
+        })
+        .map((entry) => ({
+          taskId: task._id,
+          taskTitle: task.title || task.taskTitle || '',
+          taskType: task.taskType || '',
+          clientId: task.client?._id || null,
+          clientName: task.client?.name || task.client?.company || task.clientName || '',
+          projectId: task.project?._id || null,
+          projectName: task.project?.name || task.projectName || '',
+          employeeId: entry.updatedBy?._id || entry.updatedBy || null,
+          employeeName: entry.updatedBy?.name || 'Unknown',
+          role: entry.updatedBy?.role || '',
+          description: entry.description || '',
+          workNotes: entry.workNotes || '',
+          hours: Number(entry.hours) || 0,
+          workDate: entry.workDate || entry.completedAt,
+          loggedAt: entry.completedAt || null,
+          attachmentCount: Array.isArray(entry.attachments) ? entry.attachments.length : 0,
+        }))
+    ));
+
+    rows.sort((a, b) => {
+      const dateDiff = new Date(a.workDate).getTime() - new Date(b.workDate).getTime();
+      if (dateDiff !== 0) return dateDiff;
+      return a.taskTitle.localeCompare(b.taskTitle);
+    });
+
+    const totalHours = rows.reduce((sum, row) => sum + (Number(row.hours) || 0), 0);
+    const dailyBreakdown = rows.reduce((accumulator, row) => {
+      const key = formatReportDay(row.workDate);
+      if (!accumulator[key]) {
+        accumulator[key] = { date: key, hours: 0, updates: 0 };
+      }
+      accumulator[key].hours += Number(row.hours) || 0;
+      accumulator[key].updates += 1;
+      return accumulator;
+    }, {});
+
+    const employeeBreakdown = rows.reduce((accumulator, row) => {
+      const key = toIdString(row.employeeId) || row.employeeName;
+      if (!accumulator[key]) {
+        accumulator[key] = { employeeId: row.employeeId, employeeName: row.employeeName, hours: 0, updates: 0 };
+      }
+      accumulator[key].hours += Number(row.hours) || 0;
+      accumulator[key].updates += 1;
+      return accumulator;
+    }, {});
+
+    res.json({
+      success: true,
+      range: {
+        start: start.toISOString(),
+        end: end.toISOString(),
+      },
+      summary: {
+        totalUpdates: rows.length,
+        totalHours,
+        uniqueTasks: new Set(rows.map((row) => row.taskId.toString())).size,
+        uniqueEmployees: new Set(rows.map((row) => toIdString(row.employeeId) || row.employeeName)).size,
+      },
+      dailyBreakdown: Object.values(dailyBreakdown),
+      employeeBreakdown: Object.values(employeeBreakdown),
+      rows,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
