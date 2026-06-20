@@ -38,6 +38,7 @@ import Attendance from './pages/employee/Attendance';
 import Communication from './pages/employee/Communication';
 import ReferralDashboard from './pages/referral/ReferralDashboard';
 import Users from './pages/admin/Users';
+import DomainRenewals from './pages/admin/DomainRenewals';
 import AssetsLibrary from './pages/assets/AssetsLibrary';
 import Settings from './pages/Settings';
 import NotFound from './pages/NotFound';
@@ -250,6 +251,11 @@ const App = () => {
           <Route path="/assets" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
               <AssetsLibrary />
+            </ProtectedRoute>
+          } />
+          <Route path="/domain-renewals" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+              <DomainRenewals />
             </ProtectedRoute>
           } />
 

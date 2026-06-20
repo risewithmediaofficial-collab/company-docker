@@ -1,51 +1,46 @@
 import cron from 'node-cron';
-import Lead from '../models/lead.model.js';
-import Task from '../models/task.model.js';
+import DomainRenewal from '../models/domainRenewal.model.js';
 import Invoice from '../models/invoice.model.js';
+import Lead from '../models/lead.model.js';
+import Notification from '../models/notification.model.js';
+import Task from '../models/task.model.js';
+import User from '../models/user.model.js';
 import { createNotification } from '../utils/notification.js';
 import { sendWhatsAppMessage } from './whatsapp.service.js';
 
-/**
- * Initializes all cron jobs for the application.
- * Note: Provide an io instance to emit real-time socket events if needed.
- */
 export const initCronJobs = (io) => {
-  console.log('⏳ Initializing cron jobs...');
+  console.log('Initializing cron jobs...');
 
-  // 1. Follow-up reminders (Runs daily at 9:00 AM)
   cron.schedule('0 9 * * *', async () => {
     try {
       console.log('CRON: Checking for leads needing follow-up today...');
-      
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      
-      const endOfDay = new Date();
-      endOfDay.setHours(23, 59, 59, 999);
+
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
 
       const leadsToFollowUp = await Lead.find({
-        followUpDate: { $gte: startOfDay, $lte: endOfDay },
+        followUpDate: { $gte: start, $lte: end },
         isConverted: false,
       }).populate('assignedTo', 'name email phone');
 
       for (const lead of leadsToFollowUp) {
-        if (lead.assignedTo) {
-          // Send internal notification
-          await createNotification({
-            recipient: lead.assignedTo._id,
-            type: 'lead_assigned', // or 'follow_up'
-            title: 'Follow-up Reminder',
-            message: `You have a scheduled follow-up with lead: ${lead.name} today.`,
-            link: `/crm/leads/${lead._id}`,
-          }, io);
+        if (!lead.assignedTo) continue;
 
-          // WhatsApp alert (If we have user's phone, we can notify the assigned employee)
-          if (lead.assignedTo.phone) {
-             await sendWhatsAppMessage(
-               lead.assignedTo.phone, 
-               `Hello ${lead.assignedTo.name}, reminder to follow up with Lead: *${lead.name}* today.`
-             );
-          }
+        await createNotification({
+          recipient: lead.assignedTo._id,
+          type: 'lead_assigned',
+          title: 'Follow-up Reminder',
+          message: `You have a scheduled follow-up with lead: ${lead.name} today.`,
+          link: `/crm/leads/${lead._id}`,
+        }, io);
+
+        if (lead.assignedTo.phone) {
+          await sendWhatsAppMessage(
+            lead.assignedTo.phone,
+            `Hello ${lead.assignedTo.name}, reminder to follow up with Lead: *${lead.name}* today.`
+          );
         }
       }
     } catch (error) {
@@ -53,38 +48,36 @@ export const initCronJobs = (io) => {
     }
   });
 
-  // 2. Task Deadlines (Runs daily at 8:00 AM)
   cron.schedule('0 8 * * *', async () => {
     try {
       console.log('CRON: Checking for tasks due today...');
-      
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      
-      const endOfDay = new Date();
-      endOfDay.setHours(23, 59, 59, 999);
+
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
 
       const tasksDueToday = await Task.find({
-        dueDate: { $gte: startOfDay, $lte: endOfDay },
+        dueDate: { $gte: start, $lte: end },
         status: { $ne: 'done' },
       }).populate('assignedTo', 'name phone');
 
       for (const task of tasksDueToday) {
         for (const user of task.assignedTo) {
-           await createNotification({
-             recipient: user._id,
-             type: 'task_assigned',
-             title: 'Task Deadline Today',
-             message: `The task "${task.title}" is due today.`,
-             link: `/tasks`,
-           }, io);
+          await createNotification({
+            recipient: user._id,
+            type: 'task_assigned',
+            title: 'Task Deadline Today',
+            message: `The task "${task.title}" is due today.`,
+            link: '/tasks',
+          }, io);
 
-           if (user.phone) {
-             await sendWhatsAppMessage(
-               user.phone, 
-               `Reminder: Task *${task.title}* is due today.`
-             );
-           }
+          if (user.phone) {
+            await sendWhatsAppMessage(
+              user.phone,
+              `Reminder: Task *${task.title}* is due today.`
+            );
+          }
         }
       }
     } catch (error) {
@@ -92,7 +85,6 @@ export const initCronJobs = (io) => {
     }
   });
 
-  // 3. Payment Reminders (Overdue Invoices) (Runs daily at 10:00 AM)
   cron.schedule('0 10 * * *', async () => {
     try {
       console.log('CRON: Checking for overdue invoices...');
@@ -105,16 +97,15 @@ export const initCronJobs = (io) => {
 
       for (const invoice of overdueInvoices) {
         if (invoice.status !== 'overdue') {
-            invoice.status = 'overdue';
-            await invoice.save();
+          invoice.status = 'overdue';
+          await invoice.save();
         }
 
-        // WhatsApp to Client if phone exists
-        if (invoice.client && invoice.client.phone) {
-           await sendWhatsAppMessage(
-             invoice.client.phone, 
-`Dear ${invoice.client.name}, this is a gentle reminder that Invoice *${invoice.invoiceNumber}* for ₹${invoice.total} is currently overdue. Please arrange payment at your earliest convenience.`
-           );
+        if (invoice.client?.phone) {
+          await sendWhatsAppMessage(
+            invoice.client.phone,
+            `Dear ${invoice.client.name}, this is a gentle reminder that Invoice *${invoice.invoiceNumber}* for Rs.${invoice.total} is currently overdue. Please arrange payment at your earliest convenience.`
+          );
         }
       }
     } catch (error) {
@@ -122,5 +113,65 @@ export const initCronJobs = (io) => {
     }
   });
 
-  console.log('✅ Cron jobs initialized.');
+  cron.schedule('0 7 * * *', async () => {
+    try {
+      console.log('CRON: Checking for upcoming renewal expiries...');
+
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const reminderEnd = new Date(todayStart);
+      reminderEnd.setDate(reminderEnd.getDate() + 7);
+      reminderEnd.setHours(23, 59, 59, 999);
+      const reminderDateKey = todayStart.toISOString().slice(0, 10);
+
+      await DomainRenewal.updateMany(
+        { expiryDate: { $lt: todayStart }, status: { $in: ['active', 'pending'] } },
+        { $set: { status: 'expired' } }
+      );
+
+      const expiringRecords = await DomainRenewal.find({
+        expiryDate: { $gte: todayStart, $lte: reminderEnd },
+        status: { $in: ['active', 'pending'] },
+      }).populate('clientId', 'name company');
+
+      for (const record of expiringRecords) {
+        const recipients = await User.find({
+          organizationId: record.organizationId,
+          role: { $in: ['superAdmin', 'manager'] },
+          isActive: true,
+        }).select('_id');
+
+        const daysLeft = Math.ceil((new Date(record.expiryDate).getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
+        const clientName = record.clientId?.company || record.clientId?.name || 'No client';
+
+        for (const recipient of recipients) {
+          const existingNotification = await Notification.findOne({
+            recipient: recipient._id,
+            type: 'general',
+            'metadata.domainRenewalId': record._id.toString(),
+            'metadata.reminderDate': reminderDateKey,
+          });
+
+          if (existingNotification) continue;
+
+          await createNotification({
+            recipient: recipient._id,
+            type: 'general',
+            title: 'Renewal Expiry Reminder',
+            message: `${record.itemName} for ${clientName} expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}.`,
+            link: '/domain-renewals',
+            metadata: {
+              domainRenewalId: record._id.toString(),
+              reminderDate: reminderDateKey,
+              daysLeft,
+            },
+          }, io);
+        }
+      }
+    } catch (error) {
+      console.error('CRON Error (Renewal Expiry):', error);
+    }
+  });
+
+  console.log('Cron jobs initialized.');
 };

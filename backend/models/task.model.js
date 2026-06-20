@@ -167,6 +167,7 @@ const taskSchema = new mongoose.Schema(
       },
     ],
     orderIndex: { type: Number, default: 0 },
+    isPersonalTask: { type: Boolean, default: false },
     isRecurring: { type: Boolean, default: false },
     recurringPattern: { type: String },
     approvalRequired: { type: Boolean, default: false },

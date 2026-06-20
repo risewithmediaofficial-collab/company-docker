@@ -24,7 +24,8 @@ import {
   BookOpen,
   Calendar,
   KeyRound,
-  PhoneCall
+  PhoneCall,
+  Globe2
 } from 'lucide-react';
 import { toggleSidebar } from '../../store/slices/uiSlice';
 import { motion } from 'framer-motion';
@@ -76,6 +77,7 @@ const Sidebar = () => {
       { name: 'Ads Budget', icon: IndianRupee, path: '/finance' },
       { name: 'Client Follow-ups', icon: PhoneCall, path: '/client-followups' },
       { name: 'Client Vault', icon: KeyRound, path: '/client-vault' },
+      { name: 'Domain Renewals', icon: Globe2, path: '/domain-renewals' },
       { name: 'Content Calendar', icon: Calendar, path: '/calendar' },
       { name: 'Message Center', icon: MessageSquare, path: '/chat' },
       { name: 'HR & Hiring', icon: Users2, path: '/hr' },
@@ -95,6 +97,7 @@ const Sidebar = () => {
       { name: 'Finance', icon: IndianRupee, path: '/finance' },
       { name: 'Client Follow-ups', icon: PhoneCall, path: '/client-followups' },
       { name: 'Client Vault', icon: KeyRound, path: '/client-vault' },
+      { name: 'Domain Renewals', icon: Globe2, path: '/domain-renewals' },
       { name: 'Content Calendar', icon: Calendar, path: '/calendar' },
       { name: 'Message Center', icon: MessageSquare, path: '/chat' },
       { name: 'Reports', icon: BarChart3, path: '/reports' },

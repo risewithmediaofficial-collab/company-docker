@@ -72,6 +72,26 @@ export const useCreateTask = () => {
   });
 };
 
+export const useCreateDailyTask = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data) => {
+      const response = await api.post('/tasks/daily', data);
+      return response.data.task;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task-calendar'] });
+      queryClient.invalidateQueries({ queryKey: ['task-weekly-report'] });
+      toast.success('Daily task saved');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to save daily task');
+    },
+  });
+};
+
 export const useUpdateTask = () => {
   const queryClient = useQueryClient();
 

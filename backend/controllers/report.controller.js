@@ -8,6 +8,7 @@ import Project from '../models/project.model.js';
 import Task from '../models/task.model.js';
 import Invoice from '../models/invoice.model.js';
 import Attendance from '../models/attendance.model.js';
+import DomainRenewal from '../models/domainRenewal.model.js';
 import User from '../models/user.model.js';
 
 export const getAdminDashboard = async (req, res) => {
@@ -26,6 +27,7 @@ export const getAdminDashboard = async (req, res) => {
       monthRevenue, lastMonthRevenue,
       adBudgetTotals,
       totalUsers,
+      expiringRenewals,
     ] = await Promise.all([
       Lead.countDocuments(),
       Lead.countDocuments({ createdAt: { $gte: startOfMonth } }),
@@ -47,6 +49,14 @@ export const getAdminDashboard = async (req, res) => {
         },
       ]),
       User.countDocuments({ isActive: true }),
+      DomainRenewal.find({
+        organizationId: req.user.organizationId,
+        expiryDate: { $gte: now, $lte: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59, 999) },
+        status: { $in: ['active', 'pending'] },
+      })
+        .populate('clientId', 'name company')
+        .sort({ expiryDate: 1 })
+        .limit(5),
     ]);
 
     // Lead stage funnel
@@ -84,8 +94,10 @@ export const getAdminDashboard = async (req, res) => {
         revenueGrowth: isManager ? 0 : revenueGrowth,
         totalAdsBudget,
         totalUsers,
+        expiringRenewalsCount: expiringRenewals.length,
       },
       charts: { stageFunnel, revenueChart: isManager ? [] : revenueChart, taskBreakdown },
+      renewals: expiringRenewals,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -97,17 +109,28 @@ export const getEmployeeDashboard = async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [myTasks, overdueTasks, todayAttendance, completedThisWeek] = await Promise.all([
+    const weekStart = new Date(Date.now() - 7 * 24 * 3600000);
+
+    const [myTasks, overdueTasks, todayAttendance, completedThisWeek, weeklyLoggedUpdates, personalTasksThisWeek] = await Promise.all([
       Task.find({ assignedTo: req.user._id, status: { $nin: ['done'] }, parent: null })
         .populate('project', 'name')
         .sort({ dueDate: 1 })
         .limit(10),
       Task.countDocuments({ assignedTo: req.user._id, dueDate: { $lt: new Date() }, status: { $nin: ['done', 'approved'] } }),
       Attendance.findOne({ user: req.user._id, date: today }),
-      Task.countDocuments({ assignedTo: req.user._id, status: 'done', completedAt: { $gte: new Date(Date.now() - 7 * 24 * 3600000) } }),
+      Task.countDocuments({ assignedTo: req.user._id, status: 'done', completedAt: { $gte: weekStart } }),
+      Task.countDocuments({
+        assignedTo: req.user._id,
+        'progressUpdates.workDate': { $gte: weekStart },
+      }),
+      Task.countDocuments({
+        createdBy: req.user._id,
+        isPersonalTask: true,
+        dueDate: { $gte: weekStart },
+      }),
     ]);
 
-    res.json({ success: true, myTasks, overdueTasks, todayAttendance, completedThisWeek });
+    res.json({ success: true, myTasks, overdueTasks, todayAttendance, completedThisWeek, weeklyLoggedUpdates, personalTasksThisWeek });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

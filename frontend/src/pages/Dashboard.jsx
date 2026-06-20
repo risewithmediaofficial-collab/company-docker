@@ -157,6 +157,12 @@ const Dashboard = () => {
         detail: 'Tasks past due date',
         color: 'bg-amber-500',
       },
+      {
+        label: 'Renewals This Week',
+        value: data.stats.expiringRenewalsCount || 0,
+        detail: 'Items nearing expiry',
+        color: 'bg-rose-500',
+      },
     ];
 
     const stats = [
@@ -164,6 +170,7 @@ const Dashboard = () => {
       { label: isManager ? 'Active Clients' : 'Total Clients', value: data.stats.totalClients, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10', trend: 'Active', up: true },
       { label: isManager ? 'Projects In Delivery' : 'Active Projects', value: data.stats.activeProjects, icon: Briefcase, color: 'text-indigo-500', bg: 'bg-indigo-500/10', trend: 'In Delivery', up: true },
       { label: isManager ? 'Team Tasks' : 'Conversion Rate', value: isManager ? data.stats.totalTasks : `${data.stats.conversionRate}%`, icon: isManager ? ClipboardList : CheckCircle2, color: 'text-amber-500', bg: 'bg-amber-500/10', trend: isManager ? `${data.stats.overdueTasks} Overdue` : 'Won Deals', up: !isManager || data.stats.overdueTasks === 0 },
+      { label: 'Renewals This Week', value: data.stats.expiringRenewalsCount || 0, icon: Calendar, color: 'text-rose-500', bg: 'bg-rose-500/10', trend: 'Expiry watch', up: (data.stats.expiringRenewalsCount || 0) === 0 },
     ];
 
     return (
@@ -218,6 +225,38 @@ const Dashboard = () => {
               </div>
             </motion.div>
           ))}
+        </div>
+
+        <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-bold tracking-tight">Upcoming Renewals</h2>
+              <p className="text-sm text-muted-foreground">Domains, hosting, and subscriptions expiring in the next 7 days.</p>
+            </div>
+            <Link to="/domain-renewals" className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-secondary">
+              Open Renewal Tracker
+            </Link>
+          </div>
+
+          <div className="mt-5 grid gap-3">
+            {(data.renewals || []).length ? data.renewals.map((item) => (
+              <div key={item._id} className="rounded-2xl border border-border bg-background px-4 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="font-semibold text-foreground">{item.itemName}</p>
+                    <p className="text-xs text-muted-foreground">{item.clientId?.company || item.clientId?.name || 'No client linked'}</p>
+                  </div>
+                  <span className="text-xs font-semibold text-rose-600">
+                    {new Date(item.expiryDate).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            )) : (
+              <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-8 text-center text-sm text-muted-foreground">
+                No renewals expiring this week.
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Charts Row */}
@@ -545,7 +584,7 @@ const Dashboard = () => {
             <div className="bg-card p-6 rounded-2xl border border-border shadow-sm bg-gradient-to-br from-indigo-600 to-primary text-white">
               <Award size={32} className="mb-4 opacity-50" />
               <h3 className="text-lg font-bold leading-tight">Weekly Progress</h3>
-              <p className="text-white/70 text-xs mt-1">You've completed {data.completedThisWeek} tasks this week. Keep crushing it!</p>
+              <p className="text-white/70 text-xs mt-1">You&apos;ve completed {data.completedThisWeek} tasks, logged {data.weeklyLoggedUpdates || 0} updates, and added {data.personalTasksThisWeek || 0} personal daily tasks this week.</p>
               <div className="mt-4 bg-white/20 h-2 rounded-full">
                 <div className="bg-white h-full rounded-full" style={{ width: `${Math.min(100, (data.completedThisWeek / 10) * 100)}%` }}></div>
               </div>

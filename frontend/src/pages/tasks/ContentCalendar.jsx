@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { AddTaskModal } from '../../components/modals/AddTaskModal';
 import { ClientTaskResponsePanel } from '../../components/tasks/ClientTaskResponsePanel';
+import { DailyCalendarTaskDialog } from '../../components/tasks/DailyCalendarTaskDialog';
 import { DailyTaskUpdateDialog } from '../../components/tasks/DailyTaskUpdateDialog';
 import { TaskDetailModal } from '../../components/ui/TaskDetailModal';
 import { Button } from '../../components/ui/button';
@@ -527,6 +528,7 @@ const ContentCalendar = ({ embedded = false }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [showDayDialog, setShowDayDialog] = useState(false);
   const [showDailyUpdateDialog, setShowDailyUpdateDialog] = useState(false);
+  const [showDailyTaskDialog, setShowDailyTaskDialog] = useState(false);
 
   const isClient = user?.role === 'client';
   const canManageCalendar = ['superAdmin', 'manager'].includes(user?.role);
@@ -671,11 +673,19 @@ const ContentCalendar = ({ embedded = false }) => {
     const key = format(date, 'yyyy-MM-dd');
     const dayTasks = tasksByDate.get(key) || [];
 
-    if (!dayTasks.length && canManageCalendar) {
-      setSelectedTask(null);
-      setDraftDueDate(format(date, 'yyyy-MM-dd'));
-      setShowAddModal(true);
-      return;
+    if (!dayTasks.length) {
+      if (canManageCalendar) {
+        setSelectedTask(null);
+        setDraftDueDate(format(date, 'yyyy-MM-dd'));
+        setShowAddModal(true);
+        return;
+      }
+
+      if (canLogDailyUpdates) {
+        setSelectedDate(date);
+        setShowDailyTaskDialog(true);
+        return;
+      }
     }
 
     setSelectedDate(date);
@@ -789,7 +799,11 @@ const ContentCalendar = ({ embedded = false }) => {
                 ))
               ) : (
                 <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-10 text-center text-sm text-muted-foreground">
-                  {canManageCalendar ? 'No tasks here yet. Click the date above to add one.' : 'No tasks scheduled.'}
+                  {canManageCalendar
+                    ? 'No tasks here yet. Click the date above to add one.'
+                    : canLogDailyUpdates
+                      ? 'No tasks scheduled. Add your daily task to keep your weekly report complete.'
+                      : 'No tasks scheduled.'}
                 </div>
               )}
             </div>
@@ -830,6 +844,17 @@ const ContentCalendar = ({ embedded = false }) => {
                 </button>
               ))}
             </div>
+
+            {canLogDailyUpdates ? (
+              <Button
+                variant="outline"
+                onClick={() => setShowDailyTaskDialog(true)}
+                className="w-full justify-center sm:w-auto"
+              >
+                <Plus size={16} className="mr-2" />
+                Add Daily Task
+              </Button>
+            ) : null}
 
             {canManageCalendar ? (
               <Button
@@ -1136,6 +1161,13 @@ const ContentCalendar = ({ embedded = false }) => {
         onSubmitted={refetch}
       />
 
+      <DailyCalendarTaskDialog
+        open={showDailyTaskDialog}
+        onOpenChange={setShowDailyTaskDialog}
+        defaultDate={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')}
+        onSubmitted={refetch}
+      />
+
       <Dialog open={showDayDialog} onOpenChange={setShowDayDialog}>
         <DialogContent className="max-h-[88vh] overflow-hidden p-0 sm:max-w-4xl">
           <div className="border-b border-border bg-gradient-to-br from-background via-background to-secondary/60 px-6 py-5">
@@ -1173,6 +1205,16 @@ const ContentCalendar = ({ embedded = false }) => {
                       >
                         <Plus size={16} className="mr-2" />
                         Create Task
+                      </Button>
+                    ) : canLogDailyUpdates ? (
+                      <Button
+                        onClick={() => {
+                          setShowDayDialog(false);
+                          setShowDailyTaskDialog(true);
+                        }}
+                      >
+                        <Plus size={16} className="mr-2" />
+                        Add Daily Task
                       </Button>
                     ) : null}
                   />

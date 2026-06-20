@@ -5,6 +5,7 @@ import {
   addTaskAttachments,
   addProgressUpdate,
   approveTask,
+  createDailyTask,
   createTask,
   deleteTask,
   getCalendarTasks,
@@ -25,6 +26,7 @@ router.use(protect);
 router.get('/', authorize('superAdmin', 'manager', 'employee', 'client'), getTasks);
 router.get('/calendar', authorize('superAdmin', 'manager', 'employee', 'client', 'referral'), getCalendarTasks);
 router.get('/weekly-report', authorize('superAdmin', 'manager', 'employee'), getWeeklyTaskReport);
+router.post('/daily', authorize('superAdmin', 'manager', 'employee'), createDailyTask);
 router.get('/:id', authorize('superAdmin', 'manager', 'employee', 'client'), getTask);
 router.post('/', authorize('superAdmin', 'manager', 'employee'), createTask);
 router.put('/:id', authorize('superAdmin', 'manager', 'employee'), updateTask);

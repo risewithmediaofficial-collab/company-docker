@@ -998,6 +998,77 @@ export const addProgressUpdate = async (req, res) => {
   }
 };
 
+export const createDailyTask = async (req, res) => {
+  try {
+    const {
+      title,
+      workDate,
+      description = '',
+      hours = 0,
+      workNotes = '',
+      status = 'Completed',
+      priority = 'Medium',
+    } = req.body;
+
+    if (!title?.trim()) {
+      return res.status(400).json({ success: false, message: 'Task title is required' });
+    }
+
+    const parsedDate = normalizeReportDate(workDate || new Date());
+    if (!parsedDate) {
+      return res.status(400).json({ success: false, message: 'A valid work date is required' });
+    }
+
+    const payload = normalizeTaskPayload({
+      title: title.trim(),
+      taskTitle: title.trim(),
+      description: description?.trim?.() || '',
+      taskCategory: 'non_content',
+      taskType: 'custom_task',
+      assignedTo: [req.user._id],
+      status,
+      priority,
+      dueDate: parsedDate,
+      deadline: parsedDate,
+      startDate: parsedDate,
+      actualStartDate: parsedDate,
+      isPersonalTask: true,
+      progressUpdates: [],
+    });
+
+    const task = await Task.create({
+      ...payload,
+      organizationId: req.user.organizationId,
+      brandId: req.user.brandId,
+      createdBy: req.user._id,
+    });
+
+    await syncTaskDerivedFields(task);
+    updateCompletionState(task);
+
+    task.progressUpdates.push({
+      description: description?.trim?.() || `Completed work for ${title.trim()}`,
+      hours: Number(hours) || 0,
+      workDate: parsedDate,
+      completedAt: new Date(),
+      updatedBy: req.user._id,
+      workNotes: workNotes?.trim?.() || '',
+      attachments: [],
+    });
+
+    if (Number(hours) > 0) {
+      task.loggedHours = Number(hours);
+    }
+
+    await task.save();
+
+    const hydrated = await hydrateTask(task._id);
+    res.status(201).json({ success: true, task: serializeTask(hydrated) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 export const getWeeklyTaskReport = async (req, res) => {
   try {
     const { startDate, endDate, assignedTo } = req.query;
