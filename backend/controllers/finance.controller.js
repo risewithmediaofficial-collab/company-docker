@@ -1464,7 +1464,7 @@ export const getExpenses = async (req, res) => {
 
     if (status) filter.status = status;
     if (category) filter.category = category;
-    if (req.user.role === 'employee') filter.submittedBy = req.user._id;
+    if (req.user.role !== 'superAdmin') filter.submittedBy = req.user._id;
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },

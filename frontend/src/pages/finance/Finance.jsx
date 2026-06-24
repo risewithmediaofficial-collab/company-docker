@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { AddFinanceModal } from '../../components/modals/AddFinanceModal';
 import { AddInvoiceModal } from '../../components/modals/AddInvoiceModal';
+import { AddExpenseModal } from '../../components/modals/AddExpenseModal';
 import { DataTable } from '../../components/ui/DataTable';
 import {
   MetricCard,
@@ -54,6 +55,8 @@ import {
   useReferralAnalytics,
   useReferrals,
   useSendInvoice,
+  useExpenses,
+  useApproveExpense,
 } from '../../hooks/useFinance';
 
 const currency = new Intl.NumberFormat('en-IN', {
@@ -62,12 +65,7 @@ const currency = new Intl.NumberFormat('en-IN', {
   maximumFractionDigits: 0,
 });
 
-const tabs = [
-  { id: 'records', label: 'Finance Records', icon: IndianRupee },
-  { id: 'invoices', label: 'Invoices', icon: FileText },
-  { id: 'calls', label: 'Call History', icon: Phone },
-  { id: 'referrals', label: 'Referrals', icon: Users2 },
-];
+
 
 const paymentStatusTone = {
   'Not Paid': 'neutral',
@@ -89,10 +87,21 @@ const invoiceStatusTone = {
 const Finance = () => {
   const { user } = useSelector((state) => state.auth);
   const isManager = user?.role === 'manager';
+  const isAdmin = user?.role === 'superAdmin';
+
+  const tabs = [
+    { id: 'records', label: 'Finance Records', icon: IndianRupee },
+    { id: 'invoices', label: 'Invoices', icon: FileText },
+    { id: 'calls', label: 'Call History', icon: Phone },
+    { id: 'referrals', label: 'Referrals', icon: Users2 },
+    ...(isAdmin ? [{ id: 'expenses', label: 'Expenses & Profits', icon: Receipt }] : []),
+  ];
+
   const [activeTab, setActiveTab] = useState('records');
   const [search, setSearch] = useState('');
   const [showFinanceModal, setShowFinanceModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [deleteInvoiceId, setDeleteInvoiceId] = useState(null);
@@ -139,7 +148,9 @@ const Finance = () => {
   const { data: callHistory = [] } = useCallHistory({ search }, { enabled: canViewFinanceDetails });
   const { data: referrals = [] } = useReferrals({ search }, { enabled: canViewFinanceDetails });
   const { data: referralAnalytics = {} } = useReferralAnalytics({ enabled: canViewFinanceDetails });
-  useFinanceSummary({ enabled: canManage });
+  const { data: financeSummary = {} } = useFinanceSummary({ enabled: isAdmin });
+  const { data: expenses = [] } = useExpenses({ search }, { enabled: isAdmin });
+  const approveExpense = useApproveExpense();
   const { data: payments = [] } = usePayments({ search }, { enabled: canViewFinanceDetails });
   const { data: overdueRecords = [] } = useOverdueFinanceRecords({ enabled: canViewFinanceDetails });
 
@@ -153,6 +164,40 @@ const Finance = () => {
   const addPartialPayment = useAddPartialPayment();
   const sendInvoice = useSendInvoice();
   const deleteReferral = useDeleteReferral();
+
+  const categoryLabels = {
+    salary: 'Salary',
+    tools: 'Software Tools',
+    advertising: 'Advertising',
+    travel: 'Travel',
+    office: 'Office & Rent',
+    freelance: 'Freelancer Fees',
+    misc: 'Miscellaneous',
+  };
+
+  const categoryBreakdown = useMemo(() => {
+    const breakdown = {
+      salary: 0,
+      tools: 0,
+      advertising: 0,
+      travel: 0,
+      office: 0,
+      freelance: 0,
+      misc: 0,
+    };
+    expenses.forEach((exp) => {
+      if (exp.status === 'approved' && breakdown[exp.category] !== undefined) {
+        breakdown[exp.category] += Number(exp.amount || 0);
+      }
+    });
+    return breakdown;
+  }, [expenses]);
+
+  const profitMargin = useMemo(() => {
+    const revenue = Number(financeSummary.totalRevenue || 0);
+    const profit = Number(financeSummary.profit || 0);
+    return revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : '0';
+  }, [financeSummary]);
 
   const filteredReferrals = useMemo(() => referrals.filter((item) => {
     const haystack = [
@@ -276,6 +321,74 @@ const Finance = () => {
           }}>Mark Paid</Button> : null}
         </div>
       ),
+    },
+  ];
+
+  const expenseColumns = [
+    {
+      key: 'title',
+      label: 'Expense Details',
+      render: (row) => (
+        <div className="min-w-0">
+          <div className="font-semibold text-foreground">{row.title}</div>
+          {row.notes && <div className="mt-1 text-xs text-muted-foreground line-clamp-1">{row.notes}</div>}
+        </div>
+      ),
+    },
+    {
+      key: 'category',
+      label: 'Category',
+      render: (row) => (
+        <span className="capitalize">{categoryLabels[row.category] || row.category}</span>
+      ),
+    },
+    {
+      key: 'amount',
+      label: 'Amount',
+      render: (row) => (
+        <span className="font-semibold text-foreground">{currency.format(Number(row.amount || 0))}</span>
+      ),
+    },
+    {
+      key: 'date',
+      label: 'Date',
+      render: (row) => (
+        <span>{row.date ? new Date(row.date).toLocaleDateString() : 'N/A'}</span>
+      ),
+    },
+    {
+      key: 'submittedBy',
+      label: 'Submitted By',
+      render: (row) => (
+        <span>{row.submittedBy?.name || 'Admin'}</span>
+      ),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (row) => (
+        <StatusBadge tone={
+          row.status === 'approved' ? 'success' :
+          row.status === 'pending' ? 'warning' : 'danger'
+        }>
+          {row.status}
+        </StatusBadge>
+      ),
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (row) => {
+        if (row.status === 'pending') {
+          return (
+            <div className="flex gap-2" onClick={(event) => event.stopPropagation()}>
+              <Button size="sm" variant="outline" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => approveExpense.mutate({ id: row._id, action: 'approve' })} disabled={approveExpense.isPending}>Approve</Button>
+              <Button size="sm" variant="outline" className="text-rose-600 border-rose-200 hover:bg-rose-50" onClick={() => approveExpense.mutate({ id: row._id, action: 'reject' })} disabled={approveExpense.isPending}>Reject</Button>
+            </div>
+          );
+        }
+        return <span className="text-xs text-muted-foreground">-</span>;
+      },
     },
   ];
 
@@ -409,7 +522,8 @@ const Finance = () => {
         actions={(
           <div className="flex gap-3">
             {canManage ? <Button variant="outline" onClick={() => { setSelectedRecord(null); setShowFinanceModal(true); }}><Plus size={16} className="mr-2" />Finance Record</Button> : null}
-            {canManage ? <Button onClick={() => { setSelectedInvoice(null); setShowInvoiceModal(true); }}><Plus size={16} className="mr-2" />Invoice</Button> : null}
+            {canManage ? <Button variant="outline" onClick={() => { setSelectedInvoice(null); setShowInvoiceModal(true); }}><Plus size={16} className="mr-2" />Invoice</Button> : null}
+            {isAdmin && activeTab === 'expenses' ? <Button onClick={() => setShowExpenseModal(true)}><Plus size={16} className="mr-2" />Record Expense</Button> : null}
           </div>
         )}
       >
@@ -442,6 +556,7 @@ const Finance = () => {
           <div className="app-pill">{financeRecords.length} finance records</div>
           <div className="app-pill">{invoices.length} invoices</div>
           <div className="app-pill">{payments.length} payments</div>
+          {isAdmin && <div className="app-pill">{expenses.length} expenses</div>}
         </div>
       </PageToolbar>
 
@@ -681,6 +796,87 @@ const Finance = () => {
         </SectionCard>
       ) : null}
 
+      {activeTab === 'expenses' && isAdmin ? (
+        <div className="space-y-6">
+          <SectionCard title="Expenses & Profits Dashboard" description="Full-scope P&L summary and operational overhead report. Restricted to superAdmin.">
+            
+            {/* Metric Overview inside the Tab */}
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-6">
+              <MetricCard 
+                label="Total Revenue" 
+                value={currency.format(Number(financeSummary.totalRevenue || 0))} 
+                helper="Client invoices & payments received" 
+                icon={IndianRupee} 
+                tone="success" 
+              />
+              <MetricCard 
+                label="Total Expenses" 
+                value={currency.format(Number(financeSummary.totalExpenses || 0))} 
+                helper="Approved company expenses" 
+                icon={Receipt} 
+                tone="danger" 
+              />
+              <MetricCard 
+                label="Net Profit" 
+                value={currency.format(Number(financeSummary.profit || 0))} 
+                helper="Revenue minus approved expenses" 
+                icon={CheckCircle2} 
+                tone={Number(financeSummary.profit || 0) >= 0 ? 'success' : 'danger'} 
+              />
+              <MetricCard 
+                label="Profit Margin" 
+                value={`${profitMargin}%`} 
+                helper="Net profitability ratio" 
+                icon={AlertCircle} 
+                tone={Number(financeSummary.profit || 0) >= 0 ? 'primary' : 'warning'} 
+              />
+            </div>
+
+            {/* Category Breakdown list */}
+            <div className="rounded-3xl border border-border bg-background p-6 mb-6">
+              <h3 className="text-lg font-bold text-foreground mb-4">Category-Wise Overheads</h3>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {Object.entries(categoryBreakdown).map(([catKey, val]) => {
+                  const maxVal = Math.max(...Object.values(categoryBreakdown), 1);
+                  const pct = Math.round((val / maxVal) * 100);
+                  return (
+                    <div key={catKey} className="rounded-2xl border border-border bg-card p-4 flex flex-col justify-between">
+                      <div>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{categoryLabels[catKey] || catKey}</span>
+                        <div className="text-xl font-bold text-foreground mt-1">{currency.format(val)}</div>
+                      </div>
+                      <div className="mt-3">
+                        <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                          <div className="h-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Table of all expenses */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-foreground">All Company Expenses</h3>
+                <Button size="sm" onClick={() => setShowExpenseModal(true)}>
+                  <Plus size={15} className="mr-1" /> Record Expense
+                </Button>
+              </div>
+
+              <DataTable
+                data={expenses}
+                columns={expenseColumns}
+                emptyTitle="No expenses logged yet"
+                emptyDescription="Expenses logged or submitted by team members will show up here."
+              />
+            </div>
+
+          </SectionCard>
+        </div>
+      ) : null}
+
       <AlertDialog open={!!deleteInvoiceId} onOpenChange={(open) => !open && setDeleteInvoiceId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -708,6 +904,7 @@ const Finance = () => {
 
       <AddFinanceModal open={showFinanceModal} onOpenChange={setShowFinanceModal} entry={selectedRecord} />
       <AddInvoiceModal open={showInvoiceModal} onOpenChange={setShowInvoiceModal} invoice={selectedInvoice} />
+      <AddExpenseModal open={showExpenseModal} onOpenChange={setShowExpenseModal} />
     </div>
   );
 };

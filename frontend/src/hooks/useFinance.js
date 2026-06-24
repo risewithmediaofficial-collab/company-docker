@@ -509,3 +509,52 @@ export const useFinanceSummary = (options = {}) => {
     staleTime: 2 * 60 * 1000,
   });
 };
+
+export const useExpenses = (filters = {}, options = {}) => {
+  return useQuery({
+    queryKey: ['expenses', filters],
+    queryFn: async () => {
+      const response = await api.get('/finance/expenses', { params: filters });
+      return response.data?.expenses || [];
+    },
+    staleTime: 2 * 60 * 1000,
+    ...options,
+  });
+};
+
+export const useCreateExpense = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data) => {
+      const response = await api.post('/finance/expenses', data);
+      return response.data.expense;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+      toast.success('Expense recorded successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to record expense');
+    },
+  });
+};
+
+export const useApproveExpense = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, action }) => {
+      const response = await api.patch(`/finance/expenses/${id}/approve`, { action });
+      return response.data.expense;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+      toast.success('Expense status updated successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to update expense status');
+    },
+  });
+};
+

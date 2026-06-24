@@ -44,7 +44,7 @@ const router = express.Router();
 router.get('/invoices/public/:publicLink', getInvoiceByPublicLink);
 router.use(protect);
 
-router.get('/summary', authorize('superAdmin', 'manager', 'employee'), getFinanceSummary);
+router.get('/summary', authorize('superAdmin'), getFinanceSummary);
 
 router.get('/records/overdue/list', authorize('superAdmin', 'manager', 'employee', 'client'), getOverdueFinanceRecords);
 router.get('/records/client/:clientId', authorize('superAdmin', 'manager', 'employee', 'client'), getFinanceRecordsByClient);
@@ -82,7 +82,7 @@ router.delete('/call-history/:id', authorize('superAdmin', 'manager'), deleteCal
 
 router.get('/expenses', authorize('superAdmin', 'manager', 'employee'), getExpenses);
 router.post('/expenses', authorize('superAdmin', 'manager', 'employee'), createExpense);
-router.patch('/expenses/:id/approve', authorize('superAdmin', 'manager'), approveExpense);
+router.patch('/expenses/:id/approve', authorize('superAdmin'), approveExpense);
 
 router.put('/:id', authorize('superAdmin', 'manager'), updateFinanceEntry);
 router.delete('/:id', authorize('superAdmin', 'manager'), deleteFinanceEntry);
