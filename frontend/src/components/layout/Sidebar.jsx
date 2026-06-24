@@ -25,7 +25,8 @@ import {
   Calendar,
   KeyRound,
   PhoneCall,
-  Globe2
+  Globe2,
+  X
 } from 'lucide-react';
 import { toggleSidebar } from '../../store/slices/uiSlice';
 import { motion } from 'framer-motion';
@@ -139,10 +140,9 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile Sidebar Overlay Backdrop */}
+      {/* Mobile Sidebar Overlay Backdrop (clicking outside does NOT close it anymore) */}
       {isMobile && sidebarOpen && (
         <div 
-          onClick={() => dispatch(toggleSidebar())}
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300"
         />
       )}
@@ -154,23 +154,34 @@ const Sidebar = () => {
         className="fixed left-0 top-0 h-screen bg-card border-r border-border z-50 flex flex-col shadow-xl"
       >
         {/* Logo Section */}
-        <div className="h-16 flex items-center px-6 border-b border-border">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-background p-1.5 shadow-sm">
-            <img
-              src="/branding/rise-with-media-logo.png"
-              alt="RISE WITH MEDIA logo"
-              className="h-full w-full object-contain"
-            />
+        <div className="h-16 flex items-center justify-between px-6 border-b border-border">
+          <div className="flex items-center min-w-0">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-background p-1.5 shadow-sm">
+              <img
+                src="/branding/rise-with-media-logo.png"
+                alt="RISE WITH MEDIA logo"
+                className="h-full w-full object-contain"
+              />
+            </div>
+            {(sidebarOpen || isMobile) && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="ml-3 flex min-w-0 flex-col leading-tight"
+              >
+                <span className="truncate text-[11px] font-black uppercase tracking-[0.22em] text-primary/80">Rise With</span>
+                <span className="truncate text-sm font-bold uppercase tracking-[0.18em] text-foreground">Media</span>
+              </motion.div>
+            )}
           </div>
-          {(sidebarOpen || isMobile) && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="ml-3 flex min-w-0 flex-col leading-tight"
+          {isMobile && (
+            <button
+              onClick={() => dispatch(toggleSidebar())}
+              className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              title="Close Navigation"
             >
-              <span className="truncate text-[11px] font-black uppercase tracking-[0.22em] text-primary/80">Rise With</span>
-              <span className="truncate text-sm font-bold uppercase tracking-[0.18em] text-foreground">Media</span>
-            </motion.div>
+              <X size={18} />
+            </button>
           )}
         </div>
 

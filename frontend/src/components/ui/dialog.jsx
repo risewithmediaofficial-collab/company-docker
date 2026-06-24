@@ -16,6 +16,8 @@ export const DialogContent = React.forwardRef(({ className, children, ...props }
         'fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 shadow-2xl outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:zoom-in-95',
         className
       )}
+      onPointerDownOutside={(e) => e.preventDefault()}
+      onEscapeKeyDown={(e) => e.preventDefault()}
       {...props}
     >
       {children}
