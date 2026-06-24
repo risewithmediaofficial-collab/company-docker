@@ -74,7 +74,7 @@ const Sidebar = () => {
       { name: 'Tasks', icon: CheckSquare, path: '/tasks' },
       { name: 'SOP Dashboard', icon: BookOpen, path: '/sop' },
       { name: 'Proposals', icon: FileText, path: '/proposals' },
-      { name: 'Ads Budget', icon: IndianRupee, path: '/finance' },
+      { name: 'Finance Status', icon: IndianRupee, path: '/finance' },
       { name: 'Client Follow-ups', icon: PhoneCall, path: '/client-followups' },
       { name: 'Client Vault', icon: KeyRound, path: '/client-vault' },
       { name: 'Domain Renewals', icon: Globe2, path: '/domain-renewals' },
