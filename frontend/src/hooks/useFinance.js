@@ -558,3 +558,15 @@ export const useApproveExpense = () => {
   });
 };
 
+
+export const useFinanceDashboardSummary = (options = {}) => {
+  return useQuery({
+    queryKey: ['finance-dashboard-summary'],
+    queryFn: async () => {
+      const response = await api.get('/finance/dashboard-summary');
+      return response.data?.summary || {};
+    },
+    enabled: options.enabled ?? true,
+    staleTime: 2 * 60 * 1000,
+  });
+};

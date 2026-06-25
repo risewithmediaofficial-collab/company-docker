@@ -34,6 +34,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useCreateClient, useUpdateClient } from '../../hooks/useClients';
 import { useUsers } from '../../hooks/useUsers';
 import { toast } from 'sonner';
+import { FolderOpen } from 'lucide-react';
 
 const DRAFT_KEY = 'draft:client-modal';
 
@@ -93,6 +94,15 @@ const clientFormSchema = z.object({
     },
     z.string().url('Invalid website URL').optional().or(z.literal(''))
   ),
+  driveLink: z.preprocess(
+    (value) => {
+      if (typeof value !== 'string') return value;
+      const trimmed = value.trim();
+      if (!trimmed) return '';
+      return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    },
+    z.string().url('Invalid Drive URL').optional().or(z.literal(''))
+  ),
   industry: z.string().optional(),
   services: z.array(z.string()).default([]),
   status: z.enum(['Active', 'Inactive', 'Prospect', 'Churned']).default('Active'),
@@ -120,6 +130,7 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
       email: '',
       phone: '',
       website: '',
+      driveLink: '',
       industry: undefined,
       services: [],
       status: 'Active',
@@ -144,6 +155,7 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
         email: client.email,
         phone: client.phone || '',
         website: client.website || '',
+        driveLink: client.driveLink || '',
         industry: client.industry || undefined,
         services: Array.isArray(client.services) ? client.services : [],
         status: client.status || 'Active',
@@ -166,6 +178,7 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
             email: '',
             phone: '',
             website: '',
+            driveLink: '',
             industry: undefined,
             services: [],
             status: 'Active',
@@ -182,6 +195,7 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
           email: '',
           phone: '',
           website: '',
+          driveLink: '',
           industry: undefined,
             services: [],
             status: 'Active',
@@ -234,7 +248,7 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
         <DialogHeader>
           <DialogTitle>{client ? 'Edit Client' : 'Add New Client'}</DialogTitle>
           <DialogDescription>
-            {client ? 'Update the client information below' : 'Create a new client'}
+            {client ? 'Update the client information below' : 'Fill in the details below. Add a Google Drive folder link so all client files stay organized in one place.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -307,6 +321,23 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
                       <Input placeholder="www.company.com" {...field} />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="driveLink"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Google Drive Folder Link</FormLabel>
+                    <FormControl>
+                      <Input placeholder="drive.google.com/drive/folders/..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      All files for this client should be uploaded to this Drive folder.
+                    </p>
                   </FormItem>
                 )}
               />

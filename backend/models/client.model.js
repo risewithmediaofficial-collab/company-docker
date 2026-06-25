@@ -71,6 +71,9 @@ const clientSchema = new mongoose.Schema(
     referralPermissionEnabled: { type: Boolean, default: false },
     totalRevenue: { type: Number, default: 0 },
     lastActivityDate: { type: Date },
+
+    // Google Drive folder link for this client's assets/files
+    driveLink: { type: String, default: '' },
   },
   { timestamps: true }
 );

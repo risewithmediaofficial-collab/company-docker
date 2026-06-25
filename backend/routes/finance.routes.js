@@ -18,6 +18,7 @@ import {
   getCallHistoryByProject,
   getExpenses,
   getFinanceEntries,
+  getFinanceDashboardSummary,
   getFinanceRecord,
   getFinanceRecords,
   getFinanceRecordsByClient,
@@ -45,6 +46,7 @@ router.get('/invoices/public/:publicLink', getInvoiceByPublicLink);
 router.use(protect);
 
 router.get('/summary', authorize('superAdmin'), getFinanceSummary);
+router.get('/dashboard-summary', authorize('superAdmin', 'manager'), getFinanceDashboardSummary);
 
 router.get('/records/overdue/list', authorize('superAdmin', 'manager', 'employee', 'client'), getOverdueFinanceRecords);
 router.get('/records/client/:clientId', authorize('superAdmin', 'manager', 'employee', 'client'), getFinanceRecordsByClient);

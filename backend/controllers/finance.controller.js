@@ -1597,3 +1597,94 @@ export const getFinanceSummary = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// ---- FINANCE DASHBOARD SUMMARY (for sidebar widget & finance page header) ----
+// Available to superAdmin and manager — aggregates Finance records + expenses + invoices
+
+export const getFinanceDashboardSummary = async (req, res) => {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Aggregate Finance (payment tracking) records
+    const [financeAgg, invoiceAgg, sentInvoicesCount, expenseAgg, overdueRecordsCount] = await Promise.all([
+      Finance.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalProjectAmount: { $sum: '$totalProjectAmount' },
+            totalPaidAmount:    { $sum: '$totalPaidAmount' },
+            totalBalance:       { $sum: '$balanceAmount' },
+          },
+        },
+      ]),
+      // Invoices: count by status
+      Invoice.aggregate([
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 },
+            totalAmount: { $sum: '$total' },
+            totalPaid:   { $sum: '$paidAmount' },
+          },
+        },
+      ]),
+      // Sent (active) invoices
+      Invoice.countDocuments({ status: { $in: ['sent', 'viewed', 'partially_paid'] } }),
+      // Approved expenses this month + all time
+      Expense.aggregate([
+        { $match: { status: 'approved' } },
+        {
+          $group: {
+            _id: null,
+            totalAllTime: { $sum: '$amount' },
+            totalThisMonth: {
+              $sum: {
+                $cond: [{ $gte: ['$date', startOfMonth] }, '$amount', 0],
+              },
+            },
+          },
+        },
+      ]),
+      // Overdue finance records
+      Finance.countDocuments({
+        balanceAmount: { $gt: 0 },
+        paymentDueDate: { $lt: now },
+      }),
+    ]);
+
+    const fa = financeAgg[0] || {};
+    const expenses = expenseAgg[0] || {};
+
+    // Build invoice status map
+    const invoiceStatusMap = {};
+    invoiceAgg.forEach((row) => { invoiceStatusMap[row._id] = row; });
+
+    const totalCollected  = fa.totalPaidAmount   || 0;
+    const totalPending    = fa.totalBalance       || 0;
+    const totalContracted = fa.totalProjectAmount || 0;
+    const totalExpenses   = expenses.totalAllTime  || 0;
+    const monthExpenses   = expenses.totalThisMonth || 0;
+    const netProfit       = totalCollected - totalExpenses;
+    const openInvoices    = sentInvoicesCount || 0;
+    const paidInvoices    = invoiceStatusMap['paid']?.count || 0;
+    const overdueInvoices = overdueRecordsCount || 0;
+
+    res.json({
+      success: true,
+      summary: {
+        totalContracted,
+        totalCollected,
+        totalPending,
+        totalExpenses,
+        monthExpenses,
+        netProfit,
+        openInvoices,
+        paidInvoices,
+        overdueRecords: overdueInvoices,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

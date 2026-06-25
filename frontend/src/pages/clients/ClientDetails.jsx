@@ -6,7 +6,7 @@ import api from '../../api';
 import {
   ChevronLeft, Building2, Phone, Mail, Globe, IndianRupee,
   Briefcase, CheckCircle2, Clock, AlertCircle, Users,
-  FileText, TrendingUp, MoreHorizontal, Edit2, MessageSquare
+  FileText, TrendingUp, MoreHorizontal, Edit2, MessageSquare, FolderOpen
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AddClientModal } from '../../components/modals/AddClientModal';
@@ -141,6 +141,16 @@ const ClientDetails = () => {
             <Link to="/chat" className="flex items-center gap-2 px-4 py-2 border border-border rounded-xl text-sm font-medium hover:bg-secondary transition-colors">
               <MessageSquare size={16}/> Message
             </Link>
+            {client.driveLink && (
+              <a
+                href={client.driveLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 border border-emerald-500/40 bg-emerald-500/10 text-emerald-600 rounded-xl text-sm font-semibold hover:bg-emerald-500/20 transition-colors"
+              >
+                <FolderOpen size={16}/> Drive Folder
+              </a>
+            )}
             {user?.role !== 'client' && (
               <button
                 onClick={() => setShowEditModal(true)}
@@ -227,6 +237,35 @@ const ClientDetails = () => {
                     <p className="font-semibold capitalize">{value}</p>
                   </div>
                 ))}
+                {/* Drive Link — full-width card */}
+                <div className="sm:col-span-2 p-4 bg-secondary/30 rounded-2xl border border-border/50">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                    <FolderOpen size={13} /> Google Drive Folder
+                  </p>
+                  {client.driveLink ? (
+                    <a
+                      href={client.driveLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-600 hover:underline break-all"
+                    >
+                      <FolderOpen size={15} />
+                      {client.driveLink}
+                    </a>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
+                      No Drive folder linked yet.{' '}
+                      {user?.role !== 'client' && (
+                        <button
+                          onClick={() => setShowEditModal(true)}
+                          className="text-primary underline font-medium"
+                        >
+                          Add one
+                        </button>
+                      )}
+                    </p>
+                  )}
+                </div>
               </div>
               {client.notes && (
                 <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50">
