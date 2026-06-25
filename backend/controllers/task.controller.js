@@ -592,43 +592,57 @@ export const createTask = async (req, res) => {
       payload.isClientVisible = true;
     }
 
-    const task = await Task.create({
-      ...payload,
-      organizationId: req.user.organizationId,
-      brandId: req.user.brandId,
-      createdBy: req.user._id,
-    });
-    await syncTaskDerivedFields(task);
-    await task.save();
+    const duplicateCount = Math.max(1, Number(req.body.duplicateCount) || 1);
+    const createdTasks = [];
 
-    const io = req.app.get('io');
-    await notifyNewAssignees({
-      task,
-      previousAssignedTo: [],
-      actorId: req.user._id,
-      io,
-    });
+    for (let i = 0; i < duplicateCount; i++) {
+      const taskTitle = duplicateCount > 1 ? `${payload.title} - ${i + 1}` : payload.title;
+      const currentPayload = {
+        ...payload,
+        title: taskTitle,
+        taskTitle: taskTitle,
+      };
 
-    if (task.project) {
-      io?.broadcastToProject?.(task.project.toString(), 'taskCreated', task);
+      const task = await Task.create({
+        ...currentPayload,
+        organizationId: req.user.organizationId,
+        brandId: req.user.brandId,
+        createdBy: req.user._id,
+      });
+      await syncTaskDerivedFields(task);
+      await task.save();
+
+      const io = req.app.get('io');
+      await notifyNewAssignees({
+        task,
+        previousAssignedTo: [],
+        actorId: req.user._id,
+        io,
+      });
+
+      if (task.project) {
+        io?.broadcastToProject?.(task.project.toString(), 'taskCreated', task);
+      }
+
+      await Promise.all([
+        client?._id ? Client.findByIdAndUpdate(client._id, { $set: { lastActivityDate: new Date() } }) : Promise.resolve(),
+        createActivityLog({
+          actor: req.user,
+          action: 'task.created',
+          entityType: 'task',
+          entityId: task._id,
+          title: 'Task created',
+          description: `${task.title} was created.`,
+          relatedClient: task.client,
+          relatedProject: task.project,
+          relatedTask: task._id,
+        }),
+      ]);
+
+      createdTasks.push(task);
     }
 
-    await Promise.all([
-      client?._id ? Client.findByIdAndUpdate(client._id, { $set: { lastActivityDate: new Date() } }) : Promise.resolve(),
-      createActivityLog({
-        actor: req.user,
-        action: 'task.created',
-        entityType: 'task',
-        entityId: task._id,
-        title: 'Task created',
-        description: `${task.title} was created.`,
-        relatedClient: task.client,
-        relatedProject: task.project,
-        relatedTask: task._id,
-      }),
-    ]);
-
-    const populated = await hydrateTask(task._id);
+    const populated = await hydrateTask(createdTasks[0]._id);
     res.status(201).json({ success: true, task: serializeTask(populated) });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });

@@ -32,6 +32,7 @@ import ClientFollowups from './pages/clients/ClientFollowups';
 import Tasks from './pages/tasks/Tasks';
 import ContentCalendar from './pages/tasks/ContentCalendar';
 import Finance from './pages/finance/Finance';
+import CallHistoryDashboard from './pages/finance/CallHistoryDashboard';
 import HR from './pages/hr/HR';
 import Reports from './pages/reports/Reports';
 import Attendance from './pages/employee/Attendance';
@@ -227,11 +228,21 @@ const App = () => {
               <ContentCalendar />
             </ProtectedRoute>
           } />
+          <Route path="/daily-tasks" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client', 'referral']}>
+              <ContentCalendar defaultView="day" />
+            </ProtectedRoute>
+          } />
 
           {/* Finance */}
           <Route path="/finance" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
               <Finance />
+            </ProtectedRoute>
+          } />
+          <Route path="/call-history" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+              <CallHistoryDashboard />
             </ProtectedRoute>
           } />
 

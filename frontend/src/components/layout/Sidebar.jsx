@@ -70,6 +70,8 @@ const Sidebar = () => {
     superAdmin: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
       { name: 'CRM & Leads', icon: TrendingUp, path: '/crm/leads' },
+      { name: 'Call History', icon: PhoneCall, path: '/call-history' },
+      { name: 'Daily Tasks', icon: Calendar, path: '/daily-tasks' },
       { name: 'Clients', icon: Users, path: '/clients' },
       { name: 'Projects', icon: Briefcase, path: '/projects' },
       { name: 'Tasks', icon: CheckSquare, path: '/tasks' },
@@ -90,6 +92,8 @@ const Sidebar = () => {
     manager: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
       { name: 'CRM & Leads', icon: TrendingUp, path: '/crm/leads' },
+      { name: 'Call History', icon: PhoneCall, path: '/call-history' },
+      { name: 'Daily Tasks', icon: Calendar, path: '/daily-tasks' },
       { name: 'Clients', icon: Users, path: '/clients' },
       { name: 'Projects', icon: Briefcase, path: '/projects' },
       { name: 'Team Tasks', icon: CheckSquare, path: '/tasks' },
@@ -107,6 +111,8 @@ const Sidebar = () => {
     ],
     employee: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+      { name: 'Call History', icon: PhoneCall, path: '/call-history' },
+      { name: 'Daily Tasks', icon: Calendar, path: '/daily-tasks' },
       { name: 'My Tasks', icon: CheckSquare, path: '/tasks' },
       { name: 'SOP Dashboard', icon: BookOpen, path: '/sop' },
       { name: 'Content Calendar', icon: Calendar, path: '/calendar' },

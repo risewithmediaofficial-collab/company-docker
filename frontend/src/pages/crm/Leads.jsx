@@ -276,6 +276,9 @@ const Leads = () => {
     if (searchParams.get('search')) setView('list');
   }, [searchParams]);
 
+  const [selectedFollowUpDate, setSelectedFollowUpDate] = useState(null);
+  const [selectedTodayFollowedOnly, setSelectedTodayFollowedOnly] = useState(false);
+
   // Queries
   const kanbanQuery = useLeadsKanban();
   const listQuery = useLeads({ search: searchTerm, followUp: followUpFilter });
@@ -295,17 +298,57 @@ const Leads = () => {
   todayStart.setHours(0, 0, 0, 0);
   const todayEnd = new Date();
   todayEnd.setHours(23, 59, 59, 999);
+
   const followUpToday = allKanbanLeads.filter((lead) => {
     if (!lead.followUpDate && !lead.expectedCloseDate) return false;
     const date = new Date(lead.followUpDate || lead.expectedCloseDate);
     return date >= todayStart && date <= todayEnd;
   }).length;
+
   const overdueFollowUps = allKanbanLeads.filter((lead) => {
     if (!lead.followUpDate && !lead.expectedCloseDate) return false;
     const date = new Date(lead.followUpDate || lead.expectedCloseDate);
     return date < todayStart && !['won', 'lost'].includes(lead.stage);
   }).length;
+
   const refollowLeads = (kanbanData.refollow_later?.length || 0) + allKanbanLeads.filter((lead) => lead.refollowDate && lead.stage !== 'refollow_later').length;
+
+  const todayFollowed = allKanbanLeads.filter((lead) => {
+    const hasActivityToday = lead.activities?.some((act) => {
+      const d = new Date(act.createdAt || act.date);
+      return d >= todayStart && d <= todayEnd;
+    });
+    const hasCallLogToday = lead.callLogs?.some((log) => {
+      const d = new Date(log.calledAt);
+      return d >= todayStart && d <= todayEnd;
+    });
+    const isLastContactToday = lead.lastContactDate && (new Date(lead.lastContactDate) >= todayStart && new Date(lead.lastContactDate) <= todayEnd);
+    return hasActivityToday || hasCallLogToday || isLastContactToday;
+  }).length;
+
+  const upcomingFollowUpDates = allKanbanLeads
+    .map((lead) => lead.followUpDate ? new Date(lead.followUpDate) : null)
+    .filter((d) => d && d >= todayStart)
+    .sort((a, b) => a - b);
+
+  const nextFollowUpDateObj = upcomingFollowUpDates[0] || null;
+  const nextFollowUpDateStr = nextFollowUpDateObj
+    ? nextFollowUpDateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    : 'None';
+
+  const nextFollowUpLeadsCount = nextFollowUpDateObj
+    ? allKanbanLeads.filter((lead) => {
+        if (!lead.followUpDate) return false;
+        const d = new Date(lead.followUpDate);
+        return d.toDateString() === nextFollowUpDateObj.toDateString();
+      }).length
+    : 0;
+
+  const followUpPending = allKanbanLeads.filter((lead) => {
+    if (!lead.followUpDate) return false;
+    const date = new Date(lead.followUpDate);
+    return date < todayStart && !['won', 'lost'].includes(lead.stage);
+  }).length;
 
   const pipelineHighlights = [
     {
@@ -313,37 +356,104 @@ const Leads = () => {
       value: totalLeads,
       helper: 'Every opportunity in your funnel',
       icon: Target,
-      tone: 'from-sky-500/10 to-sky-500/5 text-sky-700',
+      tone: 'from-sky-500/10 to-sky-500/5 text-sky-700 hover:scale-[1.02] transition-transform cursor-pointer',
+      onClick: () => {
+        setSelectedFollowUpDate(null);
+        setSelectedTodayFollowedOnly(false);
+        setFollowUpFilter('');
+      }
     },
     {
-      label: 'Active pipeline',
-      value: activeLeads,
-      helper: 'Still in motion',
+      label: 'Today followed',
+      value: todayFollowed,
+      helper: 'Leads touched today',
       icon: TrendingUp,
-      tone: 'from-emerald-500/10 to-emerald-500/5 text-emerald-700',
+      tone: selectedTodayFollowedOnly ? 'from-emerald-500/20 to-emerald-500/10 text-emerald-800 ring-2 ring-emerald-500 scale-[1.02] cursor-pointer' : 'from-emerald-500/10 to-emerald-500/5 text-emerald-700 hover:scale-[1.02] transition-transform cursor-pointer',
+      onClick: () => {
+        setSelectedTodayFollowedOnly(!selectedTodayFollowedOnly);
+        setSelectedFollowUpDate(null);
+        setFollowUpFilter('');
+      }
     },
     {
-      label: 'Meetings booked',
-      value: kanbanData.meeting_booked?.length || 0,
-      helper: 'Upcoming conversations',
+      label: 'Next Followup Date',
+      value: nextFollowUpDateStr,
+      helper: nextFollowUpDateObj ? `${nextFollowUpLeadsCount} leads scheduled` : 'No upcoming follow-ups',
       icon: Calendar,
-      tone: 'from-violet-500/10 to-violet-500/5 text-violet-700',
+      tone: selectedFollowUpDate ? 'from-violet-500/20 to-violet-500/10 text-violet-800 ring-2 ring-violet-500 scale-[1.02] cursor-pointer' : 'from-violet-500/10 to-violet-500/5 text-violet-700 hover:scale-[1.02] transition-transform cursor-pointer',
+      onClick: () => {
+        if (nextFollowUpDateObj) {
+          const dateStr = nextFollowUpDateObj.toISOString().split('T')[0];
+          setSelectedFollowUpDate(selectedFollowUpDate === dateStr ? null : dateStr);
+          setSelectedTodayFollowedOnly(false);
+          setFollowUpFilter('');
+        }
+      }
     },
     {
-      label: 'Closing stages',
-      value: proposalLeads,
-      helper: 'Proposal or negotiation',
-      icon: CheckCircle2,
-      tone: 'from-amber-500/10 to-amber-500/5 text-amber-700',
-    },
-    {
-      label: 'Due today',
-      value: followUpToday,
-      helper: 'Follow-ups scheduled for today',
+      label: 'Followup Pending',
+      value: followUpPending,
+      helper: 'Overdue follow-ups',
       icon: ClipboardList,
-      tone: 'from-orange-500/10 to-orange-500/5 text-orange-700',
+      tone: followUpFilter === 'overdue' ? 'from-rose-500/20 to-rose-500/10 text-rose-800 ring-2 ring-rose-500 scale-[1.02] cursor-pointer' : 'from-rose-500/10 to-rose-500/5 text-rose-700 hover:scale-[1.02] transition-transform cursor-pointer',
+      onClick: () => {
+        setFollowUpFilter(followUpFilter === 'overdue' ? '' : 'overdue');
+        setSelectedFollowUpDate(null);
+        setSelectedTodayFollowedOnly(false);
+      }
     },
   ];
+
+  const filteredListLeads = useMemo(() => {
+    return leads.filter((lead) => {
+      if (selectedFollowUpDate) {
+        if (!lead.followUpDate) return false;
+        const d = new Date(lead.followUpDate).toISOString().split('T')[0];
+        return d === selectedFollowUpDate;
+      }
+      if (selectedTodayFollowedOnly) {
+        const hasActivityToday = lead.activities?.some((act) => {
+          const d = new Date(act.createdAt || act.date);
+          return d >= todayStart && d <= todayEnd;
+        });
+        const hasCallLogToday = lead.callLogs?.some((log) => {
+          const d = new Date(log.calledAt);
+          return d >= todayStart && d <= todayEnd;
+        });
+        const isLastContactToday = lead.lastContactDate && (new Date(lead.lastContactDate) >= todayStart && new Date(lead.lastContactDate) <= todayEnd);
+        return hasActivityToday || hasCallLogToday || isLastContactToday;
+      }
+      return true;
+    });
+  }, [leads, selectedFollowUpDate, selectedTodayFollowedOnly, todayStart, todayEnd]);
+
+  const filteredKanbanData = useMemo(() => {
+    if (!selectedFollowUpDate && !selectedTodayFollowedOnly) return kanbanData;
+    const filtered = {};
+    PIPELINE_STAGES.forEach((stage) => {
+      filtered[stage] = (kanbanData[stage] || []).filter((lead) => {
+        if (selectedFollowUpDate) {
+          if (!lead.followUpDate) return false;
+          const d = new Date(lead.followUpDate).toISOString().split('T')[0];
+          return d === selectedFollowUpDate;
+        }
+        if (selectedTodayFollowedOnly) {
+          const hasActivityToday = lead.activities?.some((act) => {
+            const d = new Date(act.createdAt || act.date);
+            return d >= todayStart && d <= todayEnd;
+          });
+          const hasCallLogToday = lead.callLogs?.some((log) => {
+            const d = new Date(log.calledAt);
+            return d >= todayStart && d <= todayEnd;
+          });
+          const isLastContactToday = lead.lastContactDate && (new Date(lead.lastContactDate) >= todayStart && new Date(lead.lastContactDate) <= todayEnd);
+          return hasActivityToday || hasCallLogToday || isLastContactToday;
+        }
+        return true;
+      });
+    });
+    return filtered;
+  }, [kanbanData, selectedFollowUpDate, selectedTodayFollowedOnly, todayStart, todayEnd]);
 
   const handleDeleteLead = async () => {
     if (deleteLeadId) {
@@ -391,7 +501,7 @@ const Leads = () => {
           <div className="grid w-max min-w-full auto-cols-[minmax(280px,320px)] grid-flow-col gap-5 pr-1">
             {PIPELINE_STAGES.map((stage) => {
               const stageInfo = STAGE_META[stage];
-              const stageLeads = kanbanData[stage] || [];
+              const stageLeads = filteredKanbanData[stage] || [];
 
               return (
                 <section
@@ -607,6 +717,7 @@ const Leads = () => {
             {pipelineHighlights.map((item) => (
               <div
                 key={item.label}
+                onClick={item.onClick}
                 className={`rounded-[24px] border border-border/80 bg-gradient-to-br px-4 py-4 shadow-sm ${item.tone}`}
               >
                 <div className="flex items-center justify-between gap-3">
@@ -680,7 +791,7 @@ const Leads = () => {
                   {view === 'kanban' ? 'Board view active' : 'List view active'}
                 </div>
                 <div className="rounded-2xl border border-border bg-background px-3 py-2 text-xs font-medium text-muted-foreground">
-                  {hasSearch ? `${leads.length} matching leads` : `${totalLeads} total leads`}
+                  {hasSearch ? `${filteredListLeads.length} matching leads` : `${totalLeads} total leads`}
                 </div>
               </div>
             </div>
@@ -693,7 +804,7 @@ const Leads = () => {
       ) : (
         view === 'kanban' ? renderKanban() : (
           <div className="overflow-hidden rounded-[28px] border border-border bg-card shadow-sm">
-            {leads.length === 0 ? (
+            {filteredListLeads.length === 0 ? (
               <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
                 <div className="rounded-full bg-secondary p-4 text-muted-foreground">
                   <Search size={22} />
@@ -719,7 +830,7 @@ const Leads = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {leads.map((lead) => {
+                    {filteredListLeads.map((lead) => {
                       const stageInfo = STAGE_META[lead.stage] || STAGE_META.new;
 
                       return (

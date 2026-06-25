@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Briefcase, Gauge, Plus, Target, TrendingUp } from 'lucide-react';
@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { formatINR } from '../../utils/currency';
+import { SelectDropdown } from '../../components/ui/SelectDropdown';
 
 const projectStatusTone = {
   Completed: 'success',
@@ -33,6 +34,29 @@ const projectPriorityTone = {
   Low: 'neutral',
 };
 
+const MONTHS = [
+  { value: '0', label: 'January' },
+  { value: '1', label: 'February' },
+  { value: '2', label: 'March' },
+  { value: '3', label: 'April' },
+  { value: '4', label: 'May' },
+  { value: '5', label: 'June' },
+  { value: '6', label: 'July' },
+  { value: '7', label: 'August' },
+  { value: '8', label: 'September' },
+  { value: '9', label: 'October' },
+  { value: '10', label: 'November' },
+  { value: '11', label: 'December' },
+];
+
+const STATUSES = [
+  { value: 'Planning', label: 'Planning' },
+  { value: 'In Progress', label: 'In Progress' },
+  { value: 'On Hold', label: 'On Hold' },
+  { value: 'Completed', label: 'Completed' },
+  { value: 'Cancelled', label: 'Cancelled' },
+];
+
 const Projects = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
@@ -41,6 +65,7 @@ const Projects = () => {
   const [deleteProjectId, setDeleteProjectId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
 
   const filters = {
     search: searchTerm,
@@ -49,16 +74,26 @@ const Projects = () => {
 
   const { data: projects = [], isLoading } = useProjects(filters);
 
+  const filteredProjects = useMemo(() => {
+    return projects.filter((project) => {
+      if (!monthFilter) return true;
+      const projectDate = project.startDate ? new Date(project.startDate) : new Date(project.createdAt);
+      const projectMonth = projectDate.getMonth();
+      return projectMonth === Number(monthFilter);
+    });
+  }, [projects, monthFilter]);
+
   const clearFilters = () => {
     setSearchTerm('');
     setStatusFilter('');
+    setMonthFilter('');
   };
   const deleteProjectMutation = useDeleteProject();
 
-  const inDelivery = projects.filter((project) => project.status === 'In Progress').length;
-  const completed = projects.filter((project) => project.status === 'Completed').length;
-  const averageProgress = projects.length
-    ? Math.round(projects.reduce((sum, project) => sum + Number(project.progress || 0), 0) / projects.length)
+  const inDelivery = filteredProjects.filter((project) => project.status === 'In Progress').length;
+  const completed = filteredProjects.filter((project) => project.status === 'Completed').length;
+  const averageProgress = filteredProjects.length
+    ? Math.round(filteredProjects.reduce((sum, project) => sum + Number(project.progress || 0), 0) / filteredProjects.length)
     : 0;
 
   const isManager = user?.role === 'manager';
@@ -136,7 +171,7 @@ const Projects = () => {
         )}
       >
         <MetricGrid>
-          <MetricCard label="Portfolio Size" value={projects.length} helper="Projects visible in the current search" icon={Briefcase} tone="info" />
+          <MetricCard label="Portfolio Size" value={filteredProjects.length} helper="Projects visible in the current search" icon={Briefcase} tone="info" />
           <MetricCard label="In Delivery" value={inDelivery} helper="Projects currently being executed" icon={TrendingUp} tone="warning" />
           <MetricCard label="Completed" value={completed} helper="Finished work ready for archive" icon={Target} tone="success" />
           <MetricCard label="Average Progress" value={`${averageProgress}%`} helper="Across the visible portfolio" icon={Gauge} tone="primary" />
@@ -150,16 +185,26 @@ const Projects = () => {
           placeholder="Search project or client name..."
           className="lg:min-w-[320px]"
         />
-        <select className="app-input lg:w-56" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">All statuses</option>
-          {['Planning', 'In Progress', 'On Hold', 'Completed', 'Cancelled'].map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <SelectDropdown
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={STATUSES}
+          placeholder="All statuses"
+          className="lg:w-56"
+        />
+        <SelectDropdown
+          value={monthFilter}
+          onChange={setMonthFilter}
+          options={MONTHS}
+          placeholder="Filter by Month"
+          className="lg:w-56"
+        />
         <Button type="button" variant="outline" onClick={clearFilters}>Clear</Button>
-        <div className="app-pill">{projects.length} projects</div>
+        <div className="app-pill">{filteredProjects.length} projects</div>
       </PageToolbar>
 
       <DataTable
-        data={projects}
+        data={filteredProjects}
         columns={columns}
         loading={isLoading}
         onRowClick={(project) => navigate(`/projects/${project._id}`)}

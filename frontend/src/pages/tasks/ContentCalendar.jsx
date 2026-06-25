@@ -502,10 +502,10 @@ const TaskSummaryCard = ({ task, onOpen }) => {
   );
 };
 
-const ContentCalendar = ({ embedded = false }) => {
+const ContentCalendar = ({ embedded = false, defaultView = 'month' }) => {
   const { user } = useSelector((state) => state.auth);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState('month');
+  const [view, setView] = useState(defaultView);
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({
     client: '',

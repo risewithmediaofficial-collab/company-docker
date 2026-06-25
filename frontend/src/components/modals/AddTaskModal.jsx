@@ -88,6 +88,7 @@ const taskFormSchema = z.object({
   clientVisibleNotes: z.string().optional(),
   approvalRequired: z.boolean().default(true),
   isClientVisible: z.boolean().default(true),
+  duplicateCount: z.preprocess((val) => Number(val) || 1, z.number().min(1).default(1)),
 }).superRefine((data, ctx) => {
   if (data.taskCategory === 'content') {
     if (!data.caption?.trim()) {
@@ -150,6 +151,7 @@ const buildDefaultValues = (initialValues = {}) => ({
   clientVisibleNotes: '',
   approvalRequired: true,
   isClientVisible: true,
+  duplicateCount: 1,
   ...initialValues,
 });
 
@@ -267,6 +269,7 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
       deadline: data.dueDate || undefined,
       assignedTo: data.assignedTo,
       pagesNeeded: data.pagesNeeded || [],
+      duplicateCount: Number(data.duplicateCount) || 1,
     };
 
     if (task) {
@@ -433,6 +436,22 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
           </FormItem>
         )}
       />
+
+      {!task && (
+        <FormField
+          control={form.control}
+          name="duplicateCount"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Duplicate Count (Create multiple copies)</FormLabel>
+              <FormControl>
+                <Input type="number" min={1} placeholder="e.g. 30" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
     </div>
   );
 

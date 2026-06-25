@@ -4,7 +4,8 @@ const callHistorySchema = new mongoose.Schema(
   {
     organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization' },
     brandId: { type: mongoose.Schema.Types.ObjectId, ref: 'BrandWorkspace' },
-    clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: true },
+    clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
+    leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' },
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
     callDate: { type: Date, required: true },
     callTime: { type: String, default: '' },
@@ -34,6 +35,7 @@ const callHistorySchema = new mongoose.Schema(
 );
 
 callHistorySchema.index({ clientId: 1, callDate: -1 });
+callHistorySchema.index({ leadId: 1, callDate: -1 });
 callHistorySchema.index({ projectId: 1, callDate: -1 });
 callHistorySchema.index({ nextFollowUpDate: 1 });
 callHistorySchema.index({ organizationId: 1 });

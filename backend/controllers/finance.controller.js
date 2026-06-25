@@ -1308,9 +1308,10 @@ export const getPayments = async (req, res) => {
 
 export const getCallHistory = async (req, res) => {
   try {
-    const { clientId, projectId, callPurpose, callDate, addedBy } = req.query;
+    const { clientId, leadId, projectId, callPurpose, callDate, addedBy } = req.query;
     const filter = {};
     if (clientId) filter.clientId = clientId;
+    if (leadId) filter.leadId = leadId;
     if (projectId) filter.projectId = projectId;
     if (callPurpose) filter.callPurpose = callPurpose;
     if (addedBy) filter.addedBy = addedBy;
@@ -1331,6 +1332,7 @@ export const getCallHistory = async (req, res) => {
 
     const calls = await CallHistory.find(scopedFilter)
       .populate('clientId', 'name company')
+      .populate('leadId', 'name company')
       .populate('projectId', 'name')
       .populate('relatedTaskId', 'title taskTitle')
       .populate('relatedInvoiceId', 'invoiceNumber')
@@ -1345,17 +1347,28 @@ export const getCallHistory = async (req, res) => {
 
 export const addCallHistory = async (req, res) => {
   try {
-    const match = await resolveClientProject({
-      clientId: req.body.clientId || req.body.client,
-      projectId: req.body.projectId || req.body.project,
-    });
-    if (!match.ok) return res.status(match.status).json({ success: false, message: match.message });
+    let clientId = undefined;
+    let projectId = undefined;
+    const leadId = req.body.leadId || req.body.lead || undefined;
+
+    if (!leadId) {
+      const match = await resolveClientProject({
+        clientId: req.body.clientId || req.body.client,
+        projectId: req.body.projectId || req.body.project,
+      });
+      if (!match.ok) return res.status(match.status).json({ success: false, message: match.message });
+      clientId = match.client?._id;
+      projectId = match.project?._id;
+    } else {
+      projectId = req.body.projectId || req.body.project || undefined;
+    }
 
     const call = await CallHistory.create({
       organizationId: req.user.organizationId,
       brandId: req.headers['x-workspace-id'] || undefined,
-      clientId: match.client._id,
-      projectId: match.project?._id,
+      clientId,
+      leadId,
+      projectId,
       callDate: req.body.callDate || new Date(),
       callTime: req.body.callTime || '',
       callType: req.body.callType || 'Outgoing',
@@ -1375,6 +1388,7 @@ export const addCallHistory = async (req, res) => {
 
     const populated = await CallHistory.findById(call._id)
       .populate('clientId', 'name company')
+      .populate('leadId', 'name company')
       .populate('projectId', 'name')
       .populate('addedBy', 'name');
 
@@ -1390,6 +1404,9 @@ export const updateCallHistory = async (req, res) => {
     if (!call) return res.status(404).json({ success: false, message: 'Call history not found' });
 
     Object.assign(call, {
+      clientId: req.body.clientId !== undefined ? (req.body.clientId || undefined) : call.clientId,
+      leadId: req.body.leadId !== undefined ? (req.body.leadId || undefined) : call.leadId,
+      projectId: req.body.projectId !== undefined ? (req.body.projectId || undefined) : call.projectId,
       callDate: req.body.callDate || call.callDate,
       callTime: req.body.callTime ?? call.callTime,
       callType: req.body.callType || call.callType,
@@ -1408,6 +1425,7 @@ export const updateCallHistory = async (req, res) => {
 
     const populated = await CallHistory.findById(call._id)
       .populate('clientId', 'name company')
+      .populate('leadId', 'name company')
       .populate('projectId', 'name')
       .populate('addedBy', 'name');
 
