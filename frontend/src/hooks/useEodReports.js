@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { toast } from 'sonner';
 
-export const useEodReports = (days = 7) => {
+export const useEodReports = (days = 7, options = {}) => {
   return useQuery({
     queryKey: ['eod-reports', days],
     queryFn: async () => {
@@ -10,6 +10,7 @@ export const useEodReports = (days = 7) => {
       return response.data;
     },
     staleTime: 60 * 1000,
+    ...options,
   });
 };
 

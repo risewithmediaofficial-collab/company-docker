@@ -50,7 +50,8 @@ const Dashboard = () => {
   const [showEodModal, setShowEodModal] = useState(false);
 
   const socket = useSocket();
-  const { data: eodData } = useEodReports(7);
+  const isAdminOrManager = user?.role === 'superAdmin' || user?.role === 'manager';
+  const { data: eodData } = useEodReports(7, { enabled: isAdminOrManager });
   const eodReports = eodData?.records || [];
 
   const fetchStats = async () => {

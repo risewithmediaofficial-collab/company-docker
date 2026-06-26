@@ -143,7 +143,7 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
 
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
-  const { data: users = [] } = useUsers();
+  const { data: users = [] } = useUsers({ enabled: open });
   const isLoading = createClient.isPending || updateClient.isPending;
   const referralOptions = users.filter((user) => user.role !== 'client');
 

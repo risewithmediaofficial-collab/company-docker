@@ -72,7 +72,7 @@ const Tasks = () => {
   const isClient = user?.role === 'client';
   const { data: tasks = [], isLoading } = useTasks(filters);
   const { data: clients = [] } = useClients();
-  const { data: users = [] } = useUsers();
+  const { data: users = [] } = useUsers({ enabled: !isEmployee });
   const deleteTaskMutation = useDeleteTask();
   const updateStatusMutation = useUpdateTaskStatus();
 

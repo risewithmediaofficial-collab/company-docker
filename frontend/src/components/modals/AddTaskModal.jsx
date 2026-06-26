@@ -168,9 +168,9 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
     defaultValues: buildDefaultValues(initialValues),
   });
 
-  const { data: projects = [] } = useProjects();
-  const { data: users = [] } = useUsers();
-  const { data: clients = [] } = useClients();
+  const { data: projects = [] } = useProjects({}, { enabled: open });
+  const { data: users = [] } = useUsers({ enabled: open });
+  const { data: clients = [] } = useClients({}, { enabled: open });
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const isLoading = createTask.isPending || updateTask.isPending;

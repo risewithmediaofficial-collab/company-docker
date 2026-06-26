@@ -41,8 +41,8 @@ export const CommunicationModal = ({ open, onOpenChange, communication, isClient
     },
   });
   
-  const { data: users = [] } = useUsers();
-  const { data: clients = [] } = useClients();
+  const { data: users = [] } = useUsers({ enabled: open });
+  const { data: clients = [] } = useClients({}, { enabled: open });
   const createCommunication = useCreateCommunication();
   const updateCommunication = useUpdateCommunication();
   const isLoading = createCommunication.isPending || updateCommunication.isPending;

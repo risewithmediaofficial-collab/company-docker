@@ -74,7 +74,7 @@ export const AddLeadModal = ({ open, onOpenChange, lead = null }) => {
     },
   });
 
-  const { data: users = [] } = useUsers();
+  const { data: users = [] } = useUsers({ enabled: open });
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
   const isLoading = createLead.isPending || updateLead.isPending;
