@@ -86,21 +86,29 @@ const ClientDetails = () => {
   const totalRevenue = paidInvoices.reduce((sum, inv) => sum + (inv.total || inv.amount || 0), 0);
   const paymentNotes = financeRecords.flatMap((record) => record.paymentHistory || []);
 
+  const isFinanceVisible = user?.role === 'superAdmin' || user?.role === 'manager' || !!user?.permissions?.canManageFinance;
+
   const stats = [
-    { label: 'Total Revenue', value: formatINR(totalRevenue), icon: IndianRupee, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    ...(isFinanceVisible ? [
+      { label: 'Total Revenue', value: formatINR(totalRevenue), icon: IndianRupee, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    ] : []),
     { label: 'Active Projects', value: projects.filter(p => p.status === 'active').length, icon: Briefcase, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { label: 'Paid Invoices', value: paidInvoices.length, icon: CheckCircle2, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-    { label: 'Pending Invoices', value: pendingInvoices.length, icon: AlertCircle, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    ...(isFinanceVisible ? [
+      { label: 'Paid Invoices', value: paidInvoices.length, icon: CheckCircle2, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+      { label: 'Pending Invoices', value: pendingInvoices.length, icon: AlertCircle, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    ] : []),
   ];
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
     { id: 'projects', label: `Projects (${projects.length})`, icon: Briefcase },
-    { id: 'finance', label: `Finance (${financeRecords.length})`, icon: IndianRupee },
-    { id: 'invoices', label: `Invoices (${invoices.length})`, icon: FileText },
-    { id: 'paymentNotes', label: 'Payment Notes', icon: AlertCircle },
-    { id: 'callHistory', label: `Call History (${callHistory.length})`, icon: Phone },
-    { id: 'referrals', label: `Referrals (${referrals.length})`, icon: Users },
+    ...(isFinanceVisible ? [
+      { id: 'finance', label: `Finance (${financeRecords.length})`, icon: IndianRupee },
+      { id: 'invoices', label: `Invoices (${invoices.length})`, icon: FileText },
+      { id: 'paymentNotes', label: 'Payment Notes', icon: AlertCircle },
+      { id: 'callHistory', label: `Call History (${callHistory.length})`, icon: Phone },
+      { id: 'referrals', label: `Referrals (${referrals.length})`, icon: Users },
+    ] : []),
     { id: 'onboarding', label: 'Onboarding', icon: CheckCircle2 },
   ];
 

@@ -88,16 +88,21 @@ const Finance = () => {
   const { user } = useSelector((state) => state.auth);
   const isManager = user?.role === 'manager';
   const isAdmin = user?.role === 'superAdmin';
+  const canViewFinanceDetails = isAdmin || (!!user?.permissions?.canManageFinance && !isManager);
 
   const tabs = [
-    { id: 'records', label: 'Finance Records', icon: IndianRupee },
-    { id: 'invoices', label: 'Invoices', icon: FileText },
-    { id: 'calls', label: 'Call History', icon: Phone },
-    { id: 'referrals', label: 'Referrals', icon: Users2 },
+    ...(canViewFinanceDetails ? [
+      { id: 'records', label: 'Finance Records', icon: IndianRupee },
+      { id: 'invoices', label: 'Invoices', icon: FileText },
+      { id: 'calls', label: 'Call History', icon: Phone },
+      { id: 'referrals', label: 'Referrals', icon: Users2 },
+    ] : [
+      { id: 'invoices', label: 'Invoices', icon: FileText }
+    ]),
     ...(isAdmin ? [{ id: 'expenses', label: 'Expenses & Profits', icon: Receipt }] : []),
   ];
 
-  const [activeTab, setActiveTab] = useState('records');
+  const [activeTab, setActiveTab] = useState(canViewFinanceDetails ? 'records' : 'invoices');
   const [search, setSearch] = useState('');
   const [showFinanceModal, setShowFinanceModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -135,7 +140,6 @@ const Finance = () => {
     notes: '',
   });
 
-  const canViewFinanceDetails = user?.role === 'superAdmin' || (!!user?.permissions?.canManageFinance && !isManager);
   const canManage = canViewFinanceDetails;
   const canDeleteFinance = user?.role === 'superAdmin';
   const canDeleteInvoice = user?.role === 'superAdmin';
