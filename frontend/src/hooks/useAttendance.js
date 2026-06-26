@@ -59,3 +59,51 @@ export const useSubmitEOD = () => {
     onError: (error) => toast.error(error.response?.data?.message || 'Failed to submit report'),
   });
 };
+
+export const useAssignHoliday = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data) => {
+      const response = await api.post('/attendance/holiday', data);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      toast.success(data?.message || 'Holiday assigned successfully');
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to assign holiday'),
+  });
+};
+
+export const useSubmitLeave = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data) => {
+      const response = await api.post('/attendance/leave', data);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      toast.success(data?.message || 'Leave informed successfully');
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to submit leave notice'),
+  });
+};
+
+export const useSubmitWFH = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data) => {
+      const response = await api.post('/attendance/wfh', data);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      toast.success(data?.message || 'Work From Home informed successfully');
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to submit WFH notice'),
+  });
+};

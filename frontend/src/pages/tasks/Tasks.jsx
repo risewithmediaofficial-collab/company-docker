@@ -81,6 +81,15 @@ const Tasks = () => {
     [users],
   );
 
+  const isAssigned = (task) => {
+    if (!task || !user) return false;
+    const assignees = Array.isArray(task.assignedTo) ? task.assignedTo : [task.assignedTo];
+    return assignees.some((assignee) => {
+      const id = typeof assignee === 'object' ? assignee._id : assignee;
+      return id?.toString() === user._id?.toString();
+    });
+  };
+
   const normalizedTasks = useMemo(
     () => tasks.map((task) => ({
       ...task,
@@ -303,11 +312,12 @@ const Tasks = () => {
         columns={columns}
         loading={isLoading}
         onRowClick={handleRowClick}
-        onEdit={isEmployee ? null : (task) => {
+        onEdit={(task) => {
           setSelectedTask(task);
           setShowAddModal(true);
         }}
         onDelete={isEmployee ? null : (id) => setDeleteTaskId(id)}
+        canEditRow={(row) => !isEmployee || isAssigned(row)}
         emptyTitle="No tasks match this view"
         emptyDescription="Adjust filters or create a new task to keep delivery moving."
       />

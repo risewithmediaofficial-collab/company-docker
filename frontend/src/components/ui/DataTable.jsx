@@ -10,6 +10,8 @@ export const DataTable = ({
   onDelete = null,
   onView = null,
   onRowClick = null,
+  canEditRow = null,
+  canDeleteRow = null,
   emptyTitle = 'No records found',
   emptyDescription = 'Get started by creating a new entry.',
   emptyAction = null,
@@ -125,7 +127,7 @@ export const DataTable = ({
                             <Eye size={16} />
                           </button>
                         ) : null}
-                        {onEdit ? (
+                        {onEdit && (!canEditRow || canEditRow(row)) ? (
                           <button
                             onClick={(event) => {
                               event.stopPropagation();
@@ -138,7 +140,7 @@ export const DataTable = ({
                             <Edit2 size={16} />
                           </button>
                         ) : null}
-                        {onDelete ? (
+                        {onDelete && (!canDeleteRow || canDeleteRow(row)) ? (
                           <button
                             onClick={(event) => {
                               event.stopPropagation();

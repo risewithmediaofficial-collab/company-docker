@@ -75,6 +75,22 @@ const HR = () => {
       render: (row) => {
         const attendance = row.todayAttendance;
 
+        if (attendance?.status === 'leave') {
+          return (
+            <span className="rounded-full bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-600" title={attendance.notes}>
+              On Leave: {attendance.notes || 'Informed Leave'}
+            </span>
+          );
+        }
+
+        if (attendance?.status === 'holiday') {
+          return (
+            <span className="rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-600" title={attendance.notes}>
+              Holiday: {attendance.notes || 'Company Holiday'}
+            </span>
+          );
+        }
+
         if (!attendance?.clockIn) {
           return <span className="text-xs text-muted-foreground">No clock-in yet</span>;
         }

@@ -10,6 +10,7 @@ import Invoice from '../models/invoice.model.js';
 import Attendance from '../models/attendance.model.js';
 import DomainRenewal from '../models/domainRenewal.model.js';
 import User from '../models/user.model.js';
+import CallHistory from '../models/callHistory.model.js';
 
 export const getAdminDashboard = async (req, res) => {
   try {
@@ -147,6 +148,58 @@ export const getClientDashboard = async (req, res) => {
     ]);
 
     res.json({ success: true, client, projects, invoices });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getMonthlyEmployeeSummary = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    const now = new Date();
+    const targetMonth = month ? parseInt(month, 10) : now.getMonth() + 1;
+    const targetYear = year ? parseInt(year, 10) : now.getFullYear();
+
+    const start = new Date(targetYear, targetMonth - 1, 1);
+    const end = new Date(targetYear, targetMonth, 0, 23, 59, 59, 999);
+
+    const users = await User.find({
+      role: { $in: ['employee', 'manager'] },
+      isActive: true,
+    }).select('name email department role position');
+
+    const reportPromises = users.map(async (userObj) => {
+      const [attendanceRecords, callCount] = await Promise.all([
+        Attendance.find({
+          user: userObj._id,
+          date: { $gte: start, $lte: end },
+        }),
+        CallHistory.countDocuments({
+          addedBy: userObj._id,
+          callDate: { $gte: start, $lte: end },
+        }),
+      ]);
+
+      const present = attendanceRecords.filter((r) => r.status === 'present').length;
+      const absent = attendanceRecords.filter((r) => r.status === 'absent').length;
+      const leave = attendanceRecords.filter((r) => r.status === 'leave').length;
+      const holiday = attendanceRecords.filter((r) => r.status === 'holiday').length;
+      const totalHours = attendanceRecords.reduce((sum, r) => sum + (r.totalHours || 0), 0);
+
+      return {
+        user: userObj,
+        present,
+        absent,
+        leave,
+        holiday,
+        totalHours: parseFloat(totalHours.toFixed(2)),
+        callCount,
+      };
+    });
+
+    const summary = await Promise.all(reportPromises);
+
+    res.json({ success: true, month: targetMonth, year: targetYear, summary });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

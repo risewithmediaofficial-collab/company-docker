@@ -195,7 +195,7 @@ const App = () => {
             </ProtectedRoute>
           } />
           <Route path="/client-followups" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
               <ClientFollowups />
             </ProtectedRoute>
           } />
@@ -241,7 +241,7 @@ const App = () => {
             </ProtectedRoute>
           } />
           <Route path="/call-history" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
               <CallHistoryDashboard />
             </ProtectedRoute>
           } />

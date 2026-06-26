@@ -1351,7 +1351,7 @@ export const addCallHistory = async (req, res) => {
     let projectId = undefined;
     const leadId = req.body.leadId || req.body.lead || undefined;
 
-    if (!leadId) {
+    if (!leadId && !req.body.unregisteredClientName) {
       const match = await resolveClientProject({
         clientId: req.body.clientId || req.body.client,
         projectId: req.body.projectId || req.body.project,
@@ -1384,6 +1384,9 @@ export const addCallHistory = async (req, res) => {
       visibleToClient: normalizeBoolean(req.body.visibleToClient),
       allowAssignedPersonAccess: normalizeBoolean(req.body.allowAssignedPersonAccess, true),
       addedBy: req.user._id,
+      unregisteredClientName: req.body.unregisteredClientName || '',
+      unregisteredClientPhone: req.body.unregisteredClientPhone || '',
+      unregisteredClientAddress: req.body.unregisteredClientAddress || '',
     });
 
     const populated = await CallHistory.findById(call._id)
@@ -1420,6 +1423,9 @@ export const updateCallHistory = async (req, res) => {
       relatedTaskId: req.body.relatedTaskId || call.relatedTaskId,
       relatedInvoiceId: req.body.relatedInvoiceId || call.relatedInvoiceId,
       visibleToClient: req.body.visibleToClient !== undefined ? normalizeBoolean(req.body.visibleToClient) : call.visibleToClient,
+      unregisteredClientName: req.body.unregisteredClientName !== undefined ? req.body.unregisteredClientName : call.unregisteredClientName,
+      unregisteredClientPhone: req.body.unregisteredClientPhone !== undefined ? req.body.unregisteredClientPhone : call.unregisteredClientPhone,
+      unregisteredClientAddress: req.body.unregisteredClientAddress !== undefined ? req.body.unregisteredClientAddress : call.unregisteredClientAddress,
     });
     await call.save();
 

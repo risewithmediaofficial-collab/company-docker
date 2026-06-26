@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ProgressUpdateForm } from './ProgressUpdateForm';
 import { useAddCompletedFiles, useTask, useUpdateTaskStatus } from '../../hooks/useTasks';
+import { AddTaskModal } from '../modals/AddTaskModal';
+import { Edit } from 'lucide-react';
 import {
   formatTaskTypeLabel,
   isWebsiteTaskType,
@@ -94,6 +96,7 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
   const updateStatus = useUpdateTaskStatus();
   const addCompletedFiles = useAddCompletedFiles();
   const [completedFiles, setCompletedFiles] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
 
   const isEmployee = user?.role === 'employee';
   const isClient = user?.role === 'client';
@@ -103,6 +106,17 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
     () => (Array.isArray(task?.assignedTo) ? task.assignedTo.map((item) => item.name).filter(Boolean).join(', ') : ''),
     [task?.assignedTo],
   );
+
+  const isAssigned = useMemo(() => {
+    if (!task || !user) return false;
+    const assigneesList = Array.isArray(task.assignedTo) ? task.assignedTo : [task.assignedTo];
+    return assigneesList.some((assignee) => {
+      const id = typeof assignee === 'object' ? assignee._id : assignee;
+      return id?.toString() === user._id?.toString();
+    });
+  }, [task, user]);
+
+  const canEdit = ['superAdmin', 'manager'].includes(user?.role) || (isEmployee && isAssigned);
 
   const handleUploadCompletedFiles = async () => {
     const uploaded = await uploadFiles(completedFiles);
@@ -146,19 +160,31 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
               </div>
 
               {!isClient && (
-                <div className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-background p-4">
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-background p-4">
                   <div>
                     <label className="text-sm font-semibold text-foreground">Update Status</label>
-                    <select
-                      value={normalizeTaskStatusLabel(task.status)}
-                      onChange={(event) => updateStatus.mutate({ id: task._id, status: event.target.value })}
-                      className="mt-2 rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
-                    >
-                      {allowedStatusOptions.map((option) => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
+                    <div className="mt-2">
+                      <select
+                        value={normalizeTaskStatusLabel(task.status)}
+                        onChange={(event) => updateStatus.mutate({ id: task._id, status: event.target.value })}
+                        className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+                      >
+                        {allowedStatusOptions.map((option) => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
+                  {canEdit && (
+                    <Button
+                      type="button"
+                      onClick={() => setIsEditing(true)}
+                      className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md hover:bg-primary/95"
+                    >
+                      <Edit size={16} />
+                      Edit Task Details
+                    </Button>
+                  )}
                 </div>
               )}
             </Section>
@@ -285,6 +311,14 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
             Task not found.
           </div>
         )}
+        <AddTaskModal
+          open={isEditing}
+          onOpenChange={(val) => {
+            setIsEditing(val);
+            if (!val) refetch();
+          }}
+          task={task}
+        />
       </DialogContent>
     </Dialog>
   );

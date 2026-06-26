@@ -6,15 +6,32 @@ import {
 import {
   TrendingUp, IndianRupee, Users, Briefcase, CheckCircle2,
   AlertTriangle, Target, BarChart3, Award, ArrowUpRight, ArrowDownRight,
-  FileSpreadsheet, FileText
+  FileSpreadsheet, FileText, Calendar, Clock, PhoneCall
 } from 'lucide-react';
-import { useAdminReport } from '../../hooks/useReports';
+import { useAdminReport, useMonthlyEmployeeReport } from '../../hooks/useReports';
 import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
 import { toast } from 'sonner';
 import { formatINR } from '../../utils/currency';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+
+const MONTHS = [
+  { value: 1, label: 'January' },
+  { value: 2, label: 'February' },
+  { value: 3, label: 'March' },
+  { value: 4, label: 'April' },
+  { value: 5, label: 'May' },
+  { value: 6, label: 'June' },
+  { value: 7, label: 'July' },
+  { value: 8, label: 'August' },
+  { value: 9, label: 'September' },
+  { value: 10, label: 'October' },
+  { value: 11, label: 'November' },
+  { value: 12, label: 'December' },
+];
+
+const YEARS = [2025, 2026, 2027, 2028];
 
 const downloadBlob = (content, filename, type) => {
   const blob = new Blob([content], { type });
@@ -40,6 +57,14 @@ const titleCase = (value) => String(value || '')
 const Reports = () => {
   const { data, isLoading } = useAdminReport();
   const [period, setPeriod] = useState('6m');
+  const [activeTab, setActiveTab] = useState('overall'); // 'overall' | 'employees'
+  const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
+  const [reportYear, setReportYear] = useState(new Date().getFullYear());
+
+  const { data: employeeReportData, isLoading: isEmployeeLoading } = useMonthlyEmployeeReport({
+    month: reportMonth,
+    year: reportYear
+  });
 
   const stats = data?.stats || {};
   const charts = data?.charts || {};
@@ -179,7 +204,7 @@ const Reports = () => {
     },
   ];
 
-  const reportSections = [
+  const reportSections = activeTab === 'overall' ? [
     {
       title: 'KPI Summary',
       columns: ['Metric', 'Value', 'Trend', 'Status'],
@@ -205,6 +230,22 @@ const Reports = () => {
       columns: ['Metric', 'Value', 'Note'],
       rows: businessHealth.map((row) => [row.label, `${row.value}%`, row.note]),
     },
+  ] : [
+    {
+      title: `Employee Monthly Report - ${MONTHS.find(m => m.value === reportMonth)?.label} ${reportYear}`,
+      columns: ['Employee', 'Role', 'Department', 'Present', 'Absent', 'Leave', 'Holiday', 'Hours', 'Calls'],
+      rows: (employeeReportData?.summary || []).map(row => [
+        row.user?.name || 'Unknown',
+        row.user?.position || row.user?.role || 'Staff',
+        row.user?.department || 'General',
+        row.present,
+        row.absent,
+        row.leave,
+        row.holiday,
+        `${row.totalHours} hrs`,
+        row.callCount,
+      ]),
+    }
   ];
 
   const handleDownloadPDF = () => {
@@ -314,17 +355,40 @@ const Reports = () => {
           <p className="text-muted-foreground text-sm mt-1">Company-wide revenue, pipeline health, and delivery metrics.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 bg-card border border-border rounded-xl p-1">
-            {['3m', '6m', '12m'].map(p => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${period === p ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          {activeTab === 'employees' ? (
+            <div className="flex items-center gap-2 bg-card border border-border rounded-xl p-1 shadow-sm">
+              <select
+                value={reportMonth}
+                onChange={(e) => setReportMonth(parseInt(e.target.value, 10))}
+                className="app-select !py-1 !px-2.5 !text-xs font-bold w-32 border-none bg-transparent"
               >
-                {p === '3m' ? '3 Months' : p === '6m' ? '6 Months' : '12 Months'}
-              </button>
-            ))}
-          </div>
+                {MONTHS.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+              <select
+                value={reportYear}
+                onChange={(e) => setReportYear(parseInt(e.target.value, 10))}
+                className="app-select !py-1 !px-2.5 !text-xs font-bold w-24 border-none bg-transparent"
+              >
+                {YEARS.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 bg-card border border-border rounded-xl p-1">
+              {['3m', '6m', '12m'].map(p => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${period === p ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  {p === '3m' ? '3 Months' : p === '6m' ? '6 Months' : '12 Months'}
+                </button>
+              ))}
+            </div>
+          )}
           <button
             onClick={handleDownloadPDF}
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
@@ -342,158 +406,250 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {kpiCards.map((card, i) => (
-          <motion.div
-            key={card.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.07 }}
-            className="bg-card rounded-2xl border border-border shadow-sm p-5 flex items-start gap-4 card-hover"
-          >
-            <div className={`p-3 rounded-2xl ${card.bg} ${card.color} flex-shrink-0`}>
-              <card.icon size={22} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground truncate">{card.label}</p>
-              <p className="text-2xl font-bold mt-1 tracking-tight">{card.value}</p>
-              <div className="flex items-center gap-1.5 mt-1">
-                {card.up
-                  ? <ArrowUpRight size={12} className="text-emerald-500" />
-                  : <ArrowDownRight size={12} className="text-red-500" />
-                }
-                <span className={`text-xs font-semibold ${card.up ? 'text-emerald-600' : 'text-red-600'}`}>{card.trend}</span>
-                <span className="text-xs text-muted-foreground">· {card.sub}</span>
-              </div>
-            </div>
-          </motion.div>
-        ))}
+      {/* Tab Switcher */}
+      <div className="border-b border-border flex items-center gap-6">
+        <button
+          onClick={() => setActiveTab('overall')}
+          className={`pb-3 text-sm font-bold border-b-2 transition-all ${
+            activeTab === 'overall' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Overall Summary
+        </button>
+        <button
+          onClick={() => setActiveTab('employees')}
+          className={`pb-3 text-sm font-bold border-b-2 transition-all ${
+            activeTab === 'employees' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Employee Monthly Summary
+        </button>
       </div>
 
-      {/* Charts Row 1 */}
-      <div className="grid gap-6 xl:grid-cols-3">
-        {/* Revenue Trend - wide */}
-        <div className="xl:col-span-2 bg-card rounded-2xl border border-border shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-bold">Revenue Trend</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Monthly revenue from paid invoices</p>
-            </div>
-            <TrendingUp size={18} className="text-primary" />
-          </div>
-          <div className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenue}>
-                <defs>
-                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={formatCompactCurrency} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
-                  formatter={v => [formatCurrency(v), 'Revenue']}
-                />
-                <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 4 }} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Task Breakdown Pie */}
-        <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-bold">Task Status</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Current task distribution</p>
-            </div>
-            <CheckCircle2 size={18} className="text-primary" />
-          </div>
-          <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={taskBreakdown} cx="50%" cy="50%" innerRadius={55} outerRadius={75} paddingAngle={4} dataKey="count" nameKey="status">
-                  {taskBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '10px' }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-3 space-y-2">
-            {taskBreakdown.slice(0, 4).map((item, i) => (
-              <div key={item.status} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                  <span className="text-muted-foreground capitalize">{item.status}</span>
+      {activeTab === 'overall' ? (
+        <>
+          {/* KPI Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {kpiCards.map((card, i) => (
+              <motion.div
+                key={card.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.07 }}
+                className="bg-card rounded-2xl border border-border shadow-sm p-5 flex items-start gap-4 card-hover"
+              >
+                <div className={`p-3 rounded-2xl ${card.bg} ${card.color} flex-shrink-0`}>
+                  <card.icon size={22} />
                 </div>
-                <span className="font-bold">{item.count}</span>
-              </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground truncate">{card.label}</p>
+                  <p className="text-2xl font-bold mt-1 tracking-tight">{card.value}</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {card.up
+                      ? <ArrowUpRight size={12} className="text-emerald-500" />
+                      : <ArrowDownRight size={12} className="text-red-500" />
+                    }
+                    <span className={`text-xs font-semibold ${card.up ? 'text-emerald-600' : 'text-red-600'}`}>{card.trend}</span>
+                    <span className="text-xs text-muted-foreground">· {card.sub}</span>
+                  </div>
+                </div>
+              </motion.div>
             ))}
           </div>
-        </div>
-      </div>
 
-      {/* Charts Row 2 */}
-      <div className="grid gap-6 xl:grid-cols-2">
-        {/* Lead Funnel */}
-        <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-bold">Lead Funnel</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Leads by pipeline stage</p>
-            </div>
-            <Target size={18} className="text-primary" />
-          </div>
-          <div className="h-[260px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={leadFunnel} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
-                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis type="category" dataKey="stage" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} width={80} />
-                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '10px' }} />
-                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 8, 8, 0]}>
-                  {leadFunnel.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Business Health Summary */}
-        <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
-          <div className="mb-6">
-            <h2 className="font-bold">Business Health</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Key performance ratios</p>
-          </div>
-          <div className="space-y-5">
-            {businessHealth.map((metric) => (
-              <div key={metric.label}>
-                <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="font-medium">{metric.label}</span>
-                  <span className="font-bold">{metric.value}%</span>
+          {/* Charts Row 1 */}
+          <div className="grid gap-6 xl:grid-cols-3">
+            {/* Revenue Trend - wide */}
+            <div className="xl:col-span-2 bg-card rounded-2xl border border-border shadow-sm p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="font-bold">Revenue Trend</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">Monthly revenue from paid invoices</p>
                 </div>
-                <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(metric.value, 100)}%` }}
-                    transition={{ duration: 0.8, ease: 'easeOut' }}
-                    className={`h-full rounded-full ${metric.color}`}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">{metric.note}</p>
+                <TrendingUp size={18} className="text-primary" />
               </div>
-            ))}
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={revenue}>
+                    <defs>
+                      <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={formatCompactCurrency} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                      formatter={v => [formatCurrency(v), 'Revenue']}
+                    />
+                    <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 4 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Task Breakdown Pie */}
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="font-bold">Task Status</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">Current task distribution</p>
+                </div>
+                <CheckCircle2 size={18} className="text-primary" />
+              </div>
+              <div className="h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={taskBreakdown} cx="50%" cy="50%" innerRadius={55} outerRadius={75} paddingAngle={4} dataKey="count" nameKey="status">
+                      {taskBreakdown.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '10px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-3 space-y-2">
+                {taskBreakdown.slice(0, 4).map((item, i) => (
+                  <div key={item.status} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                      <span className="text-muted-foreground capitalize">{item.status}</span>
+                    </div>
+                    <span className="font-bold">{item.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
+
+          {/* Charts Row 2 */}
+          <div className="grid gap-6 xl:grid-cols-2">
+            {/* Lead Funnel */}
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="font-bold">Lead Funnel</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">Leads by pipeline stage</p>
+                </div>
+                <Target size={18} className="text-primary" />
+              </div>
+              <div className="h-[260px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={leadFunnel} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
+                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
+                    <YAxis type="category" dataKey="stage" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} width={80} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '10px' }} />
+                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 8, 8, 0]}>
+                      {leadFunnel.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Business Health Summary */}
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+              <div className="mb-6">
+                <h2 className="font-bold">Business Health</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Key performance ratios</p>
+              </div>
+              <div className="space-y-5">
+                {businessHealth.map((metric) => (
+                  <div key={metric.label}>
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="font-medium">{metric.label}</span>
+                      <span className="font-bold">{metric.value}%</span>
+                    </div>
+                    <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(metric.value, 100)}%` }}
+                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        className={`h-full rounded-full ${metric.color}`}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{metric.note}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-border bg-secondary/10 flex items-center justify-between">
+            <div>
+              <h2 className="font-bold flex items-center gap-2">
+                <Users size={18} className="text-primary" />
+                Employee Performance Summary
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Attendance and call logs breakdown for {MONTHS.find(m => m.value === reportMonth)?.label} {reportYear}
+              </p>
+            </div>
+          </div>
+
+          {isEmployeeLoading ? (
+            <div className="p-12 text-center text-muted-foreground animate-pulse font-medium">
+              Loading employee monthly statistics...
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="text-muted-foreground font-semibold border-b border-border bg-muted/20">
+                    <th className="px-6 py-4">Employee</th>
+                    <th className="px-6 py-4">Role / Department</th>
+                    <th className="px-6 py-4 text-center">Present</th>
+                    <th className="px-6 py-4 text-center">Absent</th>
+                    <th className="px-6 py-4 text-center">Leave</th>
+                    <th className="px-6 py-4 text-center">Holiday</th>
+                    <th className="px-6 py-4 text-center">Hours Logged</th>
+                    <th className="px-6 py-4 text-center">Calls Logged</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {(employeeReportData?.summary || []).map((row) => (
+                    <tr key={row.user?._id} className="hover:bg-secondary/20 transition-colors">
+                      <td className="px-6 py-4 font-bold">
+                        <div className="flex flex-col">
+                          <span className="text-foreground">{row.user?.name}</span>
+                          <span className="text-[10px] text-muted-foreground font-normal">{row.user?.email}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-foreground text-xs">{row.user?.position || row.user?.role}</span>
+                          <span className="text-[10px] text-muted-foreground uppercase">{row.user?.department || 'General'}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center font-bold text-emerald-600">{row.present} Days</td>
+                      <td className="px-6 py-4 text-center font-bold text-destructive">{row.absent} Days</td>
+                      <td className="px-6 py-4 text-center font-bold text-indigo-600">{row.leave} Days</td>
+                      <td className="px-6 py-4 text-center font-bold text-blue-600">{row.holiday} Days</td>
+                      <td className="px-6 py-4 text-center font-bold">{row.totalHours} hrs</td>
+                      <td className="px-6 py-4 text-center font-bold text-primary">{row.callCount} Calls</td>
+                    </tr>
+                  ))}
+                  {(!employeeReportData?.summary || employeeReportData.summary.length === 0) && (
+                    <tr>
+                      <td colSpan="8" className="px-6 py-12 text-center text-muted-foreground italic">
+                        No employee records found for this period.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 };

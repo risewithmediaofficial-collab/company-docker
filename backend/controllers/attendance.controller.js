@@ -127,3 +127,109 @@ export const getEodReports = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const assignHoliday = async (req, res) => {
+  try {
+    const { date, notes } = req.body;
+    if (!date) {
+      return res.status(400).json({ success: false, message: 'Date is required' });
+    }
+
+    const holidayDate = new Date(date);
+    holidayDate.setHours(0, 0, 0, 0);
+
+    const User = (await import('../models/user.model.js')).default;
+    const users = await User.find({
+      organizationId: req.user.organizationId,
+      role: { $nin: ['client', 'referral'] },
+      isActive: true,
+    });
+
+    const promises = users.map(async (userObj) => {
+      return Attendance.findOneAndUpdate(
+        { user: userObj._id, date: holidayDate },
+        {
+          status: 'holiday',
+          notes: notes || 'Company Official Holiday',
+          isApproved: true,
+          approvedBy: req.user._id,
+        },
+        { upsert: true, new: true }
+      );
+    });
+
+    await Promise.all(promises);
+
+    res.json({ success: true, message: `Holiday successfully assigned for ${users.length} team members.` });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const submitLeave = async (req, res) => {
+  try {
+    const { userId, date, notes } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'Employee userId is required' });
+    }
+    if (!date) {
+      return res.status(400).json({ success: false, message: 'Date is required' });
+    }
+
+    const leaveDate = new Date(date);
+    leaveDate.setHours(0, 0, 0, 0);
+
+    const attendance = await Attendance.findOneAndUpdate(
+      { user: userId, date: leaveDate },
+      {
+        status: 'leave',
+        notes: notes || 'Assigned Leave',
+        isApproved: true,
+        approvedBy: req.user._id,
+      },
+      { upsert: true, new: true }
+    );
+
+    res.json({ success: true, message: 'Leave assigned successfully', attendance });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const submitWFH = async (req, res) => {
+  try {
+    const { date, notes } = req.body;
+    if (!date) {
+      return res.status(400).json({ success: false, message: 'Date is required' });
+    }
+
+    const wfhDate = new Date(date);
+    wfhDate.setHours(0, 0, 0, 0);
+
+    // Validation: WFH must be informed before the day itself (i.e. tomorrow or later)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    if (wfhDate < tomorrow) {
+      return res.status(400).json({
+        success: false,
+        message: 'Work From Home must be informed at least one day in advance (for tomorrow or later)'
+      });
+    }
+
+    const attendance = await Attendance.findOneAndUpdate(
+      { user: req.user._id, date: wfhDate },
+      {
+        status: 'work_from_home',
+        notes: notes || 'Work From Home Informed',
+        isApproved: true,
+      },
+      { upsert: true, new: true }
+    );
+
+    res.json({ success: true, message: 'Work From Home informed successfully', attendance });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

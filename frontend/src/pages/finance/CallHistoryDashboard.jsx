@@ -36,7 +36,7 @@ export default function CallHistoryDashboard() {
   const [editingId, setEditingId] = useState(null);
 
   // Form State
-  const [formType, setFormType] = useState('client'); // client, lead
+  const [formType, setFormType] = useState('client'); // client, lead, unregistered
   const [form, setForm] = useState({
     clientId: '',
     leadId: '',
@@ -57,6 +57,9 @@ export default function CallHistoryDashboard() {
     leadValue: 0,
     leadPriority: 'medium',
     leadSource: 'other',
+    unregisteredClientName: '',
+    unregisteredClientPhone: '',
+    unregisteredClientAddress: '',
   });
 
   // Load editing values
@@ -64,7 +67,8 @@ export default function CallHistoryDashboard() {
     setIsEditing(true);
     setEditingId(call._id);
     const isLeadCall = !!call.leadId;
-    setFormType(isLeadCall ? 'lead' : 'client');
+    const isUnregistered = !call.clientId && !call.leadId && !!call.unregisteredClientName;
+    setFormType(isUnregistered ? 'unregistered' : (isLeadCall ? 'lead' : 'client'));
     setForm({
       clientId: call.clientId?._id || '',
       leadId: call.leadId?._id || '',
@@ -84,6 +88,9 @@ export default function CallHistoryDashboard() {
       leadValue: call.leadId?.value || 0,
       leadPriority: call.leadId?.priority || 'medium',
       leadSource: call.leadId?.source || 'other',
+      unregisteredClientName: call.unregisteredClientName || '',
+      unregisteredClientPhone: call.unregisteredClientPhone || '',
+      unregisteredClientAddress: call.unregisteredClientAddress || '',
     });
   };
 
@@ -113,6 +120,9 @@ export default function CallHistoryDashboard() {
       leadValue: 0,
       leadPriority: 'medium',
       leadSource: 'other',
+      unregisteredClientName: '',
+      unregisteredClientPhone: '',
+      unregisteredClientAddress: '',
     });
   };
 
@@ -144,22 +154,26 @@ export default function CallHistoryDashboard() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const isLead = formType === 'lead';
+    const isUnregistered = formType === 'unregistered';
 
     const payload = {
-      clientId: isLead ? undefined : form.clientId || undefined,
+      clientId: isLead || isUnregistered ? undefined : form.clientId || undefined,
       leadId: isLead ? form.leadId || undefined : undefined,
-      projectId: isLead ? undefined : form.projectId || undefined,
+      projectId: isLead || isUnregistered ? undefined : form.projectId || undefined,
       callType: form.callType,
       callPurpose: form.callPurpose,
       callDate: form.callDate,
       callTime: form.callTime,
       spokenWith: form.spokenWith,
-      contactNumber: form.contactNumber,
+      contactNumber: isUnregistered ? form.unregisteredClientPhone : form.contactNumber,
       callSummary: form.callSummary,
       clientResponse: form.clientResponse,
       nextAction: form.nextAction,
       nextFollowUpDate: form.nextFollowUpDate || undefined,
       visibleToClient: form.visibleToClient,
+      unregisteredClientName: isUnregistered ? form.unregisteredClientName : undefined,
+      unregisteredClientPhone: isUnregistered ? form.unregisteredClientPhone : undefined,
+      unregisteredClientAddress: isUnregistered ? form.unregisteredClientAddress : undefined,
     };
 
     try {
@@ -204,12 +218,14 @@ export default function CallHistoryDashboard() {
       // Type filter
       if (filterType === 'client' && !call.clientId) return false;
       if (filterType === 'lead' && !call.leadId) return false;
+      if (filterType === 'unregistered' && !call.unregisteredClientName) return false;
 
       // Search filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const clientName = call.clientId?.name || call.clientId?.company || '';
         const leadName = call.leadId?.name || call.leadId?.company || '';
+        const unregisteredName = call.unregisteredClientName || '';
         const summary = call.callSummary || '';
         const spoken = call.spokenWith || '';
         const purpose = call.callPurpose || '';
@@ -217,6 +233,7 @@ export default function CallHistoryDashboard() {
         return (
           clientName.toLowerCase().includes(query) ||
           leadName.toLowerCase().includes(query) ||
+          unregisteredName.toLowerCase().includes(query) ||
           summary.toLowerCase().includes(query) ||
           spoken.toLowerCase().includes(query) ||
           purpose.toLowerCase().includes(query)
@@ -267,6 +284,15 @@ export default function CallHistoryDashboard() {
               >
                 Lead Calls
               </button>
+              <button
+                type="button"
+                onClick={() => setFilterType('unregistered')}
+                className={`rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
+                  filterType === 'unregistered' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Unregistered Calls
+              </button>
             </div>
 
             <div className="relative flex-1">
@@ -295,13 +321,16 @@ export default function CallHistoryDashboard() {
             <div className="space-y-4">
               {filteredCalls.map((call) => {
                 const isLead = !!call.leadId;
-                const contactName = isLead ? call.leadId?.name : (call.clientId?.company || call.clientId?.name);
+                const isUnregistered = !call.clientId && !call.leadId && !!call.unregisteredClientName;
+                const contactName = isUnregistered
+                  ? call.unregisteredClientName
+                  : (isLead ? call.leadId?.name : (call.clientId?.company || call.clientId?.name));
                 return (
                   <div key={call._id} className="group relative rounded-3xl border border-border bg-card p-6 transition-all hover:shadow-md">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="flex items-start gap-4">
                         <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
-                          isLead ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600'
+                          isUnregistered ? 'bg-blue-500/10 text-blue-600' : (isLead ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600')
                         }`}>
                           <Phone size={18} />
                         </div>
@@ -309,9 +338,9 @@ export default function CallHistoryDashboard() {
                           <div className="flex flex-wrap items-center gap-2">
                             <h3 className="font-bold text-foreground text-base">{contactName}</h3>
                             <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase ${
-                              isLead ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                              isUnregistered ? 'bg-blue-100 text-blue-800' : (isLead ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800')
                             }`}>
-                              {isLead ? 'Lead' : 'Client'}
+                              {isUnregistered ? 'New/Unregistered' : (isLead ? 'Lead' : 'Client')}
                             </span>
                             {call.projectId?.name && (
                               <span className="text-xs text-muted-foreground">
@@ -324,6 +353,16 @@ export default function CallHistoryDashboard() {
                             {new Date(call.callDate).toLocaleDateString()} {call.callTime ? `at ${call.callTime}` : ''}
                             <span>• Type: <span className="font-semibold text-foreground">{call.callType}</span></span>
                           </p>
+                          {isUnregistered && (
+                            <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                              {call.unregisteredClientPhone && (
+                                <p>Phone: <span className="font-semibold text-foreground">{call.unregisteredClientPhone}</span></p>
+                              )}
+                              {call.unregisteredClientAddress && (
+                                <p>Address: <span className="font-semibold text-foreground">{call.unregisteredClientAddress}</span></p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -384,13 +423,13 @@ export default function CallHistoryDashboard() {
               className="sticky top-6 border border-border/60 shadow-lg"
             >
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Form Type Selector */}
+                                {/* Form Type Selector */}
                 {!isEditing && (
-                  <div className="grid grid-cols-2 gap-2 rounded-2xl bg-secondary/30 p-1">
+                  <div className="grid grid-cols-3 gap-2 rounded-2xl bg-secondary/30 p-1">
                     <button
                       type="button"
                       onClick={() => { setFormType('client'); resetForm(); }}
-                      className={`rounded-xl py-2 text-xs font-semibold transition-all ${
+                      className={`rounded-xl py-2 text-[10px] font-semibold transition-all ${
                         formType === 'client' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -399,17 +438,26 @@ export default function CallHistoryDashboard() {
                     <button
                       type="button"
                       onClick={() => { setFormType('lead'); resetForm(); }}
-                      className={`rounded-xl py-2 text-xs font-semibold transition-all ${
+                      className={`rounded-xl py-2 text-[10px] font-semibold transition-all ${
                         formType === 'lead' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       Lead Call
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => { setFormType('unregistered'); resetForm(); }}
+                      className={`rounded-xl py-2 text-[10px] font-semibold transition-all ${
+                        formType === 'unregistered' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      New Client
+                    </button>
                   </div>
                 )}
 
                 {/* Contact Selection */}
-                {formType === 'client' ? (
+                {formType === 'client' && (
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-muted-foreground">Select Client *</label>
                     <SelectDropdown
@@ -419,7 +467,8 @@ export default function CallHistoryDashboard() {
                       placeholder="Choose client"
                     />
                   </div>
-                ) : (
+                )}
+                {formType === 'lead' && (
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-muted-foreground">Select Lead *</label>
                     <SelectDropdown
@@ -428,6 +477,42 @@ export default function CallHistoryDashboard() {
                       options={leads.map((l) => ({ value: l._id, label: `${l.name} (${l.company || 'Independent'})` }))}
                       placeholder="Choose lead"
                     />
+                  </div>
+                )}
+                {formType === 'unregistered' && (
+                  <div className="space-y-4 border-t border-border/40 pt-3 animate-fadeIn">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 bg-blue-500/5 px-2.5 py-1 rounded-lg w-fit">New Client Details</p>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground">Client Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. John Doe / ABC Inc."
+                        value={form.unregisteredClientName}
+                        onChange={(e) => setForm((prev) => ({ ...prev, unregisteredClientName: e.target.value }))}
+                        className="w-full rounded-2xl border border-border bg-card px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground">Phone Number</label>
+                      <input
+                        type="text"
+                        placeholder="Phone number"
+                        value={form.unregisteredClientPhone}
+                        onChange={(e) => setForm((prev) => ({ ...prev, unregisteredClientPhone: e.target.value }))}
+                        className="w-full rounded-2xl border border-border bg-card px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground">Business Address</label>
+                      <textarea
+                        placeholder="Enter business address..."
+                        rows={2}
+                        value={form.unregisteredClientAddress}
+                        onChange={(e) => setForm((prev) => ({ ...prev, unregisteredClientAddress: e.target.value }))}
+                        className="w-full rounded-2xl border border-border bg-card px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -538,16 +623,18 @@ export default function CallHistoryDashboard() {
                       className="w-full rounded-2xl border border-border bg-card px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground">Contact Number</label>
-                    <input
-                      type="text"
-                      placeholder="Phone number"
-                      value={form.contactNumber}
-                      onChange={(e) => setForm((prev) => ({ ...prev, contactNumber: e.target.value }))}
-                      className="w-full rounded-2xl border border-border bg-card px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
+                  {formType !== 'unregistered' && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground">Contact Number</label>
+                      <input
+                        type="text"
+                        placeholder="Phone number"
+                        value={form.contactNumber}
+                        onChange={(e) => setForm((prev) => ({ ...prev, contactNumber: e.target.value }))}
+                        className="w-full rounded-2xl border border-border bg-card px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">

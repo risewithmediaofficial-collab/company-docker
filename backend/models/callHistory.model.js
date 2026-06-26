@@ -30,6 +30,9 @@ const callHistorySchema = new mongoose.Schema(
     visibleToClient: { type: Boolean, default: false },
     allowAssignedPersonAccess: { type: Boolean, default: true },
     addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    unregisteredClientName: { type: String, default: '' },
+    unregisteredClientPhone: { type: String, default: '' },
+    unregisteredClientAddress: { type: String, default: '' },
   },
   { timestamps: true }
 );
