@@ -155,8 +155,7 @@ const Projects = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Project Delivery"
-        title="Monitor every project from kickoff to close."
+        title="Project Delivery"
         description="Keep active delivery, budget context, and portfolio progress aligned in a single management view."
         actions={(
           <Button

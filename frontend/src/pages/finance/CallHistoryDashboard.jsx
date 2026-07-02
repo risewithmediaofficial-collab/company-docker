@@ -247,7 +247,6 @@ export default function CallHistoryDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="CRM Operations"
         title="Call History & Client Touchpoints"
         description="Log every conversation with leads and clients, track outcomes, and organize next follow-up steps."
       />

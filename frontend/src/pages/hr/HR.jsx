@@ -147,8 +147,7 @@ const HR = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="HR Operations"
-        title="Manage the team with clearer daily visibility."
+        title="HR Operations"
         description="Keep employee records, attendance signals, and team structure organized in a cleaner people-operations workspace."
         actions={(
           <Button

@@ -27,7 +27,6 @@ const ClientProposals = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Client Portal"
         title="Your Proposals"
         description="Review proposals sent to you and accept the one you want to proceed with."
       />

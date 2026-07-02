@@ -465,8 +465,7 @@ const Finance = () => {
     return (
       <div className="space-y-6">
         <PageHeader
-          eyebrow="Ads Budget"
-          title="View ads budgets across all projects."
+          title="Ads Budget"
           description="Managers can review ad budget allocations here without seeing full finance totals, invoices, or payment details."
         >
           <MetricGrid>
@@ -520,8 +519,7 @@ const Finance = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Finance Operations"
-        title="Manage receivables, invoices, calls, and referral performance."
+        title="Finance Operations"
         description="Track partial payments, private follow-ups, client-visible payment history, invoice status, client communication, and lead sources from one workspace."
         actions={(
           <div className="flex gap-3">

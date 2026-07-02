@@ -215,8 +215,7 @@ const Tasks = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={isEmployee ? 'Assigned Work' : 'Advanced Task Management'}
-        title={isEmployee ? 'Track and complete your assigned tasks.' : 'Create, assign, and monitor content and operational work.'}
+        title={isEmployee ? 'Assigned Work' : 'Advanced Task Management'}
         description={isEmployee
           ? 'See only the tasks assigned to you, update delivery status, upload completed files, and keep clients informed.'
           : 'Manage content and non-content tasks with structured requirements, clear ownership, and client approval flow.'}

@@ -11,7 +11,6 @@ const AddTask = () => {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <PageHeader
-          eyebrow="Task Management"
           title="Create New Task"
           description="Select a project first, then choose content or non-content task fields."
         />

@@ -668,9 +668,8 @@ const Leads = () => {
         <div className="p-5 sm:p-6 lg:p-7">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary/80">CRM Pipeline</p>
-              <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Track every lead without losing the next step.
+              <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                CRM Pipeline
               </h1>
             </div>
 

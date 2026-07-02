@@ -143,7 +143,6 @@ const SOPDashboard = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Operations"
         title="SOP Dashboard"
         description="Company and role-based standard operating procedures for your team."
         actions={canAdd ? (

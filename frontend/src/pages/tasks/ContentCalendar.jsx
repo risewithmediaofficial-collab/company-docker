@@ -816,12 +816,7 @@ const ContentCalendar = ({ embedded = false, defaultView = 'month' }) => {
   return (
     <div className={cn('space-y-6', embedded && 'p-4 sm:p-6')}>
       <PageHeader
-        eyebrow={isClient ? 'Client Task Calendar' : user?.role === 'employee' ? 'Assigned Task Calendar' : 'Task Calendar'}
-        title={isClient
-          ? 'Review your scheduled tasks, delivery progress, and approvals.'
-          : user?.role === 'employee'
-            ? 'Stay on top of your assigned delivery schedule.'
-            : 'See every task on the calendar with role-based visibility.'}
+        title={isClient ? 'Client Task Calendar' : user?.role === 'employee' ? 'Assigned Task Calendar' : 'Task Calendar'}
         description={isClient
           ? 'Track only your own tasks with client-visible details, alerts, and approval actions.'
           : 'Switch between monthly, weekly, daily, and list views to manage deadlines, priorities, and follow-ups.'}

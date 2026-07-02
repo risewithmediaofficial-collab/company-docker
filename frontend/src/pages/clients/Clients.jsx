@@ -21,6 +21,7 @@ const clientStatusTone = {
   Prospect: 'warning',
   Churned: 'danger',
   Inactive: 'neutral',
+  Renew: 'primary',
 };
 
 const Clients = () => {
@@ -132,8 +133,7 @@ const Clients = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Client Operations"
-        title="Keep every client relationship organized."
+        title="Client Operations"
         description="Track contacts, commercial value, and lifecycle status in one cleaner operational view."
       >
         <MetricGrid>
@@ -157,7 +157,7 @@ const Clients = () => {
           />
           <select className="app-input h-10 text-xs" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All statuses</option>
-            {['Active', 'Prospect', 'Inactive', 'Churned'].map((s) => <option key={s} value={s}>{s}</option>)}
+            {['Active', 'Prospect', 'Inactive', 'Churned', 'Renew'].map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
           <select className="app-input h-10 text-xs" value={serviceFilter} onChange={(e) => setServiceFilter(e.target.value)}>
             <option value="">All services</option>

@@ -263,8 +263,7 @@ export const AssetLibraryWorkspace = ({
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={portalMode ? 'Client Assets' : 'Asset Library'}
-        title={title}
+        title={portalMode ? 'Client Assets' : 'Asset Library'}
         description={description}
         actions={canManage ? (
           <Button onClick={() => { setSelectedAsset(null); setFormOpen(true); }}>

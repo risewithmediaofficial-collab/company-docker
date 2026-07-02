@@ -82,7 +82,6 @@ const Proposals = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Sales"
         title="Proposals Dashboard"
         description="Create and manage client proposals. Accepted proposals can be linked when creating projects."
         actions={canManage ? (

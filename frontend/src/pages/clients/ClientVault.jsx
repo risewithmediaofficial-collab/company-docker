@@ -450,8 +450,7 @@ const ClientVault = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Client Vault"
-        title="Remember client passwords and access information."
+        title="Client Vault"
         description="A separate internal dashboard for client logins, account URLs, recovery notes, and other sensitive reminders."
         actions={canManageVault ? (
           <Button

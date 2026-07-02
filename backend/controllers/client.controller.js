@@ -3,6 +3,11 @@
 // =============================================
 
 import Client from '../models/client.model.js';
+// =============================================
+// CLIENT CONTROLLER
+// =============================================
+
+import Client from '../models/client.model.js';
 import User from '../models/user.model.js';
 import Project from '../models/project.model.js';
 import ActivityLog from '../models/activityLog.model.js';
@@ -14,6 +19,7 @@ const statusMap = {
   Inactive: 'inactive',
   Prospect: 'onboarding',
   Churned: 'churned',
+  Renew: 'renew',
 };
 
 const serializeClient = (client) => {
@@ -23,6 +29,7 @@ const serializeClient = (client) => {
     inactive: 'Inactive',
     onboarding: 'Prospect',
     churned: 'Churned',
+    renew: 'Renew',
   }[item.status] || item.status;
 
   return { ...item, status: label };

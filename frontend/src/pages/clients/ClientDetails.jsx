@@ -24,10 +24,11 @@ const onboardingStepLabels = {
 };
 
 const statusStyles = {
-  active: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-  inactive: 'bg-gray-500/10 text-gray-600 border-gray-500/20',
-  churned: 'bg-red-500/10 text-red-600 border-red-500/20',
-  onboarding: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  Active: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+  Inactive: 'bg-gray-500/10 text-gray-600 border-gray-500/20',
+  Churned: 'bg-red-500/10 text-red-600 border-red-500/20',
+  Prospect: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  Renew: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
 };
 
 const ClientDetails = () => {
@@ -130,7 +131,7 @@ const ClientDetails = () => {
             <div>
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl font-bold tracking-tight">{client.company || client.name}</h1>
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${statusStyles[client.status] || statusStyles.active}`}>
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${statusStyles[client.status] || statusStyles.Active}`}>
                   {client.status}
                 </span>
                 <span className="px-2 py-1 rounded-lg bg-secondary text-[10px] font-bold uppercase text-muted-foreground">

@@ -287,8 +287,7 @@ const ClientFollowups = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Client Follow-ups"
-        title="Client Calls & Meetings"
+        title="Client Follow-ups"
         actions={(
           <Button onClick={() => {
             setSelectedFollowup(null);

@@ -23,7 +23,7 @@ const clientSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['active', 'inactive', 'churned', 'onboarding'],
+      enum: ['active', 'inactive', 'churned', 'onboarding', 'renew'],
       default: 'onboarding',
     },
     tier: {

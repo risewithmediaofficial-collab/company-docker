@@ -105,7 +105,7 @@ const clientFormSchema = z.object({
   ),
   industry: z.string().optional(),
   services: z.array(z.string()).default([]),
-  status: z.enum(['Active', 'Inactive', 'Prospect', 'Churned']).default('Active'),
+  status: z.enum(['Active', 'Inactive', 'Prospect', 'Churned', 'Renew']).default('Active'),
   referredByMode: z.enum(['none', 'dropdown', 'manual']).default('none'),
   referredBy: z.string().optional(),
   referredByManual: z.string().optional(),
@@ -384,6 +384,7 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
                         <SelectItem value="Inactive">Inactive</SelectItem>
                         <SelectItem value="Prospect">Prospect</SelectItem>
                         <SelectItem value="Churned">Churned</SelectItem>
+                        <SelectItem value="Renew">Renew</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

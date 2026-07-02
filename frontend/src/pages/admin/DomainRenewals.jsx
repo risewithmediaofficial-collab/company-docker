@@ -318,8 +318,7 @@ const DomainRenewals = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Renewal Tracker"
-        title="Track domains, hosting, and expiring renewals."
+        title="Renewal Tracker"
         description="Store purchase dates, expiry dates, progress notes, and get reminder coverage during the last seven days before expiry."
         actions={(
           <Button onClick={() => { setSelectedRecord(null); setFormOpen(true); }}>

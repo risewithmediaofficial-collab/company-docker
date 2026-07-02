@@ -73,8 +73,7 @@ const Automations = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Automation Hub"
-        title="Operational workflows, without the clutter."
+        title="Automation Hub"
         description="Create trigger-action automations that reduce manual work while keeping workflow state easy to scan."
         actions={(
           <Button

@@ -30,7 +30,7 @@ export const PageHeader = ({
           {eyebrow ? (
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary/80">{eyebrow}</p>
           ) : null}
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{title}</h1>
+          <h1 className={cn('text-3xl font-bold tracking-tight text-foreground sm:text-4xl', eyebrow && 'mt-3')}>{title}</h1>
         </div>
 
         {actions ? <div className="flex flex-wrap items-center gap-3 xl:justify-end">{actions}</div> : null}
