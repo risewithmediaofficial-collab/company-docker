@@ -94,7 +94,6 @@ const Finance = () => {
     ...(canViewFinanceDetails ? [
       { id: 'records', label: 'Finance Records', icon: IndianRupee },
       { id: 'invoices', label: 'Invoices', icon: FileText },
-      { id: 'calls', label: 'Call History', icon: Phone },
       { id: 'referrals', label: 'Referrals', icon: Users2 },
     ] : [
       { id: 'invoices', label: 'Invoices', icon: FileText }
@@ -685,56 +684,6 @@ const Finance = () => {
         </SectionCard>
       ) : null}
 
-      {activeTab === 'calls' ? (
-        <SectionCard title="Call History" description="Record every payment discussion, requirement call, approval follow-up, or rework conversation.">
-          {canManage ? (
-            <div className="mb-6 grid gap-3 rounded-3xl border border-border bg-background p-5 md:grid-cols-2 xl:grid-cols-4">
-              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={callForm.clientId} onChange={(event) => setCallForm((current) => ({ ...current, clientId: event.target.value, projectId: '' }))}>
-                <option value="">Select client</option>
-                {clients.map((client) => <option key={client._id} value={client._id}>{client.company || client.name}</option>)}
-              </select>
-              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={callForm.projectId} onChange={(event) => setCallForm((current) => ({ ...current, projectId: event.target.value }))}>
-                <option value="">Select project</option>
-                {selectedClientProjects.map((project) => <option key={project._id} value={project._id}>{project.name}</option>)}
-              </select>
-              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={callForm.callType} onChange={(event) => setCallForm((current) => ({ ...current, callType: event.target.value }))}>
-                {['Incoming', 'Outgoing', 'Missed', 'WhatsApp Call', 'Google Meet', 'Zoom', 'Direct Meeting'].map((item) => <option key={item}>{item}</option>)}
-              </select>
-              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={callForm.callPurpose} onChange={(event) => setCallForm((current) => ({ ...current, callPurpose: event.target.value }))}>
-                {['Payment Follow-up', 'Task Discussion', 'Requirement Collection', 'Approval Follow-up', 'Rework Discussion', 'General Update', 'Complaint', 'Other'].map((item) => <option key={item}>{item}</option>)}
-              </select>
-              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" type="date" value={callForm.callDate} onChange={(event) => setCallForm((current) => ({ ...current, callDate: event.target.value }))} />
-              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" type="time" value={callForm.callTime} onChange={(event) => setCallForm((current) => ({ ...current, callTime: event.target.value }))} />
-              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" placeholder="Spoken with" value={callForm.spokenWith} onChange={(event) => setCallForm((current) => ({ ...current, spokenWith: event.target.value }))} />
-              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" placeholder="Contact number" value={callForm.contactNumber} onChange={(event) => setCallForm((current) => ({ ...current, contactNumber: event.target.value }))} />
-              <textarea className="min-h-24 rounded-2xl border border-border bg-card px-4 py-3 text-sm md:col-span-2" placeholder="Call summary" value={callForm.callSummary} onChange={(event) => setCallForm((current) => ({ ...current, callSummary: event.target.value }))} />
-              <textarea className="min-h-24 rounded-2xl border border-border bg-card px-4 py-3 text-sm md:col-span-2" placeholder="Client response / next action" value={callForm.clientResponse} onChange={(event) => setCallForm((current) => ({ ...current, clientResponse: event.target.value }))} />
-              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" type="date" value={callForm.nextFollowUpDate} onChange={(event) => setCallForm((current) => ({ ...current, nextFollowUpDate: event.target.value }))} />
-              <label className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground"><input type="checkbox" checked={callForm.visibleToClient} onChange={(event) => setCallForm((current) => ({ ...current, visibleToClient: event.target.checked }))} />Visible to client</label>
-              <Button type="button" onClick={handleCreateCall} disabled={createCallHistory.isPending}>Add Call Note</Button>
-            </div>
-          ) : null}
-
-          <div className="space-y-4">
-            {callHistory.map((call) => (
-              <div key={call._id} className="rounded-3xl border border-border bg-background p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-bold text-foreground">{call.clientId?.company || call.clientId?.name} • {call.projectId?.name || 'General'}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{new Date(call.callDate).toLocaleDateString()} {call.callTime ? `• ${call.callTime}` : ''} • {call.callType}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <StatusBadge tone="info">{call.callPurpose}</StatusBadge>
-                    {call.visibleToClient ? <StatusBadge tone="success">Client Visible</StatusBadge> : null}
-                  </div>
-                </div>
-                <p className="mt-3 text-sm text-foreground">{call.callSummary || 'No summary added.'}</p>
-                <p className="mt-2 text-sm text-muted-foreground">Spoken with: {call.spokenWith || 'Not specified'} {call.nextFollowUpDate ? `• Next follow-up: ${new Date(call.nextFollowUpDate).toLocaleDateString()}` : ''}</p>
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-      ) : null}
 
       {activeTab === 'referrals' ? (
         <SectionCard title="Referral Tracking" description="Track source platforms, conversion quality, and revenue contribution from converted clients.">

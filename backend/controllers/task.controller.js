@@ -554,92 +554,106 @@ export const getTask = async (req, res) => {
 
 export const createTask = async (req, res) => {
   try {
-    const payload = normalizeTaskPayload(req.body);
-    if (!payload.title?.trim()) {
-      return res.status(400).json({ success: false, message: 'Task title is required' });
-    }
+    const tasksData = Array.isArray(req.body.tasks)
+      ? req.body.tasks.map(taskItem => ({
+          ...req.body,
+          ...taskItem,
+        }))
+      : [req.body];
 
-    if (!payload.project && !payload.client) {
-      return res.status(400).json({ success: false, message: 'Project or client is required to create a task' });
-    }
-
-    const project = payload.project
-      ? await Project.findById(payload.project).select('name client manager team')
-      : null;
-    if (payload.project && !project) {
-      return res.status(404).json({ success: false, message: 'Project not found' });
-    }
-
-    if (project && payload.client && project.client?.toString() !== payload.client.toString()) {
-      return res.status(400).json({ success: false, message: 'Selected project does not belong to the selected client' });
-    }
-    if (project && !payload.client) payload.client = project.client;
-
-    const client = payload.client
-      ? await Client.findById(payload.client).select('name assignedManager assignedTeam')
-      : null;
-    if (payload.client && !client) {
-      return res.status(404).json({ success: false, message: 'Client not found' });
-    }
-
-    if (!payload.taskCategory) {
-      payload.taskCategory = isWebsiteTaskType(payload.taskType) || payload.taskType === 'non_content'
-        ? 'non_content'
-        : 'content';
-    }
-
-    if (!payload.isClientVisible && payload.clientVisibleNotes?.trim()) {
-      payload.isClientVisible = true;
-    }
-
-    const duplicateCount = Math.max(1, Number(req.body.duplicateCount) || 1);
     const createdTasks = [];
 
-    for (let i = 0; i < duplicateCount; i++) {
-      const taskTitle = duplicateCount > 1 ? `${payload.title} - ${i + 1}` : payload.title;
-      const currentPayload = {
-        ...payload,
-        title: taskTitle,
-        taskTitle: taskTitle,
-      };
-
-      const task = await Task.create({
-        ...currentPayload,
-        organizationId: req.user.organizationId,
-        brandId: req.user.brandId,
-        createdBy: req.user._id,
-      });
-      await syncTaskDerivedFields(task);
-      await task.save();
-
-      const io = req.app.get('io');
-      await notifyNewAssignees({
-        task,
-        previousAssignedTo: [],
-        actorId: req.user._id,
-        io,
-      });
-
-      if (task.project) {
-        io?.broadcastToProject?.(task.project.toString(), 'taskCreated', task);
+    for (const taskData of tasksData) {
+      const payload = normalizeTaskPayload(taskData);
+      if (!payload.title?.trim()) {
+        return res.status(400).json({ success: false, message: 'Task title is required' });
       }
 
-      await Promise.all([
-        client?._id ? Client.findByIdAndUpdate(client._id, { $set: { lastActivityDate: new Date() } }) : Promise.resolve(),
-        createActivityLog({
-          actor: req.user,
-          action: 'task.created',
-          entityType: 'task',
-          entityId: task._id,
-          title: 'Task created',
-          description: `${task.title} was created.`,
-          relatedClient: task.client,
-          relatedProject: task.project,
-          relatedTask: task._id,
-        }),
-      ]);
+      if (!payload.project && !payload.client) {
+        return res.status(400).json({ success: false, message: 'Project or client is required to create a task' });
+      }
 
-      createdTasks.push(task);
+      const project = payload.project
+        ? await Project.findById(payload.project).select('name client manager team')
+        : null;
+      if (payload.project && !project) {
+        return res.status(404).json({ success: false, message: 'Project not found' });
+      }
+
+      if (project && payload.client && project.client?.toString() !== payload.client.toString()) {
+        return res.status(400).json({ success: false, message: 'Selected project does not belong to the selected client' });
+      }
+      if (project && !payload.client) payload.client = project.client;
+
+      const client = payload.client
+        ? await Client.findById(payload.client).select('name assignedManager assignedTeam')
+        : null;
+      if (payload.client && !client) {
+        return res.status(404).json({ success: false, message: 'Client not found' });
+      }
+
+      if (!payload.taskCategory) {
+        payload.taskCategory = isWebsiteTaskType(payload.taskType) || payload.taskType === 'non_content'
+          ? 'non_content'
+          : 'content';
+      }
+
+      if (!payload.isClientVisible && payload.clientVisibleNotes?.trim()) {
+        payload.isClientVisible = true;
+      }
+
+      const duplicateCount = Math.max(1, Number(taskData.duplicateCount) || 1);
+
+      for (let i = 0; i < duplicateCount; i++) {
+        const taskTitle = duplicateCount > 1 ? `${payload.title} - ${i + 1}` : payload.title;
+        const currentPayload = {
+          ...payload,
+          title: taskTitle,
+          taskTitle: taskTitle,
+        };
+
+        const task = await Task.create({
+          ...currentPayload,
+          organizationId: req.user.organizationId,
+          brandId: req.user.brandId,
+          createdBy: req.user._id,
+        });
+        await syncTaskDerivedFields(task);
+        await task.save();
+
+        const io = req.app.get('io');
+        await notifyNewAssignees({
+          task,
+          previousAssignedTo: [],
+          actorId: req.user._id,
+          io,
+        });
+
+        if (task.project) {
+          io?.broadcastToProject?.(task.project.toString(), 'taskCreated', task);
+        }
+
+        await Promise.all([
+          client?._id ? Client.findByIdAndUpdate(client._id, { $set: { lastActivityDate: new Date() } }) : Promise.resolve(),
+          createActivityLog({
+            actor: req.user,
+            action: 'task.created',
+            entityType: 'task',
+            entityId: task._id,
+            title: 'Task created',
+            description: `${task.title} was created.`,
+            relatedClient: task.client,
+            relatedProject: task.project,
+            relatedTask: task._id,
+          }),
+        ]);
+
+        createdTasks.push(task);
+      }
+    }
+
+    if (createdTasks.length === 0) {
+      return res.status(400).json({ success: false, message: 'No tasks were created' });
     }
 
     const populated = await hydrateTask(createdTasks[0]._id);

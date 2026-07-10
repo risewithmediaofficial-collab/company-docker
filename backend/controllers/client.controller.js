@@ -3,11 +3,6 @@
 // =============================================
 
 import Client from '../models/client.model.js';
-// =============================================
-// CLIENT CONTROLLER
-// =============================================
-
-import Client from '../models/client.model.js';
 import User from '../models/user.model.js';
 import Project from '../models/project.model.js';
 import ActivityLog from '../models/activityLog.model.js';
