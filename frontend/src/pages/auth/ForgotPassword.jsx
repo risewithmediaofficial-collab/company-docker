@@ -16,9 +16,9 @@ const ForgotPassword = () => {
     try {
       const response = await axios.post('/api/auth/forgot-password', { email });
       setSubmitted(true);
-      toast.success(response.data.message || 'Password reset email sent');
+      toast.success(response.data.message || 'Password reset request sent to the administrator');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to send reset email');
+      toast.error(error.response?.data?.message || 'Failed to send reset request');
     } finally {
       setLoading(false);
     }
@@ -29,13 +29,13 @@ const ForgotPassword = () => {
       <div>
         <h2 className="text-xl font-bold tracking-tight">Reset your password</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Enter your email and we&apos;ll send you a secure reset link.
+          Enter your email and we&apos;ll notify the administrator to reset your password.
         </p>
       </div>
 
       {submitted ? (
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-700 dark:text-emerald-300">
-          If the email is configured for your account, a reset link is on its way.
+          Your password reset request has been sent to the administrator.
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -64,7 +64,7 @@ const ForgotPassword = () => {
             disabled={loading}
             className="flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? <Loader2 size={18} className="animate-spin" /> : 'Send reset link'}
+            {loading ? <Loader2 size={18} className="animate-spin" /> : 'Submit Request'}
           </button>
         </form>
       )}

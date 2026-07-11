@@ -200,26 +200,27 @@ export const forgotPassword = async (req, res) => {
       return res.status(404).json({ success: false, message: 'No account with that email' });
     }
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.resetPasswordExpire = Date.now() + 30 * 60 * 1000; // 30 min
-    await user.save({ validateBeforeSave: false });
+    // Get active superAdmin users
+    const admins = await User.find({ role: 'superAdmin', isActive: true });
+    const io = req.app.get('io');
 
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+    await Promise.all(
+      admins.map((admin) =>
+        createNotification(
+          {
+            recipient: admin._id,
+            sender: user._id,
+            type: 'system',
+            title: 'Password Change Request',
+            message: `${user.name} (${user.email}) has requested a password change.`,
+            link: '/admin/users',
+          },
+          io
+        )
+      )
+    );
 
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: 'Password Reset - RISE WITH MEDIA',
-        html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 30 minutes.</p>`,
-      });
-      res.json({ success: true, message: 'Password reset email sent' });
-    } catch (emailErr) {
-      user.resetPasswordToken = undefined;
-      user.resetPasswordExpire = undefined;
-      await user.save({ validateBeforeSave: false });
-      res.status(500).json({ success: false, message: 'Email could not be sent' });
-    }
+    res.json({ success: true, message: 'Password reset request has been sent to the administrator' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
