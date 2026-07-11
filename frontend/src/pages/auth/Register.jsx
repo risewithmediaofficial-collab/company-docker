@@ -128,6 +128,7 @@ const Register = () => {
               className="block w-full pl-10 pr-3 py-2.5 border border-border rounded-xl bg-secondary/30 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm appearance-none"
             >
               <option value="employee">Employee</option>
+              <option value="manager">Manager</option>
               <option value="intern">Intern</option>
               <option value="client">Client</option>
               <option value="referral">Referral Partner</option>
@@ -140,7 +141,7 @@ const Register = () => {
           disabled={loading}
           className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-lg shadow-primary/20 text-sm font-bold text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4"
         >
-          {loading ? <Loader2 className="animate-spin" size={18} /> : 'Create Account'}
+          {loading ? <Loader2 className="animate-spin" size={18} /> : 'Create New Account'}
         </button>
       </form>
 

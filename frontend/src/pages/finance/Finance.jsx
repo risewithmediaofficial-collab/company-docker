@@ -92,19 +92,27 @@ const Finance = () => {
   const isAdmin = user?.role === 'superAdmin';
   const canViewFinanceDetails = isAdmin || (!!user?.permissions?.canManageFinance && !isManager);
 
-  const tabs = [
-    ...(canViewFinanceDetails ? [
-      { id: 'records', label: 'Finance Records', icon: IndianRupee },
-      { id: 'invoices', label: 'Invoices', icon: FileText },
-      { id: 'referrals', label: 'Referrals', icon: Users2 },
-      { id: 'adsCampaigns', label: 'Ads Campaigns', icon: BarChart3 },
-    ] : [
-      { id: 'invoices', label: 'Invoices', icon: FileText }
-    ]),
-    ...(isAdmin ? [{ id: 'expenses', label: 'Expenses & Profits', icon: Receipt }] : []),
-  ];
+  const tabs = useMemo(() => {
+    if (isManager) {
+      return [{ id: 'adsCampaigns', label: 'Ads Campaigns', icon: BarChart3 }];
+    }
+    return [
+      ...(canViewFinanceDetails ? [
+        { id: 'records', label: 'Finance Records', icon: IndianRupee },
+        { id: 'invoices', label: 'Invoices', icon: FileText },
+        { id: 'referrals', label: 'Referrals', icon: Users2 },
+        { id: 'adsCampaigns', label: 'Ads Campaigns', icon: BarChart3 },
+      ] : [
+        { id: 'invoices', label: 'Invoices', icon: FileText }
+      ]),
+      ...(isAdmin ? [{ id: 'expenses', label: 'Expenses & Profits', icon: Receipt }] : []),
+    ];
+  }, [isManager, canViewFinanceDetails, isAdmin]);
 
-  const [activeTab, setActiveTab] = useState(canViewFinanceDetails ? 'records' : 'invoices');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (isManager) return 'adsCampaigns';
+    return canViewFinanceDetails ? 'records' : 'invoices';
+  });
   const [search, setSearch] = useState('');
   const [showFinanceModal, setShowFinanceModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -143,7 +151,7 @@ const Finance = () => {
     notes: '',
   });
 
-  const canManage = canViewFinanceDetails;
+  const canManage = canViewFinanceDetails || isManager;
   const canDeleteFinance = user?.role === 'superAdmin';
   const canDeleteInvoice = user?.role === 'superAdmin';
 
@@ -474,107 +482,69 @@ const Finance = () => {
 
   const totalAdsBudget = adsBudgetProjects.reduce((sum, project) => sum + project.adsBudget, 0);
 
-  if (isManager) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Ads Budget"
-          description="Managers can review ad budget allocations here without seeing full finance totals, invoices, or payment details."
-        >
-          <MetricGrid>
-            <MetricCard label="Projects" value={adsBudgetProjects.length} helper="Visible in the current search" icon={FileText} tone="info" />
-            <MetricCard label="Total Ads Budget" value={currency.format(totalAdsBudget)} helper="Combined ads allocation only" icon={IndianRupee} tone="primary" />
-            <MetricCard label="Active Projects" value={adsBudgetProjects.filter((project) => project.status === 'In Progress' || project.status === 'active').length} helper="Projects currently in delivery" icon={CheckCircle2} tone="success" />
-            <MetricCard label="No Ads Budget" value={adsBudgetProjects.filter((project) => project.adsBudget <= 0).length} helper="Projects missing ads allocation" icon={AlertCircle} tone="warning" />
-          </MetricGrid>
-        </PageHeader>
 
-        <PageToolbar>
-          <SearchField value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search projects or clients..." />
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="app-pill">{adsBudgetProjects.length} projects</div>
-          </div>
-        </PageToolbar>
-
-        <SectionCard title="Project Ads Budgets" description="Only ads budget allocations are visible for the manager role.">
-          <div className="max-h-[400px] overflow-y-auto pr-1 border border-border/40 rounded-2xl">
-            <DataTable
-              data={adsBudgetProjects}
-              columns={[
-                {
-                  key: 'project',
-                  label: 'Project',
-                  render: (row) => (
-                    <div className="min-w-0">
-                      <div className="font-semibold text-foreground">{row.name}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">{row.client?.company || row.client?.name || 'No client linked'}</div>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'status',
-                  label: 'Status',
-                  render: (row) => <StatusBadge tone="neutral">{row.status}</StatusBadge>,
-                },
-                {
-                  key: 'adsBudget',
-                  label: 'Ads Budget',
-                  render: (row) => currency.format(row.adsBudget),
-                },
-              ]}
-              emptyTitle="No projects found"
-              emptyDescription="Projects with ads budgets will appear here."
-            />
-          </div>
-        </SectionCard>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Finance Operations"
-        description="Track partial payments, private follow-ups, client-visible payment history, invoice status, client communication, and lead sources from one workspace."
+        title={isManager ? "Ads Campaigns" : "Finance Operations"}
+        description={isManager ? "Review ads budgets, actual spends, and log monthly campaign metrics for clients." : "Track partial payments, private follow-ups, client-visible payment history, invoice status, client communication, and lead sources from one workspace."}
         actions={(
           <div className="flex gap-3">
-            {canManage ? <Button variant="outline" onClick={() => { setSelectedRecord(null); setShowFinanceModal(true); }}><Plus size={16} className="mr-2" />Finance Record</Button> : null}
-            {canManage ? <Button variant="outline" onClick={() => { setSelectedInvoice(null); setShowInvoiceModal(true); }}><Plus size={16} className="mr-2" />Invoice</Button> : null}
+            {!isManager && canManage ? <Button variant="outline" onClick={() => { setSelectedRecord(null); setShowFinanceModal(true); }}><Plus size={16} className="mr-2" />Finance Record</Button> : null}
+            {!isManager && canManage ? <Button variant="outline" onClick={() => { setSelectedInvoice(null); setShowInvoiceModal(true); }}><Plus size={16} className="mr-2" />Invoice</Button> : null}
             {isAdmin && activeTab === 'expenses' ? <Button onClick={() => setShowExpenseModal(true)}><Plus size={16} className="mr-2" />Record Expense</Button> : null}
-            {isAdmin && activeTab === 'adsCampaigns' ? <Button onClick={() => setShowAdsCampaignModal(true)}><Plus size={16} className="mr-2" />Record Ads Campaign</Button> : null}
+            {(isManager || (isAdmin && activeTab === 'adsCampaigns')) ? <Button onClick={() => setShowAdsCampaignModal(true)}><Plus size={16} className="mr-2" />Record Ads Campaign</Button> : null}
           </div>
         )}
       >
-        <MetricGrid>
-          <MetricCard label="Outstanding" value={currency.format(metrics.totalReceivable)} helper="Pending receivable balance" icon={AlertCircle} tone={metrics.totalReceivable > 0 ? 'warning' : 'success'} />
-          <MetricCard label="Collected" value={currency.format(metrics.totalPaid)} helper="Total payments recorded" icon={CheckCircle2} tone="success" />
-          <MetricCard label="Open Invoices" value={metrics.openInvoices} helper="Draft, sent, viewed, or partial" icon={Receipt} tone="info" />
-          <MetricCard label="Overdue" value={metrics.overdue} helper="Finance records past due date" icon={FileText} tone={metrics.overdue ? 'danger' : 'neutral'} />
-        </MetricGrid>
+        {isManager ? (
+          <MetricGrid>
+            <MetricCard label="Projects" value={adsBudgetProjects.length} helper="Total tracked projects" icon={FileText} tone="info" />
+            <MetricCard label="Total Ads Budget" value={currency.format(totalAdsBudget)} helper="Combined ads allocation only" icon={IndianRupee} tone="primary" />
+            <MetricCard label="Active Campaigns" value={adsBudgetProjects.filter((project) => project.status === 'In Progress' || project.status === 'active').length} helper="Campaigns currently running" icon={CheckCircle2} tone="success" />
+            <MetricCard label="No Ads Budget" value={adsBudgetProjects.filter((project) => project.adsBudget <= 0).length} helper="Projects missing ads allocation" icon={AlertCircle} tone="warning" />
+          </MetricGrid>
+        ) : (
+          <MetricGrid>
+            <MetricCard label="Outstanding" value={currency.format(metrics.totalReceivable)} helper="Pending receivable balance" icon={AlertCircle} tone={metrics.totalReceivable > 0 ? 'warning' : 'success'} />
+            <MetricCard label="Collected" value={currency.format(metrics.totalPaid)} helper="Total payments recorded" icon={CheckCircle2} tone="success" />
+            <MetricCard label="Open Invoices" value={metrics.openInvoices} helper="Draft, sent, viewed, or partial" icon={Receipt} tone="info" />
+            <MetricCard label="Overdue" value={metrics.overdue} helper="Finance records past due date" icon={FileText} tone={metrics.overdue ? 'danger' : 'neutral'} />
+          </MetricGrid>
+        )}
       </PageHeader>
 
-      <div className="flex items-center gap-1 rounded-2xl border border-border bg-card p-1.5">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
-              activeTab === tab.id ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-            }`}
-          >
-            <tab.icon size={15} />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {tabs.length > 1 && (
+        <div className="flex items-center gap-1 rounded-2xl border border-border bg-card p-1.5">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+                activeTab === tab.id ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+              }`}
+            >
+              <tab.icon size={15} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <PageToolbar>
-        <SearchField value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search clients, projects, invoices, calls, or referrals..." />
+        <SearchField value={search} onChange={(event) => setSearch(event.target.value)} placeholder={isManager ? "Search campaigns..." : "Search clients, projects, invoices, calls, or referrals..."} />
         <div className="flex flex-wrap items-center gap-2">
-          <div className="app-pill">{financeRecords.length} finance records</div>
-          <div className="app-pill">{invoices.length} invoices</div>
-          <div className="app-pill">{payments.length} payments</div>
-          {isAdmin && <div className="app-pill">{expenses.length} expenses</div>}
+          {isManager ? (
+            <div className="app-pill">{adsBudgetProjects.length} campaigns</div>
+          ) : (
+            <>
+              <div className="app-pill">{financeRecords.length} finance records</div>
+              <div className="app-pill">{invoices.length} invoices</div>
+              <div className="app-pill">{payments.length} payments</div>
+              {isAdmin && <div className="app-pill">{expenses.length} expenses</div>}
+            </>
+          )}
         </div>
       </PageToolbar>
 

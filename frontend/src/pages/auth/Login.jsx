@@ -122,7 +122,7 @@ const Login = () => {
         <p className="text-sm text-muted-foreground">
           Don't have an account?{' '}
           <Link to="/register" className="font-semibold text-primary hover:underline transition-all">
-            Start free trial
+            Create new account
           </Link>
         </p>
       </div>

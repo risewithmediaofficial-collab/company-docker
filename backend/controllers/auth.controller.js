@@ -35,8 +35,8 @@ export const register = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email already registered' });
     }
 
-    // Only superAdmin can create superAdmin / manager accounts
-    const safeRole = ['employee', 'client', 'referral'].includes(role) ? role : 'employee';
+    // Only superAdmin can create superAdmin accounts
+    const safeRole = ['employee', 'client', 'referral', 'manager'].includes(role) ? role : 'employee';
 
     const newUser = await User.create({
       name,
