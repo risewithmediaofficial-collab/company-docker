@@ -34,6 +34,10 @@ const reportingEntrySchema = new mongoose.Schema(
     },
     notes: { type: String, default: '' },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    showToClient: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

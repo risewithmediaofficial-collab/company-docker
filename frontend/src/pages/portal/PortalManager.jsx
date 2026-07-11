@@ -34,7 +34,8 @@ const emptyContent = {
 
 const emptyReport = {
   clientId:'', month:'', year: new Date().getFullYear().toString(),
-  adSpend:'', optIns:'', callsBooked:'', newClients:'', cashCollected:'', totalRevenue:'', notes:''
+  adSpend:'', optIns:'', callsBooked:'', newClients:'', cashCollected:'', totalRevenue:'', notes:'',
+  showToClient: false
 };
 
 export default function PortalManager() {
@@ -86,7 +87,7 @@ export default function PortalManager() {
 
   const loadReports = useCallback(() => {
     if (!selectedClient) return;
-    api.get(`/portal/reporting`)
+    api.get(`/portal/reporting?clientId=${selectedClient}`)
       .then(r => setReportEntries(r.data.entries || []))
       .catch(() => setReportEntries([]));
   }, [selectedClient]);
@@ -158,7 +159,7 @@ export default function PortalManager() {
 
   // ── Report CRUD ───────────────────────────────────────────────────────────
   const openCreateReport = () => {
-    setReportForm({ ...emptyReport, clientId: selectedClient });
+    setReportForm({ ...emptyReport, clientId: selectedClient, showToClient: false });
     setReportModal('create');
   };
 
@@ -175,6 +176,7 @@ export default function PortalManager() {
       cashCollected: entry.cashCollected ?? '',
       totalRevenue: entry.totalRevenue ?? '',
       notes: entry.notes || '',
+      showToClient: entry.showToClient ?? false,
     });
     setReportModal(entry);
   };
@@ -192,6 +194,7 @@ export default function PortalManager() {
       cashCollected: Number(reportForm.cashCollected) || 0,
       totalRevenue: Number(reportForm.totalRevenue) || 0,
       notes: reportForm.notes,
+      showToClient: !!reportForm.showToClient,
     };
     setSaving(true);
     try {
@@ -366,7 +369,7 @@ export default function PortalManager() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-white/5">
-                      {['Month','Ad Spend','Opt-Ins','Calls','New Clients','Cash Collected','Revenue','Actions'].map(h => (
+                      {['Month','Ad Spend','Opt-Ins','Calls','New Clients','Cash Collected','Revenue','Show to Client','Actions'].map(h => (
                         <th key={h} className="text-left px-4 py-3 text-slate-400 font-semibold whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -385,6 +388,13 @@ export default function PortalManager() {
                           <td className="px-4 py-3 text-white">{entry.newClients||0}</td>
                           <td className="px-4 py-3 text-emerald-400">{formatINR(entry.cashCollected || 0)}</td>
                           <td className="px-4 py-3 text-pink-400">{formatINR(entry.totalRevenue || 0)}</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              entry.showToClient ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'
+                            }`}>
+                              {entry.showToClient ? 'Yes' : 'No'}
+                            </span>
+                          </td>
                           <td className="px-4 py-3">
                             <div className="flex gap-2">
                               <button onClick={() => openEditReport(entry)}
@@ -594,6 +604,18 @@ export default function PortalManager() {
                     placeholder="0" className="modal-input" />
                 </FormField>
               ))}
+              <div className="col-span-2 flex items-center gap-2 py-1.5">
+                <input
+                  type="checkbox"
+                  id="showToClient"
+                  checked={reportForm.showToClient || false}
+                  onChange={(e) => setReportForm((f) => ({ ...f, showToClient: e.target.checked }))}
+                  className="rounded border-slate-700 bg-slate-800 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-slate-900 h-4 w-4"
+                />
+                <label htmlFor="showToClient" className="text-xs text-slate-300 select-none cursor-pointer">
+                  Show to Client (Visible in Client Portal reports dashboard)
+                </label>
+              </div>
               <FormField label="Notes" span={2}>
                 <textarea rows={2} value={reportForm.notes} onChange={e => setReportForm(f => ({...f, notes: e.target.value}))}
                   className="modal-input resize-none" placeholder="Optional notes for this month…" />

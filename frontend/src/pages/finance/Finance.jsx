@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import {
   AlertCircle,
+  BarChart3,
   CheckCircle2,
   FileText,
   IndianRupee,
@@ -24,6 +25,7 @@ import {
 import { AddFinanceModal } from '../../components/modals/AddFinanceModal';
 import { AddInvoiceModal } from '../../components/modals/AddInvoiceModal';
 import { AddExpenseModal } from '../../components/modals/AddExpenseModal';
+import { AddAdsCampaignModal } from '../../components/modals/AddAdsCampaignModal';
 import { DataTable } from '../../components/ui/DataTable';
 import {
   MetricCard,
@@ -95,6 +97,7 @@ const Finance = () => {
       { id: 'records', label: 'Finance Records', icon: IndianRupee },
       { id: 'invoices', label: 'Invoices', icon: FileText },
       { id: 'referrals', label: 'Referrals', icon: Users2 },
+      { id: 'adsCampaigns', label: 'Ads Campaigns', icon: BarChart3 },
     ] : [
       { id: 'invoices', label: 'Invoices', icon: FileText }
     ]),
@@ -106,6 +109,7 @@ const Finance = () => {
   const [showFinanceModal, setShowFinanceModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showAdsCampaignModal, setShowAdsCampaignModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [deleteInvoiceId, setDeleteInvoiceId] = useState(null);
@@ -450,13 +454,23 @@ const Finance = () => {
     });
   };
 
-  const adsBudgetProjects = useMemo(() => managerProjects.map((project) => {
-    const adsBudget = Number(project.budgetDetails?.adsAmount || 0);
-    return {
-      ...project,
-      adsBudget,
-    };
-  }), [managerProjects]);
+  const adsBudgetProjects = useMemo(() => {
+    const projList = isAdmin ? projects : managerProjects;
+    const filteredProjList = isAdmin
+      ? projList.filter((p) => {
+          const haystack = `${p.name} ${p.client?.company || ''} ${p.client?.name || ''}`.toLowerCase();
+          return haystack.includes(search.toLowerCase());
+        })
+      : projList;
+
+    return filteredProjList.map((project) => {
+      const adsBudget = Number(project.budgetDetails?.adsAmount || 0);
+      return {
+        ...project,
+        adsBudget,
+      };
+    });
+  }, [isAdmin, projects, managerProjects, search]);
 
   const totalAdsBudget = adsBudgetProjects.reduce((sum, project) => sum + project.adsBudget, 0);
 
@@ -525,6 +539,7 @@ const Finance = () => {
             {canManage ? <Button variant="outline" onClick={() => { setSelectedRecord(null); setShowFinanceModal(true); }}><Plus size={16} className="mr-2" />Finance Record</Button> : null}
             {canManage ? <Button variant="outline" onClick={() => { setSelectedInvoice(null); setShowInvoiceModal(true); }}><Plus size={16} className="mr-2" />Invoice</Button> : null}
             {isAdmin && activeTab === 'expenses' ? <Button onClick={() => setShowExpenseModal(true)}><Plus size={16} className="mr-2" />Record Expense</Button> : null}
+            {isAdmin && activeTab === 'adsCampaigns' ? <Button onClick={() => setShowAdsCampaignModal(true)}><Plus size={16} className="mr-2" />Record Ads Campaign</Button> : null}
           </div>
         )}
       >
@@ -827,6 +842,54 @@ const Finance = () => {
           </SectionCard>
         </div>
       ) : null}
+      {activeTab === 'adsCampaigns' ? (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <MetricCard label="Projects" value={adsBudgetProjects.length} helper="Total tracked projects" icon={FileText} tone="info" />
+            <MetricCard label="Total Ads Budget" value={currency.format(totalAdsBudget)} helper="Combined allocation" icon={IndianRupee} tone="primary" />
+            <MetricCard label="Active Campaigns" value={adsBudgetProjects.filter((project) => project.status === 'In Progress' || project.status === 'active').length} helper="Campaigns currently running" icon={CheckCircle2} tone="success" />
+            <MetricCard label="No Allocation" value={adsBudgetProjects.filter((project) => project.adsBudget <= 0).length} helper="Projects without ads budgets" icon={AlertCircle} tone="warning" />
+          </div>
+
+          <SectionCard 
+            title="Project Ads Budgets" 
+            description="Review ads budgets allocated across active client campaigns."
+            action={
+              <Button size="sm" onClick={() => setShowAdsCampaignModal(true)}>
+                <BarChart3 size={15} className="mr-1" /> Record Ads Campaign
+              </Button>
+            }
+          >
+            <DataTable
+              data={adsBudgetProjects}
+              columns={[
+                {
+                  key: 'project',
+                  label: 'Project',
+                  render: (row) => (
+                    <div className="min-w-0">
+                      <div className="font-semibold text-foreground">{row.name}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">{row.client?.company || row.client?.name || 'No client linked'}</div>
+                    </div>
+                  ),
+                },
+                {
+                  key: 'status',
+                  label: 'Status',
+                  render: (row) => <StatusBadge tone={row.status === 'In Progress' || row.status === 'active' ? 'success' : 'neutral'}>{row.status}</StatusBadge>,
+                },
+                {
+                  key: 'adsBudget',
+                  label: 'Ads Budget',
+                  render: (row) => currency.format(row.adsBudget),
+                },
+              ]}
+              emptyTitle="No projects found"
+              emptyDescription="Projects with ads budgets will appear here."
+            />
+          </SectionCard>
+        </div>
+      ) : null}
 
       <AlertDialog open={!!deleteInvoiceId} onOpenChange={(open) => !open && setDeleteInvoiceId(null)}>
         <AlertDialogContent>
@@ -856,6 +919,7 @@ const Finance = () => {
       <AddFinanceModal open={showFinanceModal} onOpenChange={setShowFinanceModal} entry={selectedRecord} />
       <AddInvoiceModal open={showInvoiceModal} onOpenChange={setShowInvoiceModal} invoice={selectedInvoice} />
       <AddExpenseModal open={showExpenseModal} onOpenChange={setShowExpenseModal} />
+      <AddAdsCampaignModal open={showAdsCampaignModal} onOpenChange={setShowAdsCampaignModal} />
     </div>
   );
 };

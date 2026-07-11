@@ -34,7 +34,7 @@ router.get('/content/:id', authorize('client'), getContentItem);
 router.post('/content/:id/approve', authorize('client'), approveContentItem);
 router.post('/content/:id/revision', authorize('client'), requestRevision);
 router.post('/content/:id/feedback', authorize('client'), addContentFeedback);
-router.get('/reporting', authorize('client'), getReportingData);
+router.get('/reporting', authorize('client', 'superAdmin', 'manager'), getReportingData);
 router.get('/finance', authorize('client'), getClientFinanceOverview);
 router.get('/invoices', authorize('client'), getClientInvoices);
 router.get('/projects', authorize('client'), getClientProjects);

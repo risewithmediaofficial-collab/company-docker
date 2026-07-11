@@ -419,7 +419,7 @@ export default function CallHistoryDashboard() {
             <SectionCard
               title={isEditing ? 'Edit Call Note' : 'Log Call Note'}
               description="Record discussion points, update CRM pipeline stages, and schedule follow-ups."
-              className="sticky top-6 border border-border/60 shadow-lg"
+              className="sticky top-6 border border-border/60 shadow-lg max-h-[calc(100vh-100px)] overflow-y-auto"
             >
               <form onSubmit={handleSubmit} className="space-y-4">
                                 {/* Form Type Selector */}

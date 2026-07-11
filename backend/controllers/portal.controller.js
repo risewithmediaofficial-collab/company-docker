@@ -207,9 +207,25 @@ export const addContentFeedback = async (req, res) => {
 
 export const getReportingData = async (req, res) => {
   try {
-    const { year } = req.query;
+    const { year, clientId } = req.query;
     const targetYear = year || new Date().getFullYear().toString();
-    const scope = withWorkspaceScope(req, { month: { $regex: `^${targetYear}` } });
+    
+    const extraScope = {};
+    if (req.user.role === 'client') {
+      const client = await getClientFromUser(req.user._id);
+      if (!client) {
+        return res.status(404).json({ success: false, message: 'Client profile not found' });
+      }
+      extraScope.client = client._id;
+      extraScope.showToClient = true;
+    } else if (clientId) {
+      extraScope.client = clientId;
+    }
+
+    const scope = withWorkspaceScope(req, {
+      month: { $regex: `^${targetYear}` },
+      ...extraScope,
+    });
 
     const entries = await ReportingEntry.find(scope).sort({ month: 1 });
 
@@ -291,6 +307,7 @@ export const createReportingEntry = async (req, res) => {
   try {
     const entry = await ReportingEntry.create({
       ...req.body,
+      client: req.body.client || req.body.clientId,
       createdBy: req.user._id,
     });
 
@@ -303,7 +320,14 @@ export const createReportingEntry = async (req, res) => {
 export const updateReportingEntry = async (req, res) => {
   try {
     const scope = withWorkspaceScope(req, { _id: req.params.id });
-    const entry = await ReportingEntry.findOneAndUpdate(scope, req.body, { new: true });
+    const entry = await ReportingEntry.findOneAndUpdate(
+      scope,
+      {
+        ...req.body,
+        client: req.body.client || req.body.clientId,
+      },
+      { new: true }
+    );
     if (!entry) return res.status(404).json({ success: false, message: 'Entry not found' });
     res.json({ success: true, entry });
   } catch (error) {
