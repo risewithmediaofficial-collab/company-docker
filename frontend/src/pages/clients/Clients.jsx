@@ -155,23 +155,23 @@ const Clients = () => {
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="Search by name, email, phone, or company..."
           />
-          <select className="app-input h-10 text-xs" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <select className="app-input h-10 text-xs w-full sm:w-auto sm:min-w-[140px]" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All statuses</option>
             {['Active', 'Prospect', 'Inactive', 'Churned', 'Renew'].map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <select className="app-input h-10 text-xs" value={serviceFilter} onChange={(e) => setServiceFilter(e.target.value)}>
+          <select className="app-input h-10 text-xs w-full sm:w-auto sm:min-w-[140px]" value={serviceFilter} onChange={(e) => setServiceFilter(e.target.value)}>
             <option value="">All services</option>
             {['Social Media', 'Website', 'Branding', 'SEO', 'Ads', 'Video Editing', 'Content Creation', 'Custom'].map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
-          <input type="date" className="app-input h-10 text-xs" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} />
-          <input type="date" className="app-input h-10 text-xs" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
+          <input type="date" className="app-input h-10 text-xs w-full sm:w-auto sm:min-w-[140px]" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} />
+          <input type="date" className="app-input h-10 text-xs w-full sm:w-auto sm:min-w-[140px]" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
           <Button type="button" variant="outline" size="sm" onClick={clearFilters}>Clear</Button>
           <div className="app-pill text-xs">{clients.length} clients</div>
           <Button
             size="sm"
-            className="ml-auto"
+            className="ml-auto w-full sm:w-auto"
             onClick={() => {
               setSelectedClient(null);
               setShowAddModal(true);

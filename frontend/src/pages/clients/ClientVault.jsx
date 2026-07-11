@@ -478,13 +478,13 @@ const ClientVault = () => {
           onChange={(event) => setSearchTerm(event.target.value)}
           placeholder="Search client, username, URL, tag, or credential name..."
         />
-        <select value={clientFilter} onChange={(event) => setClientFilter(event.target.value)} className="app-input lg:w-56">
+        <select value={clientFilter} onChange={(event) => setClientFilter(event.target.value)} className="app-input w-full sm:w-auto sm:min-w-[160px] lg:w-56">
           <option value="all">All clients</option>
           {clients.map((client) => (
             <option key={client._id} value={client._id}>{client.company || client.name}</option>
           ))}
         </select>
-        <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="app-input lg:w-52">
+        <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="app-input w-full sm:w-auto sm:min-w-[150px] lg:w-52">
           <option value="all">All types</option>
           {credentialTypes.map((type) => (
             <option key={type.value} value={type.value}>{type.label}</option>

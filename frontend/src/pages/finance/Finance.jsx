@@ -497,33 +497,35 @@ const Finance = () => {
         </PageToolbar>
 
         <SectionCard title="Project Ads Budgets" description="Only ads budget allocations are visible for the manager role.">
-          <DataTable
-            data={adsBudgetProjects}
-            columns={[
-              {
-                key: 'project',
-                label: 'Project',
-                render: (row) => (
-                  <div className="min-w-0">
-                    <div className="font-semibold text-foreground">{row.name}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">{row.client?.company || row.client?.name || 'No client linked'}</div>
-                  </div>
-                ),
-              },
-              {
-                key: 'status',
-                label: 'Status',
-                render: (row) => <StatusBadge tone="neutral">{row.status}</StatusBadge>,
-              },
-              {
-                key: 'adsBudget',
-                label: 'Ads Budget',
-                render: (row) => currency.format(row.adsBudget),
-              },
-            ]}
-            emptyTitle="No projects found"
-            emptyDescription="Projects with ads budgets will appear here."
-          />
+          <div className="max-h-[400px] overflow-y-auto pr-1 border border-border/40 rounded-2xl">
+            <DataTable
+              data={adsBudgetProjects}
+              columns={[
+                {
+                  key: 'project',
+                  label: 'Project',
+                  render: (row) => (
+                    <div className="min-w-0">
+                      <div className="font-semibold text-foreground">{row.name}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">{row.client?.company || row.client?.name || 'No client linked'}</div>
+                    </div>
+                  ),
+                },
+                {
+                  key: 'status',
+                  label: 'Status',
+                  render: (row) => <StatusBadge tone="neutral">{row.status}</StatusBadge>,
+                },
+                {
+                  key: 'adsBudget',
+                  label: 'Ads Budget',
+                  render: (row) => currency.format(row.adsBudget),
+                },
+              ]}
+              emptyTitle="No projects found"
+              emptyDescription="Projects with ads budgets will appear here."
+            />
+          </div>
         </SectionCard>
       </div>
     );
@@ -578,23 +580,25 @@ const Finance = () => {
 
       {activeTab === 'records' ? (
         <SectionCard title="Finance Records" description="Track total amount, paid amount, balance, follow-up notes, and client-visible payment updates.">
-          <DataTable
-            data={financeRecords}
-            columns={financeColumns}
-            onRowClick={(row) => {
-              setSelectedRecord(row);
-              setShowFinanceModal(true);
-            }}
-            onEdit={canManage ? (row) => {
-              setSelectedRecord(row);
-              setShowFinanceModal(true);
-            } : null}
-            onDelete={canDeleteFinance ? (id) => deleteFinanceRecord.mutate(id) : null}
-            emptyTitle="No finance records yet"
-            emptyDescription="Create a finance record for each client project to start tracking balance and follow-up."
-          />
+          <div className="max-h-[400px] overflow-y-auto pr-1 border border-border/40 rounded-2xl">
+            <DataTable
+              data={financeRecords}
+              columns={financeColumns}
+              onRowClick={(row) => {
+                setSelectedRecord(row);
+                setShowFinanceModal(true);
+              }}
+              onEdit={canManage ? (row) => {
+                setSelectedRecord(row);
+                setShowFinanceModal(true);
+              } : null}
+              onDelete={canDeleteFinance ? (id) => deleteFinanceRecord.mutate(id) : null}
+              emptyTitle="No finance records yet"
+              emptyDescription="Create a finance record for each client project to start tracking balance and follow-up."
+            />
+          </div>
 
-          <div className="mt-6 grid gap-4">
+          <div className="mt-6 grid gap-4 max-h-[500px] overflow-y-auto pr-1">
             {financeRecords.map((record) => (
               <div key={record._id} className="rounded-3xl border border-border bg-background p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -644,23 +648,25 @@ const Finance = () => {
 
       {activeTab === 'invoices' ? (
         <SectionCard title="Invoices" description="Create invoices, send them to the client dashboard, and track partial or completed payment updates.">
-          <DataTable
-            data={invoices}
-            columns={invoiceColumns}
-            onRowClick={(row) => {
-              setSelectedInvoice(row);
-              setShowInvoiceModal(true);
-            }}
-            onEdit={canManage ? (row) => {
-              setSelectedInvoice(row);
-              setShowInvoiceModal(true);
-            } : null}
-            onDelete={canDeleteInvoice ? (id) => setDeleteInvoiceId(id) : null}
-            emptyTitle="No invoices created yet"
-            emptyDescription="Create your first invoice to share payment details with the client."
-          />
+          <div className="max-h-[400px] overflow-y-auto pr-1 border border-border/40 rounded-2xl">
+            <DataTable
+              data={invoices}
+              columns={invoiceColumns}
+              onRowClick={(row) => {
+                setSelectedInvoice(row);
+                setShowInvoiceModal(true);
+              }}
+              onEdit={canManage ? (row) => {
+                setSelectedInvoice(row);
+                setShowInvoiceModal(true);
+              } : null}
+              onDelete={canDeleteInvoice ? (id) => setDeleteInvoiceId(id) : null}
+              emptyTitle="No invoices created yet"
+              emptyDescription="Create your first invoice to share payment details with the client."
+            />
+          </div>
 
-          <div className="mt-6 grid gap-4">
+          <div className="mt-6 grid gap-4 max-h-[500px] overflow-y-auto pr-1">
             {invoices.map((invoice) => (
               <div key={invoice._id} className="rounded-3xl border border-border bg-background p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -737,7 +743,7 @@ const Finance = () => {
             <MetricCard label="Revenue" value={currency.format(Number(referralAnalytics.totalRevenueFromConvertedClients || 0))} helper={referralAnalytics.bestPerformingReferralSource ? `Best source: ${referralAnalytics.bestPerformingReferralSource}` : 'No best source yet'} icon={IndianRupee} tone="primary" />
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
             {filteredReferrals.map((item) => (
               <div key={item._id} className="rounded-3xl border border-border bg-background p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -831,12 +837,14 @@ const Finance = () => {
                 </Button>
               </div>
 
-              <DataTable
-                data={expenses}
-                columns={expenseColumns}
-                emptyTitle="No expenses logged yet"
-                emptyDescription="Expenses logged or submitted by team members will show up here."
-              />
+              <div className="max-h-[400px] overflow-y-auto pr-1 border border-border/40 rounded-2xl">
+                <DataTable
+                  data={expenses}
+                  columns={expenseColumns}
+                  emptyTitle="No expenses logged yet"
+                  emptyDescription="Expenses logged or submitted by team members will show up here."
+                />
+              </div>
             </div>
 
           </SectionCard>
@@ -860,33 +868,35 @@ const Finance = () => {
               </Button>
             }
           >
-            <DataTable
-              data={adsBudgetProjects}
-              columns={[
-                {
-                  key: 'project',
-                  label: 'Project',
-                  render: (row) => (
-                    <div className="min-w-0">
-                      <div className="font-semibold text-foreground">{row.name}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">{row.client?.company || row.client?.name || 'No client linked'}</div>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'status',
-                  label: 'Status',
-                  render: (row) => <StatusBadge tone={row.status === 'In Progress' || row.status === 'active' ? 'success' : 'neutral'}>{row.status}</StatusBadge>,
-                },
-                {
-                  key: 'adsBudget',
-                  label: 'Ads Budget',
-                  render: (row) => currency.format(row.adsBudget),
-                },
-              ]}
-              emptyTitle="No projects found"
-              emptyDescription="Projects with ads budgets will appear here."
-            />
+            <div className="max-h-[400px] overflow-y-auto pr-1 border border-border/40 rounded-2xl">
+              <DataTable
+                data={adsBudgetProjects}
+                columns={[
+                  {
+                    key: 'project',
+                    label: 'Project',
+                    render: (row) => (
+                      <div className="min-w-0">
+                        <div className="font-semibold text-foreground">{row.name}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">{row.client?.company || row.client?.name || 'No client linked'}</div>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'status',
+                    label: 'Status',
+                    render: (row) => <StatusBadge tone={row.status === 'In Progress' || row.status === 'active' ? 'success' : 'neutral'}>{row.status}</StatusBadge>,
+                  },
+                  {
+                    key: 'adsBudget',
+                    label: 'Ads Budget',
+                    render: (row) => currency.format(row.adsBudget),
+                  },
+                ]}
+                emptyTitle="No projects found"
+                emptyDescription="Projects with ads budgets will appear here."
+              />
+            </div>
           </SectionCard>
         </div>
       ) : null}

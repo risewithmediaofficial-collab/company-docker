@@ -308,14 +308,14 @@ const ClientFollowups = () => {
 
       <PageToolbar>
         <SearchField value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search clients, notes, outcomes..." />
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="app-input lg:w-48">
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="app-input w-full sm:w-auto sm:min-w-[150px] lg:w-48">
           <option value="">All statuses</option>
           <option value="open">Open</option>
           <option value="completed">Completed</option>
           <option value="waiting">Waiting</option>
           <option value="cancelled">Cancelled</option>
         </select>
-        <select value={dueFilter} onChange={(event) => setDueFilter(event.target.value)} className="app-input lg:w-48">
+        <select value={dueFilter} onChange={(event) => setDueFilter(event.target.value)} className="app-input w-full sm:w-auto sm:min-w-[150px] lg:w-48">
           <option value="">All dates</option>
           <option value="today">Today</option>
           <option value="overdue">Overdue</option>
