@@ -479,15 +479,15 @@ const ClientVault = () => {
           placeholder="Search client, username, URL, tag, or credential name..."
         />
         <select value={clientFilter} onChange={(event) => setClientFilter(event.target.value)} className="app-input w-full sm:w-auto sm:min-w-[160px] lg:w-56">
-          <option value="all">All clients</option>
+          <option value="all" onClick={() => setClientFilter('all')}>All clients</option>
           {clients.map((client) => (
-            <option key={client._id} value={client._id}>{client.company || client.name}</option>
+            <option key={client._id} value={client._id} onClick={() => { if (clientFilter === client._id) setClientFilter('all'); }}>{client.company || client.name}</option>
           ))}
         </select>
         <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="app-input w-full sm:w-auto sm:min-w-[150px] lg:w-52">
-          <option value="all">All types</option>
+          <option value="all" onClick={() => setTypeFilter('all')}>All types</option>
           {credentialTypes.map((type) => (
-            <option key={type.value} value={type.value}>{type.label}</option>
+            <option key={type.value} value={type.value} onClick={() => { if (typeFilter === type.value) setTypeFilter('all'); }}>{type.label}</option>
           ))}
         </select>
       </PageToolbar>

@@ -95,9 +95,9 @@ const Proposals = () => {
       <PageToolbar>
         <SearchField value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search proposals..." />
         <select className="app-input w-full sm:w-auto sm:min-w-[160px]" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">All statuses</option>
+          <option value="" onClick={() => setStatusFilter('')}>All statuses</option>
           {['draft', 'sent', 'viewed', 'accepted', 'rejected', 'expired'].map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s} onClick={() => { if (statusFilter === s) setStatusFilter(''); }}>{s}</option>
           ))}
         </select>
         <div className="app-pill">{filtered.length} proposals</div>

@@ -338,15 +338,15 @@ const DomainRenewals = () => {
       <PageToolbar>
         <SearchField value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search item, domain, provider, or notes..." />
         <select value={itemType} onChange={(event) => setItemType(event.target.value)} className="app-input w-full sm:w-auto sm:min-w-[150px] lg:w-52">
-          <option value="all">All types</option>
+          <option value="all" onClick={() => setItemType('all')}>All types</option>
           {renewalTypeOptions.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
+            <option key={option.value} value={option.value} onClick={() => { if (itemType === option.value) setItemType('all'); }}>{option.label}</option>
           ))}
         </select>
         <select value={status} onChange={(event) => setStatus(event.target.value)} className="app-input w-full sm:w-auto sm:min-w-[150px] lg:w-52">
-          <option value="all">All statuses</option>
+          <option value="all" onClick={() => setStatus('all')}>All statuses</option>
           {renewalStatusOptions.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
+            <option key={option.value} value={option.value} onClick={() => { if (status === option.value) setStatus('all'); }}>{option.label}</option>
           ))}
         </select>
       </PageToolbar>
