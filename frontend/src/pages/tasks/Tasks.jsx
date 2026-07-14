@@ -70,6 +70,7 @@ const Tasks = () => {
   const { user } = useSelector((state) => state.auth);
   const isEmployee = user?.role === 'employee';
   const isClient = user?.role === 'client';
+  const isManager = user?.role === 'manager';
   const { data: tasks = [], isLoading } = useTasks(filters);
   const { data: clients = [] } = useClients();
   const { data: users = [] } = useUsers({ enabled: !isEmployee });
@@ -215,10 +216,12 @@ const Tasks = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={isEmployee ? 'Assigned Work' : 'Advanced Task Management'}
+        title={isEmployee ? 'Assigned Work' : isManager ? 'Manager Tasks' : 'Advanced Task Management'}
         description={isEmployee
           ? 'See only the tasks assigned to you, update delivery status, upload completed files, and keep clients informed.'
-          : 'Manage content and non-content tasks with structured requirements, clear ownership, and client approval flow.'}
+          : isManager
+            ? 'View and manage the tasks under your team’s responsibility. Create, assign, and track task progress across clients and projects.'
+            : 'Manage content and non-content tasks with structured requirements, clear ownership, and client approval flow.'}
         actions={!isEmployee ? (
           <Button
             onClick={() => navigate('/tasks/new')}
@@ -235,6 +238,13 @@ const Tasks = () => {
           <MetricCard label="Overdue" value={taskMetrics.overdue} helper="Needs attention right away" icon={TimerReset} tone={taskMetrics.overdue > 0 ? 'danger' : 'neutral'} />
         </MetricGrid>
       </PageHeader>
+
+      {isManager && (
+        <div className="rounded-3xl border border-border bg-secondary/70 p-4 text-sm text-foreground">
+          <p className="font-semibold">Manager task inbox</p>
+          <p className="mt-1 text-sm text-muted-foreground">This page shows tasks within your management scope. Use filters to narrow by client, assignee, or status.</p>
+        </div>
+      )}
 
       <PageToolbar>
         <SearchField

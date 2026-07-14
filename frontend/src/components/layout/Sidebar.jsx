@@ -98,7 +98,7 @@ const Sidebar = () => {
       { name: 'Daily Tasks', icon: Calendar, path: '/daily-tasks' },
       { name: 'Clients', icon: Users, path: '/clients' },
       { name: 'Projects', icon: Briefcase, path: '/projects' },
-      { name: 'Team Tasks', icon: CheckSquare, path: '/tasks' },
+      { name: 'Manager Tasks', icon: CheckSquare, path: '/manager-tasks' },
       { name: 'SOP Dashboard', icon: BookOpen, path: '/sop' },
       { name: 'Proposals', icon: FileText, path: '/proposals' },
       { name: 'Ads Campaigns', icon: BarChart3, path: '/finance' },

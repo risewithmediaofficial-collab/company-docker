@@ -213,6 +213,11 @@ const App = () => {
               <Tasks />
             </ProtectedRoute>
           } />
+          <Route path="/manager-tasks" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['manager']}>
+              <Tasks />
+            </ProtectedRoute>
+          } />
           <Route path="/tasks/new" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
               <AddTask />
