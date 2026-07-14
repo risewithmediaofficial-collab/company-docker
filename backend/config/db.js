@@ -27,14 +27,19 @@ export const connectDB = async () => {
     });
 
     mongoose.connection.on('disconnected', () => {
-      console.warn('MongoDB disconnected');
+      console.warn('MongoDB disconnected. Attempting to reconnect...');
+      setTimeout(connectDB, 5000);
     });
   } catch (error) {
     const env = getEnv();
     console.error(`MongoDB connection failed (${env.mongoUri}): ${error.message}`);
-    if (error.code === 'ECONNREFUSED') {
-      console.error('Ensure MongoDB is running and the MONGO_URI is correct.');
+
+    // Retry on connection refused (MongoDB not yet started)
+    if (error.code === 'ECONNREFUSED' || error.message?.includes('ECONNREFUSED')) {
+      console.warn('MongoDB not reachable. Retrying in 5 seconds...');
+      setTimeout(connectDB, 5000);
+    } else {
+      process.exit(1);
     }
-    process.exit(1);
   }
 };
