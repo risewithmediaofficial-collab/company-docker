@@ -47,6 +47,7 @@ import assetRoutes from './routes/asset.routes.js';
 import domainRenewalRoutes from './routes/domainRenewal.routes.js';
 import sopRoutes from './routes/sop.routes.js';
 import proposalRoutes from './routes/proposal.routes.js';
+import taskNoteRoutes from './routes/taskNote.routes.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
 
 loadEnv();
@@ -153,6 +154,7 @@ app.use('/api/assets', assetRoutes);
 app.use('/api/domain-renewals', domainRenewalRoutes);
 app.use('/api/sop', sopRoutes);
 app.use('/api/proposals', proposalRoutes);
+app.use('/api/task-notes', taskNoteRoutes);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

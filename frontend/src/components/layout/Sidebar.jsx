@@ -27,6 +27,8 @@ import {
   PhoneCall,
   Globe2,
   CreditCard,
+  ClipboardList,
+  StickyNote,
   X
 } from 'lucide-react';
 import { toggleSidebar } from '../../store/slices/uiSlice';
@@ -90,6 +92,7 @@ const Sidebar = () => {
       { name: 'Asset Library', icon: Palette, path: '/assets' },
       { name: 'Portal Manager', icon: FileText, path: '/portal-manager' },
       { name: 'Manager Assignments', icon: CheckSquare, path: '/admin/manager-assignments' },
+      { name: 'Manager Board', icon: ClipboardList, path: '/manager-board' },
       { name: 'Users', icon: Users2, path: '/admin/users' },
     ],
     manager: [
@@ -112,11 +115,13 @@ const Sidebar = () => {
       { name: 'Reports', icon: BarChart3, path: '/reports' },
       { name: 'Asset Library', icon: Palette, path: '/assets' },
       { name: 'Portal Manager', icon: FileText, path: '/portal-manager' },
+      { name: 'Manager Board', icon: ClipboardList, path: '/manager-board' },
     ],
     employee: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
       { name: 'Daily Tasks', icon: Calendar, path: '/daily-tasks' },
       { name: 'My Tasks', icon: CheckSquare, path: '/tasks' },
+      { name: 'Pending Notes', icon: StickyNote, path: '/pending-notes' },
       { name: 'SOP Dashboard', icon: BookOpen, path: '/sop' },
       { name: 'Content Calendar', icon: Calendar, path: '/calendar' },
       { name: 'Client Vault', icon: KeyRound, path: '/client-vault' },

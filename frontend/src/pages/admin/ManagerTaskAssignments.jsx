@@ -6,7 +6,7 @@ import { DataTable } from '../../components/ui/DataTable';
 import { Button } from '../../components/ui/button';
 import { MetricCard, MetricGrid, PageHeader, PageToolbar, SearchField, StatusBadge } from '../../components/ui/page';
 import { useClients } from '../../hooks/useClients';
-import { useDeleteTask, useTasks, useUpdateTaskStatus } from '../../hooks/useTasks';
+import { useDeleteTask, useTasks, useUpdateTask, useUpdateTaskStatus } from '../../hooks/useTasks';
 import { useUsers } from '../../hooks/useUsers';
 import { CONTENT_TASK_TYPE_OPTIONS, NON_CONTENT_TASK_TYPE_OPTIONS, PRIORITY_OPTIONS, TASK_STATUS_OPTIONS, formatTaskTypeLabel, normalizeTaskStatusLabel } from '../../utils/taskFields';
 
@@ -36,18 +36,20 @@ const ManagerTaskAssignments = () => {
   const [filters, setFilters] = useState({
     search: '',
     client: '',
-    assignedManager: '',
+    assignedManager: 'unassigned',
     assignedTo: '',
     status: '',
     taskType: '',
     priority: '',
     dueDate: '',
   });
+  const [selectedManagers, setSelectedManagers] = useState({});
 
   const { data: tasks = [], isLoading } = useTasks(filters);
   const { data: clients = [] } = useClients();
   const { data: users = [] } = useUsers({ enabled: true });
   const deleteTaskMutation = useDeleteTask();
+  const updateTaskMutation = useUpdateTask();
   const updateStatusMutation = useUpdateTaskStatus();
 
   const managerUsers = useMemo(() => users.filter((person) => person.role === 'manager'), [users]);
@@ -85,6 +87,43 @@ const ManagerTaskAssignments = () => {
       key: 'assignedManager',
       label: 'Manager',
       render: (row) => row.assignedManager?.name || 'Unassigned',
+    },
+    {
+      key: 'note',
+      label: 'Pending Note',
+      render: (row) => (
+        <div className="text-sm text-muted-foreground">
+          {row.description ? row.description.substring(0, 80) : 'Task needs manager review and delegation.'}
+        </div>
+      ),
+    },
+    {
+      key: 'assign',
+      label: 'Send to Manager',
+      render: (row) => (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <select
+            value={selectedManagers[row._id] || ''}
+            onChange={(event) => setSelectedManagers((current) => ({ ...current, [row._id]: event.target.value }))}
+            className="rounded-2xl border border-border bg-background px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+          >
+            <option value="">Select manager</option>
+            {managerUsers.map((manager) => (
+              <option key={manager._id} value={manager._id}>{manager.name}</option>
+            ))}
+          </select>
+          <Button
+            size="sm"
+            disabled={!selectedManagers[row._id]}
+            onClick={(event) => {
+              event.stopPropagation();
+              sendTaskToManager(row._id);
+            }}
+          >
+            Send
+          </Button>
+        </div>
+      ),
     },
     {
       key: 'assignedTo',
@@ -130,6 +169,13 @@ const ManagerTaskAssignments = () => {
 
   const handleDeleteTask = async (taskId) => {
     await deleteTaskMutation.mutateAsync(taskId);
+  };
+
+  const sendTaskToManager = async (taskId) => {
+    const managerId = selectedManagers[taskId];
+    if (!managerId) return;
+
+    await updateTaskMutation.mutateAsync({ id: taskId, data: { assignedManager: managerId } });
   };
 
   return (
@@ -234,8 +280,8 @@ const ManagerTaskAssignments = () => {
         loading={isLoading}
         onRowClick={(task) => navigate(`/tasks/${task._id}`)}
         onDelete={(id) => handleDeleteTask(id)}
-        emptyTitle="No manager-assigned tasks found"
-        emptyDescription="Update filters or create a new manager assignment to display tasks here."
+        emptyTitle="No pending manager tasks found"
+        emptyDescription="Create tasks or update filters to find tasks pending manager assignment."
       />
     </div>
   );

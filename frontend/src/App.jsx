@@ -31,6 +31,8 @@ import ClientVault from './pages/clients/ClientVault';
 import ClientFollowups from './pages/clients/ClientFollowups';
 import Tasks from './pages/tasks/Tasks';
 import ContentCalendar from './pages/tasks/ContentCalendar';
+import PendingNotes from './pages/tasks/PendingNotes';
+import ManagerBoard from './pages/tasks/ManagerBoard';
 import Finance from './pages/finance/Finance';
 import CallHistoryDashboard from './pages/finance/CallHistoryDashboard';
 import HR from './pages/hr/HR';
@@ -237,6 +239,20 @@ const App = () => {
           <Route path="/daily-tasks" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client', 'referral']}>
               <ContentCalendar defaultView="day" />
+            </ProtectedRoute>
+          } />
+
+          {/* Pending Notes – employee writes notes to send to manager */}
+          <Route path="/pending-notes" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+              <PendingNotes />
+            </ProtectedRoute>
+          } />
+
+          {/* Manager Board – manager reviews & assigns notes */}
+          <Route path="/manager-board" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+              <ManagerBoard />
             </ProtectedRoute>
           } />
 
