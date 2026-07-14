@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import QRPaymentModal from '../components/modals/QRPaymentModal';
 import { toggleDarkMode } from '../store/slices/uiSlice';
 import { updateCurrentUser } from '../store/slices/authSlice';
 import {
@@ -50,8 +49,7 @@ const Settings = () => {
   const updatePreferences = useUpdatePreferences();
   const changePassword = useChangePassword();
   const [activeSection, setActiveSection] = useState('profile');
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [selectedPlanTier, setSelectedPlanTier] = useState('');
+  // Payment modal removed: purchases are disabled in this build.
 
   const settings = data?.settings;
   const profileUser = data?.user || user;
@@ -577,8 +575,7 @@ const Settings = () => {
 
                       <button
                         onClick={() => {
-                          setSelectedPlanTier(plan.name);
-                          setPaymentModalOpen(true);
+                          toast('Purchases are disabled in this build');
                         }}
                         className={`mt-6 w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
                           plan.popular
