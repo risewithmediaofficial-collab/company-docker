@@ -47,7 +47,6 @@ import assetRoutes from './routes/asset.routes.js';
 import domainRenewalRoutes from './routes/domainRenewal.routes.js';
 import sopRoutes from './routes/sop.routes.js';
 import proposalRoutes from './routes/proposal.routes.js';
-import paymentRequestRoutes from './routes/paymentRequest.routes.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
 
 loadEnv();
@@ -154,9 +153,6 @@ app.use('/api/assets', assetRoutes);
 app.use('/api/domain-renewals', domainRenewalRoutes);
 app.use('/api/sop', sopRoutes);
 app.use('/api/proposals', proposalRoutes);
-// ── QR Payment System (Temporary — see paymentRequest.routes.js) ──────────────
-// When Razorpay Live Mode is restored, register razorpay.routes.js here instead.
-app.use('/api/payment-requests', paymentRequestRoutes);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
