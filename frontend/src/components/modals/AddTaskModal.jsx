@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -91,6 +92,7 @@ const taskFormSchema = z.object({
   client: z.string().min(1, 'Client is required'),
   project: z.string().min(1, 'Select a project first'),
   assignedTo: z.string().min(1, 'Assigned person is required'),
+  assignedManager: z.string().optional(),
   priority: z.enum(PRIORITY_OPTIONS),
   dueDate: z.string().optional(),
   status: z.enum(TASK_STATUS_OPTIONS),
@@ -132,6 +134,7 @@ const buildDefaultValues = (initialValues = {}) => ({
   client: '',
   project: '',
   assignedTo: '',
+  assignedManager: '',
   priority: 'Medium',
   dueDate: '',
   status: 'To Do',
@@ -180,10 +183,12 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
   const { data: projects = [] } = useProjects({}, { enabled: open });
   const { data: users = [] } = useUsers({ enabled: open });
   const { data: clients = [] } = useClients({}, { enabled: open });
+  const { user: currentUser } = useSelector((state) => state.auth);
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const isLoading = createTask.isPending || updateTask.isPending;
   const assignableUsers = users.filter((user) => ['superAdmin', 'manager', 'employee'].includes(user.role));
+  const managerOptions = users.filter((user) => user.role === 'manager');
   const [attachmentFiles, setAttachmentFiles] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
   const [tasksList, setTasksList] = useState([
@@ -409,6 +414,7 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
         dueDate: data.dueDate || undefined,
         deadline: data.dueDate || undefined,
         assignedTo: data.assignedTo,
+        assignedManager: data.assignedManager || undefined,
         pagesNeeded: data.pagesNeeded || [],
       };
       await updateTask.mutateAsync({ id: task._id, data: payload });
@@ -455,6 +461,7 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
         dueDate: data.dueDate || undefined,
         deadline: data.dueDate || undefined,
         assignedTo: data.assignedTo,
+        assignedManager: data.assignedManager || undefined,
         priority: data.priority,
         status: data.status,
         internalNotes: data.internalNotes,
@@ -572,6 +579,34 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
           </FormItem>
         )}
       />
+
+      {currentUser?.role === 'superAdmin' && (
+        <FormField
+          control={form.control}
+          name="assignedManager"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Assigned Manager</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value || undefined}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select manager" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="">Unassigned</SelectItem>
+                  {managerOptions.map((user) => (
+                    <SelectItem key={user._id} value={user._id}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
 
       <FormField
         control={form.control}

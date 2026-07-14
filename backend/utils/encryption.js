@@ -3,26 +3,27 @@
 // =============================================
 
 import crypto from 'crypto';
-import dotenv from 'dotenv';
 
-dotenv.config();
-
-const ENCRYPTION_KEY =
-  process.env.ENCRYPTION_KEY ||
-  process.env.JWT_SECRET ||
-  'rise-with-media-development-credential-key';
 const ALGORITHM = 'aes-256-cbc';
-
-if (!process.env.ENCRYPTION_KEY) {
-  console.warn('ENCRYPTION_KEY is not set. Set a persistent 32-byte secret before storing production credentials.');
-}
+let warnedAboutEncryptionKey = false;
 
 // Ensure encryption key is exactly 32 bytes for aes-256
 const getEncryptionKey = () => {
-  const key = ENCRYPTION_KEY.length === 64 
-    ? Buffer.from(ENCRYPTION_KEY, 'hex') 
-    : crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
-  return key;
+  const encryptionKey =
+    process.env.ENCRYPTION_KEY ||
+    process.env.JWT_SECRET ||
+    'rise-with-media-development-credential-key';
+
+  if (!process.env.ENCRYPTION_KEY && !warnedAboutEncryptionKey) {
+    console.warn(
+      'ENCRYPTION_KEY is not set. Set a persistent 32-byte secret before storing production credentials.'
+    );
+    warnedAboutEncryptionKey = true;
+  }
+
+  return encryptionKey.length === 64
+    ? Buffer.from(encryptionKey, 'hex')
+    : crypto.scryptSync(encryptionKey, 'salt', 32);
 };
 
 /**

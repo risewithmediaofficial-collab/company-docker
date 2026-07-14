@@ -23,6 +23,7 @@ export const loadEnv = () => {
   process.env.JWT_REFRESH_SECRET ||= process.env.JWT_SECRET;
   process.env.JWT_EXPIRE ||= '15m';
   process.env.JWT_REFRESH_EXPIRE ||= '7d';
+  process.env.ENCRYPTION_KEY ||= 'rise-with-media-development-credential-key';
   process.env.MAX_FILE_SIZE ||= String(10 * 1024 * 1024);
   process.env.PAGINATION_LIMIT ||= '20';
   process.env.UPLOAD_DIR ||= path.join(serverRoot, 'uploads');

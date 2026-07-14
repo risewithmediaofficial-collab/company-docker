@@ -30,7 +30,11 @@ export const connectDB = async () => {
       console.warn('MongoDB disconnected');
     });
   } catch (error) {
-    console.error('MongoDB connection failed:', error.message);
+    const env = getEnv();
+    console.error(`MongoDB connection failed (${env.mongoUri}): ${error.message}`);
+    if (error.code === 'ECONNREFUSED') {
+      console.error('Ensure MongoDB is running and the MONGO_URI is correct.');
+    }
     process.exit(1);
   }
 };

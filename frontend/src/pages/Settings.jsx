@@ -14,9 +14,12 @@ import {
   Shield,
   Trash2,
   User,
+  CreditCard,
+  Sparkles,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import QRPaymentModal from '../components/modals/QRPaymentModal';
 import { toggleDarkMode } from '../store/slices/uiSlice';
 import { updateCurrentUser } from '../store/slices/authSlice';
 import {
@@ -33,6 +36,7 @@ const sections = [
   { id: 'security', label: 'Security', icon: Lock },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'appearance', label: 'Appearance', icon: Palette },
+  { id: 'billing', label: 'Billing & Plans', icon: CreditCard },
   { id: 'permissions', label: 'Permissions', icon: Shield },
 ];
 
@@ -46,6 +50,8 @@ const Settings = () => {
   const updatePreferences = useUpdatePreferences();
   const changePassword = useChangePassword();
   const [activeSection, setActiveSection] = useState('profile');
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedPlanTier, setSelectedPlanTier] = useState('');
 
   const settings = data?.settings;
   const profileUser = data?.user || user;
@@ -491,9 +497,111 @@ const Settings = () => {
                 </div>
               </div>
             )}
+
+            {activeSection === 'billing' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold">Billing & Pricing Plans</h3>
+                  <p className="text-sm text-muted-foreground">Upgrade your plan to unlock more CRM features and power up your agency.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+                  {[
+                    {
+                      name: 'Starter',
+                      price: '₹999',
+                      period: '/month',
+                      desc: 'Essential leads & tasks tracking.',
+                      features: ['Up to 5 Projects', 'Basic CRM Leads', 'Content Calendar', 'Shared SOPs'],
+                    },
+                    {
+                      name: 'Basic',
+                      price: '₹2,499',
+                      period: '/month',
+                      desc: 'Perfect for small growing teams.',
+                      features: ['Up to 15 Projects', 'Advanced CRM Leads', 'Content Calendar', 'Shared SOPs', 'Asset Library', 'Portal Access'],
+                      popular: true,
+                    },
+                    {
+                      name: 'Professional',
+                      price: '₹4,999',
+                      period: '/month',
+                      desc: 'Advanced options for agencies.',
+                      features: ['Unlimited Projects', 'Custom Proposals', 'Client Vault access', 'Daily Tasks & HR', 'Finance Status', 'Realtime Chat'],
+                    },
+                    {
+                      name: 'Premium',
+                      price: '₹9,999',
+                      period: '/month',
+                      desc: 'Scale up your agency work.',
+                      features: ['Everything in Pro', 'Priority Admin Support', 'Dedicated Account Manager', 'Custom domain renewals'],
+                    },
+                    {
+                      name: 'Enterprise',
+                      price: '₹19,999',
+                      period: '/month',
+                      desc: 'Custom solutions for companies.',
+                      features: ['Custom workflows', 'Granular team access override', 'Unlimited Client Portals', '24/7 dedicated support team'],
+                    },
+                  ].map((plan) => (
+                    <div
+                      key={plan.name}
+                      className={`relative flex flex-col rounded-3xl border p-6 transition-all duration-300 ${
+                        plan.popular
+                          ? 'border-primary bg-primary/5 shadow-lg ring-1 ring-primary/20 scale-[1.02]'
+                          : 'border-border bg-card hover:border-primary/30 hover:shadow-md'
+                      }`}
+                    >
+                      {plan.popular && (
+                        <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                          <Sparkles size={10} /> Popular
+                        </span>
+                      )}
+                      <div>
+                        <h4 className="text-base font-bold text-foreground">{plan.name}</h4>
+                        <p className="text-xs text-muted-foreground mt-1 min-h-[32px]">{plan.desc}</p>
+                        <div className="mt-4 flex items-baseline">
+                          <span className="text-3xl font-black text-foreground">{plan.price}</span>
+                          <span className="text-xs text-muted-foreground ml-1">{plan.period}</span>
+                        </div>
+                      </div>
+
+                      <ul className="mt-6 space-y-2.5 flex-1">
+                        {plan.features.map((feat) => (
+                          <li key={feat} className="flex items-center text-xs text-muted-foreground gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            <span>{feat}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <button
+                        onClick={() => {
+                          setSelectedPlanTier(plan.name);
+                          setPaymentModalOpen(true);
+                        }}
+                        className={`mt-6 w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
+                          plan.popular
+                            ? 'bg-primary text-primary-foreground shadow-md hover:opacity-90 active:scale-[0.98]'
+                            : 'bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground'
+                        }`}
+                      >
+                        Buy {plan.name} Plan
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </motion.div>
         </div>
       </div>
+
+      <QRPaymentModal
+        isOpen={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        defaultPlan={selectedPlanTier}
+      />
     </div>
   );
 };

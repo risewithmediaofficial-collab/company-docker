@@ -128,6 +128,7 @@ const serializeTask = (task) => {
     projectName: item.projectName || item.project?.name || '',
     assignedPersonName: item.assignedPersonName
       || (Array.isArray(item.assignedTo) ? item.assignedTo.map((user) => user?.name).filter(Boolean).join(', ') : ''),
+    assignedManagerName: item.assignedManager?.name || '',
     isOverdue: isTaskOverdue(item),
   };
 };
@@ -138,6 +139,7 @@ const normalizeTaskPayload = (body = {}) => {
   if (payload.status) payload.status = taskStatusMap[payload.status] || payload.status;
   if (payload.priority) payload.priority = priorityMap[payload.priority] || payload.priority;
   if (payload.assignedTo !== undefined) payload.assignedTo = uniqueIds(toArray(payload.assignedTo));
+  if (payload.assignedManager !== undefined) payload.assignedManager = toIdString(payload.assignedManager) || undefined;
   if (payload.tags !== undefined) payload.tags = Array.isArray(payload.tags)
     ? payload.tags.filter(Boolean)
     : payload.tags
@@ -181,6 +183,13 @@ const getManagedScope = async (userId) => {
   };
 };
 
+const getManagerAssignableUserIds = (project, client, managerId) => {
+  const ids = [managerId];
+  if (project?.team) ids.push(...toArray(project.team).map(toIdString));
+  if (client?.assignedTeam) ids.push(...toArray(client.assignedTeam).map(toIdString));
+  return uniqueIds(ids);
+};
+
 const buildScopedTaskFilter = async (req, baseFilter = {}) => {
   const filter = { ...baseFilter };
   const baseOr = filter.$or;
@@ -195,6 +204,7 @@ const buildScopedTaskFilter = async (req, baseFilter = {}) => {
       { client: { $in: clientIds.length ? clientIds : [null] } },
       { createdBy: req.user._id },
       { assignedTo: req.user._id },
+      { assignedManager: req.user._id },
     ];
     return baseOr ? { ...filter, $and: [{ $or: baseOr }, { $or: scopedOr }] } : { ...filter, $or: scopedOr };
   }
@@ -274,6 +284,7 @@ const assertTaskAccess = async (req, task) => {
     if (toIdString(project?.manager) === userId) return { allowed: true };
     if (toArray(project?.team).some((member) => toIdString(member) === userId)) return { allowed: true };
     if (toIdString(client?.assignedManager) === userId) return { allowed: true };
+    if (toIdString(task.assignedManager) === userId) return { allowed: true };
 
     return { allowed: false, status: 403, message: 'Access denied' };
   }
@@ -283,6 +294,7 @@ const assertTaskAccess = async (req, task) => {
 
 const hydrateTask = async (taskId) => Task.findById(taskId)
   .populate('assignedTo', 'name email avatar role')
+  .populate('assignedManager', 'name email avatar role')
   .populate('createdBy', 'name email avatar role')
   .populate('project', 'name client manager')
   .populate('client', 'name company email')
@@ -313,20 +325,40 @@ const syncTaskDerivedFields = async (task) => {
   task.taskTitle = task.title;
 };
 
-const notifyNewAssignees = async ({ task, previousAssignedTo = [], actorId, io }) => {
+const notifyNewAssignees = async ({ task, previousAssignedTo = [], previousAssignedManager, actorId, io }) => {
   const previousIds = uniqueIds(previousAssignedTo);
   const nextIds = uniqueIds(task.assignedTo);
+  const previousManagerId = toIdString(previousAssignedManager);
+  const nextManagerId = toIdString(task.assignedManager);
 
   const newlyAssigned = nextIds.filter(
     (userId) => !previousIds.includes(userId) && userId !== actorId.toString(),
   );
 
-  await Promise.all(newlyAssigned.map((recipient) => createNotification({
+  const notifications = [
+    ...newlyAssigned.map((recipient) => ({
+      recipient,
+      type: 'task_assigned',
+      title: 'Task Assigned',
+      message: `You have been assigned: ${task.title}`,
+    })),
+  ];
+
+  if (nextManagerId && nextManagerId !== previousManagerId && nextManagerId !== actorId.toString()) {
+    notifications.push({
+      recipient: nextManagerId,
+      type: 'task_assigned_manager',
+      title: 'Task Assigned to You',
+      message: `A task has been assigned under your management: ${task.title}`,
+    });
+  }
+
+  await Promise.all(notifications.map(({ recipient, type, title, message }) => createNotification({
     recipient,
     sender: actorId,
-    type: 'task_assigned',
-    title: 'Task Assigned',
-    message: `You have been assigned: ${task.title}`,
+    type,
+    title,
+    message,
     link: '/tasks',
   }, io)));
 };
@@ -592,6 +624,27 @@ export const createTask = async (req, res) => {
         return res.status(404).json({ success: false, message: 'Client not found' });
       }
 
+      if (req.user.role === 'manager') {
+        if (!payload.assignedManager) {
+          payload.assignedManager = req.user._id;
+        } else if (toIdString(payload.assignedManager) !== toIdString(req.user._id)) {
+          return res.status(403).json({ success: false, message: 'Managers can only assign tasks under their own management' });
+        }
+
+        const allowedAssignees = getManagerAssignableUserIds(project, client, req.user._id);
+        const invalidAssignees = (payload.assignedTo || []).filter((id) => !allowedAssignees.includes(toIdString(id)));
+        if (invalidAssignees.length) {
+          return res.status(403).json({ success: false, message: 'You can only assign tasks to team members you manage' });
+        }
+      }
+
+      if (req.user.role === 'superAdmin' && payload.assignedManager) {
+        const manager = await User.findById(payload.assignedManager).select('role');
+        if (!manager || manager.role !== 'manager') {
+          return res.status(400).json({ success: false, message: 'Assigned manager must be a manager user' });
+        }
+      }
+
       if (!payload.taskCategory) {
         payload.taskCategory = isWebsiteTaskType(payload.taskType) || payload.taskType === 'non_content'
           ? 'non_content'
@@ -617,6 +670,7 @@ export const createTask = async (req, res) => {
           organizationId: req.user.organizationId,
           brandId: req.user.brandId,
           createdBy: req.user._id,
+          assignedManager: currentPayload.assignedManager || undefined,
         });
         await syncTaskDerivedFields(task);
         await task.save();
@@ -672,6 +726,7 @@ export const updateTask = async (req, res) => {
     }
 
     const previousAssignedTo = [...(task.assignedTo || [])];
+    const previousAssignedManager = task.assignedManager;
     const payload = normalizeTaskPayload(req.body);
 
     if (payload.project || payload.client) {
@@ -685,6 +740,31 @@ export const updateTask = async (req, res) => {
         if (project.client?.toString() !== nextClientId.toString()) {
           return res.status(400).json({ success: false, message: 'Selected project does not belong to the selected client' });
         }
+      }
+    }
+
+    if (req.user.role === 'manager') {
+      if (!payload.assignedManager) {
+        payload.assignedManager = task.assignedManager || req.user._id;
+      } else if (toIdString(payload.assignedManager) !== toIdString(req.user._id)) {
+        return res.status(403).json({ success: false, message: 'Managers can only assign tasks under their own management' });
+      }
+
+      const nextProjectId = payload.project || task.project;
+      const nextClientId = payload.client || task.client;
+      const project = nextProjectId ? await Project.findById(toIdString(nextProjectId)).select('team') : null;
+      const client = nextClientId ? await Client.findById(toIdString(nextClientId)).select('assignedTeam') : null;
+      const allowedAssignees = getManagerAssignableUserIds(project, client, req.user._id);
+      const invalidAssignees = (payload.assignedTo || []).filter((id) => !allowedAssignees.includes(toIdString(id)));
+      if (invalidAssignees.length) {
+        return res.status(403).json({ success: false, message: 'You can only assign tasks to team members you manage' });
+      }
+    }
+
+    if (req.user.role === 'superAdmin' && payload.assignedManager) {
+      const manager = await User.findById(payload.assignedManager).select('role');
+      if (!manager || manager.role !== 'manager') {
+        return res.status(400).json({ success: false, message: 'Assigned manager must be a manager user' });
       }
     }
 
@@ -710,6 +790,7 @@ export const updateTask = async (req, res) => {
     await notifyNewAssignees({
       task,
       previousAssignedTo,
+      previousAssignedManager,
       actorId: req.user._id,
       io,
     });

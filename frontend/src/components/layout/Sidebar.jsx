@@ -26,6 +26,7 @@ import {
   KeyRound,
   PhoneCall,
   Globe2,
+  CreditCard,
   X
 } from 'lucide-react';
 import { toggleSidebar } from '../../store/slices/uiSlice';
@@ -89,6 +90,8 @@ const Sidebar = () => {
       { name: 'Asset Library', icon: Palette, path: '/assets' },
       { name: 'Portal Manager', icon: FileText, path: '/portal-manager' },
       { name: 'Users', icon: Users2, path: '/admin/users' },
+      { name: 'Payment Requests', icon: CreditCard, path: '/admin/payment-requests' },
+      { name: 'Payment History', icon: CreditCard, path: '/payment-history' },
     ],
     manager: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
@@ -110,6 +113,7 @@ const Sidebar = () => {
       { name: 'Reports', icon: BarChart3, path: '/reports' },
       { name: 'Asset Library', icon: Palette, path: '/assets' },
       { name: 'Portal Manager', icon: FileText, path: '/portal-manager' },
+      { name: 'Payment History', icon: CreditCard, path: '/payment-history' },
     ],
     employee: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
@@ -120,6 +124,7 @@ const Sidebar = () => {
       { name: 'Client Vault', icon: KeyRound, path: '/client-vault' },
       { name: 'Attendance', icon: Clock, path: '/attendance' },
       { name: 'Message Center', icon: MessageSquare, path: '/chat' },
+      { name: 'Payment History', icon: CreditCard, path: '/payment-history' },
     ],
     client: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
@@ -133,12 +138,14 @@ const Sidebar = () => {
       { name: 'Support', icon: HeadphonesIcon, path: '/portal/support' },
       { name: 'Guidelines', icon: BookOpen, path: '/portal/guidelines' },
       { name: 'Message Center', icon: MessageSquare, path: '/chat' },
+      { name: 'Payment History', icon: CreditCard, path: '/payment-history' },
     ],
     referral: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
       { name: 'Leads', icon: TrendingUp, path: '/crm/leads' },
       { name: 'Content Calendar', icon: Calendar, path: '/calendar' },
       { name: 'Earnings', icon: Award, path: '/referral' },
+      { name: 'Payment History', icon: CreditCard, path: '/payment-history' },
     ],
   };
 

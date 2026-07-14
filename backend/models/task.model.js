@@ -82,6 +82,7 @@ const taskSchema = new mongoose.Schema(
     },
     clientName: { type: String, default: '' },
     assignedPersonName: { type: String, default: '' },
+    assignedManager: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
     client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
     parent: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
@@ -216,6 +217,7 @@ taskSchema.index({ project: 1, status: 1 });
 taskSchema.index({ assignedTo: 1 });
 taskSchema.index({ dueDate: 1 });
 taskSchema.index({ parent: 1 });
+taskSchema.index({ assignedManager: 1 });
 taskSchema.index({ organizationId: 1 });
 taskSchema.index({ brandId: 1 });
 
