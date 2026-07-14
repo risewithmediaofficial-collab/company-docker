@@ -469,6 +469,7 @@ export const getTasks = async (req, res) => {
       taskType,
       status,
       assignedTo,
+      assignedManager,
       priority,
       dueDate,
       search,
@@ -494,6 +495,7 @@ export const getTasks = async (req, res) => {
     if (status) filter.status = taskStatusMap[status] || status;
     if (priority) filter.priority = priorityMap[priority] || priority;
     if (assignedTo) filter.assignedTo = assignedTo;
+    if (assignedManager) filter.assignedManager = assignedManager;
     if (dueDate) {
       const date = new Date(dueDate);
       if (!Number.isNaN(date.getTime())) {
@@ -522,6 +524,7 @@ export const getTasks = async (req, res) => {
     const total = await Task.countDocuments(scopedFilter);
     const tasks = await Task.find(scopedFilter)
       .populate('assignedTo', 'name avatar')
+      .populate('assignedManager', 'name avatar')
       .populate('createdBy', 'name avatar')
       .populate('project', 'name')
       .populate('client', 'name company')

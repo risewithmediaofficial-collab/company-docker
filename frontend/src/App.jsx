@@ -40,6 +40,7 @@ import Communication from './pages/employee/Communication';
 import ReferralDashboard from './pages/referral/ReferralDashboard';
 import Users from './pages/admin/Users';
 import DomainRenewals from './pages/admin/DomainRenewals';
+import ManagerTaskAssignments from './pages/admin/ManagerTaskAssignments';
 import AssetsLibrary from './pages/assets/AssetsLibrary';
 import Settings from './pages/Settings';
 import NotFound from './pages/NotFound';
@@ -300,6 +301,11 @@ const App = () => {
           <Route path="/admin/users" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin']}>
               <Users />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/manager-assignments" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin']}>
+              <ManagerTaskAssignments />
             </ProtectedRoute>
           } />
 
