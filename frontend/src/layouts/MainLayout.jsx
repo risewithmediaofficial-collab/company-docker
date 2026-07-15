@@ -16,7 +16,7 @@ const MainLayout = () => {
       {/* Main Content */}
       <div className={`flex min-w-0 flex-1 flex-col transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'}`}>
         <Navbar />
-        <main className="min-w-0 flex-1 overflow-y-auto bg-secondary/30 p-4 md:p-6">
+        <main className="min-w-0 flex-1 overflow-y-auto bg-secondary/30 p-4 md:p-6 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
           <div className="mx-auto min-w-0 max-w-7xl">
             <AnimatePresence mode="wait">
               <motion.div
