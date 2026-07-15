@@ -2,6 +2,17 @@ import { Edit2, Eye, Inbox, Trash2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { EmptyState } from './page';
 
+// Scrollbar style applied to the scroll container
+const scrollClass = [
+  'overflow-x-auto',
+  'overflow-y-auto',
+  '[&::-webkit-scrollbar]:h-1.5',
+  '[&::-webkit-scrollbar]:w-1.5',
+  '[&::-webkit-scrollbar-thumb]:rounded-full',
+  '[&::-webkit-scrollbar-thumb]:bg-border',
+  '[&::-webkit-scrollbar-track]:bg-transparent',
+].join(' ');
+
 export const DataTable = ({
   data = [],
   columns = [],
@@ -15,6 +26,8 @@ export const DataTable = ({
   emptyTitle = 'No records found',
   emptyDescription = 'Get started by creating a new entry.',
   emptyAction = null,
+  // maxHeight controls the inline vertical scroll — table body scrolls, header stays fixed
+  maxHeight = '520px',
   className,
 }) => {
   const hasActions = Boolean(onView || onEdit || onDelete);
@@ -22,9 +35,9 @@ export const DataTable = ({
   if (loading) {
     return (
       <div className={cn('overflow-hidden rounded-[28px] border border-border bg-card shadow-sm', className)}>
-        <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
+        <div className={cn('w-full', scrollClass)} style={{ maxHeight }}>
           <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="border-b border-border bg-secondary/40 text-muted-foreground">
+            <thead className="sticky top-0 z-10 border-b border-border bg-secondary/40 text-muted-foreground">
               <tr>
                 {columns.map((col, i) => (
                   <th key={col.key || i} className="px-4 py-4 font-semibold sm:px-6">
@@ -66,9 +79,10 @@ export const DataTable = ({
 
   return (
     <div className={cn('overflow-hidden rounded-[28px] border border-border bg-card shadow-sm', className)}>
-      <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
+      <div className={cn('w-full', scrollClass)} style={{ maxHeight }}>
         <table className="w-full min-w-[760px] text-left text-sm">
-          <thead className="border-b border-border bg-secondary/40 text-muted-foreground">
+          {/* Sticky header — stays fixed while rows scroll */}
+          <thead className="sticky top-0 z-10 border-b border-border bg-secondary/40 text-muted-foreground">
             <tr>
               {columns.map((col) => (
                 <th key={col.key} scope="col" className="px-4 py-4 font-semibold sm:px-6">
