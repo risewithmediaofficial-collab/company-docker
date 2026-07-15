@@ -8,7 +8,7 @@ import TaskNote from '../models/taskNote.model.js';
 // ── Employee: Create a new pending note ──────────────────────────────────────
 export const createNote = async (req, res) => {
   try {
-    const { title, description, priority } = req.body;
+    const { title, description, priority, startDate, deadline } = req.body;
     if (!title) return res.status(400).json({ success: false, message: 'Title is required' });
 
     const note = await TaskNote.create({
@@ -17,6 +17,8 @@ export const createNote = async (req, res) => {
       title,
       description,
       priority: priority || 'medium',
+      startDate: startDate || null,
+      deadline: deadline || null,
     });
 
     const populated = await TaskNote.findById(note._id).populate('submittedBy', 'name email role');

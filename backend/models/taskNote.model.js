@@ -1,6 +1,6 @@
 // =============================================
-// TASK NOTE MODEL - Employee pending task notes
-// Employees submit notes → Manager assigns them
+// TASK NOTE MODEL - Project briefs & pending task notes
+// SuperAdmin posts briefs → Manager reads & assigns tasks
 // =============================================
 
 import mongoose from 'mongoose';
@@ -40,6 +40,10 @@ const taskNoteSchema = new mongoose.Schema(
 
     // Due date suggested by manager when assigning
     dueDate: { type: Date },
+
+    // Project brief fields (set by SuperAdmin)
+    startDate: { type: Date },
+    deadline: { type: Date },
   },
   { timestamps: true }
 );

@@ -7,6 +7,7 @@ import Client from '../models/client.model.js';
 import Project from '../models/project.model.js';
 import Task from '../models/task.model.js';
 import Invoice from '../models/invoice.model.js';
+import Expense from '../models/expense.model.js';
 import Attendance from '../models/attendance.model.js';
 import DomainRenewal from '../models/domainRenewal.model.js';
 import User from '../models/user.model.js';
@@ -26,6 +27,8 @@ export const getAdminDashboard = async (req, res) => {
       totalProjects, activeProjects,
       totalTasks, overdueTasks,
       monthRevenue, lastMonthRevenue,
+      allTimeRevenue,
+      totalExpensesData,
       adBudgetTotals,
       totalUsers,
       expiringRenewals,
@@ -41,6 +44,8 @@ export const getAdminDashboard = async (req, res) => {
       Task.countDocuments({ dueDate: { $lt: now }, status: { $nin: ['done', 'approved'] } }),
       Invoice.aggregate([{ $match: { status: 'paid', paidDate: { $gte: startOfMonth } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
       Invoice.aggregate([{ $match: { status: 'paid', paidDate: { $gte: startOfLastMonth, $lte: endOfLastMonth } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
+      Invoice.aggregate([{ $match: { status: 'paid' } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
+      Expense.aggregate([{ $match: { status: { $in: ['approved', 'reimbursed'] } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
       Project.aggregate([
         {
           $group: {
@@ -82,6 +87,8 @@ export const getAdminDashboard = async (req, res) => {
     const lastMonthRev = lastMonthRevenue[0]?.total || 0;
     const revenueGrowth = lastMonthRev > 0 ? (((thisMonthRev - lastMonthRev) / lastMonthRev) * 100).toFixed(1) : 0;
     const totalAdsBudget = adBudgetTotals[0]?.totalAdsBudget || 0;
+    const totalIncome = allTimeRevenue[0]?.total || 0;
+    const totalExpenses = totalExpensesData[0]?.total || 0;
 
     res.json({
       success: true,
@@ -93,6 +100,8 @@ export const getAdminDashboard = async (req, res) => {
         totalTasks, overdueTasks,
         monthRevenue: isManager ? 0 : thisMonthRev,
         revenueGrowth: isManager ? 0 : revenueGrowth,
+        totalIncome: isManager ? 0 : totalIncome,
+        totalExpenses: isManager ? 0 : totalExpenses,
         totalAdsBudget,
         totalUsers,
         expiringRenewalsCount: expiringRenewals.length,

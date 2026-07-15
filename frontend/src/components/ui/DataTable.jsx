@@ -22,7 +22,7 @@ export const DataTable = ({
   if (loading) {
     return (
       <div className={cn('overflow-hidden rounded-[28px] border border-border bg-card shadow-sm', className)}>
-        <div className="w-full overflow-x-auto">
+        <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="border-b border-border bg-secondary/40 text-muted-foreground">
               <tr>
@@ -66,7 +66,7 @@ export const DataTable = ({
 
   return (
     <div className={cn('overflow-hidden rounded-[28px] border border-border bg-card shadow-sm', className)}>
-      <div className="w-full overflow-x-auto">
+      <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="border-b border-border bg-secondary/40 text-muted-foreground">
             <tr>

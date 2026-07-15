@@ -88,10 +88,20 @@ const Dashboard = () => {
 
     socket.on('userCreated', handleUpdate);
     socket.on('clientCreated', handleUpdate);
+    socket.on('projectCreated', handleUpdate);
+    socket.on('taskCreated', handleUpdate);
+    socket.on('invoicePaid', handleUpdate);
+    socket.on('expenseApproved', handleUpdate);
+    socket.on('leadUpdated', handleUpdate);
 
     return () => {
       socket.off('userCreated', handleUpdate);
       socket.off('clientCreated', handleUpdate);
+      socket.off('projectCreated', handleUpdate);
+      socket.off('taskCreated', handleUpdate);
+      socket.off('invoicePaid', handleUpdate);
+      socket.off('expenseApproved', handleUpdate);
+      socket.off('leadUpdated', handleUpdate);
     };
   }, [socket]);
 
@@ -166,11 +176,24 @@ const Dashboard = () => {
       },
     ];
 
-    const stats = [
-      { label: isManager ? 'Ads Budget' : 'Total Revenue', value: isManager ? formatINR(data.stats.totalAdsBudget || 0) : formatINR(data.stats.monthRevenue), icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', trend: isManager ? 'Project budget only' : `${data.stats.revenueGrowth}%`, up: isManager ? true : data.stats.revenueGrowth >= 0 },
-      { label: isManager ? 'Active Clients' : 'Total Clients', value: data.stats.totalClients, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10', trend: 'Active', up: true },
-      { label: isManager ? 'Projects In Delivery' : 'Active Projects', value: data.stats.activeProjects, icon: Briefcase, color: 'text-indigo-500', bg: 'bg-indigo-500/10', trend: 'In Delivery', up: true },
-      { label: isManager ? 'Team Tasks' : 'Conversion Rate', value: isManager ? data.stats.totalTasks : `${data.stats.conversionRate}%`, icon: isManager ? ClipboardList : CheckCircle2, color: 'text-amber-500', bg: 'bg-amber-500/10', trend: isManager ? `${data.stats.overdueTasks} Overdue` : 'Won Deals', up: !isManager || data.stats.overdueTasks === 0 },
+    const stats = !isManager ? [
+      // Row 1 – Revenue & Financials
+      { label: 'Total Income', value: formatINR(data.stats.totalIncome || 0), icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', trend: 'All-time paid', up: true },
+      { label: 'This Month Revenue', value: formatINR(data.stats.monthRevenue || 0), icon: IndianRupee, color: 'text-green-500', bg: 'bg-green-500/10', trend: `${data.stats.revenueGrowth >= 0 ? '+' : ''}${data.stats.revenueGrowth}% vs last month`, up: data.stats.revenueGrowth >= 0 },
+      { label: 'Total Expenses', value: formatINR(data.stats.totalExpenses || 0), icon: Wallet, color: 'text-rose-500', bg: 'bg-rose-500/10', trend: 'Approved expenses', up: true },
+      // Row 2 – Clients & Projects
+      { label: 'Total Clients', value: data.stats.totalClients, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10', trend: `${data.stats.activeClients} active`, up: true },
+      { label: 'Active Projects', value: data.stats.activeProjects, icon: Briefcase, color: 'text-indigo-500', bg: 'bg-indigo-500/10', trend: `${data.stats.totalProjects} total`, up: true },
+      { label: 'Conversion Rate', value: `${data.stats.conversionRate}%`, icon: CheckCircle2, color: 'text-amber-500', bg: 'bg-amber-500/10', trend: 'Won deals', up: data.stats.conversionRate > 0 },
+      // Row 3 – Operations
+      { label: 'Total Tasks', value: data.stats.totalTasks, icon: ClipboardList, color: 'text-violet-500', bg: 'bg-violet-500/10', trend: `${data.stats.overdueTasks} overdue`, up: data.stats.overdueTasks === 0 },
+      { label: 'Team Members', value: data.stats.totalUsers, icon: ShieldCheck, color: 'text-cyan-500', bg: 'bg-cyan-500/10', trend: 'Active users', up: true },
+      { label: 'Renewals This Week', value: data.stats.expiringRenewalsCount || 0, icon: Calendar, color: 'text-rose-500', bg: 'bg-rose-500/10', trend: 'Expiry watch', up: (data.stats.expiringRenewalsCount || 0) === 0 },
+    ] : [
+      { label: 'Ads Budget', value: formatINR(data.stats.totalAdsBudget || 0), icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', trend: 'Project budget only', up: true },
+      { label: 'Active Clients', value: data.stats.activeClients, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10', trend: 'In service', up: true },
+      { label: 'Projects In Delivery', value: data.stats.activeProjects, icon: Briefcase, color: 'text-indigo-500', bg: 'bg-indigo-500/10', trend: 'In Delivery', up: true },
+      { label: 'Team Tasks', value: data.stats.totalTasks, icon: ClipboardList, color: 'text-amber-500', bg: 'bg-amber-500/10', trend: `${data.stats.overdueTasks} Overdue`, up: data.stats.overdueTasks === 0 },
       { label: 'Renewals This Week', value: data.stats.expiringRenewalsCount || 0, icon: Calendar, color: 'text-rose-500', bg: 'bg-rose-500/10', trend: 'Expiry watch', up: (data.stats.expiringRenewalsCount || 0) === 0 },
     ];
 
@@ -202,27 +225,27 @@ const Dashboard = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${!isManager ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-4`}>
           {stats.map((stat, i) => (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
+              transition={{ delay: i * 0.07 }}
               key={stat.label}
-              className="bg-card p-6 rounded-2xl border border-border shadow-sm card-hover"
+              className="bg-card p-5 rounded-2xl border border-border shadow-sm card-hover"
             >
               <div className="flex items-center justify-between">
                 <div className={`p-2.5 rounded-xl ${stat.bg} ${stat.color}`}>
-                  <stat.icon size={20} />
+                  <stat.icon size={18} />
                 </div>
                 <div className={`flex items-center text-[10px] font-bold px-2 py-1 rounded-full ${stat.up ? 'bg-emerald-500/10 text-emerald-600' : 'bg-destructive/10 text-destructive'}`}>
                   {stat.up ? <ArrowUpRight size={12} className="mr-1" /> : <ArrowDownRight size={12} className="mr-1" />}
                   {stat.trend}
                 </div>
               </div>
-              <div className="mt-4">
-                <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                <h3 className="text-2xl font-bold mt-1 tracking-tight">{stat.value}</h3>
+              <div className="mt-3">
+                <p className="text-xs font-medium text-muted-foreground">{stat.label}</p>
+                <h3 className="text-xl font-bold mt-1 tracking-tight">{stat.value}</h3>
               </div>
             </motion.div>
           ))}
