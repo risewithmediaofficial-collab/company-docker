@@ -194,16 +194,16 @@ const ReferralDashboard = () => {
           </button>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="w-full overflow-x-auto overflow-y-auto max-h-[400px] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
           <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="text-muted-foreground font-medium border-b border-border">
-                <th className="px-6 py-4">Submitted Lead</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Commission</th>
-                <th className="px-6 py-4">Total Paid</th>
-                <th className="px-6 py-4">Payout Status</th>
-                <th className="px-6 py-4">Date</th>
+            <thead className="text-muted-foreground font-medium">
+              <tr>
+                <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Submitted Lead</th>
+                <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Status</th>
+                <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Commission</th>
+                <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Total Paid</th>
+                <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Payout Status</th>
+                <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

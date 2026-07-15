@@ -232,15 +232,15 @@ const Attendance = () => {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="w-full overflow-x-auto overflow-y-auto max-h-[400px] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
               <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="text-muted-foreground font-medium border-b border-border">
-                    <th className="px-6 py-4">Date</th>
-                    <th className="px-6 py-4">In / Out</th>
-                    <th className="px-6 py-4">Total Time</th>
-                    <th className="px-6 py-4">EOD</th>
-                    <th className="px-6 py-4">Status</th>
+                <thead className="text-muted-foreground font-medium">
+                  <tr>
+                    <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Date</th>
+                    <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">In / Out</th>
+                    <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Total Time</th>
+                    <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">EOD</th>
+                    <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">

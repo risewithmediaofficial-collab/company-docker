@@ -813,19 +813,19 @@ const Leads = () => {
                 </h2>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="w-full overflow-x-auto overflow-y-auto max-h-[520px] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
                 <table className="w-full min-w-[760px] text-left text-sm">
-                  <thead className="border-b border-border bg-secondary/40 text-muted-foreground">
+                  <thead className="text-muted-foreground">
                     <tr>
-                      <th className="px-4 py-4 font-semibold sm:px-6">Lead Name</th>
-                      <th className="px-4 py-4 font-semibold sm:px-6">Company</th>
-                      <th className="px-4 py-4 font-semibold sm:px-6">Email</th>
-                      <th className="px-4 py-4 font-semibold sm:px-6">Interest</th>
-                      <th className="px-4 py-4 font-semibold sm:px-6">Value</th>
-                      <th className="px-4 py-4 font-semibold sm:px-6">Follow-up</th>
-                      <th className="px-4 py-4 font-semibold sm:px-6">Stage</th>
-                      <th className="px-4 py-4 font-semibold sm:px-6">Owner</th>
-                      <th className="px-4 py-4 font-semibold sm:px-6 text-right">Actions</th>
+                      <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">Lead Name</th>
+                      <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">Company</th>
+                      <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">Email</th>
+                      <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">Interest</th>
+                      <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">Value</th>
+                      <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">Follow-up</th>
+                      <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">Stage</th>
+                      <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">Owner</th>
+                      <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">

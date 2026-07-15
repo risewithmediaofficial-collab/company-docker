@@ -232,16 +232,16 @@ const Users = () => {
       </div>
 
       <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div className="w-full overflow-x-auto">
+        <div className="w-full overflow-x-auto overflow-y-auto max-h-[520px] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
           <table className="w-full min-w-[1040px] text-left text-sm">
-            <thead className="bg-secondary/30 text-muted-foreground font-medium border-b border-border">
+            <thead className="text-muted-foreground font-medium">
               <tr>
-                <th className="px-6 py-4">User</th>
-                <th className="px-6 py-4">Role</th>
-                <th className="px-6 py-4">Approval</th>
-                <th className="px-6 py-4">Access</th>
-                <th className="px-6 py-4">Joined</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">User</th>
+                <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Role</th>
+                <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Approval</th>
+                <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Access</th>
+                <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Joined</th>
+                <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
