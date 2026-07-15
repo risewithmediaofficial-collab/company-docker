@@ -306,111 +306,113 @@ export default function CallHistoryDashboard() {
             </div>
           </PageToolbar>
 
-          {callHistoryQuery.isLoading ? (
-            <div className="flex h-40 items-center justify-center rounded-3xl border border-border bg-card">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
-            </div>
-          ) : filteredCalls.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-3xl border border-border bg-card p-10 text-center">
-              <Phone className="h-10 w-10 text-muted-foreground/50" />
-              <h3 className="mt-4 font-bold text-foreground">No call logs found</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Try modifying your filters or log a new call note.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredCalls.map((call) => {
-                const isLead = !!call.leadId;
-                const isUnregistered = !call.clientId && !call.leadId && !!call.unregisteredClientName;
-                const contactName = isUnregistered
-                  ? call.unregisteredClientName
-                  : (isLead ? call.leadId?.name : (call.clientId?.company || call.clientId?.name));
-                return (
-                  <div key={call._id} className="group relative rounded-3xl border border-border bg-card p-6 transition-all hover:shadow-md">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div className="flex items-start gap-4">
-                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
-                          isUnregistered ? 'bg-blue-500/10 text-blue-600' : (isLead ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600')
-                        }`}>
-                          <Phone size={18} />
-                        </div>
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-bold text-foreground text-base">{contactName}</h3>
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase ${
-                              isUnregistered ? 'bg-blue-100 text-blue-800' : (isLead ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800')
-                            }`}>
-                              {isUnregistered ? 'New/Unregistered' : (isLead ? 'Lead' : 'Client')}
-                            </span>
-                            {call.projectId?.name && (
-                              <span className="text-xs text-muted-foreground">
-                                • Project: <span className="font-semibold text-foreground">{call.projectId?.name}</span>
+          <div className="overflow-y-auto max-h-[calc(100vh-270px)] pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
+            {callHistoryQuery.isLoading ? (
+              <div className="flex h-40 items-center justify-center rounded-3xl border border-border bg-card">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+              </div>
+            ) : filteredCalls.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-3xl border border-border bg-card p-10 text-center">
+                <Phone className="h-10 w-10 text-muted-foreground/50" />
+                <h3 className="mt-4 font-bold text-foreground">No call logs found</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Try modifying your filters or log a new call note.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredCalls.map((call) => {
+                  const isLead = !!call.leadId;
+                  const isUnregistered = !call.clientId && !call.leadId && !!call.unregisteredClientName;
+                  const contactName = isUnregistered
+                    ? call.unregisteredClientName
+                    : (isLead ? call.leadId?.name : (call.clientId?.company || call.clientId?.name));
+                  return (
+                    <div key={call._id} className="group relative rounded-3xl border border-border bg-card p-6 transition-all hover:shadow-md">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
+                            isUnregistered ? 'bg-blue-500/10 text-blue-600' : (isLead ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600')
+                          }`}>
+                            <Phone size={18} />
+                          </div>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-bold text-foreground text-base">{contactName}</h3>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase ${
+                                isUnregistered ? 'bg-blue-100 text-blue-800' : (isLead ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800')
+                              }`}>
+                                {isUnregistered ? 'New/Unregistered' : (isLead ? 'Lead' : 'Client')}
                               </span>
+                              {call.projectId?.name && (
+                                <span className="text-xs text-muted-foreground">
+                                  • Project: <span className="font-semibold text-foreground">{call.projectId?.name}</span>
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-1.5 text-xs text-muted-foreground flex items-center gap-2">
+                              <Calendar size={12} />
+                              {new Date(call.callDate).toLocaleDateString()} {call.callTime ? `at ${call.callTime}` : ''}
+                              <span>• Type: <span className="font-semibold text-foreground">{call.callType}</span></span>
+                            </p>
+                            {isUnregistered && (
+                              <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                                {call.unregisteredClientPhone && (
+                                  <p>Phone: <span className="font-semibold text-foreground">{call.unregisteredClientPhone}</span></p>
+                                )}
+                                {call.unregisteredClientAddress && (
+                                  <p>Address: <span className="font-semibold text-foreground">{call.unregisteredClientAddress}</span></p>
+                                )}
+                              </div>
                             )}
                           </div>
-                          <p className="mt-1.5 text-xs text-muted-foreground flex items-center gap-2">
-                            <Calendar size={12} />
-                            {new Date(call.callDate).toLocaleDateString()} {call.callTime ? `at ${call.callTime}` : ''}
-                            <span>• Type: <span className="font-semibold text-foreground">{call.callType}</span></span>
-                          </p>
-                          {isUnregistered && (
-                            <div className="mt-2 text-xs text-muted-foreground space-y-1">
-                              {call.unregisteredClientPhone && (
-                                <p>Phone: <span className="font-semibold text-foreground">{call.unregisteredClientPhone}</span></p>
-                              )}
-                              {call.unregisteredClientAddress && (
-                                <p>Address: <span className="font-semibold text-foreground">{call.unregisteredClientAddress}</span></p>
-                              )}
+                        </div>
+
+                        {canManage && (
+                          <div className="flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => startEdit(call)}
+                              className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                              title="Edit Call Note"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(call._id)}
+                              className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                              title="Delete Call Note"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        <div className="rounded-2xl bg-secondary/15 p-4 border border-border/40">
+                          <h4 className="text-[11px] font-black uppercase tracking-[0.15em] text-muted-foreground">Discussion Summary</h4>
+                          <p className="mt-2 text-sm text-foreground leading-relaxed whitespace-pre-wrap">{call.callSummary || 'No details provided.'}</p>
+                        </div>
+                        <div className="rounded-2xl bg-secondary/15 p-4 border border-border/40">
+                          <h4 className="text-[11px] font-black uppercase tracking-[0.15em] text-muted-foreground">Response & Next Steps</h4>
+                          <p className="mt-2 text-sm text-foreground leading-relaxed whitespace-pre-wrap">{call.clientResponse || 'No responses provided.'}</p>
+                          {call.nextFollowUpDate && (
+                            <div className="mt-3 flex items-center gap-1.5 text-xs text-amber-600 bg-amber-500/5 px-2.5 py-1.5 rounded-xl border border-amber-500/10 w-fit font-medium">
+                              <AlertCircle size={12} />
+                              Next Follow-up: {new Date(call.nextFollowUpDate).toLocaleDateString()}
                             </div>
                           )}
                         </div>
                       </div>
 
-                      {canManage && (
-                        <div className="flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => startEdit(call)}
-                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                            title="Edit Call Note"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(call._id)}
-                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                            title="Delete Call Note"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
-                      <div className="rounded-2xl bg-secondary/15 p-4 border border-border/40">
-                        <h4 className="text-[11px] font-black uppercase tracking-[0.15em] text-muted-foreground">Discussion Summary</h4>
-                        <p className="mt-2 text-sm text-foreground leading-relaxed whitespace-pre-wrap">{call.callSummary || 'No details provided.'}</p>
-                      </div>
-                      <div className="rounded-2xl bg-secondary/15 p-4 border border-border/40">
-                        <h4 className="text-[11px] font-black uppercase tracking-[0.15em] text-muted-foreground">Response & Next Steps</h4>
-                        <p className="mt-2 text-sm text-foreground leading-relaxed whitespace-pre-wrap">{call.clientResponse || 'No responses provided.'}</p>
-                        {call.nextFollowUpDate && (
-                          <div className="mt-3 flex items-center gap-1.5 text-xs text-amber-600 bg-amber-500/5 px-2.5 py-1.5 rounded-xl border border-amber-500/10 w-fit font-medium">
-                            <AlertCircle size={12} />
-                            Next Follow-up: {new Date(call.nextFollowUpDate).toLocaleDateString()}
-                          </div>
-                        )}
+                      <div className="mt-4 border-t border-border/40 pt-3 flex flex-wrap items-center justify-between text-xs text-muted-foreground">
+                        <span>Purpose: <span className="font-semibold text-foreground">{call.callPurpose}</span></span>
+                        <span>Logged by: <span className="font-semibold text-foreground">{call.addedBy?.name || 'Unknown'}</span></span>
                       </div>
                     </div>
-
-                    <div className="mt-4 border-t border-border/40 pt-3 flex flex-wrap items-center justify-between text-xs text-muted-foreground">
-                      <span>Purpose: <span className="font-semibold text-foreground">{call.callPurpose}</span></span>
-                      <span>Logged by: <span className="font-semibold text-foreground">{call.addedBy?.name || 'Unknown'}</span></span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Add/Edit Call Log Form Card */}
@@ -419,7 +421,7 @@ export default function CallHistoryDashboard() {
             <SectionCard
               title={isEditing ? 'Edit Call Note' : 'Log Call Note'}
               description="Record discussion points, update CRM pipeline stages, and schedule follow-ups."
-              className="sticky top-6 border border-border/60 shadow-lg max-h-[calc(100vh-100px)] overflow-y-auto"
+              className="sticky top-6 border border-border/60 shadow-lg max-h-[calc(100vh-120px)] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent"
             >
               <form onSubmit={handleSubmit} className="space-y-4">
                                 {/* Form Type Selector */}
