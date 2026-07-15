@@ -593,12 +593,6 @@ const Settings = () => {
           </motion.div>
         </div>
       </div>
-
-      <QRPaymentModal
-        isOpen={paymentModalOpen}
-        onClose={() => setPaymentModalOpen(false)}
-        defaultPlan={selectedPlanTier}
-      />
     </div>
   );
 };
