@@ -83,7 +83,7 @@ const CLIENT_REQUIREMENTS = [
 const clientFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   company: z.string().min(2, 'Company name is required'),
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Invalid email address').optional().or(z.literal('')),
   phone: z.string(),
   website: z.preprocess(
     (value) => {
@@ -288,7 +288,7 @@ export const AddClientModal = ({ open, onOpenChange, client = null }) => {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email *</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input type="email" placeholder="john@acme.com" {...field} />
                     </FormControl>

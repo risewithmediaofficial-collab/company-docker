@@ -8,7 +8,7 @@ const clientSchema = new mongoose.Schema(
   {
     organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization' },
     name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, trim: true, lowercase: true },
+    email: { type: String, trim: true, lowercase: true },
     phone: { type: String, trim: true },
     company: { type: String, trim: true },
     website: { type: String, trim: true },
