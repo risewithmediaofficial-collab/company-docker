@@ -37,14 +37,14 @@ export const DataTable = ({
       <div className={cn('overflow-hidden rounded-[28px] border border-border bg-card shadow-sm', className)}>
         <div className={cn('w-full', scrollClass)} style={{ maxHeight }}>
           <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="sticky top-0 z-10 border-b border-border bg-secondary/40 text-muted-foreground">
+            <thead className="text-muted-foreground">
               <tr>
                 {columns.map((col, i) => (
-                  <th key={col.key || i} className="px-4 py-4 font-semibold sm:px-6">
+                  <th key={col.key || i} className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">
                     <div className="h-4 w-24 animate-pulse rounded-md bg-secondary" />
                   </th>
                 ))}
-                {hasActions ? <th className="px-4 py-4 sm:px-6" /> : null}
+                {hasActions ? <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 sm:px-6" /> : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -82,15 +82,15 @@ export const DataTable = ({
       <div className={cn('w-full', scrollClass)} style={{ maxHeight }}>
         <table className="w-full min-w-[760px] text-left text-sm">
           {/* Sticky header — stays fixed while rows scroll */}
-          <thead className="sticky top-0 z-10 border-b border-border bg-secondary/40 text-muted-foreground">
+          <thead className="text-muted-foreground">
             <tr>
               {columns.map((col) => (
-                <th key={col.key} scope="col" className="px-4 py-4 font-semibold sm:px-6">
+                <th key={col.key} scope="col" className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">
                   {col.label}
                 </th>
               ))}
               {hasActions ? (
-                <th scope="col" className="px-4 py-4 text-right font-semibold sm:px-6">
+                <th scope="col" className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 text-right font-semibold sm:px-6">
                   Actions
                 </th>
               ) : null}
