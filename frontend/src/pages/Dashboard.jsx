@@ -48,6 +48,7 @@ const Dashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showEodModal, setShowEodModal] = useState(false);
+  const [period, setPeriod] = useState('monthly');
 
   const socket = useSocket();
   const isAdminOrManager = user?.role === 'superAdmin' || user?.role === 'manager';
@@ -65,7 +66,7 @@ const Dashboard = () => {
             ? '/referrals'
             : '/reports/employee';
           
-      const res = await api.get(endpoint);
+      const res = await api.get(endpoint, { params: { period } });
       setData(res.data);
     } catch (err) {
       console.error(err);
@@ -77,7 +78,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user?.role) return;
     fetchStats();
-  }, [user?.role]);
+  }, [user?.role, period]);
 
   useEffect(() => {
     if (!socket) return;
@@ -176,11 +177,31 @@ const Dashboard = () => {
       },
     ];
 
+    const getRevenueLabel = () => {
+      if (period === 'weekly') return 'This Week Revenue';
+      if (period === 'yearly') return 'This Year Revenue';
+      if (period === 'allTime') return 'All-Time Revenue';
+      return 'This Month Revenue';
+    };
+
+    const getRevenueTrend = () => {
+      if (period === 'allTime') return 'All-time revenue';
+      const suffix = period === 'weekly' ? 'last week' : period === 'yearly' ? 'last year' : 'last month';
+      return `${data.stats.revenueGrowth >= 0 ? '+' : ''}${data.stats.revenueGrowth}% vs ${suffix}`;
+    };
+
+    const getExpensesTrend = () => {
+      if (period === 'weekly') return 'Approved expenses this week';
+      if (period === 'yearly') return 'Approved expenses this year';
+      if (period === 'allTime') return 'All approved expenses';
+      return 'Approved expenses this month';
+    };
+
     const stats = !isManager ? [
       // Row 1 – Revenue & Financials
       { label: 'Total Income', value: formatINR(data.stats.totalIncome || 0), icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', trend: 'All-time paid', up: true },
-      { label: 'This Month Revenue', value: formatINR(data.stats.monthRevenue || 0), icon: IndianRupee, color: 'text-green-500', bg: 'bg-green-500/10', trend: `${data.stats.revenueGrowth >= 0 ? '+' : ''}${data.stats.revenueGrowth}% vs last month`, up: data.stats.revenueGrowth >= 0 },
-      { label: 'Total Expenses', value: formatINR(data.stats.totalExpenses || 0), icon: Wallet, color: 'text-rose-500', bg: 'bg-rose-500/10', trend: 'Approved expenses', up: true },
+      { label: getRevenueLabel(), value: formatINR(data.stats.monthRevenue || 0), icon: IndianRupee, color: 'text-green-500', bg: 'bg-green-500/10', trend: getRevenueTrend(), up: data.stats.revenueGrowth >= 0 },
+      { label: 'Total Expenses', value: formatINR(data.stats.totalExpenses || 0), icon: Wallet, color: 'text-rose-500', bg: 'bg-rose-500/10', trend: getExpensesTrend(), up: true },
       // Row 2 – Clients & Projects
       { label: 'Total Clients', value: data.stats.totalClients, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10', trend: `${data.stats.activeClients} active`, up: true },
       { label: 'Active Projects', value: data.stats.activeProjects, icon: Briefcase, color: 'text-indigo-500', bg: 'bg-indigo-500/10', trend: `${data.stats.totalProjects} total`, up: true },
@@ -217,6 +238,26 @@ const Dashboard = () => {
             <Calendar size={16} />
             Content Calendar
           </Link>
+          <div className="flex items-center space-x-1 bg-card p-1 rounded-xl border border-border shadow-sm">
+            {[
+              { value: 'weekly', label: 'Weekly' },
+              { value: 'monthly', label: 'Monthly' },
+              { value: 'yearly', label: 'Yearly' },
+              { value: 'allTime', label: 'All-Time' },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setPeriod(opt.value)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                  period === opt.value
+                    ? 'bg-secondary text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
           <div className="flex items-center space-x-2 bg-card p-1 rounded-xl border border-border shadow-sm">
             <button className="px-3 py-1.5 text-xs font-medium rounded-lg bg-secondary text-foreground">Overview</button>
             <button className="px-3 py-1.5 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground transition-colors">Analytics</button>

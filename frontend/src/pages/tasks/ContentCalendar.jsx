@@ -970,19 +970,25 @@ const ContentCalendar = ({ embedded = false, defaultView = 'month' }) => {
             ))}
           </select>
 
-          <input
-            type="date"
-            value={filters.startDate}
-            onChange={(event) => setFilters((current) => ({ ...current, startDate: event.target.value }))}
-            className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
-          />
+          <div className="relative">
+            <span className="absolute left-4 top-1.5 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Start Date</span>
+            <input
+              type="date"
+              value={filters.startDate}
+              onChange={(event) => setFilters((current) => ({ ...current, startDate: event.target.value }))}
+              className="w-full rounded-2xl border border-border bg-background px-4 pb-1.5 pt-5 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+            />
+          </div>
 
-          <input
-            type="date"
-            value={filters.endDate}
-            onChange={(event) => setFilters((current) => ({ ...current, endDate: event.target.value }))}
-            className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
-          />
+          <div className="relative">
+            <span className="absolute left-4 top-1.5 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">End Date</span>
+            <input
+              type="date"
+              value={filters.endDate}
+              onChange={(event) => setFilters((current) => ({ ...current, endDate: event.target.value }))}
+              className="w-full rounded-2xl border border-border bg-background px-4 pb-1.5 pt-5 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+            />
+          </div>
         </div>
       </PageToolbar>
 

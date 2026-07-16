@@ -12,7 +12,6 @@ import {
   LayoutGrid,
   MoreHorizontal,
   Calendar,
-  Filter,
   Briefcase,
   List,
   Activity,
@@ -26,6 +25,7 @@ import {
 } from 'lucide-react';
 import { formatINR } from '../../utils/currency';
 import { useUpdateProject } from '../../hooks/useProjects';
+import { useUpdateTaskStatus } from '../../hooks/useTasks';
 import api from '../../api';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -69,8 +69,16 @@ const ProjectDetails = () => {
   const [hasRequested, setHasRequested] = useState(false);
   const [editingBudget, setEditingBudget] = useState(false);
   const [budgetForm, setBudgetForm] = useState({});
-  const updateProject = useUpdateProject();
 
+  // Drag & drop state
+  const [draggingTaskId, setDraggingTaskId] = useState(null);
+  const [dragOverStatus, setDragOverStatus] = useState(null);
+  const [pendingDrop, setPendingDrop] = useState(null);
+
+  const updateProject = useUpdateProject();
+  const updateTaskStatus = useUpdateTaskStatus();
+
+  // ─── Data Fetching ───────────────────────────────────────────────────────────
   const fetchProjectData = async () => {
     try {
       setLoading(true);
@@ -95,6 +103,92 @@ const ProjectDetails = () => {
     }
   };
 
+  useEffect(() => {
+    fetchProjectData();
+  }, [id]);
+
+  // ─── Drag & Drop ─────────────────────────────────────────────────────────────
+  const handleDragStart = (e, taskId) => {
+    setDraggingTaskId(taskId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('taskId', taskId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingTaskId(null);
+    setDragOverStatus(null);
+  };
+
+  const handleDragOver = (e, status) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverStatus(status);
+  };
+
+  const handleDrop = (e, targetStatus) => {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData('taskId');
+    setDraggingTaskId(null);
+    setDragOverStatus(null);
+
+    const currentStatus = Object.keys(kanban).find((s) =>
+      (kanban[s] || []).some((t) => t._id === taskId)
+    );
+
+    if (!taskId || !targetStatus || currentStatus === targetStatus) return;
+
+    const confirmStatuses = ['approved', 'done'];
+    const confirmMessages = {
+      approved: 'Are you sure you want to mark this task as Approved?',
+      done: 'Are you sure you want to mark this task as Done / Completed?',
+    };
+
+    if (confirmStatuses.includes(targetStatus)) {
+      setPendingDrop({ taskId, targetStatus, message: confirmMessages[targetStatus] });
+    } else {
+      executeDrop(taskId, targetStatus);
+    }
+  };
+
+  const executeDrop = async (taskId, targetStatus) => {
+    try {
+      // Optimistic UI update
+      setKanban((prev) => {
+        const next = { ...prev };
+        let movedTask = null;
+        for (const s of Object.keys(next)) {
+          const idx = (next[s] || []).findIndex((t) => t._id === taskId);
+          if (idx !== -1) {
+            movedTask = next[s][idx];
+            next[s] = next[s].filter((_, i) => i !== idx);
+            break;
+          }
+        }
+        if (movedTask) {
+          next[targetStatus] = [
+            ...(next[targetStatus] || []),
+            { ...movedTask, status: targetStatus },
+          ];
+        }
+        return next;
+      });
+
+      await updateTaskStatus.mutateAsync({ id: taskId, status: statusLabels[targetStatus] || targetStatus });
+      toast.success(`Task moved to ${statusLabels[targetStatus]}`);
+      fetchProjectData();
+    } catch {
+      fetchProjectData(); // rollback
+    }
+  };
+
+  const confirmPendingDrop = () => {
+    if (pendingDrop) {
+      executeDrop(pendingDrop.taskId, pendingDrop.targetStatus);
+      setPendingDrop(null);
+    }
+  };
+
+  // ─── Handlers ────────────────────────────────────────────────────────────────
   const handleRequestAccess = async () => {
     try {
       setIsRequesting(true);
@@ -118,9 +212,14 @@ const ProjectDetails = () => {
     }
   };
 
-  useEffect(() => {
-    fetchProjectData();
-  }, [id]);
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/projects/${id}`);
+      toast.success('Project link copied to clipboard');
+    } catch (_) {
+      toast.error('Unable to copy project link');
+    }
+  };
 
   const openTaskModal = (defaults = {}) => {
     if (user?.role === 'client') return;
@@ -133,6 +232,7 @@ const ProjectDetails = () => {
     setShowTaskModal(true);
   };
 
+  // ─── Computed ─────────────────────────────────────────────────────────────────
   const allTasks = useMemo(
     () => statuses.flatMap((status) => kanban[status] || []),
     [kanban],
@@ -144,12 +244,13 @@ const ProjectDetails = () => {
       source: 'Project file',
       createdAt: file.uploadedAt,
     }));
-    const taskFiles = allTasks.flatMap((task) => (task.attachments || []).map((file) => ({
-      ...file,
-      source: task.title,
-      createdAt: file.uploadedAt,
-    })));
-
+    const taskFiles = allTasks.flatMap((task) =>
+      (task.attachments || []).map((file) => ({
+        ...file,
+        source: task.title,
+        createdAt: file.uploadedAt,
+      }))
+    );
     return [...projectFiles, ...taskFiles];
   }, [allTasks, project]);
 
@@ -159,6 +260,56 @@ const ProjectDetails = () => {
     return (project?.team || []).some((member) => member._id === user._id) || project?.manager?._id === user._id;
   }, [project?.manager?._id, project?.team, user]);
 
+  // ─── Budget helpers ───────────────────────────────────────────────────────────
+  const syncBudgetForm = () => {
+    const b = project.budgetDetails || {};
+    setBudgetForm({
+      marketingAmount: b.marketingAmount ?? 0,
+      adsAmount: b.adsAmount ?? 0,
+      contentAmount: b.contentAmount ?? 0,
+      designAmount: b.designAmount ?? 0,
+      developmentAmount: b.developmentAmount ?? 0,
+      printingAmount: b.printingAmount ?? 0,
+      otherExpenses: b.otherExpenses ?? 0,
+      totalBudget: b.totalBudget ?? project.budget ?? 0,
+      amountReceived: b.amountReceived ?? 0,
+      paymentStatus: b.paymentStatus || 'pending',
+      budgetNotes: b.budgetNotes || '',
+    });
+  };
+
+  const handleSaveBudget = async () => {
+    const subtotal = [
+      budgetForm.marketingAmount, budgetForm.adsAmount, budgetForm.contentAmount,
+      budgetForm.designAmount, budgetForm.developmentAmount, budgetForm.printingAmount,
+      budgetForm.otherExpenses,
+    ].reduce((sum, val) => sum + (Number(val) || 0), 0);
+    const totalBudget = Number(budgetForm.totalBudget) || subtotal;
+    const amountReceived = Number(budgetForm.amountReceived) || 0;
+
+    await updateProject.mutateAsync({
+      id: project._id,
+      data: {
+        budget: totalBudget,
+        budgetDetails: {
+          ...budgetForm,
+          marketingAmount: Number(budgetForm.marketingAmount) || 0,
+          adsAmount: Number(budgetForm.adsAmount) || 0,
+          contentAmount: Number(budgetForm.contentAmount) || 0,
+          designAmount: Number(budgetForm.designAmount) || 0,
+          developmentAmount: Number(budgetForm.developmentAmount) || 0,
+          printingAmount: Number(budgetForm.printingAmount) || 0,
+          otherExpenses: Number(budgetForm.otherExpenses) || 0,
+          totalBudget,
+          amountReceived,
+        },
+      },
+    });
+    setEditingBudget(false);
+    fetchProjectData();
+  };
+
+  // ─── Early returns ────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center text-muted-foreground animate-pulse">
@@ -171,113 +322,190 @@ const ProjectDetails = () => {
     return <div className="rounded-3xl border border-border bg-card p-12 text-center text-muted-foreground">Project not found.</div>;
   }
 
-  const handleShare = async () => {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/projects/${id}`);
-      toast.success('Project link copied to clipboard');
-    } catch (_) {
-      toast.error('Unable to copy project link');
-    }
-  };
+  if (!isTeamMember && user.role !== 'client') {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-6">
+        <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary">
+          <Lock size={40} />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold">Access Restricted</h2>
+          <p className="text-muted-foreground mt-2 max-w-md mx-auto">
+            You don't have permission to view this project's assets. Please request access from the project manager.
+          </p>
+        </div>
+        <button
+          onClick={handleRequestAccess}
+          disabled={isRequesting || hasRequested}
+          className={`px-8 py-3 rounded-2xl font-bold transition-all shadow-lg ${
+            hasRequested
+              ? 'bg-secondary text-muted-foreground cursor-default'
+              : 'bg-primary text-white hover:bg-primary/90 shadow-primary/20'
+          }`}
+        >
+          {isRequesting ? 'Sending...' : hasRequested ? 'Request Sent' : 'Request Access'}
+        </button>
+      </div>
+    );
+  }
+
+  // ─── Tab Renderers ────────────────────────────────────────────────────────────
 
   const renderBoard = () => (
-    <div className="flex h-[calc(100vh-320px)] space-x-6 overflow-x-auto pb-6 scrollbar-hide">
-      {statuses.map((status) => (
-        <div key={status} className="flex w-80 flex-shrink-0 flex-col">
-          <div className="mb-4 flex items-center justify-between px-2">
-            <div className="flex items-center space-x-2">
-              <div className={`h-2 w-2 rounded-full ${
-                status === 'done' ? 'bg-emerald-500'
-                  : status === 'review' ? 'bg-amber-500'
-                    : status === 'in_progress' ? 'bg-blue-500'
-                      : 'bg-muted-foreground'
-              }`}
-              />
-              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                {statusLabels[status]}
-              </h3>
-              <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-bold">
-                {kanban[status]?.length || 0}
-              </span>
+    <>
+      {/* Confirmation Dialog */}
+      {pendingDrop && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 max-w-sm rounded-3xl border border-border bg-card p-6 shadow-2xl">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <CheckCircle2 size={24} />
             </div>
-            {user?.role !== 'client' && (
+            <h2 className="text-base font-bold">Confirm Status Change</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{pendingDrop.message}</p>
+            <div className="mt-5 flex gap-3">
               <button
-                onClick={() => openTaskModal({ status: statusLabels[status] })}
-                className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-secondary"
+                onClick={() => setPendingDrop(null)}
+                className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-secondary"
               >
-                <Plus size={14} />
+                Cancel
               </button>
-            )}
-          </div>
-
-          <div className="flex-1 space-y-3 overflow-y-auto rounded-2xl border border-dashed border-border bg-secondary/20 p-3">
-            {(kanban[status] || []).map((task) => (
-              <motion.div
-                layoutId={task._id}
-                key={task._id}
-                className="group cursor-pointer rounded-xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
+              <button
+                onClick={confirmPendingDrop}
+                className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm shadow-primary/30 transition-colors hover:bg-primary/90"
               >
-                <div className="mb-3 flex items-start justify-between">
-                  <div className="flex flex-wrap gap-1">
-                    {(task.tags || []).length ? task.tags.map((tag) => (
-                      <span key={tag} className="rounded bg-primary/10 px-1.5 py-0.5 text-[8px] font-bold uppercase text-primary">
-                        {tag}
-                      </span>
-                    )) : (
-                      <span className="rounded bg-secondary px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-tighter text-muted-foreground">
-                        {task.taskType || 'Task'}
-                      </span>
-                    )}
-                  </div>
-                  <button className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
-                    <MoreHorizontal size={14} />
-                  </button>
-                </div>
-
-                <h4 className="line-clamp-2 text-sm font-bold leading-tight">{task.title}</h4>
-
-                <div className="mt-4 flex items-center justify-between">
-                  <div className="flex items-center space-x-3 text-[10px] text-muted-foreground">
-                    <span className="flex items-center">
-                      <MessageSquare size={12} className="mr-1" /> {task.comments?.length || 0}
-                    </span>
-                    <span className="flex items-center">
-                      <Paperclip size={12} className="mr-1" /> {task.attachments?.length || 0}
-                    </span>
-                  </div>
-                  <div className="flex -space-x-1.5">
-                    {(task.assignedTo || []).map((member) => (
-                      <div
-                        key={member._id}
-                        className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border-2 border-card bg-secondary text-[8px] font-bold shadow-sm"
-                        title={member.name}
-                      >
-                        {member.avatar ? <img src={getAssetUrl(member.avatar)} alt="" /> : member.name?.charAt(0)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {task.dueDate && (
-                  <div className={`mt-3 flex items-center text-[10px] font-bold ${
-                    new Date(task.dueDate) < new Date() && status !== 'done' ? 'text-destructive' : 'text-muted-foreground'
-                  }`}>
-                    <Clock size={10} className="mr-1" />
-                    {new Date(task.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                  </div>
-                )}
-              </motion.div>
-            ))}
-
-            {(kanban[status] || []).length === 0 && (
-              <div className="flex h-20 items-center justify-center text-xs italic text-muted-foreground">
-                No tasks in this column.
-              </div>
-            )}
+                Yes, Confirm
+              </button>
+            </div>
           </div>
         </div>
-      ))}
-    </div>
+      )}
+
+      <div className="flex h-[calc(100vh-320px)] space-x-6 overflow-x-auto pb-6 scrollbar-hide">
+        {statuses.map((status) => {
+          const isDragOver = dragOverStatus === status;
+          const columnDotColor =
+            status === 'done' ? 'bg-emerald-500'
+              : status === 'approved' ? 'bg-blue-500'
+                : status === 'review' ? 'bg-amber-500'
+                  : status === 'in_progress' ? 'bg-indigo-500'
+                    : status === 'rejected' ? 'bg-rose-500'
+                      : 'bg-muted-foreground';
+
+          return (
+            <div key={status} className="flex w-80 flex-shrink-0 flex-col">
+              {/* Column Header */}
+              <div className="mb-4 flex items-center justify-between px-2">
+                <div className="flex items-center space-x-2">
+                  <div className={`h-2 w-2 rounded-full ${columnDotColor}`} />
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                    {statusLabels[status]}
+                  </h3>
+                  <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-bold">
+                    {kanban[status]?.length || 0}
+                  </span>
+                </div>
+                {user?.role !== 'client' && (
+                  <button
+                    onClick={() => openTaskModal({ status: statusLabels[status] })}
+                    className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-secondary"
+                  >
+                    <Plus size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* Drop Zone */}
+              <div
+                onDragOver={(e) => handleDragOver(e, status)}
+                onDragLeave={() => setDragOverStatus(null)}
+                onDrop={(e) => handleDrop(e, status)}
+                className={`flex-1 space-y-3 overflow-y-auto rounded-2xl border-2 p-3 transition-all duration-150 ${
+                  isDragOver
+                    ? 'border-primary bg-primary/5 shadow-inner'
+                    : 'border-dashed border-border bg-secondary/20'
+                }`}
+              >
+                {isDragOver && (
+                  <div className="flex h-12 items-center justify-center rounded-xl border border-dashed border-primary/40 bg-primary/5 text-xs font-semibold text-primary">
+                    Drop here
+                  </div>
+                )}
+
+                {(kanban[status] || []).map((task) => (
+                  <div
+                    key={task._id}
+                    draggable={user?.role !== 'client'}
+                    onDragStart={(e) => handleDragStart(e, task._id)}
+                    onDragEnd={handleDragEnd}
+                    className={`group cursor-grab rounded-xl border border-border bg-card p-4 shadow-sm transition-all active:cursor-grabbing ${
+                      draggingTaskId === task._id
+                        ? 'opacity-40 scale-95 rotate-1'
+                        : 'hover:shadow-md hover:-translate-y-0.5'
+                    }`}
+                  >
+                    <div className="mb-3 flex items-start justify-between">
+                      <div className="flex flex-wrap gap-1">
+                        {(task.tags || []).length ? task.tags.map((tag) => (
+                          <span key={tag} className="rounded bg-primary/10 px-1.5 py-0.5 text-[8px] font-bold uppercase text-primary">
+                            {tag}
+                          </span>
+                        )) : (
+                          <span className="rounded bg-secondary px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-tighter text-muted-foreground">
+                            {task.taskType || 'Task'}
+                          </span>
+                        )}
+                      </div>
+                      <button className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                        <MoreHorizontal size={14} />
+                      </button>
+                    </div>
+
+                    <h4 className="line-clamp-2 text-sm font-bold leading-tight">{task.title}</h4>
+
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex items-center space-x-3 text-[10px] text-muted-foreground">
+                        <span className="flex items-center">
+                          <MessageSquare size={12} className="mr-1" /> {task.comments?.length || 0}
+                        </span>
+                        <span className="flex items-center">
+                          <Paperclip size={12} className="mr-1" /> {task.attachments?.length || 0}
+                        </span>
+                      </div>
+                      <div className="flex -space-x-1.5">
+                        {(task.assignedTo || []).map((member) => (
+                          <div
+                            key={member._id}
+                            className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border-2 border-card bg-secondary text-[8px] font-bold shadow-sm"
+                            title={member.name}
+                          >
+                            {member.avatar ? <img src={getAssetUrl(member.avatar)} alt="" /> : member.name?.charAt(0)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {task.dueDate && (
+                      <div className={`mt-3 flex items-center text-[10px] font-bold ${
+                        new Date(task.dueDate) < new Date() && status !== 'done' ? 'text-destructive' : 'text-muted-foreground'
+                      }`}>
+                        <Clock size={10} className="mr-1" />
+                        {new Date(task.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {(kanban[status] || []).length === 0 && !isDragOver && (
+                  <div className="flex h-20 items-center justify-center text-xs italic text-muted-foreground">
+                    No tasks here.
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 
   const renderList = () => {
@@ -347,7 +575,7 @@ const ProjectDetails = () => {
   const renderFiles = () => (
     <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="font-bold">Files & Attachments</h2>
+        <h2 className="font-bold">Files &amp; Attachments</h2>
         <span className="text-xs font-semibold text-muted-foreground">
           {files.length} item{files.length === 1 ? '' : 's'}
         </span>
@@ -359,35 +587,35 @@ const ProjectDetails = () => {
           const isImage = file.type?.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(file.url || file.name || '');
 
           return (
-          <a
-            key={`${file.url}-${index}`}
-            href={fileUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-secondary/20 p-4 transition-colors hover:bg-secondary/40"
-          >
-            <div className="flex min-w-0 items-center gap-3">
-              {isImage ? (
-                <img
-                  src={fileUrl}
-                  alt={file.name || 'File preview'}
-                  className="h-12 w-12 shrink-0 rounded-xl border border-border object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Paperclip size={18} />
+            <a
+              key={`${file.url}-${index}`}
+              href={fileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-secondary/20 p-4 transition-colors hover:bg-secondary/40"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                {isImage ? (
+                  <img
+                    src={fileUrl}
+                    alt={file.name || 'File preview'}
+                    className="h-12 w-12 shrink-0 rounded-xl border border-border object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Paperclip size={18} />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="font-semibold">{file.name || 'Untitled file'}</p>
+                  <p className="text-xs text-muted-foreground">{file.source}</p>
                 </div>
-              )}
-              <div className="min-w-0">
-                <p className="font-semibold">{file.name || 'Untitled file'}</p>
-                <p className="text-xs text-muted-foreground">{file.source}</p>
               </div>
-            </div>
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {file.createdAt ? new Date(file.createdAt).toLocaleDateString() : 'Recently added'}
-            </span>
-          </a>
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {file.createdAt ? new Date(file.createdAt).toLocaleDateString() : 'Recently added'}
+              </span>
+            </a>
           );
         }) : (
           <div className="rounded-2xl border border-dashed border-border bg-secondary/10 p-12 text-center text-sm text-muted-foreground">
@@ -445,13 +673,13 @@ const ProjectDetails = () => {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={() => handleProcessRequest(request._id, 'rejected')}
                     className="rounded-lg p-2 text-destructive hover:bg-destructive/10 transition-colors"
                   >
                     <XCircle size={20} />
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleProcessRequest(request._id, 'approved')}
                     className="rounded-lg p-2 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
                   >
@@ -465,54 +693,6 @@ const ProjectDetails = () => {
       )}
     </div>
   );
-
-  const syncBudgetForm = () => {
-    const b = project.budgetDetails || {};
-    setBudgetForm({
-      marketingAmount: b.marketingAmount ?? 0,
-      adsAmount: b.adsAmount ?? 0,
-      contentAmount: b.contentAmount ?? 0,
-      designAmount: b.designAmount ?? 0,
-      developmentAmount: b.developmentAmount ?? 0,
-      printingAmount: b.printingAmount ?? 0,
-      otherExpenses: b.otherExpenses ?? 0,
-      totalBudget: b.totalBudget ?? project.budget ?? 0,
-      amountReceived: b.amountReceived ?? 0,
-      paymentStatus: b.paymentStatus || 'pending',
-      budgetNotes: b.budgetNotes || '',
-    });
-  };
-
-  const handleSaveBudget = async () => {
-    const subtotal = [
-      budgetForm.marketingAmount, budgetForm.adsAmount, budgetForm.contentAmount,
-      budgetForm.designAmount, budgetForm.developmentAmount, budgetForm.printingAmount,
-      budgetForm.otherExpenses,
-    ].reduce((sum, val) => sum + (Number(val) || 0), 0);
-    const totalBudget = Number(budgetForm.totalBudget) || subtotal;
-    const amountReceived = Number(budgetForm.amountReceived) || 0;
-
-    await updateProject.mutateAsync({
-      id: project._id,
-      data: {
-        budget: totalBudget,
-        budgetDetails: {
-          ...budgetForm,
-          marketingAmount: Number(budgetForm.marketingAmount) || 0,
-          adsAmount: Number(budgetForm.adsAmount) || 0,
-          contentAmount: Number(budgetForm.contentAmount) || 0,
-          designAmount: Number(budgetForm.designAmount) || 0,
-          developmentAmount: Number(budgetForm.developmentAmount) || 0,
-          printingAmount: Number(budgetForm.printingAmount) || 0,
-          otherExpenses: Number(budgetForm.otherExpenses) || 0,
-          totalBudget,
-          amountReceived,
-        },
-      },
-    });
-    setEditingBudget(false);
-    fetchProjectData();
-  };
 
   const renderProposalPanel = () => {
     const proposal = project.acceptedProposalId;
@@ -547,7 +727,7 @@ const ProjectDetails = () => {
             <p className="mt-1 text-lg font-bold capitalize">{proposal.status}</p>
           </div>
           <div className="rounded-2xl border border-border bg-secondary/20 p-4 md:col-span-2">
-            <p className="text-xs text-muted-foreground">Accepted Date & Time</p>
+            <p className="text-xs text-muted-foreground">Accepted Date &amp; Time</p>
             <p className="mt-1 text-lg font-bold">
               {proposal.acceptedAt ? new Date(proposal.acceptedAt).toLocaleString() : '—'}
             </p>
@@ -719,35 +899,10 @@ const ProjectDetails = () => {
     </div>
   );
 
-  if (!isTeamMember && user.role !== 'client') {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-6">
-        <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary">
-          <Lock size={40} />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold">Access Restricted</h2>
-          <p className="text-muted-foreground mt-2 max-w-md mx-auto">
-            You don't have permission to view this project's assets. Please request access from the project manager.
-          </p>
-        </div>
-        <button
-          onClick={handleRequestAccess}
-          disabled={isRequesting || hasRequested}
-          className={`px-8 py-3 rounded-2xl font-bold transition-all shadow-lg ${
-            hasRequested 
-              ? 'bg-secondary text-muted-foreground cursor-default' 
-              : 'bg-primary text-white hover:bg-primary/90 shadow-primary/20'
-          }`}
-        >
-          {isRequesting ? 'Sending...' : hasRequested ? 'Request Sent' : 'Request Access'}
-        </button>
-      </div>
-    );
-  }
-
+  // ─── Main Render ──────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
+      {/* Project Header */}
       <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-sm">
         <div className="absolute left-0 top-0 h-1 w-full bg-primary" />
 
@@ -815,6 +970,7 @@ const ProjectDetails = () => {
           </div>
         </div>
 
+        {/* Tab Navigation */}
         <div className="mt-8 flex items-center space-x-8 border-t border-border pt-4">
           {[
             { id: 'board', label: 'Task Board', icon: LayoutGrid },
@@ -842,6 +998,7 @@ const ProjectDetails = () => {
         </div>
       </div>
 
+      {/* Tab Content */}
       <AnimatePresence mode="wait">
         <motion.div
           key={activeTab}

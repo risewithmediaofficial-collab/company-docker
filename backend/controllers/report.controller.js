@@ -17,9 +17,40 @@ export const getAdminDashboard = async (req, res) => {
   try {
     const isManager = req.user?.role === 'manager';
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    const period = req.query.period || 'monthly';
+
+    let periodStart, periodEnd, priorPeriodStart, priorPeriodEnd;
+
+    if (period === 'weekly') {
+      const day = now.getDay();
+      periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
+      periodStart.setHours(0, 0, 0, 0);
+      periodEnd = new Date(now);
+
+      priorPeriodStart = new Date(periodStart);
+      priorPeriodStart.setDate(priorPeriodStart.getDate() - 7);
+      priorPeriodEnd = new Date(periodStart);
+      priorPeriodEnd.setMilliseconds(-1);
+    } else if (period === 'yearly') {
+      periodStart = new Date(now.getFullYear(), 0, 1);
+      periodEnd = new Date(now);
+
+      priorPeriodStart = new Date(now.getFullYear() - 1, 0, 1);
+      priorPeriodEnd = new Date(now.getFullYear(), 0, 0, 23, 59, 59, 999);
+    } else if (period === 'allTime') {
+      periodStart = new Date(0);
+      periodEnd = new Date(now);
+
+      priorPeriodStart = new Date(0);
+      priorPeriodEnd = new Date(now);
+    } else {
+      // 'monthly'
+      periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      periodEnd = new Date(now);
+
+      priorPeriodStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      priorPeriodEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    }
 
     const [
       totalLeads, newLeadsThisMonth, wonLeads,
@@ -34,18 +65,18 @@ export const getAdminDashboard = async (req, res) => {
       expiringRenewals,
     ] = await Promise.all([
       Lead.countDocuments(),
-      Lead.countDocuments({ createdAt: { $gte: startOfMonth } }),
-      Lead.countDocuments({ stage: 'won' }),
+      Lead.countDocuments({ createdAt: { $gte: periodStart, $lte: periodEnd } }),
+      Lead.countDocuments({ stage: 'won', updatedAt: { $gte: periodStart, $lte: periodEnd } }),
       Client.countDocuments(),
       Client.countDocuments({ status: 'active' }),
       Project.countDocuments(),
       Project.countDocuments({ status: 'active' }),
       Task.countDocuments({ parent: null }),
       Task.countDocuments({ dueDate: { $lt: now }, status: { $nin: ['done', 'approved'] } }),
-      Invoice.aggregate([{ $match: { status: 'paid', paidDate: { $gte: startOfMonth } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
-      Invoice.aggregate([{ $match: { status: 'paid', paidDate: { $gte: startOfLastMonth, $lte: endOfLastMonth } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
+      Invoice.aggregate([{ $match: { status: 'paid', paidDate: { $gte: periodStart, $lte: periodEnd } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
+      Invoice.aggregate([{ $match: { status: 'paid', paidDate: { $gte: priorPeriodStart, $lte: priorPeriodEnd } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
       Invoice.aggregate([{ $match: { status: 'paid' } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
-      Expense.aggregate([{ $match: { status: { $in: ['approved', 'reimbursed'] } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+      Expense.aggregate([{ $match: { status: { $in: ['approved', 'reimbursed'] }, date: { $gte: periodStart, $lte: periodEnd } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
       Project.aggregate([
         {
           $group: {
