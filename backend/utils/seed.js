@@ -32,7 +32,7 @@ const seed = async () => {
 
     // ── USERS ──────────────────────────────────────────────────────────────
     const users = await User.create([
-      { name: process.env.DEFAULT_ADMIN_NAME || 'DINESH M', email: 'admin@agencycrm.com', password: 'password123', role: 'superAdmin', isActive: true },
+      { name: process.env.DEFAULT_ADMIN_NAME || 'DINESH M', email: 'admin@agencycrm.com', password: process.env.DEFAULT_ADMIN_PASSWORD || 'dinesh123', role: 'superAdmin', isActive: true },
       { name: 'Maria Manager', email: 'manager@agencycrm.com', password: 'password123', role: 'manager', department: 'Operations', isActive: true },
       { name: 'Emma Employee', email: 'employee@agencycrm.com', password: 'password123', role: 'employee', department: 'Design', position: 'UI Designer', isActive: true },
       { name: 'Sam Sales', email: 'sales@agencycrm.com', password: 'password123', role: 'employee', department: 'Sales', position: 'Sales Executive', isActive: true },

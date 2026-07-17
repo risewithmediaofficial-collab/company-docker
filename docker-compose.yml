@@ -1,0 +1,85 @@
+# =============================================
+# Docker Compose - Agency CRM
+# Services: MongoDB, Backend API, Frontend
+# =============================================
+
+services:
+
+  # ── MongoDB ──────────────────────────────────────────
+  mongodb:
+    image: mongo:7.0
+    container_name: agency_crm_mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-changeThisPassword}
+      MONGO_INITDB_DATABASE: agency_crm
+    ports:
+      - "27019:27017"   # Host port 27019 → container port 27017
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - crm_network
+
+  # ── Backend API ──────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agency_crm_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      # MongoDB connection uses the service name "mongodb" as hostname
+      MONGO_URI: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-changeThisPassword}@mongodb:27017/agency_crm?authSource=admin
+      CLIENT_URL: ${CLIENT_URL:-http://localhost}
+      JWT_SECRET: ${JWT_SECRET:-changeme_strong_jwt_secret_32chars}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-changeme_strong_refresh_secret}
+      JWT_EXPIRE: ${JWT_EXPIRE:-15m}
+      JWT_REFRESH_EXPIRE: ${JWT_REFRESH_EXPIRE:-7d}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-changeme_32byte_encryption_key!!}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-dinesh123}
+      # Cloudinary (optional - for file uploads)
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      # Email (optional)
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+    ports:
+      - "5001:5001"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      - mongodb
+    networks:
+      - crm_network
+
+  # ── Frontend (Nginx + React) ─────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: agency_crm_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - crm_network
+
+# ── Volumes ──────────────────────────────────────────
+volumes:
+  mongodb_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+# ── Networks ─────────────────────────────────────────
+networks:
+  crm_network:
+    driver: bridge
