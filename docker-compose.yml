@@ -49,8 +49,6 @@ services:
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
-    ports:
-      - "5001:5001"
     volumes:
       - uploads_data:/app/uploads
     depends_on:
