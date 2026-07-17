@@ -64,7 +64,7 @@ services:
     container_name: agency_crm_frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "82:80"
     depends_on:
       - backend
     networks:
