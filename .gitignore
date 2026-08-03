@@ -1,5 +1,6 @@
 node_modules
 .env
+.env.production
 dist
 build
 .DS_Store
@@ -9,3 +10,4 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+uploads/
