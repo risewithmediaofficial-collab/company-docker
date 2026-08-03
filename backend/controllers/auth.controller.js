@@ -6,8 +6,10 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import User from '../models/user.model.js';
 import Client from '../models/client.model.js';
+import Organization from '../models/organization.model.js';
 import { sendEmail } from '../utils/email.js';
 import { createNotification } from '../utils/notification.js';
+
 
 // Generate access token
 const generateAccessToken = (id, role) => {
@@ -182,11 +184,18 @@ export const logout = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate('clientId');
-    res.json({ success: true, user });
+    let organization = null;
+    if (user.organizationId) {
+      organization = await Organization.findById(user.organizationId).select(
+        'name plan planStatus enabledModules maxUsers maxClients trialEndsAt settings'
+      );
+    }
+    res.json({ success: true, user, organization });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 // @desc    Forgot password
 // @route   POST /api/auth/forgot-password
@@ -297,6 +306,81 @@ export const changePassword = async (req, res) => {
     user.password = newPassword;
     await user.save();
     res.json({ success: true, message: 'Password changed successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Register a new company (SaaS tenant registration)
+// @route   POST /api/auth/register-company
+// @access  Public
+export const registerCompany = async (req, res) => {
+  try {
+    const { companyName, ownerName, email, password, phone, industry, website } = req.body;
+
+    if (!companyName || !ownerName || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Company name, your name, email and password are required',
+      });
+    }
+
+    // Check if email already registered
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'This email is already registered' });
+    }
+
+    // Create the owner user first (inactive until approved)
+    const owner = await User.create({
+      name: ownerName,
+      email,
+      password,
+      phone: phone || '',
+      role: 'organizationOwner',
+      isActive: false,
+      approvalStatus: 'pending',
+    });
+
+    // Create the organization (pending approval)
+    const org = await Organization.create({
+      name: companyName,
+      ownerId: owner._id,
+      industry: industry || '',
+      website: website || '',
+      phone: phone || '',
+      planStatus: 'pending',
+      plan: 'trial',
+    });
+
+    // Link user to org
+    owner.organizationId = org._id;
+    await owner.save({ validateBeforeSave: false });
+
+    // Notify platform super admins
+    const superAdmins = await User.find({ role: 'superAdmin', isActive: true });
+    const io = req.app.get('io');
+    await Promise.all(
+      superAdmins.map((admin) =>
+        createNotification(
+          {
+            recipient: admin._id,
+            type: 'system',
+            title: '🆕 New Company Registration',
+            message: `"${companyName}" registered by ${ownerName} (${email}). Awaiting your approval.`,
+            link: '/platform/companies',
+          },
+          io
+        )
+      )
+    );
+
+    if (io) io.emit('newOrgRegistered', { orgId: org._id, companyName });
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful! Your account is under review. You will be notified once approved.',
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -30,7 +30,8 @@ import {
   Sparkles,
   StickyNote,
   Share2,
-  X
+  X,
+  Shield
 } from 'lucide-react';
 import { toggleSidebar } from '../../store/slices/uiSlice';
 import { motion } from 'framer-motion';
@@ -97,6 +98,7 @@ const Sidebar = () => {
       { name: 'Manager Assignments', icon: CheckSquare, path: '/admin/manager-assignments' },
       { name: 'Manager Board', icon: ClipboardList, path: '/manager-board' },
       { name: 'Users', icon: Users2, path: '/admin/users' },
+      { name: 'Platform Admin', icon: Shield, path: '/platform' },
     ],
     manager: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/' },

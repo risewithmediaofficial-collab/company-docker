@@ -13,6 +13,7 @@ import AuthLayout from './layouts/AuthLayout';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import RegisterCompany from './pages/auth/RegisterCompany';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import Leads from './pages/crm/Leads';
@@ -58,6 +59,12 @@ import PortalGuidelines from './pages/portal/sections/PortalGuidelines';
 // Social Media Manager Module Pages
 import SMMDashboard from './pages/smm/SMMDashboard';
 import SMMClients from './pages/smm/SMMClients';
+
+// Platform Admin Pages (SaaS)
+import PlatformLayout from './pages/platform/PlatformLayout';
+import PlatformDashboard from './pages/platform/PlatformDashboard';
+import Companies from './pages/platform/Companies';
+import CompanyDetail from './pages/platform/CompanyDetail';
 import SMMProjects from './pages/smm/SMMProjects';
 import Campaigns from './pages/smm/Campaigns';
 import AdSets from './pages/smm/AdSets';
@@ -126,12 +133,28 @@ const App = () => {
       <SonnerToaster position="top-right" richColors closeButton />
       <Suspense fallback={null}>
         <Routes>
+          {/* ── Public Standalone SaaS Registration Page ──────────────── */}
+          <Route path="/register-company" element={!isAuthenticated ? <RegisterCompany /> : <Navigate to="/" />} />
+
           {/* ── Auth Routes ─────────────────────────────────────────────── */}
           <Route element={<AuthLayout />}>
             <Route path="/login"          element={!isAuthenticated ? <Login />          : <Navigate to="/" />} />
             <Route path="/register"       element={!isAuthenticated ? <Register />       : <Navigate to="/" />} />
             <Route path="/forgot-password" element={!isAuthenticated ? <ForgotPassword /> : <Navigate to="/" />} />
             <Route path="/reset-password/:token" element={!isAuthenticated ? <ResetPassword /> : <Navigate to="/" />} />
+          </Route>
+
+          {/* ── Platform Admin Routes (superAdmin only) ───────────────────── */}
+          <Route
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin']}>
+                <PlatformLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/platform" element={<PlatformDashboard />} />
+            <Route path="/platform/companies" element={<Companies />} />
+            <Route path="/platform/companies/:id" element={<CompanyDetail />} />
           </Route>
 
           {/* ── Protected Shell ─────────────────────────────────────────── */}

@@ -118,13 +118,24 @@ const Login = () => {
         </button>
       </form>
 
-      <div className="text-center">
+      <div className="text-center space-y-2">
         <p className="text-sm text-muted-foreground">
           Don't have an account?{' '}
           <Link to="/register" className="font-semibold text-primary hover:underline transition-all">
-            Create new account
+            Create account
           </Link>
         </p>
+        <div className="flex items-center gap-2 text-muted-foreground/50 text-xs">
+          <div className="flex-1 h-px bg-border" />
+          <span>OR</span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
+        <Link
+          to="/register-company"
+          className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-indigo-500/30 bg-indigo-500/5 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 text-sm font-semibold transition-all"
+        >
+          🏢 Register Your Company
+        </Link>
       </div>
     </div>
   );

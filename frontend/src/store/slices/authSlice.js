@@ -67,6 +67,7 @@ const authSlice = createSlice({
   name: 'auth',
   initialState: {
     user: null,
+    organization: null,
     accessToken: localStorage.getItem('accessToken') || null,
     activeWorkspace: localStorage.getItem('activeWorkspace') || null,
     loading: false,
@@ -76,6 +77,7 @@ const authSlice = createSlice({
   reducers: {
     logout: (state) => {
       state.user = null;
+      state.organization = null;
       state.accessToken = null;
       state.activeWorkspace = null;
       state.isAuthenticated = false;
@@ -134,12 +136,14 @@ const authSlice = createSlice({
       .addCase(fetchMe.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload.user;
+        state.organization = action.payload.organization || null;
         state.isAuthenticated = true;
         state.error = null;
       })
       .addCase(fetchMe.rejected, (state, action) => {
         state.loading = false;
         state.user = null;
+        state.organization = null;
         state.accessToken = null;
         state.isAuthenticated = false;
         state.error = action.payload?.message || 'Session expired';
