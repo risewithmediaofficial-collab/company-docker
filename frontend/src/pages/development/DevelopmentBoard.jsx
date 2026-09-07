@@ -307,14 +307,14 @@ export default function DevelopmentBoard() {
                   setDraggingTaskId(null);
                   setDragOverColId(null);
                 }}
-                className={`w-[250px] rounded-2xl border p-3 flex flex-col shrink-0 min-h-[520px] transition-all duration-150 ${
+                className={`w-[260px] rounded-2xl border p-3 flex flex-col shrink-0 h-[calc(100vh-270px)] min-h-[480px] max-h-[750px] transition-all duration-150 ${
                   isColumnDraggedOver
                     ? 'ring-2 ring-primary ring-offset-2 bg-primary/10 border-primary shadow-lg scale-[1.01]'
                     : column.color
                 }`}
               >
                 {/* Column Header */}
-                <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-border">
+                <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-border shrink-0">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-foreground text-xs uppercase tracking-wider">
                       {column.title}
@@ -325,9 +325,9 @@ export default function DevelopmentBoard() {
                   </div>
                 </div>
 
-                {/* Task Cards Container */}
+                {/* Task Cards Container (with inline vertical scroll) */}
                 <div
-                  className="space-y-2.5 flex-1 min-h-[100px] flex flex-col"
+                  className="space-y-2.5 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 flex flex-col"
                   onDragOver={(e) => {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'move';
