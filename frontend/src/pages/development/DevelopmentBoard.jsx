@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { devApi } from '../../api/development';
 import { DevelopmentSubNav } from '../../components/development/DevelopmentSubNav';
 import { PageHeader } from '../../components/ui/page';
@@ -23,6 +23,7 @@ import {
   Flame,
   Clock,
   ExternalLink,
+  GripVertical,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -68,6 +69,11 @@ export default function DevelopmentBoard() {
   const [blockingTask, setBlockingTask] = useState(null);
   const [blockedReasonInput, setBlockedReasonInput] = useState('');
 
+  // Drag and Drop state
+  const [draggingTaskId, setDraggingTaskId] = useState(null);
+  const [dragOverColId, setDragOverColId] = useState(null);
+  const isDraggingRef = useRef(false);
+
   // Fetch Sprints & Tasks
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -100,8 +106,27 @@ export default function DevelopmentBoard() {
     fetchData();
   }, [fetchData]);
 
-  // Handle stage transition
+  // Handle stage transition (with optimistic UI update)
   const handleStageChange = async (taskId, newStage) => {
+    if (!taskId || !newStage) return;
+
+    // Optimistically update local state immediately
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t._id === taskId) {
+          return {
+            ...t,
+            development: {
+              ...(t.development || {}),
+              stage: newStage,
+              previousStage: t.development?.stage || 'backlog',
+            },
+          };
+        }
+        return t;
+      })
+    );
+
     try {
       await devApi.updateStage(taskId, { stage: newStage });
       toast.success(`Task moved to ${newStage.replace(/_/g, ' ')}`);
@@ -109,6 +134,7 @@ export default function DevelopmentBoard() {
     } catch (err) {
       console.error('Failed to update stage:', err);
       toast.error(err.response?.data?.message || 'Failed to move task');
+      fetchData(); // Rollback on failure
     }
   };
 
@@ -248,11 +274,44 @@ export default function DevelopmentBoard() {
         <div className="flex items-start gap-3 min-w-[2800px] pt-1">
           {PIPELINE_COLUMNS.map((column) => {
             const colTasks = groupedTasks[column.id] || [];
+            const isColumnDraggedOver = dragOverColId === column.id;
 
             return (
               <div
                 key={column.id}
-                className={`w-[250px] rounded-2xl border p-3 flex flex-col shrink-0 min-h-[500px] transition-all ${column.color}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (dragOverColId !== column.id) {
+                    setDragOverColId(column.id);
+                  }
+                }}
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  setDragOverColId(column.id);
+                }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget)) {
+                    if (dragOverColId === column.id) {
+                      setDragOverColId(null);
+                    }
+                  }
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const droppedTaskId = e.dataTransfer.getData('taskId') || draggingTaskId;
+                  if (droppedTaskId) {
+                    handleStageChange(droppedTaskId, column.id);
+                  }
+                  setDraggingTaskId(null);
+                  setDragOverColId(null);
+                }}
+                className={`w-[250px] rounded-2xl border p-3 flex flex-col shrink-0 min-h-[520px] transition-all duration-150 ${
+                  isColumnDraggedOver
+                    ? 'ring-2 ring-primary ring-offset-2 bg-primary/10 border-primary shadow-lg scale-[1.01]'
+                    : column.color
+                }`}
               >
                 {/* Column Header */}
                 <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-border">
@@ -267,24 +326,65 @@ export default function DevelopmentBoard() {
                 </div>
 
                 {/* Task Cards Container */}
-                <div className="space-y-2.5 flex-1">
+                <div
+                  className="space-y-2.5 flex-1 min-h-[100px] flex flex-col"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragOverColId !== column.id) setDragOverColId(column.id);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const droppedTaskId = e.dataTransfer.getData('taskId') || draggingTaskId;
+                    if (droppedTaskId) {
+                      handleStageChange(droppedTaskId, column.id);
+                    }
+                    setDraggingTaskId(null);
+                    setDragOverColId(null);
+                  }}
+                >
                   {colTasks.length === 0 ? (
-                    <div className="py-8 text-center text-muted-foreground/50 text-[11px] italic">
-                      No tasks in this stage
+                    <div className={`flex-1 flex items-center justify-center py-8 text-center text-[11px] italic border-2 border-dashed rounded-xl m-1 transition-all ${
+                      isColumnDraggedOver
+                        ? 'border-primary/60 bg-primary/5 text-primary font-semibold'
+                        : 'border-border/40 text-muted-foreground/50'
+                    }`}>
+                      {isColumnDraggedOver ? 'Drop here to move' : 'No tasks in this stage'}
                     </div>
                   ) : (
                     colTasks.map((task) => {
                       const dev = task.development || {};
                       const isBlocked = dev.isBlocked || dev.stage === 'blocked';
                       const devUser = dev.developer || (task.assignedTo && task.assignedTo[0]);
+                      const isCardBeingDragged = task._id === draggingTaskId;
 
                       return (
                         <div
                           key={task._id}
-                          className={`p-3 bg-card border rounded-xl shadow-xs space-y-2 hover:shadow-md transition-all group relative cursor-pointer ${
-                            isBlocked ? 'border-rose-500/50 bg-rose-500/5' : 'border-border'
+                          draggable={true}
+                          onDragStart={(e) => {
+                            isDraggingRef.current = true;
+                            setDraggingTaskId(task._id);
+                            e.dataTransfer.setData('taskId', task._id);
+                            e.dataTransfer.effectAllowed = 'move';
+                          }}
+                          onDragEnd={() => {
+                            setTimeout(() => {
+                              isDraggingRef.current = false;
+                            }, 100);
+                            setDraggingTaskId(null);
+                            setDragOverColId(null);
+                          }}
+                          className={`p-3 bg-card border rounded-xl shadow-xs space-y-2 hover:shadow-md transition-all group relative cursor-grab active:cursor-grabbing select-none ${
+                            isCardBeingDragged
+                              ? 'opacity-40 scale-95 border-dashed border-primary ring-2 ring-primary/40'
+                              : isBlocked
+                              ? 'border-rose-500/50 bg-rose-500/5'
+                              : 'border-border hover:border-primary/40'
                           }`}
                           onClick={() => {
+                            if (isDraggingRef.current) return;
                             setSelectedTaskId(task._id);
                             setShowTaskDetail(true);
                           }}
@@ -301,9 +401,9 @@ export default function DevelopmentBoard() {
                             </div>
                           )}
 
-                          {/* Task Badges (Project / Priority / Bug) */}
+                          {/* Task Badges (Project / Priority / Bug / Drag Grip) */}
                           <div className="flex items-center justify-between gap-1 flex-wrap">
-                            <span className="text-[10px] font-bold text-muted-foreground bg-secondary px-1.5 py-0.5 rounded truncate max-w-[130px]">
+                            <span className="text-[10px] font-bold text-muted-foreground bg-secondary px-1.5 py-0.5 rounded truncate max-w-[125px]">
                               {task.project?.name || 'CRM Task'}
                             </span>
                             <div className="flex items-center gap-1">
@@ -319,6 +419,7 @@ export default function DevelopmentBoard() {
                               >
                                 {task.priority || 'Medium'}
                               </span>
+                              <GripVertical size={13} className="text-muted-foreground/40 group-hover:text-foreground/70 transition-colors" />
                             </div>
                           </div>
 
@@ -347,6 +448,7 @@ export default function DevelopmentBoard() {
                           <div
                             className="flex items-center justify-between pt-1 border-t border-border text-[10px]"
                             onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
                           >
                             {/* Assignee */}
                             <div className="flex items-center gap-1 text-muted-foreground">
