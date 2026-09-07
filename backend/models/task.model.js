@@ -257,9 +257,77 @@ const taskSchema = new mongoose.Schema(
     progressUpdates: [progressUpdateSchema],
     isOverTarget: { type: Boolean, default: false },
     targetExceededBy: { type: Number, default: 0 },
+
+    // ── Development Management Extension ──────────────────────────────
+    department: { type: String, default: '', trim: true },
+    development: {
+      isDevTask: { type: Boolean, default: false },
+      stage: {
+        type: String,
+        enum: [
+          'backlog',
+          'analysis',
+          'ready_for_dev',
+          'in_development',
+          'code_review',
+          'qa_testing',
+          'client_uat',
+          'approved',
+          'deployment',
+          'live',
+          'closed',
+          'blocked',
+        ],
+        default: 'backlog',
+      },
+      previousStage: { type: String, default: '' },
+      isBlocked: { type: Boolean, default: false },
+      blockedReason: { type: String, default: '' },
+      blockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      blockedAt: { type: Date, default: null },
+      developer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      reviewer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      reviewStatus: {
+        type: String,
+        enum: ['none', 'pending', 'approved', 'changes_requested'],
+        default: 'none',
+      },
+      reviewComments: { type: String, default: '' },
+      reviewedAt: { type: Date, default: null },
+      tester: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      testStatus: {
+        type: String,
+        enum: ['none', 'pending', 'passed', 'failed', 'blocked'],
+        default: 'none',
+      },
+      testNotes: { type: String, default: '' },
+      testDate: { type: Date, default: null },
+      testAttachments: [fileAttachmentSchema],
+      branch: { type: String, default: '', trim: true },
+      pullRequestUrl: { type: String, default: '', trim: true },
+      pullRequestNumber: { type: String, default: '', trim: true },
+      commitHash: { type: String, default: '', trim: true },
+      sprint: { type: mongoose.Schema.Types.ObjectId, ref: 'Sprint', default: null },
+      release: { type: mongoose.Schema.Types.ObjectId, ref: 'Release', default: null },
+      isBug: { type: Boolean, default: false },
+      bugSeverity: {
+        type: String,
+        enum: ['low', 'medium', 'high', 'critical', ''],
+        default: '',
+      },
+      stepsToReproduce: { type: String, default: '' },
+      expectedResult: { type: String, default: '' },
+      actualResult: { type: String, default: '' },
+      environment: { type: String, default: '' },
+    },
   },
   { timestamps: true }
 );
+
+taskSchema.index({ department: 1 });
+taskSchema.index({ 'development.isDevTask': 1, 'development.stage': 1 });
+taskSchema.index({ 'development.sprint': 1 });
+taskSchema.index({ 'development.release': 1 });
 
 taskSchema.index({ project: 1, status: 1 });
 taskSchema.index({ assignedTo: 1 });

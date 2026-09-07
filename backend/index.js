@@ -65,6 +65,7 @@ import smmNoteRoutes from './routes/smm/smmNote.routes.js';
 import smmDashboardRoutes from './routes/smm/smmDashboard.routes.js';
 import smmDailyReportRoutes from './routes/smm/smmDailyReport.routes.js';
 import smmBudgetRoutes from './routes/smm/smmBudget.routes.js';
+import developmentRoutes from './routes/development.routes.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
 
 loadEnv();
@@ -201,6 +202,9 @@ app.use('/api/smm/tasks', smmTaskRoutes);
 app.use('/api/smm/notes', smmNoteRoutes);
 app.use('/api/smm/daily-reports', smmDailyReportRoutes);
 app.use('/api/smm/budgets', smmBudgetRoutes);
+
+// Development Module Routes
+app.use('/api/development', developmentRoutes);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

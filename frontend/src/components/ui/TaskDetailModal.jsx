@@ -40,6 +40,11 @@ import {
   Flame,
   ShieldCheck,
   ChevronDown,
+  Code2,
+  GitBranch,
+  GitPullRequest,
+  Bug,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   formatTaskTypeLabel,
@@ -51,6 +56,21 @@ import {
 } from '../../utils/taskFields';
 import { getAssetUrl } from '../../utils/assetUrl';
 import toast from 'react-hot-toast';
+
+const DEV_STAGE_LABELS = {
+  backlog: 'Backlog',
+  analysis: 'Analysis / Specs',
+  ready_for_dev: 'Ready for Dev',
+  in_development: 'In Development',
+  code_review: 'Code Review',
+  qa_testing: 'QA / Testing',
+  client_uat: 'Client / UAT',
+  approved: 'Approved',
+  deployment: 'Deployment',
+  live: 'Live in Production',
+  closed: 'Closed',
+  blocked: 'Blocked',
+};
 
 const STATUS_TONES = {
   'To Do': 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700',
@@ -323,6 +343,27 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                     {task.approvalStatus || task.clientResponse || 'Pending'}
                   </span>
                 </NotionPropertyRow>
+
+                {task.department && (
+                  <NotionPropertyRow icon={Briefcase} label="Department">
+                    <span className="font-semibold text-foreground text-xs">{task.department}</span>
+                  </NotionPropertyRow>
+                )}
+
+                {(task.department === 'Development' || task.development?.isDevTask) && (
+                  <NotionPropertyRow icon={Code2} label="Dev Stage">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-primary/10 text-primary font-bold text-xs border border-primary/20">
+                        {DEV_STAGE_LABELS[task.development?.stage] || task.development?.stage || 'In Development'}
+                      </span>
+                      {task.development?.isBlocked && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold text-[11px] border border-rose-500/20">
+                          <AlertCircle size={11} /> Blocked
+                        </span>
+                      )}
+                    </div>
+                  </NotionPropertyRow>
+                )}
               </div>
 
               {/* ── Production Pipeline Workflow ── */}
@@ -392,6 +433,9 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
               <div className="flex items-center gap-1.5 border-b border-border overflow-x-auto no-scrollbar py-0.5">
                 {[
                   { id: 'brief', label: 'Brief & Scope', icon: FileText },
+                  ...((task.department === 'Development' || task.development?.isDevTask || isWebsiteTaskType(task.taskType))
+                    ? [{ id: 'development', label: 'Dev Workflow', icon: Code2 }]
+                    : []),
                   { id: 'deliverables', label: `Files (${(task.attachments?.length || 0) + (task.completedFiles?.length || 0)})`, icon: FolderArchive },
                   { id: 'progress', label: `Logs (${task.progressUpdates?.length || 0})`, icon: Clock },
                   { id: 'review', label: 'Review', icon: MessageSquare },
@@ -574,6 +618,223 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                           <div className="p-2.5 rounded-xl border border-amber-200/60 bg-amber-500/5 space-y-1">
                             <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase">Internal Notes:</span>
                             <p className="text-xs whitespace-pre-wrap">{task.internalNotes}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── DEVELOPMENT WORKFLOW TAB ── */}
+              {activeTab === 'development' && (
+                <div className="space-y-4">
+                  {/* Pipeline Stage Card */}
+                  <div className="rounded-2xl border border-border bg-card p-4 shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <Code2 size={14} className="text-primary" /> Development Pipeline
+                      </span>
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 capitalize">
+                        {DEV_STAGE_LABELS[task.development?.stage] || task.development?.stage || 'Backlog'}
+                      </span>
+                    </div>
+
+                    {task.development?.isBlocked && (
+                      <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 space-y-1 text-xs text-rose-700 dark:text-rose-400">
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <AlertTriangle size={14} className="text-rose-500" />
+                          <span>Task is Currently Blocked</span>
+                        </div>
+                        <p className="text-muted-foreground dark:text-rose-300">
+                          <span className="font-semibold text-foreground">Reason: </span>
+                          {task.development?.blockedReason || 'No reason specified'}
+                        </p>
+                        {task.development?.blockedAt && (
+                          <span className="text-[10px] text-muted-foreground block">
+                            Blocked on {new Date(task.development.blockedAt).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="grid gap-2 sm:grid-cols-2 text-xs">
+                      <div className="p-2.5 rounded-xl border border-border bg-background">
+                        <span className="text-[10px] text-muted-foreground uppercase block font-bold">Developer</span>
+                        <span className="font-semibold text-foreground">
+                          {task.development?.developer?.name || (Array.isArray(task.assignedTo) ? task.assignedTo[0]?.name : task.assignedTo?.name) || 'Assigned Lead'}
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-xl border border-border bg-background">
+                        <span className="text-[10px] text-muted-foreground uppercase block font-bold">Environment</span>
+                        <span className="font-semibold text-foreground capitalize">{task.development?.environment || 'Development'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Git & Branch Specs */}
+                  <div className="rounded-2xl border border-border bg-card p-4 shadow-2xs space-y-3">
+                    <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <GitBranch size={14} className="text-primary" /> Repository & Version Control
+                    </span>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-center justify-between p-2 rounded-xl border border-border bg-background">
+                        <span className="text-muted-foreground font-semibold">Branch:</span>
+                        <span className="font-mono font-bold text-foreground text-[11px] bg-secondary px-2 py-0.5 rounded">
+                          {task.development?.branch || `feat/${task.taskTitle ? task.taskTitle.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30) : 'task-' + task._id?.slice(-4)}`}
+                        </span>
+                      </div>
+                      {task.development?.pullRequestUrl && (
+                        <div className="flex items-center justify-between p-2 rounded-xl border border-border bg-background">
+                          <span className="text-muted-foreground font-semibold">Pull Request:</span>
+                          <a
+                            href={task.development.pullRequestUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-bold text-primary hover:underline flex items-center gap-1 truncate max-w-[240px]"
+                          >
+                            <GitPullRequest size={12} />
+                            <span>{task.development.pullRequestNumber ? `PR #${task.development.pullRequestNumber}` : task.development.pullRequestUrl}</span>
+                            <ExternalLink size={10} />
+                          </a>
+                        </div>
+                      )}
+                      {task.development?.commitHash && (
+                        <div className="flex items-center justify-between p-2 rounded-xl border border-border bg-background">
+                          <span className="text-muted-foreground font-semibold">Commit Hash:</span>
+                          <span className="font-mono text-xs text-foreground">{task.development.commitHash}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Code Review Details */}
+                  <div className="rounded-2xl border border-border bg-card p-4 shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <GitPullRequest size={14} className="text-indigo-500" /> Code Review
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
+                        task.development?.reviewStatus === 'approved'
+                          ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                          : task.development?.reviewStatus === 'changes_requested'
+                          ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                          : 'bg-secondary text-muted-foreground'
+                      }`}>
+                        {task.development?.reviewStatus?.replace('_', ' ') || 'Pending'}
+                      </span>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2 text-xs">
+                      <div className="p-2.5 rounded-xl border border-border bg-background">
+                        <span className="text-[10px] text-muted-foreground uppercase block font-bold">Reviewer</span>
+                        <span className="font-semibold text-foreground">{task.development?.reviewer?.name || 'Unassigned'}</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl border border-border bg-background">
+                        <span className="text-[10px] text-muted-foreground uppercase block font-bold">Reviewed At</span>
+                        <span className="font-semibold text-foreground">
+                          {task.development?.reviewedAt ? new Date(task.development.reviewedAt).toLocaleDateString() : '—'}
+                        </span>
+                      </div>
+                    </div>
+                    {task.development?.reviewComments && (
+                      <div className="p-3 rounded-xl border border-border bg-background text-xs space-y-1">
+                        <span className="font-bold text-foreground">Review Comments:</span>
+                        <p className="text-muted-foreground whitespace-pre-wrap">{task.development.reviewComments}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* QA / Testing Details */}
+                  <div className="rounded-2xl border border-border bg-card p-4 shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <ShieldCheck size={14} className="text-emerald-500" /> QA & Verification
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
+                        task.development?.testStatus === 'passed'
+                          ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                          : task.development?.testStatus === 'failed'
+                          ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                          : task.development?.testStatus === 'blocked'
+                          ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                          : 'bg-secondary text-muted-foreground'
+                      }`}>
+                        {task.development?.testStatus || 'Pending'}
+                      </span>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2 text-xs">
+                      <div className="p-2.5 rounded-xl border border-border bg-background">
+                        <span className="text-[10px] text-muted-foreground uppercase block font-bold">Tester</span>
+                        <span className="font-semibold text-foreground">{task.development?.tester?.name || 'Unassigned'}</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl border border-border bg-background">
+                        <span className="text-[10px] text-muted-foreground uppercase block font-bold">Tested At</span>
+                        <span className="font-semibold text-foreground">
+                          {task.development?.testedAt ? new Date(task.development.testedAt).toLocaleDateString() : '—'}
+                        </span>
+                      </div>
+                    </div>
+                    {task.development?.testNotes && (
+                      <div className="p-3 rounded-xl border border-border bg-background text-xs space-y-1">
+                        <span className="font-bold text-foreground">QA Test Notes:</span>
+                        <p className="text-muted-foreground whitespace-pre-wrap">{task.development.testNotes}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Sprints & Releases */}
+                  {(task.development?.sprint || task.development?.release) && (
+                    <div className="rounded-2xl border border-border bg-card p-4 shadow-2xs space-y-3">
+                      <span className="text-xs font-bold text-foreground uppercase tracking-wider">
+                        🎯 Sprint & Release Target
+                      </span>
+                      <div className="grid gap-2 sm:grid-cols-2 text-xs">
+                        {task.development?.sprint && (
+                          <div className="p-2.5 rounded-xl border border-border bg-background">
+                            <span className="text-[10px] text-muted-foreground uppercase block font-bold">Sprint</span>
+                            <span className="font-semibold text-foreground">{task.development.sprint.name || 'Assigned Sprint'}</span>
+                          </div>
+                        )}
+                        {task.development?.release && (
+                          <div className="p-2.5 rounded-xl border border-border bg-background">
+                            <span className="text-[10px] text-muted-foreground uppercase block font-bold">Release</span>
+                            <span className="font-semibold text-foreground">
+                              {task.development.release.version ? `v${task.development.release.version} - ${task.development.release.name}` : task.development.release.name || 'Assigned Release'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bug Tracking */}
+                  {task.development?.isBug && (
+                    <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 shadow-2xs space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Bug size={14} className="text-rose-500" /> Defect / Bug Report
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-rose-500/20 text-rose-600 border border-rose-500/30">
+                          {task.development?.bugSeverity || 'Medium'} Severity
+                        </span>
+                      </div>
+                      {task.development?.stepsToReproduce && (
+                        <div className="p-2.5 rounded-xl border border-border bg-background text-xs space-y-1">
+                          <span className="font-bold text-foreground">Steps to Reproduce:</span>
+                          <p className="text-muted-foreground whitespace-pre-wrap">{task.development.stepsToReproduce}</p>
+                        </div>
+                      )}
+                      <div className="grid gap-2 sm:grid-cols-2 text-xs">
+                        {task.development?.expectedResult && (
+                          <div className="p-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 space-y-1">
+                            <span className="font-bold text-emerald-700 dark:text-emerald-400 text-[10px] uppercase">Expected:</span>
+                            <p className="text-foreground">{task.development.expectedResult}</p>
+                          </div>
+                        )}
+                        {task.development?.actualResult && (
+                          <div className="p-2.5 rounded-xl border border-rose-500/20 bg-rose-500/5 space-y-1">
+                            <span className="font-bold text-rose-700 dark:text-rose-400 text-[10px] uppercase">Actual:</span>
+                            <p className="text-foreground">{task.development.actualResult}</p>
                           </div>
                         )}
                       </div>

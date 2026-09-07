@@ -71,6 +71,15 @@ import SMMDailyTracking from './pages/smm/DailyTracking';
 import SMMTeam from './pages/smm/Team';
 import AdBudgetDashboard from './pages/smm/AdBudgetDashboard';
 
+// Development Module Pages
+import DevelopmentDashboard from './pages/development/DevelopmentDashboard';
+import DevelopmentBoard from './pages/development/DevelopmentBoard';
+import MyDevTasks from './pages/development/MyDevTasks';
+import DevelopmentSprints from './pages/development/DevelopmentSprints';
+import DevelopmentReviews from './pages/development/DevelopmentReviews';
+import DevelopmentQA from './pages/development/DevelopmentQA';
+import DevelopmentReleases from './pages/development/DevelopmentReleases';
+
 // ─── Shared Loading Screen ────────────────────────────────────────────────────
 const LoadingScreen = () => (
   <div className="flex h-screen w-full flex-col items-center justify-center bg-[#0a0a0a] text-white">
@@ -446,6 +455,43 @@ const App = () => {
           <Route path="/smm/team" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
               <SMMTeam />
+            </ProtectedRoute>
+          } />
+
+          {/* Development Module Routes */}
+          <Route path="/development" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <DevelopmentDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/development/board" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <DevelopmentBoard />
+            </ProtectedRoute>
+          } />
+          <Route path="/development/my-tasks" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <MyDevTasks />
+            </ProtectedRoute>
+          } />
+          <Route path="/development/sprints" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <DevelopmentSprints />
+            </ProtectedRoute>
+          } />
+          <Route path="/development/reviews" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <DevelopmentReviews />
+            </ProtectedRoute>
+          } />
+          <Route path="/development/qa" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <DevelopmentQA />
+            </ProtectedRoute>
+          } />
+          <Route path="/development/releases" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <DevelopmentReleases />
             </ProtectedRoute>
           } />
 

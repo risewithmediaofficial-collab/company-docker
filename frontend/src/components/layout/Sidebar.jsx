@@ -32,7 +32,12 @@ import {
   Search,
   UserCheck,
   Video,
-  X
+  X,
+  Kanban,
+  GitPullRequest,
+  Bug,
+  Rocket,
+  Zap,
 } from 'lucide-react';
 import { toggleSidebar } from '../../store/slices/uiSlice';
 import { motion } from 'framer-motion';
@@ -168,6 +173,18 @@ export default function Sidebar({ onOpenSearch }) {
           items: employeeDelivery,
         },
         {
+          title: 'DEVELOPMENT',
+          items: [
+            { name: 'Dev Dashboard', icon: LayoutDashboard, path: '/development' },
+            { name: 'Dev Board', icon: Kanban, path: '/development/board' },
+            { name: 'My Dev Tasks', icon: CheckSquare, path: '/development/my-tasks' },
+            { name: 'Sprints', icon: Zap, path: '/development/sprints' },
+            { name: 'Code Reviews', icon: GitPullRequest, path: '/development/reviews' },
+            { name: 'QA & Testing', icon: Bug, path: '/development/qa' },
+            { name: 'Releases', icon: Rocket, path: '/development/releases' },
+          ],
+        },
+        {
           title: 'TEAM & WORKLOAD',
           items: [
             { name: 'Attendance & EOD', icon: Clock, path: '/attendance' },
@@ -217,6 +234,18 @@ export default function Sidebar({ onOpenSearch }) {
           { name: 'Influencer Hub', icon: Sparkles, path: '/influencers' },
           { name: 'Manager Board', icon: ClipboardList, path: '/manager-board' },
           { name: 'Task Notes & Logs', icon: StickyNote, path: '/pending-notes' },
+        ],
+      },
+      {
+        title: 'DEVELOPMENT',
+        items: [
+          { name: 'Dev Dashboard', icon: LayoutDashboard, path: '/development' },
+          { name: 'Dev Board', icon: Kanban, path: '/development/board' },
+          { name: 'My Dev Tasks', icon: CheckSquare, path: '/development/my-tasks' },
+          { name: 'Sprints', icon: Zap, path: '/development/sprints' },
+          { name: 'Code Reviews', icon: GitPullRequest, path: '/development/reviews' },
+          { name: 'QA & Testing', icon: Bug, path: '/development/qa' },
+          { name: 'Releases', icon: Rocket, path: '/development/releases' },
         ],
       },
       {

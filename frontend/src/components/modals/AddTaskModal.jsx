@@ -132,6 +132,7 @@ const BLANK_TASK_TEMPLATE = {
   pagesNeeded: [],
   contentAvailability: '',
   brandingAvailability: '',
+  department: '',
   domainDetails: '',
   hostingDetails: '',
   adminCredentials: '',
@@ -204,6 +205,7 @@ const taskFormSchema = z.object({
   requiredFeatures: z.string().optional(),
   internalNotes: z.string().optional(),
   clientVisibleNotes: z.string().optional(),
+  department: z.string().optional(),
   approvalRequired: z.boolean().default(true),
   isClientVisible: z.boolean().default(true),
   duplicateCount: z.preprocess((val) => Number(val) || 1, z.number().min(1).default(1)),
@@ -264,6 +266,7 @@ const buildDefaultValues = (initialValues = {}) => ({
   approvalRequired: true,
   isClientVisible: true,
   duplicateCount: 1,
+  department: initialValues?.department || '',
   ...initialValues,
 });
 
@@ -559,6 +562,7 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
         clientVisibleNotes: task.clientVisibleNotes || '',
         approvalRequired: task.approvalRequired ?? true,
         isClientVisible: task.isClientVisible ?? true,
+        department: task.department || '',
       });
       setExistingAttachments(task.attachments || []);
       setAttachmentFiles([]);
@@ -642,6 +646,7 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
         videographerAssigned: sanitizeId(data.videographerAssigned),
         editorAssigned: sanitizeId(data.editorAssigned),
         publisherAssigned: sanitizeId(data.publisherAssigned),
+        department: data.department || '',
         pagesNeeded: data.pagesNeeded || [],
       };
       await updateTask.mutateAsync({ id: task._id, data: payload });
@@ -674,6 +679,7 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
           editorAssigned: sanitizeId(t.editorAssigned),
           publisherAssigned: sanitizeId(t.publisherAssigned),
           priority: data.priority,
+          department: data.department || '',
           status: 'To Do',
           dueDate: data.dueDate || undefined,
           deadline: data.dueDate || undefined,
@@ -722,6 +728,7 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
         videographerContentNeeded: t.videographerContentNeeded || '',
         editorAssigned: sanitizeId(t.editorAssigned),
         publisherAssigned: sanitizeId(t.publisherAssigned),
+        department: data.department || t.department || '',
       }));
 
       await createTask.mutateAsync({
@@ -855,6 +862,31 @@ export const AddTaskModal = ({ open, onOpenChange, task = null, initialValues = 
                     {user.name}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="department"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Department</FormLabel>
+            <Select onValueChange={(val) => field.onChange(val === '_none' ? '' : val)} value={field.value || '_none'}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select department (Optional)" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="_none">General / Unspecified</SelectItem>
+                <SelectItem value="Development">💻 Development & Tech</SelectItem>
+                <SelectItem value="Marketing">📈 Marketing & SMM</SelectItem>
+                <SelectItem value="Creative">🎨 Creative & Design</SelectItem>
+                <SelectItem value="Operations">⚙️ Operations</SelectItem>
               </SelectContent>
             </Select>
             <FormMessage />

@@ -791,6 +791,17 @@ export const createTask = async (req, res) => {
           taskTitle: taskTitle,
         };
 
+        if (
+          currentPayload.department === 'Development' ||
+          isWebsiteTaskType(currentPayload.taskType) ||
+          ['development_task', 'bug_fix'].includes(currentPayload.nonContentCategory)
+        ) {
+          if (!currentPayload.development) currentPayload.development = {};
+          currentPayload.development.isDevTask = true;
+          if (!currentPayload.development.stage) currentPayload.development.stage = 'backlog';
+          currentPayload.department = 'Development';
+        }
+
         const task = await Task.create({
           ...currentPayload,
           isOverTarget,
