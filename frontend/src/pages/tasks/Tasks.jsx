@@ -25,6 +25,7 @@ import {
   Globe,
   Palette,
   Film,
+  Megaphone,
   Edit2,
   Code2,
   Kanban,
