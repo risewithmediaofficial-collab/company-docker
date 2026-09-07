@@ -25,9 +25,13 @@ import {
   Globe,
   Palette,
   Film,
-  Megaphone,
   Edit2,
+  Code2,
+  Kanban,
+  GitPullRequest,
+  ShieldAlert,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { getPersonColor, extractTaskAssignees, PersonAssigneeBadge } from '../../utils/personColors';
 import { CollapsibleFilterBar } from '../../components/ui/CollapsibleFilterBar';
 import { AddTaskModal } from '../../components/modals/AddTaskModal';
@@ -64,6 +68,7 @@ import {
   TEAM_STATUS_OPTIONS,
   formatTaskTypeLabel,
   normalizeTaskStatusLabel,
+  isWebsiteTaskType,
 } from '../../utils/taskFields';
 
 export const TASK_CATEGORY_PILLS = [
@@ -108,6 +113,36 @@ const priorityTone = {
   Medium: 'info',
   High: 'warning',
   Urgent: 'danger',
+};
+
+const DEV_STAGE_SHORT_LABELS = {
+  backlog: 'Backlog',
+  analysis: 'Analysis',
+  ready_for_dev: 'Ready for Dev',
+  in_development: 'In Dev',
+  code_review: 'Code Review',
+  qa_testing: 'QA / Testing',
+  client_uat: 'Client UAT',
+  approved: 'Approved',
+  deployment: 'Deploying',
+  live: 'Live',
+  closed: 'Closed',
+  blocked: 'Blocked',
+};
+
+const DEV_STAGE_TONES = {
+  backlog: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
+  analysis: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  ready_for_dev: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
+  in_development: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  code_review: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+  qa_testing: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
+  client_uat: 'bg-teal-500/10 text-teal-600 border-teal-500/20',
+  approved: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+  deployment: 'bg-sky-500/10 text-sky-600 border-sky-500/20',
+  live: 'bg-green-500/10 text-green-600 border-green-500/20',
+  closed: 'bg-gray-500/10 text-gray-600 border-gray-500/20',
+  blocked: 'bg-rose-500/10 text-rose-600 border-rose-500/20',
 };
 
 const KANBAN_STATUSES = ['To Do', 'On Process', 'Waiting for Client', 'Review Required', 'Completed'];
@@ -573,16 +608,25 @@ const Tasks = () => {
       icon={CheckSquare}
       breadcrumbs={[{ name: 'Delivery', path: '/tasks' }, { name: 'Tasks Database' }]}
       actions={
-        canCreate && (
-          <Button
-            size="sm"
-            onClick={() => setShowAddModal(true)}
-            className="bg-primary text-primary-foreground font-bold shadow-sm"
+        <div className="flex items-center gap-2">
+          <Link
+            to={isEmployee ? '/development/my-tasks' : '/development/board'}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all shadow-xs"
           >
-            <Plus size={15} className="mr-1.5 stroke-[2.5]" />
-            New Task
-          </Button>
-        )
+            <Kanban size={13} />
+            <span>Dev Pipeline Board</span>
+          </Link>
+          {canCreate && (
+            <Button
+              size="sm"
+              onClick={() => setShowAddModal(true)}
+              className="bg-primary text-primary-foreground font-bold shadow-sm"
+            >
+              <Plus size={15} className="mr-1.5 stroke-[2.5]" />
+              New Task
+            </Button>
+          )}
+        </div>
       }
       properties={
         <div className="flex flex-wrap items-center gap-2">
@@ -899,6 +943,30 @@ const Tasks = () => {
                               })()}
                             </div>
                           )}
+
+                          {/* Development Pipeline Workflow in List/Table view */}
+                          {(task.department === 'Development' || task.development?.isDevTask || isWebsiteTaskType(task.taskType)) && (
+                            <div className="flex flex-wrap items-center gap-1.5 text-[10px] pt-1">
+                              <span className={`px-2 py-0.5 rounded-md border font-bold flex items-center gap-1 shadow-2xs ${
+                                task.development?.isBlocked
+                                  ? 'bg-rose-500/15 text-rose-600 border-rose-500/30'
+                                  : DEV_STAGE_TONES[task.development?.stage] || DEV_STAGE_TONES.in_development
+                              }`}>
+                                <Code2 size={11} />
+                                <span>Dev: {task.development?.isBlocked ? 'Blocked' : (DEV_STAGE_SHORT_LABELS[task.development?.stage] || 'In Dev')}</span>
+                              </span>
+                              {task.development?.reviewer && (
+                                <span className="px-2 py-0.5 rounded-md border font-semibold bg-purple-500/10 text-purple-600 border-purple-500/20">
+                                  🔍 Review: {task.development.reviewer.name || 'Reviewer'}
+                                </span>
+                              )}
+                              {task.development?.tester && (
+                                <span className="px-2 py-0.5 rounded-md border font-semibold bg-cyan-500/10 text-cyan-600 border-cyan-500/20">
+                                  🛡️ QA: {task.development.tester.name || 'Tester'}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })()}
@@ -1187,6 +1255,46 @@ const Tasks = () => {
                                       </span>
                                     );
                                   })()}
+                                </div>
+                              )}
+
+                              {/* Development Pipeline Workflow Badge & Sub-assignees */}
+                              {(task.department === 'Development' || task.development?.isDevTask || isWebsiteTaskType(task.taskType)) && (
+                                <div className="flex flex-wrap items-center gap-1 text-[9px] pt-1 border-t border-border/40">
+                                  <span className={`px-1.5 py-0.5 rounded-md border font-bold flex items-center gap-1 shadow-2xs ${
+                                    task.development?.isBlocked
+                                      ? 'bg-rose-500/15 text-rose-600 border-rose-500/30'
+                                      : DEV_STAGE_TONES[task.development?.stage] || DEV_STAGE_TONES.in_development
+                                  }`}>
+                                    <Code2 size={10} />
+                                    <span>Dev: {task.development?.isBlocked ? 'Blocked' : (DEV_STAGE_SHORT_LABELS[task.development?.stage] || 'In Dev')}</span>
+                                  </span>
+
+                                  {task.development?.reviewer && (() => {
+                                    const name = task.development.reviewer.name || 'Reviewer';
+                                    const c = getPersonColor(name);
+                                    return (
+                                      <span className={`px-1.5 py-0.5 rounded-md border font-semibold flex items-center gap-1 shadow-2xs ${c.bg} ${c.text} ${c.border}`}>
+                                        🔍 Review: <span className="font-bold">{name}</span>
+                                      </span>
+                                    );
+                                  })()}
+
+                                  {task.development?.tester && (() => {
+                                    const name = task.development.tester.name || 'Tester';
+                                    const c = getPersonColor(name);
+                                    return (
+                                      <span className={`px-1.5 py-0.5 rounded-md border font-semibold flex items-center gap-1 shadow-2xs ${c.bg} ${c.text} ${c.border}`}>
+                                        🛡️ QA: <span className="font-bold">{name}</span>
+                                      </span>
+                                    );
+                                  })()}
+
+                                  {task.development?.branch && (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-secondary text-muted-foreground border border-border font-mono text-[8px] truncate max-w-[100px]">
+                                      🌿 {task.development.branch}
+                                    </span>
+                                  )}
                                 </div>
                               )}
 
