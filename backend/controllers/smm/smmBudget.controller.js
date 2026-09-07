@@ -1,7 +1,7 @@
 // =============================================
 // SMM CLIENT BUDGET CONTROLLER
 // Dedicated Client Ad Budget Ledger (Decoupled from Campaigns)
-// Fields: Client, Monthly Budget, Daily Budget, Amount Deposited, Balance
+// Fields: Client, From/To Date, Monthly Budget, Deposits[], Balance
 // =============================================
 import SmmBudget from '../../models/smm/smmBudget.model.js';
 import Client from '../../models/client.model.js';
@@ -39,6 +39,10 @@ const resolveClientNames = async (clientId) => {
   return { companyName, clientName };
 };
 
+// ─── Helper: compute sum of deposits ──────────────────────────────────────────
+const sumDeposits = (deposits = []) =>
+  deposits.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+
 // ─── GET All Client Budgets ───────────────────────────────────────────────────
 export const getBudgets = async (req, res) => {
   try {
@@ -48,16 +52,16 @@ export const getBudgets = async (req, res) => {
     if (client) query.client = client;
 
     if (startDate || endDate) {
-      query.date = {};
+      query.fromDate = {};
       if (startDate) {
         const s = new Date(startDate);
         s.setHours(0, 0, 0, 0);
-        query.date.$gte = s;
+        query.fromDate.$gte = s;
       }
       if (endDate) {
         const e = new Date(endDate);
         e.setHours(23, 59, 59, 999);
-        query.date.$lte = e;
+        query.fromDate.$lte = e;
       }
     }
 
@@ -76,7 +80,7 @@ export const getBudgets = async (req, res) => {
         select: 'name company companyName primaryContact email phone',
       })
       .populate('createdBy', 'name email')
-      .sort({ date: -1, createdAt: -1 })
+      .sort({ fromDate: -1, createdAt: -1 })
       .skip((Number(page) - 1) * Number(limit))
       .limit(Number(limit));
 
@@ -105,23 +109,22 @@ export const getBudgetSummary = async (req, res) => {
     if (client) query.client = client;
 
     if (startDate || endDate) {
-      query.date = {};
+      query.fromDate = {};
       if (startDate) {
         const s = new Date(startDate);
         s.setHours(0, 0, 0, 0);
-        query.date.$gte = s;
+        query.fromDate.$gte = s;
       }
       if (endDate) {
         const e = new Date(endDate);
         e.setHours(23, 59, 59, 999);
-        query.date.$lte = e;
+        query.fromDate.$lte = e;
       }
     }
 
     const budgets = await SmmBudget.find(query);
 
     const totalMonthlyBudget = budgets.reduce((sum, b) => sum + (Number(b.monthlyBudget) || 0), 0);
-    const totalDailyBudget = budgets.reduce((sum, b) => sum + (Number(b.dailyBudget) || 0), 0);
     const totalAmountDeposited = budgets.reduce((sum, b) => sum + (Number(b.amountDeposited) || 0), 0);
     const totalBalance = budgets.reduce((sum, b) => sum + (Number(b.balance) || 0), 0);
 
@@ -131,7 +134,6 @@ export const getBudgetSummary = async (req, res) => {
       success: true,
       data: {
         totalMonthlyBudget,
-        totalDailyBudget,
         totalAmountDeposited,
         totalBalance,
         totalClients: uniqueClients.size,
@@ -147,23 +149,22 @@ export const getBudgetSummary = async (req, res) => {
 // ─── CREATE Budget Entry ──────────────────────────────────────────────────────
 export const addBudget = async (req, res) => {
   try {
-    const { client, date, monthlyBudget, dailyBudget, amountDeposited, notes } = req.body;
+    const { client, fromDate, toDate, monthlyBudget, deposits, notes } = req.body;
 
     if (!client) {
       return res.status(400).json({ success: false, message: 'Client is required' });
     }
+    if (!fromDate || !toDate) {
+      return res.status(400).json({ success: false, message: 'From Date and To Date are required' });
+    }
 
     const parsedMonthly = Number(monthlyBudget) || 0;
-    const parsedDeposited = Number(amountDeposited) || 0;
-    const parsedDaily = dailyBudget !== undefined && dailyBudget !== ''
-      ? Number(dailyBudget)
-      : Math.round(parsedMonthly / 30);
+    const parsedDeposits = Array.isArray(deposits) ? deposits : [];
+    const totalDeposited = sumDeposits(parsedDeposits);
+    const balance = parsedMonthly - totalDeposited;
 
-    // Balance formula: Monthly Budget less Deposited Amount
-    const balance = parsedMonthly - parsedDeposited;
-
-    const entryDate = date ? new Date(date) : new Date();
-    const month = entryDate.toISOString().slice(0, 7); // 'YYYY-MM'
+    const entryFromDate = new Date(fromDate);
+    const month = entryFromDate.toISOString().slice(0, 7); // 'YYYY-MM'
 
     // Resolve client & company name
     const { companyName, clientName } = await resolveClientNames(client);
@@ -172,11 +173,19 @@ export const addBudget = async (req, res) => {
       client,
       clientName,
       companyName,
-      date: entryDate,
+      fromDate: entryFromDate,
+      toDate: new Date(toDate),
+      date: entryFromDate,
       month,
       monthlyBudget: parsedMonthly,
-      dailyBudget: parsedDaily,
-      amountDeposited: parsedDeposited,
+      deposits: parsedDeposits.map((d) => ({
+        fromDate: d.fromDate ? new Date(d.fromDate) : null,
+        toDate: d.toDate ? new Date(d.toDate) : null,
+        depositDate: d.depositDate ? new Date(d.depositDate) : new Date(),
+        amount: Number(d.amount) || 0,
+        notes: d.notes || '',
+      })),
+      amountDeposited: totalDeposited,
       balance,
       notes: notes || '',
       createdBy: req.user?._id,
@@ -205,7 +214,7 @@ export const updateBudget = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Budget entry not found' });
     }
 
-    const { client, date, monthlyBudget, dailyBudget, amountDeposited, notes } = req.body;
+    const { client, fromDate, toDate, monthlyBudget, deposits, notes } = req.body;
 
     if (client && String(client) !== String(budget.client)) {
       budget.client = client;
@@ -214,23 +223,31 @@ export const updateBudget = async (req, res) => {
       budget.clientName = clientName;
     }
 
-    if (date) {
-      budget.date = new Date(date);
-      budget.month = budget.date.toISOString().slice(0, 7);
+    if (fromDate) {
+      budget.fromDate = new Date(fromDate);
+      budget.date = budget.fromDate;
+      budget.month = budget.fromDate.toISOString().slice(0, 7);
+    }
+    if (toDate) {
+      budget.toDate = new Date(toDate);
     }
 
     const parsedMonthly = monthlyBudget !== undefined ? Number(monthlyBudget) || 0 : budget.monthlyBudget;
-    const parsedDeposited = amountDeposited !== undefined ? Number(amountDeposited) || 0 : budget.amountDeposited;
-
     budget.monthlyBudget = parsedMonthly;
-    budget.amountDeposited = parsedDeposited;
-    budget.balance = parsedMonthly - parsedDeposited;
 
-    if (dailyBudget !== undefined && dailyBudget !== '') {
-      budget.dailyBudget = Number(dailyBudget) || 0;
-    } else {
-      budget.dailyBudget = Math.round(parsedMonthly / 30);
+    if (deposits !== undefined && Array.isArray(deposits)) {
+      budget.deposits = deposits.map((d) => ({
+        fromDate: d.fromDate ? new Date(d.fromDate) : null,
+        toDate: d.toDate ? new Date(d.toDate) : null,
+        depositDate: d.depositDate ? new Date(d.depositDate) : new Date(),
+        amount: Number(d.amount) || 0,
+        notes: d.notes || '',
+      }));
     }
+
+    const totalDeposited = sumDeposits(budget.deposits);
+    budget.amountDeposited = totalDeposited;
+    budget.balance = parsedMonthly - totalDeposited;
 
     if (notes !== undefined) budget.notes = notes;
 
@@ -273,46 +290,58 @@ export const exportBudgetReport = async (req, res) => {
     if (client) query.client = client;
 
     if (startDate || endDate) {
-      query.date = {};
+      query.fromDate = {};
       if (startDate) {
         const s = new Date(startDate);
         s.setHours(0, 0, 0, 0);
-        query.date.$gte = s;
+        query.fromDate.$gte = s;
       }
       if (endDate) {
         const e = new Date(endDate);
         e.setHours(23, 59, 59, 999);
-        query.date.$lte = e;
+        query.fromDate.$lte = e;
       }
     }
 
     const budgets = await SmmBudget.find(query)
       .populate('client', 'name company companyName primaryContact')
-      .sort({ date: -1 });
+      .sort({ fromDate: -1 });
 
     const headers = [
       'Company Name',
       'Client Name',
-      'Date',
+      'From Date',
+      'To Date',
       'Monthly Budget (INR)',
-      'Daily Budget (INR)',
       'Amount Deposited (INR)',
       'Balance Amount (INR)',
+      'Deposit Details',
       'Notes',
     ];
 
     const rows = budgets.map((b) => {
       const company = b.companyName || b.client?.company || b.client?.companyName || '';
       const clientPerson = b.clientName || b.client?.name || b.client?.primaryContact || '';
-      const dateStr = b.date ? new Date(b.date).toISOString().slice(0, 10) : '';
+      const fromStr = b.fromDate ? new Date(b.fromDate).toISOString().slice(0, 10) : '';
+      const toStr = b.toDate ? new Date(b.toDate).toISOString().slice(0, 10) : '';
+      const depositDetails = (b.deposits || [])
+        .map((d) => {
+          const period = d.fromDate && d.toDate
+            ? `(${new Date(d.fromDate).toISOString().slice(0, 10)} to ${new Date(d.toDate).toISOString().slice(0, 10)}) `
+            : '';
+          const depDate = d.depositDate ? new Date(d.depositDate).toISOString().slice(0, 10) : '';
+          return `${period}Deposited on ${depDate}: ₹${d.amount}`;
+        })
+        .join(' | ');
       return [
         `"${company.replace(/"/g, '""')}"`,
         `"${clientPerson.replace(/"/g, '""')}"`,
-        `"${dateStr}"`,
+        `"${fromStr}"`,
+        `"${toStr}"`,
         b.monthlyBudget || 0,
-        b.dailyBudget || 0,
         b.amountDeposited || 0,
         b.balance || 0,
+        `"${depositDetails.replace(/"/g, '""')}"`,
         `"${(b.notes || '').replace(/"/g, '""')}"`,
       ].join(',');
     });
