@@ -296,7 +296,7 @@ const SocialAccountRow = ({ account, index, onChange, onRemove, isEditing }) => 
                     ))}
                   </select>
                 </FormField>
-                <FormField label="Page ID (Optional)">
+                <FormField label="Ad Account Number (Optional)">
                   <Input
                     value={page.pageId}
                     onChange={(e) => updatePage(pi, 'pageId', e.target.value)}
@@ -1093,11 +1093,10 @@ export default function ClientVault() {
           <button
             key={type}
             onClick={() => setTypeFilter(type)}
-            className={`px-3 py-1 rounded-xl text-xs font-semibold capitalize transition-all whitespace-nowrap ${
-              typeFilter === type
+            className={`px-3 py-1 rounded-xl text-xs font-semibold capitalize transition-all whitespace-nowrap ${typeFilter === type
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary'
-            }`}
+              }`}
           >
             {type === 'all' ? 'All Categories' : typeLabels[type] || type.replace(/_/g, ' ')}
           </button>
