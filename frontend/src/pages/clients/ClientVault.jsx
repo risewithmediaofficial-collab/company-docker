@@ -127,15 +127,17 @@ const SocialAccountRow = ({ account, index, onChange, onRemove, isEditing }) => 
     onChange(index, 'pages', (account.pages || []).filter((_, i) => i !== pi));
 
   return (
-    <div className="border border-border rounded-xl p-3 space-y-3 bg-secondary/20 relative">
+    <div className="border border-border rounded-xl overflow-hidden bg-secondary/20">
       {/* Row header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-border/60 bg-secondary/30">
         <div className="flex items-center gap-2">
-          <span className="text-base">{platform.emoji}</span>
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-background border border-border text-base leading-none">
+            {platform.emoji}
+          </span>
           <select
             value={account.platform}
             onChange={(e) => onChange(index, 'platform', e.target.value)}
-            className="h-7 px-2 rounded-lg border border-border bg-background text-xs font-semibold"
+            className="h-8 px-2 pr-6 rounded-lg border border-border bg-background text-xs font-semibold leading-none appearance-auto"
           >
             {PLATFORMS.map((p) => (
               <option key={p.value} value={p.value}>{p.label}</option>
@@ -146,28 +148,28 @@ const SocialAccountRow = ({ account, index, onChange, onRemove, isEditing }) => 
               value={account.platformLabel}
               onChange={(e) => onChange(index, 'platformLabel', e.target.value)}
               placeholder="Platform name"
-              className="h-7 text-xs w-28 rounded-lg"
+              className="h-8 text-xs w-32 rounded-lg"
             />
           )}
         </div>
         <button
           type="button"
           onClick={() => onRemove(index)}
-          className="p-1 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-all"
-          title="Remove"
+          className="flex items-center justify-center w-7 h-7 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-all"
+          title="Remove this account"
         >
-          <Minus size={14} />
+          <Minus size={13} />
         </button>
       </div>
 
       {/* Fields grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+      <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <FormField label="Account Handle / Username">
           <Input
             value={account.accountHandle}
             onChange={(e) => onChange(index, 'accountHandle', e.target.value)}
             placeholder="@handle or username"
-            className="h-8 text-xs rounded-lg font-mono"
+            className="h-9 text-xs rounded-lg font-mono"
           />
         </FormField>
 
@@ -177,7 +179,7 @@ const SocialAccountRow = ({ account, index, onChange, onRemove, isEditing }) => 
             value={account.email}
             onChange={(e) => onChange(index, 'email', e.target.value)}
             placeholder="login@email.com"
-            className="h-8 text-xs rounded-lg"
+            className="h-9 text-xs rounded-lg"
           />
         </FormField>
 
@@ -186,7 +188,7 @@ const SocialAccountRow = ({ account, index, onChange, onRemove, isEditing }) => 
             value={account.mobileNumber}
             onChange={(e) => onChange(index, 'mobileNumber', e.target.value)}
             placeholder="+91 98765 43210"
-            className="h-8 text-xs rounded-lg"
+            className="h-9 text-xs rounded-lg"
           />
         </FormField>
 
@@ -197,14 +199,14 @@ const SocialAccountRow = ({ account, index, onChange, onRemove, isEditing }) => 
               value={account.password}
               onChange={(e) => onChange(index, 'password', e.target.value)}
               placeholder={isEditing ? 'Leave blank to keep' : 'Enter password'}
-              className="h-8 text-xs rounded-lg font-mono pr-8"
+              className="h-9 text-xs rounded-lg font-mono pr-9"
             />
             <button
               type="button"
               onClick={() => setShowPass((v) => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             >
-              {showPass ? <EyeOff size={13} /> : <Eye size={13} />}
+              {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
           </div>
         </FormField>
@@ -215,7 +217,7 @@ const SocialAccountRow = ({ account, index, onChange, onRemove, isEditing }) => 
             value={account.recoveryEmail}
             onChange={(e) => onChange(index, 'recoveryEmail', e.target.value)}
             placeholder="recovery@email.com"
-            className="h-8 text-xs rounded-lg"
+            className="h-9 text-xs rounded-lg"
           />
         </FormField>
 
@@ -224,14 +226,13 @@ const SocialAccountRow = ({ account, index, onChange, onRemove, isEditing }) => 
             value={account.notes}
             onChange={(e) => onChange(index, 'notes', e.target.value)}
             placeholder="2FA via app / SMS to +91..."
-            className="h-8 text-xs rounded-lg"
+            className="h-9 text-xs rounded-lg"
           />
         </FormField>
       </div>
-
       {/* ── Pages sub-section (Facebook & Instagram only) ── */}
       {supportsPages && (
-        <div className="space-y-2 pt-1">
+        <div className="border-t border-border/60 px-3 pb-3 pt-2.5 space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
               <span>{platform.emoji}</span>
@@ -241,7 +242,7 @@ const SocialAccountRow = ({ account, index, onChange, onRemove, isEditing }) => 
             <button
               type="button"
               onClick={addPage}
-              className="flex items-center gap-1 text-[11px] font-semibold text-primary px-2 py-0.5 rounded-lg border border-primary/30 hover:bg-primary/5 transition-all"
+              className="flex items-center gap-1 text-[11px] font-semibold text-primary px-2 py-1 rounded-lg border border-primary/30 hover:bg-primary/5 transition-all"
             >
               <PlusCircle size={11} />
               Add Page
@@ -249,7 +250,7 @@ const SocialAccountRow = ({ account, index, onChange, onRemove, isEditing }) => 
           </div>
 
           {(account.pages || []).length === 0 && (
-            <div className="rounded-lg border border-dashed border-border/70 py-3 text-center text-[11px] text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-border py-3 text-center text-[11px] text-muted-foreground">
               No pages added.{' '}
               <button type="button" onClick={addPage} className="text-primary font-semibold hover:underline">
                 Add a {account.platform === 'facebook' ? 'Facebook Page' : 'Profile/Page'}
@@ -258,36 +259,37 @@ const SocialAccountRow = ({ account, index, onChange, onRemove, isEditing }) => 
           )}
 
           {(account.pages || []).map((page, pi) => (
-            <div key={pi} className="rounded-lg border border-border/60 bg-background/60 p-2.5 space-y-2">
+            <div key={pi} className="rounded-lg border border-border bg-background/70 p-2.5 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-foreground">
-                  {account.platform === 'facebook' ? '📄' : '📋'} Page {pi + 1}
+                <span className="text-[11px] font-semibold text-foreground flex items-center gap-1.5">
+                  <span className="text-base">{account.platform === 'facebook' ? '📄' : '📋'}</span>
+                  <span>Page {pi + 1}</span>
                   {page.pageName && (
-                    <span className="ml-1.5 text-muted-foreground font-normal">— {page.pageName}</span>
+                    <span className="text-muted-foreground font-normal">— {page.pageName}</span>
                   )}
                 </span>
                 <button
                   type="button"
                   onClick={() => removePage(pi)}
-                  className="p-0.5 rounded text-muted-foreground hover:text-rose-500 transition-all"
+                  className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-all"
                 >
                   <Minus size={12} />
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <FormField label="Page Name *">
+                <FormField label="Page Name">
                   <Input
                     value={page.pageName}
                     onChange={(e) => updatePage(pi, 'pageName', e.target.value)}
                     placeholder={account.platform === 'facebook' ? 'My Brand Page' : 'My Profile Name'}
-                    className="h-7 text-xs rounded-lg"
+                    className="h-8 text-xs rounded-lg"
                   />
                 </FormField>
                 <FormField label="Role">
                   <select
                     value={page.role}
                     onChange={(e) => updatePage(pi, 'role', e.target.value)}
-                    className="w-full h-7 px-2 rounded-lg border border-border bg-background text-xs"
+                    className="w-full h-8 px-2 rounded-lg border border-border bg-background text-xs"
                   >
                     {['Admin', 'Editor', 'Moderator', 'Advertiser', 'Analyst', 'Other'].map((r) => (
                       <option key={r} value={r}>{r}</option>
@@ -299,7 +301,7 @@ const SocialAccountRow = ({ account, index, onChange, onRemove, isEditing }) => 
                     value={page.pageId}
                     onChange={(e) => updatePage(pi, 'pageId', e.target.value)}
                     placeholder="123456789"
-                    className="h-7 text-xs rounded-lg font-mono"
+                    className="h-8 text-xs rounded-lg font-mono"
                   />
                 </FormField>
                 <FormField label="Page URL (Optional)">
@@ -307,7 +309,7 @@ const SocialAccountRow = ({ account, index, onChange, onRemove, isEditing }) => 
                     value={page.pageUrl}
                     onChange={(e) => updatePage(pi, 'pageUrl', e.target.value)}
                     placeholder="facebook.com/mypagename"
-                    className="h-7 text-xs rounded-lg"
+                    className="h-8 text-xs rounded-lg"
                   />
                 </FormField>
               </div>
