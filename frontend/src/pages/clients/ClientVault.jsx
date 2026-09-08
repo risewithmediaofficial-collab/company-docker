@@ -137,7 +137,7 @@ const SocialAccountRow = ({ account, index, onChange, onRemove, isEditing }) => 
           <select
             value={account.platform}
             onChange={(e) => onChange(index, 'platform', e.target.value)}
-            className="h-8 px-2 pr-6 rounded-lg border border-border bg-background text-xs font-semibold leading-none appearance-auto"
+            className="h-8 px-2.5 pr-7 rounded-lg border border-border bg-background text-xs font-semibold appearance-none cursor-pointer"
           >
             {PLATFORMS.map((p) => (
               <option key={p.value} value={p.value}>{p.label}</option>
@@ -289,7 +289,7 @@ const SocialAccountRow = ({ account, index, onChange, onRemove, isEditing }) => 
                   <select
                     value={page.role}
                     onChange={(e) => updatePage(pi, 'role', e.target.value)}
-                    className="w-full h-8 px-2 rounded-lg border border-border bg-background text-xs"
+                    className="w-full h-8 px-2.5 pr-7 rounded-lg border border-border bg-background text-xs appearance-none cursor-pointer"
                   >
                     {['Admin', 'Editor', 'Moderator', 'Advertiser', 'Analyst', 'Other'].map((r) => (
                       <option key={r} value={r}>{r}</option>
@@ -516,7 +516,7 @@ const CredentialFormDialog = ({ open, onOpenChange, credential, clients, onSave,
                 value={form.clientId}
                 onChange={(e) => updateField('clientId', e.target.value)}
                 required
-                className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs"
+                className="w-full h-9 px-3 pr-8 rounded-xl border border-border bg-background text-xs appearance-none cursor-pointer"
               >
                 <option value="">Select client</option>
                 {clients.map((c) => (
@@ -532,7 +532,7 @@ const CredentialFormDialog = ({ open, onOpenChange, credential, clients, onSave,
                 value={form.credentialType}
                 onChange={(e) => updateField('credentialType', e.target.value)}
                 required
-                className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs"
+                className="w-full h-9 px-3 pr-8 rounded-xl border border-border bg-background text-xs appearance-none cursor-pointer"
               >
                 {credentialTypes.map((type) => (
                   <option key={type.value} value={type.value}>
