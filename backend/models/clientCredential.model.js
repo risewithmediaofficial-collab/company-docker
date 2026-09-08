@@ -4,6 +4,61 @@
 
 import mongoose from 'mongoose';
 
+// Sub-schema for per-platform social/app credentials
+const socialAccountSchema = new mongoose.Schema(
+  {
+    platform: {
+      type: String,
+      enum: ['instagram', 'facebook', 'x', 'youtube', 'linkedin', 'threads', 'tiktok', 'snapchat', 'pinterest', 'other'],
+      default: 'other',
+    },
+    platformLabel: {
+      type: String,
+      default: '',
+      // Custom label for 'other' platforms or overrides
+    },
+    accountHandle: {
+      type: String,
+      default: '',
+      // e.g., @brandname
+    },
+    email: {
+      type: String,
+      default: '',
+    },
+    mobileNumber: {
+      type: String,
+      default: '',
+    },
+    encryptedPassword: {
+      type: String,
+      // Encrypted platform password
+    },
+    recoveryEmail: {
+      type: String,
+      default: '',
+    },
+    notes: {
+      type: String,
+      default: '',
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    // Facebook Pages / Instagram Business Profiles linked to this account
+    pages: [
+      {
+        pageName: { type: String, default: '' },
+        pageId: { type: String, default: '' },
+        pageUrl: { type: String, default: '' },
+        role: { type: String, default: 'Admin', enum: ['Admin', 'Editor', 'Moderator', 'Advertiser', 'Analyst', 'Other'] },
+      },
+    ],
+  },
+  { _id: true }
+);
+
 const clientCredentialSchema = new mongoose.Schema(
   {
     clientId: {
@@ -49,6 +104,15 @@ const clientCredentialSchema = new mongoose.Schema(
       type: String,
       // For complex data like API keys, JSON objects, etc.
     },
+    // Primary contact fields
+    email: {
+      type: String,
+      default: '',
+    },
+    mobileNumber: {
+      type: String,
+      default: '',
+    },
     url: {
       type: String,
       default: '',
@@ -58,6 +122,8 @@ const clientCredentialSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    // Multiple social/platform account credentials
+    socialAccounts: [socialAccountSchema],
     // Expiry information
     expiryDate: {
       type: Date,
