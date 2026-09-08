@@ -82,7 +82,8 @@ const getBreadcrumbs = (pathname) => {
     '/smm/calendar': [{ label: 'Growth', path: '/smm' }, { label: 'Marketing', path: '/smm' }, { label: 'SMM Calendar', path: '/smm/calendar' }],
     '/smm/analytics': [{ label: 'Growth', path: '/smm' }, { label: 'Marketing', path: '/smm' }, { label: 'Analytics', path: '/smm/analytics' }],
     '/smm/performance': [{ label: 'Growth', path: '/smm' }, { label: 'Marketing', path: '/smm' }, { label: 'Performance', path: '/smm/performance' }],
-    '/smm/reports': [{ label: 'Growth', path: '/smm' }, { label: 'Marketing', path: '/smm' }, { label: 'SMM Reports', path: '/smm/reports' }],
+    '/smm/daily-tracking': [{ label: 'Growth', path: '/smm' }, { label: 'Marketing', path: '/smm' }, { label: 'Daily Tracking', path: '/smm/daily-tracking' }],
+    '/smm/call-logs': [{ label: 'Growth', path: '/smm' }, { label: 'Marketing', path: '/smm' }, { label: 'Call Logs', path: '/smm/call-logs' }],
     '/smm/team': [{ label: 'Growth', path: '/smm' }, { label: 'Marketing', path: '/smm' }, { label: 'Team', path: '/smm/team' }],
 
     '/finance': [{ label: 'Business', path: '/finance' }, { label: 'Finance Status', path: '/finance' }],

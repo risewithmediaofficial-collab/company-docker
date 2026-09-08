@@ -68,6 +68,7 @@ import SMMContentCalendar from './pages/smm/ContentCalendar';
 import SMMPerformance from './pages/smm/Performance';
 import SMMReports from './pages/smm/Reports';
 import SMMDailyTracking from './pages/smm/DailyTracking';
+import SMMCallLogs from './pages/smm/SMMCallLogs';
 import SMMTeam from './pages/smm/Team';
 import AdBudgetDashboard from './pages/smm/AdBudgetDashboard';
 
@@ -450,6 +451,11 @@ const App = () => {
           <Route path="/smm/daily-tracking" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
               <SMMDailyTracking />
+            </ProtectedRoute>
+          } />
+          <Route path="/smm/call-logs" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee', 'adsManager']}>
+              <SMMCallLogs />
             </ProtectedRoute>
           } />
           <Route path="/smm/team" element={

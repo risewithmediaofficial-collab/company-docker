@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Video, Calendar, Megaphone, Layers,
-  PlayCircle, Clock, BarChart2, FileSpreadsheet, DollarSign
+  PlayCircle, Clock, BarChart2, FileSpreadsheet, DollarSign, PhoneCall
 } from 'lucide-react';
 
 const SMM_NAV_ITEMS = [
@@ -16,6 +16,7 @@ const SMM_NAV_ITEMS = [
   { name: 'Budget', path: '/smm/budget', icon: DollarSign },
   // ── Operations & Tracking Section ──
   { name: 'Daily Tracking', path: '/smm/daily-tracking', icon: Clock },
+  { name: 'Call Logs', path: '/smm/call-logs', icon: PhoneCall },
   { name: 'Analytics', path: '/smm/analytics', icon: BarChart2, aliases: ['/smm/performance'] },
   { name: 'Reports', path: '/smm/reports', icon: FileSpreadsheet },
 ];

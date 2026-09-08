@@ -88,4 +88,12 @@ export const smmApi = {
   getNotes: (params) => api.get('/smm/notes', { params }),
   createNote: (data) => api.post('/smm/notes', data),
   deleteNote: (id) => api.delete(`/smm/notes/${id}`),
+
+  // Call Logs
+  getCallLogs: (params) => api.get('/smm/call-logs', { params }),
+  getCallLogStats: (params) => api.get('/smm/call-logs/stats', { params }),
+  createCallLog: (data) => api.post('/smm/call-logs', data),
+  updateCallLog: (id, data) => api.put(`/smm/call-logs/${id}`, data),
+  updateCallLogStatus: (id, data) => api.patch(`/smm/call-logs/${id}/status`, data),
+  deleteCallLog: (id) => api.delete(`/smm/call-logs/${id}`),
 };
