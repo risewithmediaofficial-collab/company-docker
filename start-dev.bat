@@ -43,12 +43,12 @@ echo.
 
 :: Start backend
 cd /d "E:\risewithmedia projects\COMPANY\backend"
-start "Backend (Port 5000)" cmd /k "npm run dev"
+start "Backend (Port 5001)" cmd /k "npm run dev"
 
 echo.
 echo  ================================================
 echo   Dev environment started!
-echo   Backend  : http://localhost:5000
+echo   Backend  : http://localhost:5001
 echo   Frontend : run 'npm run dev' in /frontend
 echo  ================================================
 echo.

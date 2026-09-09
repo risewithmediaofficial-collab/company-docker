@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import api from '../../api';
 import { devApi } from '../../api/development';
 import { DevelopmentSubNav } from '../../components/development/DevelopmentSubNav';
 import { PageHeader } from '../../components/ui/page';
@@ -18,12 +19,15 @@ import {
   User,
   CheckCircle2,
   ChevronRight,
+  ChevronDown,
   MoreVertical,
   AlertTriangle,
   Flame,
   Clock,
   ExternalLink,
   GripVertical,
+  Zap,
+  X,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -57,8 +61,20 @@ export default function DevelopmentBoard() {
   // Filters
   const [filterSprint, setFilterSprint] = useState('');
   const [filterProject, setFilterProject] = useState('');
+  const [filterDeveloper, setFilterDeveloper] = useState('');
+  const [filterPriority, setFilterPriority] = useState('');
   const [filterBlockedOnly, setFilterBlockedOnly] = useState(false);
+  const [filterBugOnly, setFilterBugOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Sprints, Projects, Developers lists
+  const [projectsList, setProjectsList] = useState([]);
+  const [developersList, setDevelopersList] = useState([]);
+
+  // Discovered entities cache from all loaded tasks so dropdowns never lose options when filtered
+  const [discoveredProjects, setDiscoveredProjects] = useState([]);
+  const [discoveredDevelopers, setDiscoveredDevelopers] = useState([]);
+  const [discoveredSprints, setDiscoveredSprints] = useState([]);
 
   // Task detail & Add task modal states
   const [selectedTaskId, setSelectedTaskId] = useState(null);
@@ -78,21 +94,89 @@ export default function DevelopmentBoard() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [tasksRes, sprintsRes] = await Promise.all([
+      const [tasksRes, sprintsRes, projectsRes, usersRes] = await Promise.all([
         devApi.getTasks({
           sprint: filterSprint || undefined,
           project: filterProject || undefined,
+          developer: filterDeveloper || undefined,
           isBlocked: filterBlockedOnly ? 'true' : undefined,
+          isBug: filterBugOnly ? 'true' : undefined,
           search: searchQuery.trim() || undefined,
         }),
         devApi.getSprints().catch(() => ({ data: { data: [] } })),
+        api.get('/projects').catch(() => ({ data: { projects: [] } })),
+        api.get('/users').catch(() => ({ data: { users: [] } })),
       ]);
 
       if (tasksRes.data?.success) {
-        setTasks(tasksRes.data.data || []);
+        const loadedTasks = tasksRes.data.data || [];
+        setTasks(loadedTasks);
+
+        // Update discovered projects cache from loaded tasks
+        const newProjMap = new Map();
+        loadedTasks.forEach((t) => {
+          if (t.project && typeof t.project === 'object' && t.project._id) {
+            newProjMap.set(t.project._id.toString(), { _id: t.project._id.toString(), name: t.project.name || 'CRM Project' });
+          } else if (t.project && typeof t.project === 'string') {
+            newProjMap.set(t.project, { _id: t.project, name: t.project });
+          }
+        });
+        if (newProjMap.size > 0) {
+          setDiscoveredProjects((prev) => {
+            const merged = new Map(prev.map((p) => [p._id, p]));
+            newProjMap.forEach((v, k) => merged.set(k, v));
+            return Array.from(merged.values());
+          });
+        }
+
+        // Update discovered developers cache from loaded tasks
+        const newDevMap = new Map();
+        loadedTasks.forEach((t) => {
+          const dev = t.development?.developer;
+          if (dev && typeof dev === 'object' && dev._id) {
+            newDevMap.set(dev._id.toString(), { _id: dev._id.toString(), name: dev.name || dev.email });
+          }
+          if (Array.isArray(t.assignedTo)) {
+            t.assignedTo.forEach((u) => {
+              if (u && typeof u === 'object' && u._id) {
+                newDevMap.set(u._id.toString(), { _id: u._id.toString(), name: u.name || u.email });
+              }
+            });
+          }
+        });
+        if (newDevMap.size > 0) {
+          setDiscoveredDevelopers((prev) => {
+            const merged = new Map(prev.map((d) => [d._id, d]));
+            newDevMap.forEach((v, k) => merged.set(k, v));
+            return Array.from(merged.values());
+          });
+        }
+
+        // Update discovered sprints cache from loaded tasks
+        const newSprintMap = new Map();
+        loadedTasks.forEach((t) => {
+          const sp = t.development?.sprint;
+          if (sp && typeof sp === 'object' && sp._id) {
+            newSprintMap.set(sp._id.toString(), { _id: sp._id.toString(), name: sp.name || 'Sprint', status: sp.status || 'active' });
+          }
+        });
+        if (newSprintMap.size > 0) {
+          setDiscoveredSprints((prev) => {
+            const merged = new Map(prev.map((s) => [s._id, s]));
+            newSprintMap.forEach((v, k) => merged.set(k, v));
+            return Array.from(merged.values());
+          });
+        }
       }
+
       if (sprintsRes.data?.success) {
         setSprints(sprintsRes.data.data || []);
+      }
+      if (projectsRes.data?.projects) {
+        setProjectsList(projectsRes.data.projects || []);
+      }
+      if (usersRes.data?.users) {
+        setDevelopersList(usersRes.data.users || []);
       }
     } catch (err) {
       console.error('Failed to load board data:', err);
@@ -100,11 +184,67 @@ export default function DevelopmentBoard() {
     } finally {
       setLoading(false);
     }
-  }, [filterSprint, filterProject, filterBlockedOnly, searchQuery]);
+  }, [filterSprint, filterProject, filterDeveloper, filterBlockedOnly, filterBugOnly, searchQuery]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Unified projects list from API + discovered from tasks
+  const allProjects = useMemo(() => {
+    const map = new Map();
+    projectsList.forEach((p) => {
+      if (p?._id) map.set(p._id.toString(), { _id: p._id.toString(), name: p.name || 'Project' });
+    });
+    discoveredProjects.forEach((p) => {
+      if (p?._id && !map.has(p._id.toString())) map.set(p._id.toString(), p);
+    });
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [projectsList, discoveredProjects]);
+
+  // Unified developers list from API + discovered from tasks
+  const allDevelopers = useMemo(() => {
+    const map = new Map();
+    developersList.forEach((u) => {
+      if (u?._id) map.set(u._id.toString(), { _id: u._id.toString(), name: u.name || u.email });
+    });
+    discoveredDevelopers.forEach((d) => {
+      if (d?._id && !map.has(d._id.toString())) map.set(d._id.toString(), d);
+    });
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [developersList, discoveredDevelopers]);
+
+  // Unified sprints list from API + discovered from tasks
+  const allSprints = useMemo(() => {
+    const map = new Map();
+    sprints.forEach((s) => {
+      if (s?._id) map.set(s._id.toString(), { _id: s._id.toString(), name: s.name, status: s.status });
+    });
+    discoveredSprints.forEach((s) => {
+      if (s?._id && !map.has(s._id.toString())) map.set(s._id.toString(), s);
+    });
+    return Array.from(map.values());
+  }, [sprints, discoveredSprints]);
+
+  // Filter tasks by priority locally if selected
+  const displayedTasks = useMemo(() => {
+    if (!filterPriority) return tasks;
+    return tasks.filter((t) => t.priority?.toLowerCase() === filterPriority.toLowerCase());
+  }, [tasks, filterPriority]);
+
+  const hasActiveFilters = Boolean(
+    filterSprint || filterProject || filterDeveloper || filterPriority || filterBlockedOnly || filterBugOnly || searchQuery.trim()
+  );
+
+  const clearAllFilters = () => {
+    setFilterSprint('');
+    setFilterProject('');
+    setFilterDeveloper('');
+    setFilterPriority('');
+    setFilterBlockedOnly(false);
+    setFilterBugOnly(false);
+    setSearchQuery('');
+  };
 
   // Handle stage transition (with optimistic UI update)
   const handleStageChange = async (taskId, newStage) => {
@@ -179,7 +319,7 @@ export default function DevelopmentBoard() {
       map[col.id] = [];
     });
 
-    tasks.forEach((t) => {
+    displayedTasks.forEach((t) => {
       const stage = t.development?.stage || 'backlog';
       if (map[stage]) {
         map[stage].push(t);
@@ -189,7 +329,7 @@ export default function DevelopmentBoard() {
     });
 
     return map;
-  }, [tasks]);
+  }, [displayedTasks]);
 
   return (
     <div className="space-y-6">
@@ -223,48 +363,144 @@ export default function DevelopmentBoard() {
 
       {/* ── Filter Bar ───────────────────────────────────────────────── */}
       <div className="bg-card border border-border rounded-2xl p-4 shadow-xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2.5 items-center">
           {/* Search */}
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <input
               type="text"
               placeholder="Search title, branch, PR..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="app-input w-full pl-8 text-xs"
+              className="app-input w-full pl-8 pr-3 text-xs h-9 py-1.5"
             />
           </div>
 
-          {/* Sprint Filter */}
-          <div>
+          {/* Project Filter */}
+          <div className="relative">
+            <Briefcase size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <select
-              value={filterSprint}
-              onChange={(e) => setFilterSprint(e.target.value)}
-              className="app-select w-full text-xs"
+              value={filterProject}
+              onChange={(e) => setFilterProject(e.target.value)}
+              className="app-select w-full pl-8 pr-8 text-xs h-9 py-1.5 font-medium truncate"
+              title="Filter by Project"
             >
-              <option value="">All Sprints</option>
-              {sprints.map((s) => (
-                <option key={s._id} value={s._id}>
-                  {s.name} ({s.status})
+              <option value="">All Projects ({allProjects.length})</option>
+              {allProjects.map((p) => (
+                <option key={p._id} value={p._id}>
+                  {p.name}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Blocked Only Toggle */}
-          <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-foreground select-none p-2 rounded-xl bg-secondary/40 border border-border w-full">
+          {/* Developer / Assignee Filter */}
+          <div className="relative">
+            <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <select
+              value={filterDeveloper}
+              onChange={(e) => setFilterDeveloper(e.target.value)}
+              className="app-select w-full pl-8 pr-8 text-xs h-9 py-1.5 font-medium truncate"
+              title="Filter by Developer"
+            >
+              <option value="">All Developers ({allDevelopers.length})</option>
+              {allDevelopers.map((d) => (
+                <option key={d._id} value={d._id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sprint Filter */}
+          <div className="relative">
+            <Zap size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <select
+              value={filterSprint}
+              onChange={(e) => setFilterSprint(e.target.value)}
+              className="app-select w-full pl-8 pr-8 text-xs h-9 py-1.5 font-medium truncate"
+              title="Filter by Sprint"
+            >
+              <option value="">
+                {allSprints.length === 0 ? 'All Sprints (No active sprints)' : `All Sprints (${allSprints.length})`}
+              </option>
+              {allSprints.map((s) => (
+                <option key={s._id} value={s._id}>
+                  {s.name} {s.status ? `(${s.status})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Priority Filter */}
+          <div className="relative">
+            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <select
+              value={filterPriority}
+              onChange={(e) => setFilterPriority(e.target.value)}
+              className="app-select w-full pl-8 pr-8 text-xs h-9 py-1.5 font-medium truncate"
+              title="Filter by Priority"
+            >
+              <option value="">All Priorities</option>
+              <option value="urgent">🔴 Urgent</option>
+              <option value="high">🟠 High</option>
+              <option value="medium">🔵 Medium</option>
+              <option value="low">⚪ Low</option>
+            </select>
+          </div>
+
+          {/* Toggles & Reset */}
+          <div className="flex items-center gap-1.5">
+            {/* Blocked Only Toggle */}
+            <label
+              className={`flex-1 flex items-center justify-center gap-1.5 cursor-pointer text-xs font-bold select-none h-9 px-2 rounded-xl border transition-all ${
+                filterBlockedOnly
+                  ? 'bg-rose-500/15 border-rose-500/40 text-rose-600 dark:text-rose-400 shadow-xs'
+                  : 'bg-secondary/40 border-border text-muted-foreground hover:text-foreground'
+              }`}
+              title="Show only blocked tasks"
+            >
               <input
                 type="checkbox"
                 checked={filterBlockedOnly}
                 onChange={(e) => setFilterBlockedOnly(e.target.checked)}
-                className="w-4 h-4 rounded text-primary focus:ring-primary/20 accent-primary"
+                className="sr-only"
               />
-              <span className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 font-bold">
-                <ShieldAlert size={14} /> Blocked Only
-              </span>
+              <ShieldAlert size={13} className={filterBlockedOnly ? 'text-rose-600 dark:text-rose-400' : ''} />
+              <span className="text-[11px]">Blocked</span>
             </label>
+
+            {/* Bug Only Toggle */}
+            <label
+              className={`flex-1 flex items-center justify-center gap-1.5 cursor-pointer text-xs font-bold select-none h-9 px-2 rounded-xl border transition-all ${
+                filterBugOnly
+                  ? 'bg-purple-500/15 border-purple-500/40 text-purple-600 dark:text-purple-400 shadow-xs'
+                  : 'bg-secondary/40 border-border text-muted-foreground hover:text-foreground'
+              }`}
+              title="Show only bug tasks"
+            >
+              <input
+                type="checkbox"
+                checked={filterBugOnly}
+                onChange={(e) => setFilterBugOnly(e.target.checked)}
+                className="sr-only"
+              />
+              <Bug size={13} className={filterBugOnly ? 'text-purple-600 dark:text-purple-400' : ''} />
+              <span className="text-[11px]">Bugs</span>
+            </label>
+
+            {/* Clear All Filters */}
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="flex items-center justify-center gap-1 h-9 px-2.5 text-[11px] font-bold text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-colors border border-border shrink-0"
+                title="Reset all filters"
+              >
+                <X size={12} />
+                <span>Reset</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -446,33 +682,36 @@ export default function DevelopmentBoard() {
 
                           {/* Card Footer: Assignee & Stage Move Dropdown */}
                           <div
-                            className="flex items-center justify-between pt-1 border-t border-border text-[10px]"
+                            className="flex items-center justify-between gap-1 pt-1.5 border-t border-border text-[10px]"
                             onClick={(e) => e.stopPropagation()}
                             onMouseDown={(e) => e.stopPropagation()}
                           >
                             {/* Assignee */}
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[9px]">
-                                {devUser?.name ? devUser.name.charAt(0) : <User size={10} />}
+                            <div className="flex items-center gap-1.5 text-muted-foreground min-w-0 flex-1">
+                              <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[9px] shrink-0">
+                                {devUser?.name ? devUser.name.charAt(0).toUpperCase() : <User size={10} />}
                               </div>
-                              <span className="truncate max-w-[80px]">
+                              <span className="truncate text-[10px] font-medium" title={devUser?.name || 'Unassigned'}>
                                 {devUser?.name || 'Unassigned'}
                               </span>
                             </div>
 
                             {/* Quick Stage Move Dropdown */}
-                            <select
-                              value={dev.stage || column.id}
-                              onChange={(e) => handleStageChange(task._id, e.target.value)}
-                              className="bg-secondary/70 border border-border rounded text-[10px] font-bold text-foreground py-0.5 px-1 outline-none hover:bg-secondary cursor-pointer"
-                              title="Move task to stage"
-                            >
-                              {PIPELINE_COLUMNS.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                  {c.title}
-                                </option>
-                              ))}
-                            </select>
+                            <div className="relative shrink-0 max-w-[115px]">
+                              <select
+                                value={dev.stage || column.id}
+                                onChange={(e) => handleStageChange(task._id, e.target.value)}
+                                className="w-full appearance-none bg-secondary/80 hover:bg-secondary border border-border text-foreground rounded-lg text-[10px] font-bold py-1 pl-2 pr-5 outline-none cursor-pointer transition-colors truncate focus:border-primary focus:ring-1 focus:ring-primary/20"
+                                title="Move task to stage"
+                              >
+                                {PIPELINE_COLUMNS.map((c) => (
+                                  <option key={c.id} value={c.id} className="bg-card text-foreground font-semibold">
+                                    {c.title}
+                                  </option>
+                                ))}
+                              </select>
+                              <ChevronDown size={11} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                            </div>
                           </div>
                         </div>
                       );
