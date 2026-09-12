@@ -66,6 +66,7 @@ import smmDashboardRoutes from './routes/smm/smmDashboard.routes.js';
 import smmDailyReportRoutes from './routes/smm/smmDailyReport.routes.js';
 import smmBudgetRoutes from './routes/smm/smmBudget.routes.js';
 import smmCallLogRoutes from './routes/smm/smmCallLog.routes.js';
+import smmMonthlyTrackerRoutes from './routes/smm/smmMonthlyTracker.routes.js';
 import developmentRoutes from './routes/development.routes.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
 
@@ -204,6 +205,7 @@ app.use('/api/smm/notes', smmNoteRoutes);
 app.use('/api/smm/daily-reports', smmDailyReportRoutes);
 app.use('/api/smm/budgets', smmBudgetRoutes);
 app.use('/api/smm/call-logs', smmCallLogRoutes);
+app.use('/api/smm/tracker', smmMonthlyTrackerRoutes);
 
 // Development Module Routes
 app.use('/api/development', developmentRoutes);

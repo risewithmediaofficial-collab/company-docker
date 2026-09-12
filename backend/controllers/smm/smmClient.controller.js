@@ -77,16 +77,36 @@ export const getSmmClient = async (req, res) => {
 
 export const createSmmClient = async (req, res) => {
   try {
-    const client = await Client.create({
-      name: req.body.companyName || req.body.name,
-      company: req.body.companyName || req.body.name,
-      email: req.body.email,
-      phone: req.body.phone,
-      website: req.body.website,
-      logo: req.body.brandLogo,
-      status: 'active',
+    const companyName = req.body.companyName || req.body.name;
+    if (!companyName) {
+      return res.status(400).json({ success: false, message: 'Company or client name is required' });
+    }
+
+    const smmClient = await SmmClient.create({
+      companyName,
+      email: req.body.email || '',
+      phone: req.body.phone || '',
+      website: req.body.website || '',
+      brandLogo: req.body.brandLogo || '',
+      industry: req.body.industry || 'General',
+      status: 'Active',
     });
-    res.status(201).json({ success: true, data: client });
+
+    try {
+      await Client.create({
+        name: companyName,
+        company: companyName,
+        email: req.body.email,
+        phone: req.body.phone,
+        website: req.body.website,
+        logo: req.body.brandLogo,
+        status: 'active',
+      });
+    } catch (e) {
+      // CRM Client creation is secondary, proceed with smmClient
+    }
+
+    res.status(201).json({ success: true, data: smmClient });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }

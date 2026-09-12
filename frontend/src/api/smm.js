@@ -7,6 +7,9 @@ export const smmApi = {
   // Clients & Projects
   getClients: (params) => api.get('/smm/clients', { params }),
   getClient: (id) => api.get(`/smm/clients/${id}`),
+  createClient: (data) => api.post('/smm/clients', data),
+  updateClient: (id, data) => api.put(`/smm/clients/${id}`, data),
+  deleteClient: (id) => api.delete(`/smm/clients/${id}`),
   getProjects: (params) => api.get('/smm/projects', { params }),
   getProject: (id) => api.get(`/smm/projects/${id}`),
 
@@ -96,4 +99,13 @@ export const smmApi = {
   updateCallLog: (id, data) => api.put(`/smm/call-logs/${id}`, data),
   updateCallLogStatus: (id, data) => api.patch(`/smm/call-logs/${id}/status`, data),
   deleteCallLog: (id) => api.delete(`/smm/call-logs/${id}`),
+
+  // ── Monthly One-Page Tracker ──────────────────────────────────────────────
+  getMonthlyTrackers: (params) => api.get('/smm/tracker', { params }),
+  upsertTracker: (data) => api.post('/smm/tracker', data),
+  updateTrackerDayCell: (id, day, data) => api.patch(`/smm/tracker/${id}/day/${day}`, data),
+  updateTrackerMeta: (id, data) => api.patch(`/smm/tracker/${id}/meta`, data),
+  deleteTracker: (id) => api.delete(`/smm/tracker/${id}`),
+  syncContentTracker: (data) => api.post('/smm/tracker/sync-content', data),
 };
+

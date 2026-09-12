@@ -71,6 +71,7 @@ import SMMDailyTracking from './pages/smm/DailyTracking';
 import SMMCallLogs from './pages/smm/SMMCallLogs';
 import SMMTeam from './pages/smm/Team';
 import AdBudgetDashboard from './pages/smm/AdBudgetDashboard';
+import SMMOnePageTracker from './pages/smm/SMMOnePageTracker';
 
 // Development Module Pages
 import DevelopmentDashboard from './pages/development/DevelopmentDashboard';
@@ -421,6 +422,11 @@ const App = () => {
           <Route path="/smm/budget" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
               <AdBudgetDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/smm/tracker" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+              <SMMOnePageTracker />
             </ProtectedRoute>
           } />
           <Route path="/smm/creatives" element={

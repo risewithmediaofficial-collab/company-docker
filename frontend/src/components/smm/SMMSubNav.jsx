@@ -2,11 +2,12 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Video, Calendar, Megaphone, Layers,
-  PlayCircle, Clock, BarChart2, FileSpreadsheet, DollarSign, PhoneCall
+  PlayCircle, Clock, BarChart2, FileSpreadsheet, DollarSign, PhoneCall, LayoutGrid
 } from 'lucide-react';
 
 const SMM_NAV_ITEMS = [
   { name: 'Overview', path: '/smm', icon: LayoutDashboard, exact: true },
+  { name: 'One-Page Tracker', path: '/smm/tracker', icon: LayoutGrid },
   { name: 'Content', path: '/smm/content', icon: Video },
   { name: 'Content Calendar', path: '/smm/calendar', icon: Calendar },
   // ── Ads Manager Section ──
