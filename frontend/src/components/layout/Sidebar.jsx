@@ -229,6 +229,9 @@ export default function Sidebar({ onOpenSearch }) {
         items: [
           { name: 'Projects', icon: Briefcase, path: '/projects' },
           { name: role === 'manager' ? 'Manager Tasks' : 'Tasks Database', icon: CheckSquare, path: role === 'manager' ? '/manager-tasks' : '/tasks' },
+          ...(role === 'superAdmin' || role === 'admin' ? [
+            { name: 'Manager Assignments', icon: CheckSquare, path: '/admin/manager-assignments' },
+          ] : []),
           { name: 'Content Calendar', icon: Calendar, path: '/calendar' },
           { name: 'Shoots & DM Calendar', icon: Video, path: '/dm-calendar' },
           { name: 'Influencer Hub', icon: Sparkles, path: '/influencers' },
@@ -260,13 +263,10 @@ export default function Sidebar({ onOpenSearch }) {
         title: 'TEAM & WORKLOAD',
         items: [
           { name: 'Attendance & EOD', icon: Clock, path: '/attendance' },
+          { name: 'HR & Hiring', icon: Users2, path: '/hr' },
           ...(role === 'superAdmin' || role === 'admin' ? [
-            { name: 'HR & Hiring', icon: Users2, path: '/hr' },
             { name: 'User Directory', icon: UserCheck, path: '/admin/users' },
-            { name: 'Manager Assignments', icon: CheckSquare, path: '/admin/manager-assignments' },
-          ] : [
-            { name: 'HR & Hiring', icon: Users2, path: '/hr' },
-          ]),
+          ] : []),
         ],
       },
       {

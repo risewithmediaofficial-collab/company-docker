@@ -93,7 +93,7 @@ const getBreadcrumbs = (pathname) => {
     '/attendance': [{ label: 'Team', path: '/attendance' }, { label: 'Attendance & EOD', path: '/attendance' }],
     '/hr': [{ label: 'Team', path: '/hr' }, { label: 'HR & Hiring', path: '/hr' }],
     '/admin/users': [{ label: 'Team', path: '/admin/users' }, { label: 'User Directory', path: '/admin/users' }],
-    '/admin/manager-assignments': [{ label: 'Team', path: '/admin/users' }, { label: 'Manager Assignments', path: '/admin/manager-assignments' }],
+    '/admin/manager-assignments': [{ label: 'Delivery', path: '/tasks' }, { label: 'Manager Assignments', path: '/admin/manager-assignments' }],
 
     '/sop': [{ label: 'Knowledge', path: '/sop' }, { label: 'SOP Library', path: '/sop' }],
     '/assets': [{ label: 'Knowledge', path: '/assets' }, { label: 'Asset Library', path: '/assets' }],
