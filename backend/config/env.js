@@ -16,7 +16,7 @@ export const loadEnv = () => {
   dotenv.config({ path: path.join(workspaceRoot, '.env') });
 
   process.env.NODE_ENV ||= 'development';
-  process.env.PORT ||= '5000';
+  process.env.PORT ||= '5001';
   process.env.CLIENT_URL ||= 'http://localhost:5173';
   process.env.MONGO_URI ||= process.env.MONGODB_URI || 'mongodb://localhost:27017/agency_crm';
   process.env.JWT_SECRET ||= process.env.NODE_ENV === 'production' ? 'replace-with-strong-production-secret' : 'dev-only-change-me-access-secret';
@@ -40,7 +40,7 @@ export const getEnv = () => {
   return {
     nodeEnv: process.env.NODE_ENV,
     isProduction: process.env.NODE_ENV === 'production',
-    port: Number(process.env.PORT) || 5000,
+    port: Number(process.env.PORT) || 5001,
     clientUrl: process.env.CLIENT_URL,
     mongoUri: process.env.MONGO_URI,
     mongoDbName: process.env.MONGO_DB_NAME || undefined,

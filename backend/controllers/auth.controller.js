@@ -187,6 +187,9 @@ export const logout = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate('clientId');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
     let organization = null;
     if (user.organizationId) {
       organization = await Organization.findById(user.organizationId).select(
