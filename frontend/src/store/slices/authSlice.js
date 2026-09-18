@@ -1,6 +1,28 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const isTokenExpired = (token) => {
+  if (!token || typeof token !== 'string') return true;
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return true;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(jsonPayload);
+    if (!payload.exp) return false;
+    return Date.now() >= payload.exp * 1000;
+  } catch {
+    return true;
+  }
+};
+
 // ─── Async Thunks ────────────────────────────────────────────────────────────
 
 export const loginUser = createAsyncThunk(
@@ -32,34 +54,40 @@ export const fetchMe = createAsyncThunk(
         return rejectWithValue({ isAuthError: true, message: 'No active session' });
       }
 
-      const response = await axios.get('/api/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    } catch (error) {
-      // If 401 — try refreshing once before giving up
-      if (error.response?.status === 401) {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) {
-          return rejectWithValue({ isAuthError: true, message: 'Session expired. Please log in again.' });
-        }
+      // If refresh token is expired, session is gone without making any network request
+      if (isTokenExpired(refreshToken)) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        return rejectWithValue({ isAuthError: true, message: 'Session expired' });
+      }
 
+      let activeToken = token;
+
+      // If access token is expired, refresh it first
+      if (isTokenExpired(token)) {
         try {
           const refreshRes = await axios.post('/api/auth/refresh', { refreshToken });
-          localStorage.setItem('accessToken', refreshRes.data.accessToken);
+          activeToken = refreshRes.data.accessToken;
+          localStorage.setItem('accessToken', activeToken);
           if (refreshRes.data.refreshToken) {
             localStorage.setItem('refreshToken', refreshRes.data.refreshToken);
           }
-
-          // Retry /me with new token
-          const retryRes = await axios.get('/api/auth/me', {
-            headers: { Authorization: `Bearer ${refreshRes.data.accessToken}` },
-          });
-          return retryRes.data;
-        } catch (_refreshError) {
-          // Refresh failed — session is truly expired
+        } catch {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
           return rejectWithValue({ isAuthError: true, message: 'Session expired. Please log in again.' });
         }
+      }
+
+      const response = await axios.get('/api/auth/me', {
+        headers: { Authorization: `Bearer ${activeToken}` },
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 401) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        return rejectWithValue({ isAuthError: true, message: 'Session expired. Please log in again.' });
       }
       return rejectWithValue({ isAuthError: false, message: error.response?.data?.message || 'Server connection issue' });
     }
@@ -78,7 +106,11 @@ const authSlice = createSlice({
     loading: false,
     authChecked: false,
     error: null,
-    isAuthenticated: Boolean(localStorage.getItem('accessToken') && localStorage.getItem('refreshToken')),
+    isAuthenticated: Boolean(
+      localStorage.getItem('accessToken') &&
+      localStorage.getItem('refreshToken') &&
+      !isTokenExpired(localStorage.getItem('refreshToken'))
+    ),
   },
   reducers: {
     logout: (state) => {
