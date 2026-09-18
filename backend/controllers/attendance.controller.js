@@ -196,6 +196,15 @@ export const getAttendance = async (req, res) => {
     } else {
       if (userId && userId !== 'all') {
         filter.user = userId;
+      } else {
+        // STRICT TENANT ISOLATION: scope to users in same org
+        const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
+        const orgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
+        if (orgId) {
+          const User = (await import('../models/user.model.js')).default;
+          const orgUserIds = await User.find({ organizationId: orgId }).distinct('_id');
+          filter.user = { $in: orgUserIds };
+        }
       }
     }
 
@@ -239,9 +248,18 @@ export const getTeamAttendance = async (req, res) => {
     const endOfToday = new Date();
     endOfToday.setHours(23, 59, 59, 999);
 
-    const records = await Attendance.find({
-      date: { $gte: startOfToday, $lte: endOfToday },
-    })
+    // STRICT TENANT ISOLATION: only show attendance for users in same org
+    const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
+    const orgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
+    const attendanceFilter = { date: { $gte: startOfToday, $lte: endOfToday } };
+
+    if (orgId) {
+      const User = (await import('../models/user.model.js')).default;
+      const orgUserIds = await User.find({ organizationId: orgId }).distinct('_id');
+      attendanceFilter.user = { $in: orgUserIds };
+    }
+
+    const records = await Attendance.find(attendanceFilter)
       .populate('user', 'name avatar department position role email')
       .populate('approvedBy', 'name role');
 

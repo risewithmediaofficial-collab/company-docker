@@ -229,13 +229,34 @@ if (process.env.NODE_ENV === 'production') {
 app.use(notFound);
 app.use(errorHandler);
 
-httpServer.on('error', (error) => {
+httpServer.on('error', async (error) => {
   if (error.code === 'EADDRINUSE') {
-    console.error(`Port ${env.port} is already in use. Stop the existing server or change PORT.`);
+    console.warn(`\n⚠️  Port ${env.port} is already in use. Attempting to free it...\n`);
+    try {
+      const { execSync } = await import('child_process');
+      // Works on Windows — find and kill the PID using that port
+      const result = execSync(
+        `for /f "tokens=5" %a in ('netstat -aon ^| findstr :${env.port} ^| findstr LISTENING') do taskkill /PID %a /F`,
+        { shell: 'cmd.exe', stdio: 'pipe' }
+      ).toString();
+      console.log('✅ Freed port:', result.trim());
+    } catch (_) {
+      console.error(`❌ Could not auto-free port ${env.port}. Please run: taskkill /F /IM node.exe`);
+      process.exit(1);
+    }
+    // Retry after a short delay
+    setTimeout(() => {
+      httpServer.listen(env.port, () => {
+        console.log(`\n✅ Agency CRM Server running on port ${env.port} (restarted)`);
+        console.log(`Environment: ${env.nodeEnv}`);
+        console.log(`Client URL: ${env.clientUrl}`);
+        console.log(`API Health: http://localhost:${env.port}/api/health\n`);
+      });
+    }, 1000);
   } else {
     console.error('Server startup failed:', error.message);
+    process.exit(1);
   }
-  process.exit(1);
 });
 
 httpServer.listen(env.port, () => {

@@ -195,6 +195,8 @@ const App = () => {
           >
             <Route path="/platform" element={<PlatformDashboard />} />
             <Route path="/platform/companies" element={<Companies />} />
+            <Route path="/platform/requests" element={<Companies defaultTab="requests" />} />
+            <Route path="/platform/company-requests" element={<Companies defaultTab="requests" />} />
             <Route path="/platform/companies/:id" element={<CompanyDetail />} />
           </Route>
 

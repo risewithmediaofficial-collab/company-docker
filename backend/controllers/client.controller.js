@@ -111,13 +111,18 @@ export const getClients = async (req, res) => {
       ];
     }
 
-    // Stealth Ghost Mode / Tenant Scoping
+    // ── STRICT TENANT ISOLATION ──
+    // Tenant users see ONLY their exact organizationId — no null/missing fallback
     const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
     const targetOrgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
     if (targetOrgId) {
-      const orgMatch = [{ organizationId: targetOrgId }, { organizationId: null }, { organizationId: { $exists: false } }];
-      filter.$and = filter.$or ? [{ $or: filter.$or }, { $or: orgMatch }] : [{ $or: orgMatch }];
-      delete filter.$or;
+      // Strict: only exact match — no null fallback
+      if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, { organizationId: targetOrgId }];
+        delete filter.$or;
+      } else {
+        filter.organizationId = targetOrgId;
+      }
     }
 
     const total = await Client.countDocuments(filter);

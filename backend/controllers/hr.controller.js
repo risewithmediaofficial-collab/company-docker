@@ -79,10 +79,18 @@ const normalizeJobPayload = (body = {}) => ({
 });
 
 const buildTeamFilter = (req, extra = {}) => {
+  const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
+  const orgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
+
   const filter = {
-    role: { $in: ['manager', 'employee'] },
+    role: { $in: ['organizationOwner', 'admin', 'manager', 'employee'] },
     ...extra,
   };
+
+  // STRICT TENANT ISOLATION
+  if (orgId) {
+    filter.organizationId = orgId;
+  }
 
   if (req.user.role === 'manager') {
     filter.$or = [
@@ -103,7 +111,9 @@ const buildTeamFilter = (req, extra = {}) => {
 export const getJobs = async (req, res) => {
   try {
     const { status, search, page = 1, limit = 20 } = req.query;
-    const filter = {};
+    const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
+    const orgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
+    const filter = orgId ? { organizationId: orgId } : {};
 
     if (status) filter.status = status;
     if (search) {

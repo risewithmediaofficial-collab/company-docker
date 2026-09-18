@@ -126,11 +126,13 @@ const buildScopedLeadFilter = (req, filter = {}) => {
   const orgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
 
   if (orgId) {
-    filter.$or = [
-      { organizationId: orgId },
-      { organizationId: null },
-      { organizationId: { $exists: false } },
-    ];
+    // STRICT: exact match only — tenants never see other orgs' or unscoped data
+    if (filter.$or) {
+      filter.$and = [{ $or: filter.$or }, { organizationId: orgId }];
+      delete filter.$or;
+    } else {
+      filter.organizationId = orgId;
+    }
   }
 
   if (req.user.role === 'referral') {

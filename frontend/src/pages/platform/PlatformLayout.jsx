@@ -3,20 +3,23 @@ import { useSelector } from 'react-redux';
 import { useNavigate, Link, Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Building2, LayoutDashboard, Users2, BarChart3, Settings,
-  ChevronLeft, Shield, LogOut, Bell
+  Building2, LayoutDashboard, BarChart3, Clock,
+  ChevronLeft, Shield
 } from 'lucide-react';
+import axios from 'axios';
 
 const navItems = [
-  { label: 'Overview', icon: LayoutDashboard, path: '/platform' },
-  { label: 'Companies', icon: Building2, path: '/platform/companies' },
-  { label: 'Analytics', icon: BarChart3, path: '/platform/analytics' },
+  { label: 'Overview', icon: LayoutDashboard, path: '/platform', id: 'overview' },
+  { label: 'Companies', icon: Building2, path: '/platform/companies', id: 'companies' },
+  { label: 'Company Requests', icon: Clock, path: '/platform/companies?tab=requests', id: 'requests' },
+  { label: 'Analytics', icon: BarChart3, path: '/platform/analytics', id: 'analytics' },
 ];
 
 const PlatformLayout = () => {
   const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const location = useLocation();
+  const [pendingCount, setPendingCount] = useState(0);
 
   // Guard: Only superAdmin can access
   useEffect(() => {
@@ -24,6 +27,26 @@ const PlatformLayout = () => {
       navigate('/', { replace: true });
     }
   }, [user, navigate]);
+
+  // Fetch pending registration requests count for notification badge
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+        const res = await axios.get('/api/platform/organizations?status=pending&limit=1', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setPendingCount(res.data.total || 0);
+      } catch (err) {
+        // quiet fallback
+      }
+    };
+
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 30000); // refresh every 30s
+    return () => clearInterval(interval);
+  }, [location.pathname, location.search]);
 
   if (!user || user.role !== 'superAdmin') return null;
 
@@ -45,19 +68,50 @@ const PlatformLayout = () => {
         {/* Nav */}
         <nav className="flex-1 p-4 space-y-1">
           {navItems.map((item) => {
-            const active = location.pathname === item.path || (item.path !== '/platform' && location.pathname.startsWith(item.path));
+            const isRequests = item.id === 'requests';
+            const isCompanies = item.id === 'companies';
+            
+            let active = false;
+            if (isRequests) {
+              active =
+                location.pathname === '/platform/requests' ||
+                location.pathname === '/platform/company-requests' ||
+                (location.pathname === '/platform/companies' && (location.search.includes('tab=requests') || location.search.includes('status=pending')));
+            } else if (isCompanies) {
+              active =
+                location.pathname.startsWith('/platform/companies') &&
+                !location.search.includes('tab=requests') &&
+                !location.search.includes('status=pending');
+            } else {
+              active = location.pathname === item.path;
+            }
+
             return (
               <Link
-                key={item.path}
+                key={item.id}
                 to={item.path}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   active
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
                     : 'text-slate-400 hover:bg-white/5 hover:text-white'
                 }`}
               >
-                <item.icon size={18} />
-                {item.label}
+                <div className="flex items-center gap-3">
+                  <item.icon size={18} className={isRequests && pendingCount > 0 && !active ? 'text-amber-400' : ''} />
+                  <span>{item.label}</span>
+                </div>
+
+                {isRequests && pendingCount > 0 && (
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[11px] font-bold transition-all ${
+                      active
+                        ? 'bg-white text-indigo-700'
+                        : 'bg-amber-500 text-black shadow-sm shadow-amber-500/20 animate-pulse'
+                    }`}
+                  >
+                    {pendingCount}
+                  </span>
+                )}
               </Link>
             );
           })}

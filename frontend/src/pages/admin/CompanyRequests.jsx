@@ -344,7 +344,12 @@ export default function CompanyRequests() {
             )}
           </div>
           <div className="min-w-0">
-            <p className="font-bold text-sm text-foreground truncate">{o.name} + RWM</p>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="font-bold text-sm text-foreground truncate">{o.name}</p>
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 border border-indigo-500/20 whitespace-nowrap">
+                + RWM
+              </span>
+            </div>
             <p className="text-xs text-muted-foreground">{o.industry || 'General Business'}</p>
           </div>
         </div>
@@ -579,7 +584,12 @@ export default function CompanyRequests() {
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <h4 className="font-bold text-base text-foreground leading-snug truncate">{o.name} + RWM</h4>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h4 className="font-bold text-base text-foreground leading-snug truncate">{o.name}</h4>
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 border border-indigo-500/20 whitespace-nowrap">
+                  + RWM
+                </span>
+              </div>
               <p className="text-xs text-muted-foreground truncate">{o.industry || 'General Industry'}</p>
               {o.website && (
                 <a
@@ -830,135 +840,152 @@ export default function CompanyRequests() {
       <Dialog open={Boolean(selectedOrg)} onOpenChange={(open) => !open && setSelectedOrg(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl">
           <DialogHeader>
-            <div className="flex items-center justify-between pr-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 text-indigo-600 dark:bg-indigo-600/20 dark:text-indigo-300 flex items-center justify-center font-black text-xl overflow-hidden border border-border/60">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pr-8 pb-3 border-b border-border/40">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 text-indigo-600 dark:bg-indigo-600/20 dark:text-indigo-300 flex items-center justify-center font-black text-xl overflow-hidden border border-border/60 shrink-0 shadow-sm">
                   {selectedOrg?.logo ? (
                     <img src={selectedOrg.logo} alt={selectedOrg.name} className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   ) : (
                     selectedOrg?.name?.charAt(0)?.toUpperCase()
                   )}
                 </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold text-foreground">
-                    {selectedOrg?.name} + RWM
-                  </DialogTitle>
-                  <DialogDescription className="text-xs text-muted-foreground">
-                    Company Registration & SaaS Tenant Configuration
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <DialogTitle className="text-xl font-bold text-foreground tracking-tight">
+                      {selectedOrg?.name}
+                    </DialogTitle>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 whitespace-nowrap">
+                      + RWM
+                    </span>
+                  </div>
+                  <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                    Company Registration &amp; SaaS Tenant Configuration
                   </DialogDescription>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => handleLiveViewCRM(selectedOrg)}
-                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition-all"
+                  className="whitespace-nowrap shrink-0 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition-all"
                   title="Live View Company CRM (Stealth Ghost Mode)"
                 >
-                  <Radio size={13} className="animate-pulse text-emerald-400" />
-                  <span>Live View CRM</span>
+                  <Radio size={13} className="animate-pulse text-emerald-400 shrink-0" />
+                  <span className="whitespace-nowrap">Live View CRM</span>
                 </button>
                 <span
-                  className={`inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full border capitalize ${
+                  className={`whitespace-nowrap shrink-0 inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full border capitalize ${
                     statusBadge[selectedOrg?.planStatus] || statusBadge.pending
                   }`}
                 >
-                  {selectedOrg?.planStatus}
+                  {(() => {
+                    const SIcon = statusIcons[selectedOrg?.planStatus] || Clock;
+                    return <SIcon size={12} className="shrink-0" />;
+                  })()}
+                  <span>{selectedOrg?.planStatus}</span>
                 </span>
               </div>
             </div>
           </DialogHeader>
 
           {selectedOrg && (
-            <div className="space-y-6 pt-4">
+            <div className="space-y-6 pt-2">
               {/* Section 1: Company & Owner Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Company Details */}
-                <div className="p-4 rounded-2xl bg-secondary/40 border border-border/60 space-y-2.5 text-xs">
-                  <h5 className="font-bold text-xs uppercase tracking-wider text-primary flex items-center gap-1.5">
-                    <Building2 size={13} />
+                <div className="p-4 rounded-2xl bg-secondary/30 dark:bg-card/40 border border-border/60 space-y-3 text-xs">
+                  <h5 className="font-bold text-xs uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5 pb-2 border-b border-border/40">
+                    <Building2 size={14} className="shrink-0" />
                     <span>Company Profile</span>
                   </h5>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Company Name:</span>
-                      <span className="font-bold text-foreground">{selectedOrg.name}</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground font-medium shrink-0">Company Name:</span>
+                      <span className="font-bold text-foreground text-right truncate">{selectedOrg.name}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Industry:</span>
-                      <span className="font-semibold text-foreground">{selectedOrg.industry || 'Not specified'}</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground font-medium shrink-0">Industry:</span>
+                      <span className="font-semibold text-foreground text-right truncate">{selectedOrg.industry || 'Not specified'}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Website:</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground font-medium shrink-0">Website:</span>
                       {selectedOrg.website ? (
                         <a
                           href={selectedOrg.website.startsWith('http') ? selectedOrg.website : `https://${selectedOrg.website}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                          className="font-medium text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1 text-right truncate max-w-[200px]"
                         >
-                          <span>{selectedOrg.website}</span>
-                          <ExternalLink size={10} />
+                          <span className="truncate">{selectedOrg.website.replace(/^https?:\/\//, '')}</span>
+                          <ExternalLink size={10} className="shrink-0" />
                         </a>
                       ) : (
                         <span className="text-muted-foreground">None</span>
                       )}
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Registered Date:</span>
-                      <span className="font-semibold text-foreground">
-                        {new Date(selectedOrg.createdAt).toLocaleString()}
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground font-medium shrink-0">Registered Date:</span>
+                      <span className="font-semibold text-foreground text-right whitespace-nowrap">
+                        {new Date(selectedOrg.createdAt).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Account Owner Details */}
-                <div className="p-4 rounded-2xl bg-secondary/40 border border-border/60 space-y-2.5 text-xs">
-                  <h5 className="font-bold text-xs uppercase tracking-wider text-primary flex items-center gap-1.5">
-                    <Shield size={13} />
+                <div className="p-4 rounded-2xl bg-secondary/30 dark:bg-card/40 border border-border/60 space-y-3 text-xs">
+                  <h5 className="font-bold text-xs uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5 pb-2 border-b border-border/40">
+                    <Shield size={14} className="shrink-0" />
                     <span>Account Owner (Admin)</span>
                   </h5>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Owner Name:</span>
-                      <span className="font-bold text-foreground">{selectedOrg.ownerId?.name}</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground font-medium shrink-0">Owner Name:</span>
+                      <span className="font-bold text-foreground text-right truncate">{selectedOrg.ownerId?.name || 'Pending Owner'}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Email:</span>
-                      <a href={`mailto:${selectedOrg.ownerId?.email}`} className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground font-medium shrink-0">Email:</span>
+                      <a href={`mailto:${selectedOrg.ownerId?.email}`} className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline text-right truncate max-w-[200px]">
                         {selectedOrg.ownerId?.email}
                       </a>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Phone:</span>
-                      <span className="font-semibold text-foreground">{selectedOrg.ownerId?.phone || 'Not provided'}</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground font-medium shrink-0">Phone:</span>
+                      <span className="font-semibold text-foreground text-right">{selectedOrg.ownerId?.phone || selectedOrg.phone || 'Not provided'}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Account Role:</span>
-                      <span className="font-mono text-[11px] font-bold text-primary">organizationOwner</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground font-medium shrink-0">Account Role:</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 whitespace-nowrap">
+                        {selectedOrg.ownerId?.role === 'organizationOwner' ? 'Organization Owner' : selectedOrg.ownerId?.role || 'Organization Owner'}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Section 2: Plan & Privilege Configuration */}
-              <div className="p-4 rounded-2xl bg-card border border-border/80 space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b border-border/60">
+              <div className="p-5 rounded-2xl bg-card border border-border/80 space-y-4 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/60">
                   <h5 className="font-bold text-xs uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                    <Sliders size={13} className="text-primary" />
-                    <span>SaaS Subscription & Module Privileges</span>
+                    <Sliders size={14} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <span>SaaS Subscription &amp; Module Privileges</span>
                   </h5>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     {['trial', 'starter', 'growth', 'pro'].map((p) => (
                       <button
                         key={p}
                         type="button"
                         onClick={() => applyPlanPreset(p)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-bold capitalize transition-all ${
+                        className={`px-3 py-1 rounded-lg text-xs font-bold capitalize transition-all ${
                           editPlan === p
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'bg-secondary text-muted-foreground hover:text-foreground'
+                            ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
+                            : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
                         }`}
                       >
                         {p}
@@ -970,31 +997,31 @@ export default function CompanyRequests() {
                 {/* Limits */}
                 <div className="grid grid-cols-2 gap-4 text-xs">
                   <div>
-                    <label className="block text-muted-foreground font-semibold mb-1">Max Users Limit</label>
+                    <label className="block text-muted-foreground font-semibold mb-1 text-xs">Max Users Limit</label>
                     <input
                       type="number"
                       min={1}
                       value={editMaxUsers}
                       onChange={(e) => setEditMaxUsers(Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
                     />
                   </div>
                   <div>
-                    <label className="block text-muted-foreground font-semibold mb-1">Max Clients Limit</label>
+                    <label className="block text-muted-foreground font-semibold mb-1 text-xs">Max Clients Limit</label>
                     <input
                       type="number"
                       min={1}
                       value={editMaxClients}
                       onChange={(e) => setEditMaxClients(Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
                     />
                   </div>
                 </div>
 
-                {/* Module Toggles */}
+                {/* Module Toggles — Clean 3-column layout without truncated names */}
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground mb-2">Enabled Application Modules:</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2.5">Enabled Application Modules:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                     {ALL_MODULES.map((mod) => {
                       const enabled = Boolean(editModules[mod.key]);
                       return (
@@ -1003,14 +1030,24 @@ export default function CompanyRequests() {
                           type="button"
                           onClick={() => toggleModuleState(mod.key)}
                           disabled={mod.always}
-                          className={`p-2.5 rounded-xl border text-xs font-semibold text-left transition-all flex items-center justify-between ${
+                          className={`px-3 py-2 rounded-xl border text-xs font-semibold text-left transition-all flex items-center justify-between gap-2 ${
                             enabled
-                              ? 'bg-primary/10 border-primary/30 text-primary'
-                              : 'bg-secondary/40 border-border/60 text-muted-foreground opacity-60'
-                          } ${mod.always ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                              ? 'bg-indigo-600/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-300'
+                              : 'bg-secondary/40 border-border/60 text-muted-foreground opacity-60 hover:opacity-100'
+                          } ${mod.always ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'}`}
                         >
-                          <span className="truncate">{mod.label}</span>
-                          <span className="text-[10px] font-bold uppercase">{enabled ? 'ON' : 'OFF'}</span>
+                          <span className="font-medium text-xs leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
+                            {mod.label}
+                          </span>
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase shrink-0 ${
+                              enabled
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-muted text-muted-foreground'
+                            }`}
+                          >
+                            {enabled ? 'ON' : 'OFF'}
+                          </span>
                         </button>
                       );
                     })}
@@ -1025,7 +1062,7 @@ export default function CompanyRequests() {
                     value={editAdminNotes}
                     onChange={(e) => setEditAdminNotes(e.target.value)}
                     placeholder="Add internal notes about this company account or approval verification..."
-                    className="w-full p-2.5 rounded-xl border border-border bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full p-2.5 rounded-xl border border-border bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all resize-none"
                   />
                 </div>
               </div>

@@ -30,7 +30,6 @@ export const loadEnv = () => {
   process.env.DEFAULT_ADMIN_NAME ||= 'DINESH M';
   process.env.DEFAULT_ADMIN_EMAIL ||= 'admin@agencycrm.com';
   process.env.DEFAULT_ADMIN_PASSWORD ||= 'password123';
-
   loaded = true;
 };
 

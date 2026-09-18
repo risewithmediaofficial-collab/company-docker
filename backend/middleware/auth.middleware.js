@@ -110,55 +110,63 @@ export const requirePermission = (permissionKey) => {
 /**
  * Filter query builder based on workspace
  * Usage: const query = withWorkspaceScope(req, baseQuery)
+ *
+ * STRICT TENANT ISOLATION:
+ * - Platform superAdmin (no org, no ghost mode) → sees ALL data globally
+ * - superAdmin in ghost mode → sees only that tenant's org data (+ legacy null-org docs)
+ * - Any user with organizationId → sees ONLY their exact organizationId (strict, no null fallback)
+ * - User with no organizationId and not superAdmin → blocked (returns unmatchable filter)
  */
 export const withWorkspaceScope = (req, baseQuery = {}) => {
   const user = req.user;
   if (!user) return baseQuery;
 
-  // Stealth Ghost Mode: Scopes queries to the tenant company without notifying tenant admins
-  const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? user.organizationId : null);
+  const ghostOrgId =
+    req.headers['x-impersonate-org-id'] ||
+    req.headers['x-ghost-org-id'] ||
+    (req.isGhostMode ? user.organizationId : null);
+
+  // Ghost Mode (superAdmin viewing a specific tenant CRM stealthily)
   if (ghostOrgId && (user.role === 'superAdmin' || user.role === 'admin')) {
-    const query = {
-      ...baseQuery,
-      $or: [
-        { organizationId: ghostOrgId },
-        { organizationId: null },
-        { organizationId: { $exists: false } },
-      ],
-    };
+    const query = { ...baseQuery, organizationId: ghostOrgId };
     if (req.headers['x-workspace-id'] && req.headers['x-workspace-id'] !== 'global') {
       query.brandId = req.headers['x-workspace-id'];
     }
     return query;
   }
-  
-  // Only platform superAdmin (when not in ghost mode) has global cross-tenant access
-  if (user.role === 'superAdmin' && !ghostOrgId) {
+
+  // Platform superAdmin — global access (no org scoping)
+  if (user.role === 'superAdmin' && !ghostOrgId && !user.organizationId) {
     if (req.headers['x-workspace-id'] && req.headers['x-workspace-id'] !== 'global') {
       return { ...baseQuery, brandId: req.headers['x-workspace-id'] };
     }
     return baseQuery;
   }
-  
-  // All tenant-level users (organizationOwner, admin, manager, employee) are scoped to their organizationId
-  const targetOrgId = ghostOrgId || user.organizationId;
-  const query = targetOrgId ? { ...baseQuery, organizationId: targetOrgId } : { ...baseQuery };
-  
-  // Explicit workspace selection from UI
-  if (req.headers['x-workspace-id']) {
+
+  // ───── STRICT TENANT ISOLATION ─────
+  // All tenant users (organizationOwner, admin, manager, employee, client, etc.)
+  // are STRICTLY limited to their own organizationId. No null/missing fallback.
+  const targetOrgId = user.organizationId;
+  if (!targetOrgId) {
+    // Safety net: user has no org but isn't superAdmin — block all data
+    return { ...baseQuery, organizationId: '__BLOCKED_NO_ORG__' };
+  }
+
+  const query = { ...baseQuery, organizationId: targetOrgId };
+
+  // Workspace/brand scoping within tenant
+  if (req.headers['x-workspace-id'] && req.headers['x-workspace-id'] !== 'global') {
     query.brandId = req.headers['x-workspace-id'];
     return query;
   }
-  
-  // If user is client-side, restrict to their specific brand
+
+  // Client-portal users: further restrict to their brand
   if (user.role === 'clientAdmin' || user.role === 'clientMember') {
     query.brandId = user.brandId;
-  }
-  // If user is agency-side but not an owner/manager, restrict to assigned brands
-  else if (['editor', 'designer', 'adsManager'].includes(user.role)) {
-     if (user.assignedBrands && user.assignedBrands.length > 0) {
-       query.brandId = { $in: user.assignedBrands };
-     }
+  } else if (['editor', 'designer', 'adsManager'].includes(user.role)) {
+    if (user.assignedBrands?.length > 0) {
+      query.brandId = { $in: user.assignedBrands };
+    }
   }
 
   return query;
