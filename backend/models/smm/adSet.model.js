@@ -12,6 +12,15 @@ const adSetSchema = new mongoose.Schema(
       enum: ['Draft', 'Active', 'Paused', 'Completed', 'Error'],
       default: 'Draft',
     },
+    targetAudienceText: { type: String, default: '' },
+    locationText: { type: String, default: '' },
+    formType: {
+      type: String,
+      default: 'Instant Form',
+      trim: true,
+    },
+    destinationPlatforms: [{ type: String }],
+    sourceContentIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SmmContent' }],
     audience: {
       location: [{ type: String }],
       ageMin: { type: Number, default: 18 },
@@ -38,7 +47,6 @@ const adSetSchema = new mongoose.Schema(
     }],
     optimizationGoal: {
       type: String,
-      enum: ['Conversions', 'Leads', 'Landing Page Views', 'Link Clicks', 'Purchases'],
       default: 'Link Clicks',
     },
     budget: { type: Number, default: 0 },

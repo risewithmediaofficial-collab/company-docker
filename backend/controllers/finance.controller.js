@@ -41,7 +41,7 @@ const invoiceStatusLabels = {
 
 const normalizeStatus = (value = '') => invoiceStatusMap[value] || value.toString().toLowerCase();
 
-const financeRoles = ['superAdmin', 'manager', 'financeManager'];
+const financeRoles = ['superAdmin', 'admin', 'manager', 'financeManager'];
 const paymentModes = ['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque', 'Other'];
 
 const toNumber = (value, fallback = 0) => {
@@ -1161,7 +1161,8 @@ export const addPartialPaymentToInvoice = async (req, res) => {
     const invoice = await Invoice.findById(req.params.id).populate('client', 'name userId assignedManager assignedTeam');
     if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found' });
 
-    const amount = toNumber(req.body.amountPaid);
+    const rawAmount = req.body.amountPaid ?? req.body.amount ?? req.body.paidAmount;
+    const amount = toNumber(rawAmount);
     if (amount <= 0) {
       return res.status(400).json({ success: false, message: 'Amount paid must be greater than zero' });
     }
@@ -1320,7 +1321,10 @@ export const getPayments = async (req, res) => {
 
 export const getCallHistory = async (req, res) => {
   try {
-    const { clientId, leadId, projectId, callPurpose, callDate, addedBy } = req.query;
+    const clientId = req.query.clientId || req.query.client;
+    const leadId = req.query.leadId || req.query.lead;
+    const projectId = req.query.projectId || req.query.project;
+    const { callPurpose, callDate, addedBy } = req.query;
     const filter = {};
     if (clientId) filter.clientId = clientId;
     if (leadId) filter.leadId = leadId;

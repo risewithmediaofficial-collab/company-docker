@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { Fragment, useEffect, useMemo, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import {
-  ChevronLeft,
   Settings,
   Share2,
   Plus,
@@ -22,16 +21,35 @@ import {
   Lock,
   IndianRupee,
   FileText,
+  Edit3,
 } from 'lucide-react';
 import { formatINR } from '../../utils/currency';
 import { useUpdateProject } from '../../hooks/useProjects';
 import { useUpdateTaskStatus } from '../../hooks/useTasks';
+import { useAutoScrollOnDrag } from '../../hooks/useAutoScrollOnDrag';
+import { useSocket } from '../../context/SocketContext';
 import api from '../../api';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { AddTaskModal } from '../../components/modals/AddTaskModal';
 import { AddProjectModal } from '../../components/modals/AddProjectModal';
+import { TaskDetailModal } from '../../components/ui/TaskDetailModal';
+import ProjectMonthlyDeliverablesCard from '../../components/projects/ProjectMonthlyDeliverablesCard';
+import {
+  NotionDetailPage,
+  NotionTabs,
+} from '../../components/ui/NotionDetailTemplate';
 import { getAssetUrl } from '../../utils/assetUrl';
+import { getPersonColor, extractTaskAssignees, PersonAssigneeBadge } from '../../utils/personColors';
+import { getProjectCategoryMeta } from '../../utils/projectCategories';
+import { getCategoryTheme } from '../../utils/categoryColors';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '../../components/ui/dialog';
 
 const statuses = ['todo', 'in_progress', 'review', 'approved', 'rejected', 'done'];
 
@@ -40,8 +58,8 @@ const statusLabels = {
   in_progress: 'In Progress',
   review: 'In Review',
   approved: 'Approved',
-  rejected: 'Blocked',
-  done: 'Done',
+  rejected: 'Changes Needed',
+  done: 'Completed',
 };
 
 const projectStatusStyles = {
@@ -55,6 +73,7 @@ const projectStatusStyles = {
 const ProjectDetails = () => {
   const { id } = useParams();
   const { user } = useSelector((state) => state.auth);
+  const socket = useSocket();
   const [project, setProject] = useState(null);
   const [kanban, setKanban] = useState({});
   const [recentActivity, setRecentActivity] = useState([]);
@@ -64,6 +83,7 @@ const ProjectDetails = () => {
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [taskDefaults, setTaskDefaults] = useState({});
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [accessRequests, setAccessRequests] = useState([]);
   const [isRequesting, setIsRequesting] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
@@ -73,39 +93,92 @@ const ProjectDetails = () => {
   // Drag & drop state
   const [draggingTaskId, setDraggingTaskId] = useState(null);
   const [dragOverStatus, setDragOverStatus] = useState(null);
+  const [dragOverTaskIndex, setDragOverTaskIndex] = useState(null);
   const [pendingDrop, setPendingDrop] = useState(null);
+  const projectDetailsBoardRef = useRef(null);
+
+  // Smooth side auto-scroll while dragging tasks in project board
+  useAutoScrollOnDrag(projectDetailsBoardRef, Boolean(draggingTaskId));
 
   const updateProject = useUpdateProject();
   const updateTaskStatus = useUpdateTaskStatus();
 
   // ─── Data Fetching ───────────────────────────────────────────────────────────
-  const fetchProjectData = async () => {
+  const fetchProjectData = async (showLoading = true) => {
     try {
-      setLoading(true);
-      const [projectRes, kanbanRes] = await Promise.all([
+      if (showLoading && !project) setLoading(true);
+      const [projectSettled, kanbanSettled] = await Promise.allSettled([
         api.get(`/projects/${id}`),
         api.get(`/projects/${id}/kanban`),
       ]);
 
-      setProject(projectRes.data.project);
-      setRecentActivity(projectRes.data.recentActivity || []);
-      setRecentTasks(projectRes.data.recentTasks || []);
-      setKanban(kanbanRes.data.kanban || {});
+      if (projectSettled.status === 'fulfilled' && projectSettled.value.data?.project) {
+        setProject(projectSettled.value.data.project);
+        setRecentActivity(projectSettled.value.data.recentActivity || []);
+        setRecentTasks(projectSettled.value.data.recentTasks || []);
+      } else if (projectSettled.status === 'rejected' && showLoading && !project) {
+        toast.error(projectSettled.reason?.response?.data?.message || 'Failed to load project');
+      }
 
-      if (user?.role === 'superAdmin' || user?.role === 'manager') {
-        const requestsRes = await api.get(`/access-requests/project/${id}`);
-        setAccessRequests(requestsRes.data.requests || []);
+      if (kanbanSettled.status === 'fulfilled' && kanbanSettled.value.data?.kanban) {
+        setKanban(kanbanSettled.value.data.kanban);
+      }
+
+      if (user?.role === 'superAdmin' || user?.role === 'admin' || user?.role === 'manager') {
+        try {
+          const requestsRes = await api.get(`/access-requests/project/${id}`);
+          setAccessRequests(requestsRes.data.requests || []);
+        } catch (_) {
+          // non-blocking
+        }
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to load project');
+      if (showLoading && !project) {
+        toast.error(error.response?.data?.message || 'Failed to load project');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // Live polling fallback for continuous live updates without manual refresh
   useEffect(() => {
-    fetchProjectData();
-  }, [id]);
+    fetchProjectData(true);
+
+    const interval = setInterval(() => {
+      fetchProjectData(false);
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [id, user?.role]);
+
+  // Real-time WebSocket room listener for immediate sync
+  useEffect(() => {
+    if (!socket || !id) return;
+
+    socket.emit('joinProject', id);
+
+    const handleRealtimeUpdate = () => {
+      fetchProjectData(false);
+    };
+
+    socket.on('projectUpdated', handleRealtimeUpdate);
+    socket.on('taskCreated', handleRealtimeUpdate);
+    socket.on('taskUpdated', handleRealtimeUpdate);
+    socket.on('taskDeleted', handleRealtimeUpdate);
+    socket.on('taskMoved', handleRealtimeUpdate);
+    socket.on('accessRequestCreated', handleRealtimeUpdate);
+
+    return () => {
+      socket.emit('leaveProject', id);
+      socket.off('projectUpdated', handleRealtimeUpdate);
+      socket.off('taskCreated', handleRealtimeUpdate);
+      socket.off('taskUpdated', handleRealtimeUpdate);
+      socket.off('taskDeleted', handleRealtimeUpdate);
+      socket.off('taskMoved', handleRealtimeUpdate);
+      socket.off('accessRequestCreated', handleRealtimeUpdate);
+    };
+  }, [socket, id]);
 
   // ─── Drag & Drop ─────────────────────────────────────────────────────────────
   const handleDragStart = (e, taskId) => {
@@ -117,6 +190,7 @@ const ProjectDetails = () => {
   const handleDragEnd = () => {
     setDraggingTaskId(null);
     setDragOverStatus(null);
+    setDragOverTaskIndex(null);
   };
 
   const handleDragOver = (e, status) => {
@@ -125,17 +199,20 @@ const ProjectDetails = () => {
     setDragOverStatus(status);
   };
 
-  const handleDrop = (e, targetStatus) => {
+  const handleDrop = (e, targetStatus, dropIdx = null) => {
     e.preventDefault();
+    e.stopPropagation();
     const taskId = e.dataTransfer.getData('taskId');
+    const targetIdx = dropIdx !== null ? dropIdx : dragOverTaskIndex;
     setDraggingTaskId(null);
     setDragOverStatus(null);
+    setDragOverTaskIndex(null);
 
     const currentStatus = Object.keys(kanban).find((s) =>
       (kanban[s] || []).some((t) => t._id === taskId)
     );
 
-    if (!taskId || !targetStatus || currentStatus === targetStatus) return;
+    if (!taskId || !targetStatus) return;
 
     const confirmStatuses = ['approved', 'done'];
     const confirmMessages = {
@@ -143,14 +220,14 @@ const ProjectDetails = () => {
       done: 'Are you sure you want to mark this task as Done / Completed?',
     };
 
-    if (confirmStatuses.includes(targetStatus)) {
-      setPendingDrop({ taskId, targetStatus, message: confirmMessages[targetStatus] });
+    if (confirmStatuses.includes(targetStatus) && currentStatus !== targetStatus) {
+      setPendingDrop({ taskId, targetStatus, dropIdx: targetIdx, message: confirmMessages[targetStatus] });
     } else {
-      executeDrop(taskId, targetStatus);
+      executeDrop(taskId, targetStatus, targetIdx);
     }
   };
 
-  const executeDrop = async (taskId, targetStatus) => {
+  const executeDrop = async (taskId, targetStatus, dropIdx = null) => {
     try {
       // Optimistic UI update
       setKanban((prev) => {
@@ -165,10 +242,14 @@ const ProjectDetails = () => {
           }
         }
         if (movedTask) {
-          next[targetStatus] = [
-            ...(next[targetStatus] || []),
-            { ...movedTask, status: targetStatus },
-          ];
+          const targetList = [...(next[targetStatus] || [])];
+          const updated = { ...movedTask, status: targetStatus };
+          if (dropIdx !== null && dropIdx !== undefined && dropIdx <= targetList.length) {
+            targetList.splice(dropIdx, 0, updated);
+          } else {
+            targetList.push(updated);
+          }
+          next[targetStatus] = targetList;
         }
         return next;
       });
@@ -256,7 +337,7 @@ const ProjectDetails = () => {
 
   const isTeamMember = useMemo(() => {
     if (!user) return false;
-    if (user.role === 'superAdmin' || user.role === 'manager') return true;
+    if (user.role === 'superAdmin' || user.role === 'admin' || user.role === 'manager') return true;
     return (project?.team || []).some((member) => member._id === user._id) || project?.manager?._id === user._id;
   }, [project?.manager?._id, project?.team, user]);
 
@@ -279,34 +360,39 @@ const ProjectDetails = () => {
   };
 
   const handleSaveBudget = async () => {
-    const subtotal = [
-      budgetForm.marketingAmount, budgetForm.adsAmount, budgetForm.contentAmount,
-      budgetForm.designAmount, budgetForm.developmentAmount, budgetForm.printingAmount,
-      budgetForm.otherExpenses,
-    ].reduce((sum, val) => sum + (Number(val) || 0), 0);
-    const totalBudget = Number(budgetForm.totalBudget) || subtotal;
-    const amountReceived = Number(budgetForm.amountReceived) || 0;
+    try {
+      const subtotal = [
+        budgetForm.marketingAmount, budgetForm.adsAmount, budgetForm.contentAmount,
+        budgetForm.designAmount, budgetForm.developmentAmount, budgetForm.printingAmount,
+        budgetForm.otherExpenses,
+      ].reduce((sum, val) => sum + (Number(val) || 0), 0);
+      const totalBudget = Number(budgetForm.totalBudget) || subtotal;
+      const amountReceived = Number(budgetForm.amountReceived) || 0;
 
-    await updateProject.mutateAsync({
-      id: project._id,
-      data: {
-        budget: totalBudget,
-        budgetDetails: {
-          ...budgetForm,
-          marketingAmount: Number(budgetForm.marketingAmount) || 0,
-          adsAmount: Number(budgetForm.adsAmount) || 0,
-          contentAmount: Number(budgetForm.contentAmount) || 0,
-          designAmount: Number(budgetForm.designAmount) || 0,
-          developmentAmount: Number(budgetForm.developmentAmount) || 0,
-          printingAmount: Number(budgetForm.printingAmount) || 0,
-          otherExpenses: Number(budgetForm.otherExpenses) || 0,
-          totalBudget,
-          amountReceived,
+      await updateProject.mutateAsync({
+        id: project._id,
+        data: {
+          budget: totalBudget,
+          budgetDetails: {
+            ...budgetForm,
+            marketingAmount: Number(budgetForm.marketingAmount) || 0,
+            adsAmount: Number(budgetForm.adsAmount) || 0,
+            contentAmount: Number(budgetForm.contentAmount) || 0,
+            designAmount: Number(budgetForm.designAmount) || 0,
+            developmentAmount: Number(budgetForm.developmentAmount) || 0,
+            printingAmount: Number(budgetForm.printingAmount) || 0,
+            otherExpenses: Number(budgetForm.otherExpenses) || 0,
+            totalBudget,
+            amountReceived,
+          },
         },
-      },
-    });
-    setEditingBudget(false);
-    fetchProjectData();
+      });
+      setEditingBudget(false);
+      fetchProjectData(false);
+    } catch (err) {
+      console.error('Failed to save budget:', err);
+      toast.error(err.response?.data?.message || err.message || 'Failed to update budget');
+    }
   };
 
   // ─── Early returns ────────────────────────────────────────────────────────────
@@ -354,33 +440,33 @@ const ProjectDetails = () => {
   const renderBoard = () => (
     <>
       {/* Confirmation Dialog */}
-      {pendingDrop && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="mx-4 max-w-sm rounded-3xl border border-border bg-card p-6 shadow-2xl">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <CheckCircle2 size={24} />
-            </div>
-            <h2 className="text-base font-bold">Confirm Status Change</h2>
-            <p className="mt-2 text-sm text-muted-foreground">{pendingDrop.message}</p>
-            <div className="mt-5 flex gap-3">
-              <button
-                onClick={() => setPendingDrop(null)}
-                className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmPendingDrop}
-                className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm shadow-primary/30 transition-colors hover:bg-primary/90"
-              >
-                Yes, Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog open={Boolean(pendingDrop)} onOpenChange={(open) => { if (!open) setPendingDrop(null); }}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Confirm Status Change</DialogTitle>
+            <DialogDescription>
+              {pendingDrop?.message}
+            </DialogDescription>
+          </DialogHeader>
 
-      <div className="flex h-[calc(100vh-320px)] space-x-6 overflow-x-auto pb-6 scrollbar-hide">
+          <div className="flex justify-end gap-2 pt-4 border-t border-border">
+            <button
+              onClick={() => setPendingDrop(null)}
+              className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmPendingDrop}
+              className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-sm hover:bg-primary/90"
+            >
+              Yes, Confirm
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div ref={projectDetailsBoardRef} className="flex h-[calc(100vh-300px)] space-x-6 overflow-x-auto pb-6 custom-scrollbar">
         {statuses.map((status) => {
           const isDragOver = dragOverStatus === status;
           const columnDotColor =
@@ -417,87 +503,133 @@ const ProjectDetails = () => {
               {/* Drop Zone */}
               <div
                 onDragOver={(e) => handleDragOver(e, status)}
-                onDragLeave={() => setDragOverStatus(null)}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget)) {
+                    if (dragOverStatus === status) setDragOverStatus(null);
+                  }
+                }}
                 onDrop={(e) => handleDrop(e, status)}
-                className={`flex-1 space-y-3 overflow-y-auto rounded-2xl border-2 p-3 transition-all duration-150 ${
+                className={`flex-1 space-y-3 overflow-y-auto max-h-[calc(100vh-360px)] custom-scrollbar rounded-2xl border-2 p-3 transition-all duration-150 ${
                   isDragOver
                     ? 'border-primary bg-primary/5 shadow-inner'
                     : 'border-dashed border-border bg-secondary/20'
                 }`}
               >
-                {isDragOver && (
-                  <div className="flex h-12 items-center justify-center rounded-xl border border-dashed border-primary/40 bg-primary/5 text-xs font-semibold text-primary">
-                    Drop here
-                  </div>
+                {(kanban[status] || []).map((task, idx) => {
+                  const isBeingDragged = draggingTaskId === task._id;
+                  const showDropIndicatorBefore = isDragOver && dragOverTaskIndex === idx && !isBeingDragged;
+                  const assignees = extractTaskAssignees(task);
+                  const primaryColor = assignees.length > 0 ? getPersonColor(assignees[0].name) : null;
+
+                  return (
+                    <React.Fragment key={task._id}>
+                      {showDropIndicatorBefore && (
+                        <div className="h-1.5 rounded-full bg-primary/70 animate-pulse my-1 shadow-xs" />
+                      )}
+                      <div
+                        draggable={user?.role !== 'client'}
+                        onDragStart={(e) => handleDragStart(e, task._id)}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          e.dataTransfer.dropEffect = 'move';
+                          setDragOverStatus(status);
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const midY = rect.top + rect.height / 2;
+                          setDragOverTaskIndex(e.clientY < midY ? idx : idx + 1);
+                        }}
+                        onDrop={(e) => handleDrop(e, status, idx)}
+                        onClick={() => setSelectedTaskId(task._id)}
+                        className={`group cursor-pointer rounded-2xl border border-border bg-card p-4 shadow-xs transition-all active:cursor-grabbing border-l-[4px] ${
+                          getCategoryTheme(task.taskType || task.taskCategory).accentBorder
+                        } ${
+                          isBeingDragged
+                            ? 'opacity-30 scale-95 border-dashed border-primary ring-1 ring-primary/40'
+                            : 'hover:shadow-md hover:-translate-y-0.5 hover:border-primary/40'
+                        }`}
+                      >
+                        <div className="mb-3 flex items-start justify-between">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {task.isOverTarget && (
+                              <span className="rounded bg-rose-500/15 border border-rose-500/30 px-1.5 py-0.5 text-[8px] font-extrabold uppercase text-rose-600 dark:text-rose-400">
+                                🔴 Over Task
+                              </span>
+                            )}
+                            {(() => {
+                              const catTheme = getCategoryTheme(task.taskType || task.taskCategory);
+                              const Icon = catTheme.icon;
+                              return (
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-bold border ${catTheme.badgeClass}`}>
+                                  <Icon size={10} className="shrink-0" />
+                                  <span>{catTheme.shortLabel || task.taskType || 'Task'}</span>
+                                </span>
+                              );
+                            })()}
+                            {(task.tags || []).length > 0 && task.tags.map((tag) => (
+                              <span key={tag} className="rounded bg-primary/10 px-1.5 py-0.5 text-[8px] font-bold uppercase text-primary">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider ${
+                            task.priority === 'Urgent' || task.priority === 'High'
+                              ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                              : 'bg-secondary text-muted-foreground'
+                          }`}>
+                            {task.priority || 'Med'}
+                          </span>
+                        </div>
+
+                        <h4 className="line-clamp-2 text-sm font-bold leading-tight">{task.title}</h4>
+
+                        {/* Color-coded Assignee(s) with Name */}
+                        <div className="mt-3 flex flex-wrap items-center gap-1">
+                          {assignees.length > 0 ? (
+                            assignees.map((person, pIdx) => (
+                              <PersonAssigneeBadge key={pIdx} person={person} size="sm" />
+                            ))
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-medium bg-secondary text-muted-foreground border border-border/80">
+                              Unassigned
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between pt-2 border-t border-border/50 text-[10px] text-muted-foreground">
+                          <div className="flex items-center space-x-3">
+                            <span className="flex items-center">
+                              <MessageSquare size={12} className="mr-1" /> {task.comments?.length || 0}
+                            </span>
+                            <span className="flex items-center">
+                              <Paperclip size={12} className="mr-1" /> {task.attachments?.length || 0}
+                            </span>
+                          </div>
+
+                          {task.dueDate && (
+                            <div className={`flex items-center font-bold ${
+                              new Date(task.dueDate) < new Date() && status !== 'done' ? 'text-destructive' : 'text-muted-foreground'
+                            }`}>
+                              <Clock size={10} className="mr-1" />
+                              {new Date(task.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+
+                {/* Drop indicator at the bottom of the column */}
+                {isDragOver && dragOverTaskIndex >= (kanban[status] || []).length && (
+                  <div className="h-1.5 rounded-full bg-primary/70 animate-pulse my-1 shadow-xs" />
                 )}
 
-                {(kanban[status] || []).map((task) => (
-                  <div
-                    key={task._id}
-                    draggable={user?.role !== 'client'}
-                    onDragStart={(e) => handleDragStart(e, task._id)}
-                    onDragEnd={handleDragEnd}
-                    className={`group cursor-grab rounded-xl border border-border bg-card p-4 shadow-sm transition-all active:cursor-grabbing ${
-                      draggingTaskId === task._id
-                        ? 'opacity-40 scale-95 rotate-1'
-                        : 'hover:shadow-md hover:-translate-y-0.5'
-                    }`}
-                  >
-                    <div className="mb-3 flex items-start justify-between">
-                      <div className="flex flex-wrap gap-1">
-                        {(task.tags || []).length ? task.tags.map((tag) => (
-                          <span key={tag} className="rounded bg-primary/10 px-1.5 py-0.5 text-[8px] font-bold uppercase text-primary">
-                            {tag}
-                          </span>
-                        )) : (
-                          <span className="rounded bg-secondary px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-tighter text-muted-foreground">
-                            {task.taskType || 'Task'}
-                          </span>
-                        )}
-                      </div>
-                      <button className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
-                        <MoreHorizontal size={14} />
-                      </button>
-                    </div>
-
-                    <h4 className="line-clamp-2 text-sm font-bold leading-tight">{task.title}</h4>
-
-                    <div className="mt-4 flex items-center justify-between">
-                      <div className="flex items-center space-x-3 text-[10px] text-muted-foreground">
-                        <span className="flex items-center">
-                          <MessageSquare size={12} className="mr-1" /> {task.comments?.length || 0}
-                        </span>
-                        <span className="flex items-center">
-                          <Paperclip size={12} className="mr-1" /> {task.attachments?.length || 0}
-                        </span>
-                      </div>
-                      <div className="flex -space-x-1.5">
-                        {(task.assignedTo || []).map((member) => (
-                          <div
-                            key={member._id}
-                            className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border-2 border-card bg-secondary text-[8px] font-bold shadow-sm"
-                            title={member.name}
-                          >
-                            {member.avatar ? <img src={getAssetUrl(member.avatar)} alt="" /> : member.name?.charAt(0)}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {task.dueDate && (
-                      <div className={`mt-3 flex items-center text-[10px] font-bold ${
-                        new Date(task.dueDate) < new Date() && status !== 'done' ? 'text-destructive' : 'text-muted-foreground'
-                      }`}>
-                        <Clock size={10} className="mr-1" />
-                        {new Date(task.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {(kanban[status] || []).length === 0 && !isDragOver && (
-                  <div className="flex h-20 items-center justify-center text-xs italic text-muted-foreground">
-                    No tasks here.
+                {(kanban[status] || []).length === 0 && (
+                  <div className={`flex h-20 items-center justify-center text-xs rounded-xl border border-dashed transition-all ${
+                    isDragOver ? 'border-primary bg-primary/10 text-primary font-semibold' : 'text-muted-foreground italic border-border/60'
+                  }`}>
+                    {isDragOver ? `Drop here to move to ${statusLabels[status]}` : 'No tasks here.'}
                   </div>
                 )}
               </div>
@@ -525,22 +657,34 @@ const ProjectDetails = () => {
             </button>
           )}
         </div>
-        <div className="overflow-x-auto">
+        <div className="w-full overflow-x-auto overflow-y-auto max-h-[calc(100vh-350px)] custom-scrollbar">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-muted-foreground">
+            <thead className="sticky top-0 z-10 bg-card">
+              <tr className="border-b border-border text-left text-muted-foreground bg-card">
                 <th className="px-6 py-4">Task</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Priority</th>
+                <th className="px-6 py-4">Created</th>
                 <th className="px-6 py-4">Due Date</th>
                 <th className="px-6 py-4">Assignees</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {rows.length ? rows.map((task) => (
-                <tr key={task._id} className="transition-colors hover:bg-secondary/20">
+                <tr
+                  key={task._id}
+                  onClick={() => setSelectedTaskId(task._id)}
+                  className="cursor-pointer transition-colors hover:bg-secondary/30"
+                >
                   <td className="px-6 py-4">
-                    <div className="font-semibold">{task.title}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-semibold text-foreground group-hover:text-primary">{task.title}</div>
+                      {task.isOverTarget && (
+                        <span className="rounded bg-rose-500/15 border border-rose-500/30 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-rose-600 dark:text-rose-400 shrink-0">
+                          🔴 Over Task
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground">{task.taskType || 'task'}</div>
                   </td>
                   <td className="px-6 py-4">
@@ -549,7 +693,10 @@ const ProjectDetails = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4">{task.priority || 'Medium'}</td>
-                  <td className="px-6 py-4 text-muted-foreground">
+                  <td className="px-6 py-4 text-xs text-muted-foreground whitespace-nowrap">
+                    {task.createdAt ? new Date(task.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                  </td>
+                  <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
                     {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
                   </td>
                   <td className="px-6 py-4">
@@ -657,7 +804,7 @@ const ProjectDetails = () => {
         </div>
       </div>
 
-      {(user.role === 'superAdmin' || user.role === 'manager') && accessRequests.length > 0 && (
+      {(user.role === 'superAdmin' || user.role === 'admin' || user.role === 'manager') && accessRequests.length > 0 && (
         <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-bold">Pending Requests</h2>
           <div className="space-y-3">
@@ -902,40 +1049,40 @@ const ProjectDetails = () => {
   // ─── Main Render ──────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      {/* Project Header */}
-      <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-r from-slate-900 via-indigo-950 to-violet-950 p-6 text-white shadow-[0_20px_45px_rgba(15,23,42,0.12)]">
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-start space-x-4">
-            <Link to="/projects" className="mt-1 rounded-xl border border-white/15 bg-white/5 p-2 text-slate-200 transition-colors hover:bg-white/10">
-              <ChevronLeft size={20} />
-            </Link>
-            <div>
-              <div className="flex items-center space-x-3">
-                <h1 className="text-2xl font-black tracking-tight text-white">{project.name}</h1>
-                <span className={`rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${projectStatusStyles[project.status] || projectStatusStyles.Planning}`}>
-                  {project.status}
-                </span>
-              </div>
-              <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-slate-300">
-                <span className="flex items-center font-medium">
-                  <Briefcase size={16} className="mr-2" />
-                  {project.client?.name}
-                </span>
-                <span className="h-1 w-1 rounded-full bg-slate-400" />
-                <span className="flex items-center">
-                  <Calendar size={16} className="mr-2" />
-                  Due {project.dueDate ? new Date(project.dueDate).toLocaleDateString() : 'TBD'}
-                </span>
-              </div>
-            </div>
+      <NotionDetailPage
+        backTo="/projects"
+        backLabel="Projects"
+        title={project.name}
+        subtitle={[
+          project.client?.name || 'Internal Project',
+          project.createdAt ? `Created ${new Date(project.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}` : null,
+          `Due ${project.dueDate || project.endDate ? new Date(project.dueDate || project.endDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBD'}`,
+        ].filter(Boolean).join(' | ')}
+        icon={Briefcase}
+        status={
+          <div className="flex items-center gap-2 flex-wrap">
+            {project.category && (
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${getProjectCategoryMeta(project.category).badgeClass}`}>
+                {React.createElement(getProjectCategoryMeta(project.category).icon, { size: 13, className: 'shrink-0' })}
+                <span>{getProjectCategoryMeta(project.category).label}</span>
+              </span>
+            )}
+            <span
+              className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                projectStatusStyles[project.status] || projectStatusStyles.Planning
+              }`}
+            >
+              {project.status}
+            </span>
           </div>
-
-          <div className="flex items-center space-x-3">
-            <div className="mr-4 flex -space-x-2">
+        }
+        actions={(
+          <>
+            <div className="mr-2 flex -space-x-2">
               {(project.team || []).map((member) => (
                 <div
                   key={member._id}
-                  className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border-2 border-slate-900 bg-white text-xs font-bold text-slate-900 shadow-sm"
+                  className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border-2 border-card bg-secondary text-xs font-bold text-foreground shadow-sm"
                   title={member.name}
                 >
                   {member.avatar ? <img src={getAssetUrl(member.avatar)} alt="" /> : member.name.charAt(0)}
@@ -944,7 +1091,7 @@ const ProjectDetails = () => {
               {user?.role !== 'client' && (
                 <button
                   onClick={() => openTaskModal()}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-slate-900 bg-primary text-white text-xs font-bold transition-transform hover:scale-110"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-card bg-primary text-xs font-bold text-white transition-transform hover:scale-110"
                   title="Add task"
                 >
                   <Plus size={14} />
@@ -953,44 +1100,54 @@ const ProjectDetails = () => {
             </div>
             <button
               onClick={handleShare}
-              className="rounded-xl border border-white/15 bg-white/5 p-2.5 text-slate-200 transition-colors hover:bg-white/10"
+              className="rounded-xl border border-border bg-background p-2.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              title="Share project"
             >
               <Share2 size={18} />
             </button>
+            {(user?.role === 'superAdmin' || user?.role === 'admin' || user?.role === 'manager') && (
+              <button
+                onClick={() => setShowProjectModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/10 text-primary font-bold text-xs hover:bg-primary/20 transition-all shadow-xs cursor-pointer"
+                title="Edit Project Details"
+              >
+                <Edit3 size={14} />
+                <span>Edit Project</span>
+              </button>
+            )}
             {user?.role !== 'client' && (
               <button
                 onClick={() => setShowProjectModal(true)}
-                className="rounded-xl border border-white/15 bg-white/5 p-2.5 text-slate-200 transition-colors hover:bg-white/10"
+                className="rounded-xl border border-border bg-background p-2.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer"
+                title="Project settings"
               >
                 <Settings size={18} />
               </button>
             )}
-          </div>
-        </div>
-
-        <div className="mt-8 flex items-center gap-2 overflow-x-auto border-t border-white/10 pt-4">
-          {[
+          </>
+        )}
+      >
+        <NotionTabs
+          tabs={[
             { id: 'board', label: 'Task Board', icon: LayoutGrid },
             { id: 'list', label: 'List View', icon: List },
             { id: 'files', label: 'Files', icon: Paperclip },
             { id: 'activity', label: 'Activity', icon: Clock },
             { id: 'proposal', label: 'Proposal', icon: FileText },
             { id: 'budget', label: 'Budget', icon: IndianRupee },
-            (user.role === 'superAdmin' || user.role === 'manager') && { id: 'access', label: 'Access', icon: ShieldCheck },
-          ].filter(Boolean).map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`relative flex items-center rounded-xl px-3 py-2 text-sm font-bold transition-all ${
-                activeTab === tab.id ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <tab.icon size={16} className="mr-2" />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+            (user.role === 'superAdmin' || user.role === 'admin' || user.role === 'manager') && { id: 'access', label: 'Access', icon: ShieldCheck },
+          ].filter(Boolean)}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          className="border-0 bg-transparent p-0"
+        />
+      </NotionDetailPage>
+
+      {/* Monthly Deliverables & Targets Overview */}
+      <ProjectMonthlyDeliverablesCard
+        project={project}
+        canManage={user?.role === 'superAdmin' || user?.role === 'admin' || user?.role === 'manager'}
+      />
 
       {/* Tab Content */}
       <AnimatePresence mode="wait">
@@ -1029,12 +1186,23 @@ const ProjectDetails = () => {
             open={showProjectModal}
             onOpenChange={(open) => {
               setShowProjectModal(open);
-              if (!open) fetchProjectData();
+              if (!open) fetchProjectData(false);
             }}
             project={project}
           />
         </>
       )}
+
+      <TaskDetailModal
+        taskId={selectedTaskId}
+        open={Boolean(selectedTaskId)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedTaskId(null);
+            fetchProjectData();
+          }
+        }}
+      />
     </div>
   );
 };

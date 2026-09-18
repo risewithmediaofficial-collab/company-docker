@@ -150,7 +150,7 @@ export const AddExpenseModal = ({ open, onOpenChange, expense = null }) => {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-x-4 gap-y-4 md:grid-cols-2">
               <FormField
                 control={form.control}
                 name="title"
@@ -308,7 +308,7 @@ export const AddExpenseModal = ({ open, onOpenChange, expense = null }) => {
               )}
             />
 
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-slate-100 dark:border-border">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>Cancel</Button>
               <Button type="submit" disabled={isLoading}>{isLoading ? 'Saving...' : isEditing ? 'Update Record' : 'Record Entry'}</Button>
             </div>

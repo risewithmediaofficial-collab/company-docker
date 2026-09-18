@@ -4,6 +4,18 @@
 
 import mongoose from 'mongoose';
 
+const projectFileSchema = new mongoose.Schema(
+  {
+    name: { type: String, default: '' },
+    url: { type: String, required: true },
+    type: { type: String, default: '' },
+    size: { type: Number, default: 0 },
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    uploadedAt: { type: Date, default: Date.now },
+  },
+  { _id: true }
+);
+
 const milestoneSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String },
@@ -38,7 +50,13 @@ const projectSchema = new mongoose.Schema(
     brandId: { type: mongoose.Schema.Types.ObjectId, ref: 'BrandWorkspace' },
     name: { type: String, required: true, trim: true },
     description: { type: String, default: '' },
-    client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: true },
+    client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: false },
+    isInternal: { type: Boolean, default: false },
+    productType: {
+      type: String,
+      enum: ['client_project', 'saas_product', 'internal_tool', 'other'],
+      default: 'client_project',
+    },
     acceptedProposalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Proposal' },
     manager: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     team: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
@@ -61,7 +79,26 @@ const projectSchema = new mongoose.Schema(
     budgetDetails: budgetSchema,
     category: {
       type: String,
-      enum: ['social_media', 'seo', 'paid_ads', 'web_design', 'web_development', 'video_content', 'content', 'branding', 'video', 'graphic_design', 'mobile_app', 'e_commerce', 'other'],
+      enum: [
+        'social_media',
+        'seo',
+        'paid_ads',
+        'web_design',
+        'web_development',
+        'video_content',
+        'content',
+        'branding',
+        'video',
+        'graphic_design',
+        'mobile_app',
+        'e_commerce',
+        'saas_product',
+        'saas',
+        'internal_tool',
+        'internal_product',
+        'product',
+        'other',
+      ],
       default: 'other',
     },
     proposalText: { type: String, default: '' },
@@ -74,16 +111,7 @@ const projectSchema = new mongoose.Schema(
     progress: { type: Number, default: 0, min: 0, max: 100 },
     revisionCount: { type: Number, default: 0 },
     maxRevisions: { type: Number, default: 3 },
-    files: [
-      {
-        name: String,
-        url: String,
-        type: String,
-        size: Number,
-        uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        uploadedAt: { type: Date, default: Date.now },
-      },
-    ],
+    files: [projectFileSchema],
     isTemplate: { type: Boolean, default: false },
     templateName: { type: String },
   },

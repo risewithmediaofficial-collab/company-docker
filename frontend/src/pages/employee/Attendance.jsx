@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { Fragment, useEffect, useMemo, useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import {
   Calendar,
@@ -22,8 +22,13 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  Send,
+  Eye,
 } from 'lucide-react';
+import { getAssetUrl } from '../../utils/assetUrl';
 import { EODReportModal } from '../../components/modals/EODReportModal';
+import { EODDetailModal } from '../../components/modals/EODDetailModal';
+import { AttendanceWidget } from '../../components/attendance/AttendanceWidget';
 import {
   useAttendance,
   useTeamTodayAttendance,
@@ -32,9 +37,20 @@ import {
   useAssignHoliday,
   useSubmitLeave,
   useSubmitWFH,
+  useApproveAttendanceRequest,
 } from '../../hooks/useAttendance';
+import { useEodReports } from '../../hooks/useEodReports';
 import { useUsers } from '../../hooks/useUsers';
 import { toast } from 'sonner';
+import { useDateFilter } from '../../context/DateFilterContext';
+import { DateRangePicker } from '../../components/ui/DateRangePicker';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '../../components/ui/dialog';
 
 // Helper function to format 12-Hour AM/PM Time
 const formatTime = (isoString) => {
@@ -46,26 +62,37 @@ const formatTime = (isoString) => {
 
 const Attendance = () => {
   const { user } = useSelector((state) => state.auth);
-  const isAdmin = ['superAdmin', 'organizationOwner', 'manager', 'accountManager'].includes(user?.role);
-  const isSuperAdmin = user?.role === 'superAdmin';
+  const { isDateInRange } = useDateFilter();
+  const isAdmin = ['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager'].includes(user?.role) || Boolean(user?.permissions?.canManageHR || user?.permissions?.canManageEmployees);
+  const isSuperAdmin = user?.role === 'superAdmin' || user?.role === 'admin';
 
   const currentDate = new Date();
   const [time, setTime] = useState(new Date());
+  const approveAttendanceMutation = useApproveAttendanceRequest();
 
-  // Manager View Controls vs Personal View
-  const [viewTab, setViewTab] = useState(isAdmin ? 'team' : 'personal'); // 'team' | 'personal'
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  // Manager View Controls vs Personal View vs EOD Reports
+  const [viewTab, setViewTab] = useState(isAdmin ? 'team' : 'personal'); // 'team' | 'eod' | 'personal'
   const [selectedUser, setSelectedUser] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [eodDays, setEodDays] = useState(30);
+  const [selectedEodDetail, setSelectedEodDetail] = useState(null);
   const [showEOD, setShowEOD] = useState(false);
   const [showHolidayModal, setShowHolidayModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showWFHModal, setShowWFHModal] = useState(false);
   const [holidayForm, setHolidayForm] = useState({ date: '', notes: '' });
-  const [leaveForm, setLeaveForm] = useState({ userId: '', date: '', notes: '' });
+  const [leaveForm, setLeaveForm] = useState({
+    userId: '',
+    startDate: todayStr,
+    endDate: todayStr,
+    notes: '',
+  });
   const [wfhForm, setWfhForm] = useState({ date: '', notes: '' });
   const [selectedRecord, setSelectedRecord] = useState(null);
 
@@ -92,6 +119,7 @@ const Attendance = () => {
   const { data, isLoading } = useAttendance(attendanceFilters);
   const { data: teamTodayRecords = [] } = useTeamTodayAttendance({ enabled: isAdmin });
   const { data: users = [] } = useUsers({ enabled: isAdmin });
+  const { data: eodData, isLoading: isEodLoading } = useEodReports(eodDays, {}, { enabled: isAdmin });
 
   const clockIn = useClockIn();
   const clockOut = useClockOut();
@@ -121,8 +149,13 @@ const Attendance = () => {
   const handleAssignLeave = async (e) => {
     e.preventDefault();
     try {
-      await submitLeaveMutation.mutateAsync(leaveForm);
-      setLeaveForm({ userId: '', date: '', notes: '' });
+      await submitLeaveMutation.mutateAsync({
+        userId: leaveForm.userId || (isAdmin ? undefined : user?._id),
+        startDate: leaveForm.startDate,
+        endDate: leaveForm.endDate || leaveForm.startDate,
+        notes: leaveForm.notes,
+      });
+      setLeaveForm({ userId: '', startDate: todayStr, endDate: todayStr, notes: '' });
       setShowLeaveModal(false);
     } catch (err) {
       console.error(err);
@@ -178,7 +211,12 @@ const Attendance = () => {
     );
   }, [rawRecords, user?._id]);
 
-  const isClockedIn = Boolean(todayRecord?.clockIn && !todayRecord?.clockOut);
+  const isClockedIn = Boolean(
+    todayRecord && (
+      (todayRecord.sessions && todayRecord.sessions.length > 0 && todayRecord.sessions.some((s) => !s.clockOut)) ||
+      (todayRecord.clockIn && !todayRecord.clockOut)
+    )
+  );
   const eodSubmitted = Boolean(todayRecord?.eodReport?.submittedAt);
 
   // Live today activity list for managers
@@ -206,7 +244,9 @@ const Attendance = () => {
   const teamMetrics = useMemo(() => {
     const employeeUsers = users.filter((u) => u.role !== 'client' && u.role !== 'referral');
     const totalEmployees = employeeUsers.length;
-    const clockedIn = teamTodayRecords.filter((r) => r.clockIn && !r.clockOut).length;
+    const clockedIn = teamTodayRecords.filter((r) =>
+      r.sessions && r.sessions.length > 0 ? r.sessions.some((s) => !s.clockOut) : Boolean(r.clockIn && !r.clockOut)
+    ).length;
     const completed = teamTodayRecords.filter((r) => r.clockOut).length;
     const onLeave = teamTodayRecords.filter((r) => r.status === 'leave').length;
     const wfh = teamTodayRecords.filter((r) => r.status === 'work_from_home').length;
@@ -502,7 +542,7 @@ const Attendance = () => {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Daily Workspace & Attendance</h1>
           <p className="text-muted-foreground text-sm">
-            {isAdmin ? "Manage team attendance, monitor live clock-ins, and download monthly summary reports" : "Track attendance, hours, and daily reports"}
+            {isAdmin ? "Manage team attendance, review employee EOD reports, and approve leaves" : "Track attendance, apply for leave, hours, and daily reports"}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -525,15 +565,13 @@ const Attendance = () => {
               Assign Holiday
             </button>
           )}
-          {isAdmin && (
-            <button
-              onClick={() => setShowLeaveModal(true)}
-              className="inline-flex items-center justify-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-bold text-foreground shadow-sm hover:bg-secondary/40 transition-colors"
-            >
-              <Calendar size={18} className="mr-2 text-rose-500" />
-              Assign Leave
-            </button>
-          )}
+          <button
+            onClick={() => setShowLeaveModal(true)}
+            className="inline-flex items-center justify-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-bold text-foreground shadow-sm hover:bg-secondary/40 transition-colors"
+          >
+            <Calendar size={18} className="mr-2 text-rose-500" />
+            {isAdmin ? 'Assign / Apply Leave' : 'Apply for Leave'}
+          </button>
           {!isSuperAdmin && (
             <button
               onClick={() => setShowWFHModal(true)}
@@ -560,7 +598,7 @@ const Attendance = () => {
       {isAdmin && (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
-            <div className="flex items-center space-x-2 bg-secondary/30 p-1.5 rounded-2xl border border-border">
+            <div className="flex flex-wrap items-center gap-2 bg-secondary/30 p-1.5 rounded-2xl border border-border">
               <button
                 onClick={() => { setViewTab('team'); setSelectedUser('all'); }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
@@ -572,6 +610,24 @@ const Attendance = () => {
                 <Users size={16} className={viewTab === 'team' ? 'text-primary' : ''} />
                 Team Attendance Records
               </button>
+
+              <button
+                onClick={() => { setViewTab('eod'); }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                  viewTab === 'eod'
+                    ? 'bg-card text-foreground shadow-sm border border-border'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <FileText size={16} className={viewTab === 'eod' ? 'text-primary' : ''} />
+                Team EOD Reports
+                {eodData?.records?.length > 0 && (
+                  <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary">
+                    {eodData.records.length}
+                  </span>
+                )}
+              </button>
+
               <button
                 onClick={() => { setViewTab('personal'); setSelectedUser(user?._id); }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
@@ -635,7 +691,7 @@ const Attendance = () => {
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary text-xs uppercase overflow-hidden border border-primary/20">
                         {item.user.avatar ? (
-                          <img src={item.user.avatar} alt={item.user.name} className="h-full w-full object-cover" />
+                          <img src={getAssetUrl(item.user.avatar)} alt={item.user.name} className="h-full w-full object-cover" />
                         ) : (
                           (item.user.name || item.user.email || 'E').charAt(0).toUpperCase()
                         )}
@@ -770,7 +826,7 @@ const Attendance = () => {
                 <div className="flex items-center gap-4">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 font-black text-primary text-lg uppercase overflow-hidden border border-primary/20 shadow-sm">
                     {selectedEmployeeInfo.avatar ? (
-                      <img src={selectedEmployeeInfo.avatar} alt={selectedEmployeeInfo.name} className="h-full w-full object-cover" />
+                      <img src={getAssetUrl(selectedEmployeeInfo.avatar)} alt={selectedEmployeeInfo.name} className="h-full w-full object-cover" />
                     ) : (
                       (selectedEmployeeInfo.name || selectedEmployeeInfo.email || 'E').charAt(0).toUpperCase()
                     )}
@@ -877,59 +933,214 @@ const Attendance = () => {
         </div>
       )}
 
-      {/* Main Layout Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Clock In/Out & Monthly Summary */}
-        {!isSuperAdmin && (
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-card p-8 rounded-3xl border border-border shadow-xl relative overflow-hidden text-center">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
-              <div className="relative z-10">
-                <div className="w-16 h-16 bg-primary/10 text-primary rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner">
-                  <Timer size={32} className={isClockedIn ? 'animate-pulse' : ''} />
-                </div>
-                <h2 className="text-4xl font-black tracking-tighter mb-1">
-                  {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                </h2>
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-8">
-                  {time.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
-                </p>
+      {/* Team EOD Reports View for Super Admin / Admin / Manager */}
+      {viewTab === 'eod' ? (
+        <div className="space-y-6">
+          {/* EOD Controls Header */}
+          <div className="bg-card p-5 rounded-3xl border border-border shadow-sm flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
+              {/* Employee selector */}
+              <div className="flex items-center gap-2">
+                <User size={16} className="text-muted-foreground" />
+                <select
+                  value={selectedUser}
+                  onChange={(e) => setSelectedUser(e.target.value)}
+                  className="app-select text-xs font-semibold py-2 px-3 rounded-xl border border-border bg-secondary/20 min-w-[180px]"
+                >
+                  <option value="all">All Team Members ({users.length})</option>
+                  {users
+                    .filter((u) => ['employee', 'manager', 'superAdmin', 'organizationOwner', 'accountManager'].includes(u.role))
+                    .map((u) => (
+                      <option key={u._id} value={u._id}>
+                        {u.name || u.email} {u.department ? `(${u.department})` : `(${u.role})`}
+                      </option>
+                    ))}
+                </select>
+              </div>
 
-                {isClockedIn ? (
-                  <button
-                    onClick={handleClockOut}
-                    disabled={clockOut.isPending}
-                    className="w-full py-4 rounded-3xl bg-destructive text-white font-black text-lg shadow-xl shadow-destructive/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-60"
-                  >
-                    {clockOut.isPending ? 'Clocking Out...' : 'Clock Out'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleClockIn}
-                    disabled={clockIn.isPending || Boolean(todayRecord?.clockOut)}
-                    className="w-full py-4 rounded-3xl bg-primary text-white font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
-                  >
-                    {todayRecord?.clockOut ? 'Shift Completed' : clockIn.isPending ? 'Clocking In...' : 'Clock In'}
-                  </button>
-                )}
+              {/* Days range selector */}
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-muted-foreground" />
+                <select
+                  value={eodDays}
+                  onChange={(e) => setEodDays(Number(e.target.value))}
+                  className="app-select text-xs font-semibold py-2 px-3 rounded-xl border border-border bg-secondary/20"
+                >
+                  <option value={7}>Last 7 Days</option>
+                  <option value={14}>Last 14 Days</option>
+                  <option value={30}>Last 30 Days</option>
+                  <option value={90}>Last 90 Days</option>
+                </select>
+              </div>
 
-                <div className="flex items-center justify-center space-x-6 pt-6 text-sm font-bold text-muted-foreground">
-                  <div className="flex flex-col items-center">
-                    <span className="text-xs uppercase tracking-tighter opacity-60">In</span>
-                    <span className="text-foreground">
-                      {formatTime(todayRecord?.clockIn)}
-                    </span>
-                  </div>
-                  <div className="w-px h-8 bg-border" />
-                  <div className="flex flex-col items-center">
-                    <span className="text-xs uppercase tracking-tighter opacity-60">Out</span>
-                    <span className="text-foreground">
-                      {formatTime(todayRecord?.clockOut)}
-                    </span>
-                  </div>
-                </div>
+              {/* Search */}
+              <div className="relative flex-1 min-w-[180px] max-w-xs">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search tasks, blockers, or user..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-xs font-semibold rounded-xl border border-border bg-secondary/20 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
               </div>
             </div>
+
+            <div className="text-xs font-bold text-muted-foreground bg-secondary/30 px-3 py-1.5 rounded-xl border border-border">
+              Showing {eodData?.records?.filter((r) => {
+                if (selectedUser !== 'all' && (r.user?._id || r.user) !== selectedUser) return false;
+                if (!searchQuery.trim()) return true;
+                const q = searchQuery.toLowerCase();
+                const name = r.user?.name?.toLowerCase() || '';
+                const email = r.user?.email?.toLowerCase() || '';
+                const dept = r.user?.department?.toLowerCase() || '';
+                const summary = r.eodReport?.summary?.toLowerCase() || '';
+                const blockers = r.eodReport?.blockers?.toLowerCase() || '';
+                const tasksMatch = r.eodReport?.tasksCompleted?.some((t) =>
+                  (typeof t === 'string' ? t : t.title || t.taskTitle || '').toLowerCase().includes(q)
+                );
+                return name.includes(q) || email.includes(q) || dept.includes(q) || summary.includes(q) || blockers.includes(q) || tasksMatch;
+              }).length || 0} EOD submissions
+            </div>
+          </div>
+
+          {/* EOD Cards Grid */}
+          {isEodLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <div key={n} className="h-56 bg-card rounded-3xl animate-pulse border border-border" />
+              ))}
+            </div>
+          ) : (
+            (() => {
+              const filteredReports = (eodData?.records || []).filter((r) => {
+                if (selectedUser !== 'all' && (r.user?._id || r.user) !== selectedUser) return false;
+                if (!searchQuery.trim()) return true;
+                const q = searchQuery.toLowerCase();
+                const name = r.user?.name?.toLowerCase() || '';
+                const email = r.user?.email?.toLowerCase() || '';
+                const dept = r.user?.department?.toLowerCase() || '';
+                const summary = r.eodReport?.summary?.toLowerCase() || '';
+                const blockers = r.eodReport?.blockers?.toLowerCase() || '';
+                const tasksMatch = r.eodReport?.tasksCompleted?.some((t) =>
+                  (typeof t === 'string' ? t : t.title || t.taskTitle || '').toLowerCase().includes(q)
+                );
+                return name.includes(q) || email.includes(q) || dept.includes(q) || summary.includes(q) || blockers.includes(q) || tasksMatch;
+              });
+
+              if (filteredReports.length === 0) {
+                return (
+                  <div className="p-12 text-center bg-card rounded-3xl border border-dashed border-border text-muted-foreground space-y-2">
+                    <FileText size={36} className="mx-auto opacity-40 text-primary" />
+                    <h3 className="font-bold text-foreground text-sm">No EOD Reports Found</h3>
+                    <p className="text-xs">No team members have submitted EOD reports matching the selected filters.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {filteredReports.map((item) => (
+                    <div
+                      key={item._id}
+                      onClick={() => setSelectedEodDetail(item)}
+                      className="bg-card hover:bg-secondary/15 rounded-3xl border border-border/80 hover:border-primary/40 transition-all p-5 space-y-4 shadow-sm hover:shadow-md cursor-pointer flex flex-col justify-between group"
+                    >
+                      {/* Header: User avatar + info + date */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 font-bold text-primary text-xs uppercase overflow-hidden border border-primary/20">
+                            {item.user?.avatar ? (
+                              <img src={getAssetUrl(item.user.avatar)} alt={item.user.name} className="h-full w-full object-cover" />
+                            ) : (
+                              (item.user?.name || item.user?.email || 'E').charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-foreground text-sm truncate group-hover:text-primary transition-colors">
+                              {item.user?.name || item.user?.email || 'Employee'}
+                            </h4>
+                            <p className="text-[11px] text-muted-foreground truncate">
+                              {item.user?.department || item.user?.position || item.user?.role || 'Team Member'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span className="text-xs font-bold text-foreground block">
+                            {new Date(item.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {item.eodReport?.submittedAt ? formatTime(item.eodReport.submittedAt) : ''}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Daily Summary */}
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Daily Summary</span>
+                        <p className="text-xs text-foreground/90 line-clamp-3 leading-relaxed">
+                          {item.eodReport?.summary || 'No summary text provided.'}
+                        </p>
+                      </div>
+
+                      {/* Completed Tasks Pills */}
+                      {item.eodReport?.tasksCompleted?.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">
+                            Completed Tasks ({item.eodReport.tasksCompleted.length})
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {item.eodReport.tasksCompleted.slice(0, 3).map((t, idx) => (
+                              <span key={idx} className="inline-flex items-center gap-1 text-[11px] bg-secondary/70 border border-border/60 text-foreground px-2 py-0.5 rounded-lg max-w-[200px] truncate font-medium">
+                                ✓ {typeof t === 'string' ? t : t.title || t.taskTitle || 'Task'}
+                              </span>
+                            ))}
+                            {item.eodReport.tasksCompleted.length > 3 && (
+                              <span className="text-[10px] font-bold text-muted-foreground px-1.5 py-0.5">
+                                +{item.eodReport.tasksCompleted.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Blockers */}
+                      {item.eodReport?.blockers && (
+                        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-950 dark:text-amber-300 text-xs">
+                          <span className="font-bold flex items-center gap-1 text-[10px] uppercase">
+                            <AlertCircle size={12} /> Blocker:
+                          </span>
+                          <p className="line-clamp-2 mt-0.5">{item.eodReport.blockers}</p>
+                        </div>
+                      )}
+
+                      {/* Card Footer: Hours & View action */}
+                      <div className="pt-3 border-t border-border flex items-center justify-between text-xs">
+                        <span className="font-semibold text-muted-foreground">
+                          Total Time: <strong className="text-foreground">{item.totalHours?.toFixed(1) || '0.0'} hrs</strong>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setSelectedEodDetail(item); }}
+                          className="inline-flex items-center gap-1 font-bold text-primary hover:underline"
+                        >
+                          <Eye size={13} /> View Full Report
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()
+          )}
+        </div>
+      ) : (
+        /* Main Layout Grid */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column: Clock In/Out & Monthly Summary */}
+          <div className="lg:col-span-1 space-y-6">
+            <AttendanceWidget todayRecord={todayRecord} user={user} />
 
             <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
               <h3 className="font-bold flex items-center mb-6">
@@ -968,282 +1179,320 @@ const Attendance = () => {
               </div>
             </div>
           </div>
-        )}
 
-        {/* Right Column: Attendance Records Table */}
-        <div className={`${isSuperAdmin ? 'lg:col-span-3' : 'lg:col-span-2'} space-y-6`}>
-          <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-border flex flex-wrap items-center justify-between gap-4 bg-secondary/10">
-              <h3 className="font-bold flex items-center">
-                <History size={18} className="mr-2 text-primary" />
-                {viewTab === 'team' ? 'Employee Shift & Attendance Records' : 'Shift History'}
-                <span className="ml-2 text-xs font-semibold text-muted-foreground bg-secondary px-2.5 py-0.5 rounded-full">
-                  {records.length} records
-                </span>
-              </h3>
-
-              {isAdmin && (
-                <button
-                  onClick={handleExportCSV}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-xl transition-colors"
-                >
-                  <Download size={14} />
-                  Export CSV Report
-                </button>
-              )}
-
-              {!isAdmin && (
-                <div className="flex items-center space-x-2">
-                  <button onClick={handlePrevMonth} className="p-1.5 rounded-lg border border-border hover:bg-secondary transition-colors">
-                    <ChevronLeft size={16} />
-                  </button>
-                  <span className="text-xs font-bold uppercase tracking-widest">
-                    {monthName} {selectedYear}
+          {/* Right Column: Attendance Records Table */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-border flex flex-wrap items-center justify-between gap-4 bg-secondary/10">
+                <h3 className="font-bold flex items-center">
+                  <History size={18} className="mr-2 text-primary" />
+                  {viewTab === 'team' ? 'Employee Shift & Attendance Records' : 'Shift History'}
+                  <span className="ml-2 text-xs font-semibold text-muted-foreground bg-secondary px-2.5 py-0.5 rounded-full">
+                    {records.length} records
                   </span>
-                  <button onClick={handleNextMonth} className="p-1.5 rounded-lg border border-border hover:bg-secondary transition-colors">
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-              )}
-            </div>
+                </h3>
 
-            <div className="w-full overflow-x-auto overflow-y-auto max-h-[calc(100vh-350px)] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/60 [&::-webkit-scrollbar-track]:bg-transparent [scrollbar-width:thin] [scrollbar-color:hsl(var(--muted-foreground)/0.35)_transparent]">
-              <table className="w-full text-left text-sm">
-                <thead className="text-muted-foreground font-medium">
-                  <tr>
-                    {showEmployeeColumn && (
-                      <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Employee</th>
-                    )}
-                    <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Date</th>
-                    <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">In / Out Timings</th>
-                    <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Total Time</th>
-                    <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">EOD Report</th>
-                    <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {records.map((record) => (
-                    <tr
-                      key={record._id}
-                      onClick={() => setSelectedRecord(record)}
-                      className="hover:bg-secondary/30 transition-colors cursor-pointer"
-                    >
-                      {/* Employee Details Column for Managers / Admins */}
+                {isAdmin && (
+                  <button
+                    onClick={handleExportCSV}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-xl transition-colors"
+                  >
+                    <Download size={14} />
+                    Export CSV Report
+                  </button>
+                )}
+
+                {!isAdmin && (
+                  <div className="flex items-center space-x-2">
+                    <button onClick={handlePrevMonth} className="p-1.5 rounded-lg border border-border hover:bg-secondary transition-colors">
+                      <ChevronLeft size={16} />
+                    </button>
+                    <span className="text-xs font-bold uppercase tracking-widest">
+                      {monthName} {selectedYear}
+                    </span>
+                    <button onClick={handleNextMonth} className="p-1.5 rounded-lg border border-border hover:bg-secondary transition-colors">
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="w-full overflow-x-auto overflow-y-auto max-h-[calc(100vh-350px)] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/60 [&::-webkit-scrollbar-track]:bg-transparent [scrollbar-width:thin] [scrollbar-color:hsl(var(--muted-foreground)/0.35)_transparent]">
+                <table className="w-full text-left text-sm">
+                  <thead className="text-muted-foreground font-medium">
+                    <tr>
                       {showEmployeeColumn && (
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary text-xs uppercase overflow-hidden border border-primary/20">
-                              {record.user?.avatar ? (
-                                <img src={record.user.avatar} alt={record.user.name} className="h-full w-full object-cover" />
-                              ) : (
-                                (record.user?.name || record.user?.email || 'E').charAt(0).toUpperCase()
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="font-bold text-foreground truncate max-w-[150px]">
-                                {record.user?.name || record.user?.email || 'Unknown Employee'}
+                        <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Employee</th>
+                      )}
+                      <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Date</th>
+                      <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">In / Out Timings</th>
+                      <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Total Time</th>
+                      <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">EOD Report</th>
+                      <th className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {records.map((record) => {
+                      const isLeaveRecord = record.status === 'leave' || record.requestedStatus === 'leave';
+                      const isApprovedLeave = isLeaveRecord && (record.approvalStatus === 'approved' || (record.status === 'leave' && !record.approvalStatus));
+
+                      return (
+                        <tr
+                          key={record._id}
+                          onClick={() => setSelectedRecord(record)}
+                          className="hover:bg-secondary/30 transition-colors cursor-pointer"
+                        >
+                          {/* Employee Details Column for Managers / Admins */}
+                          {showEmployeeColumn && (
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary text-xs uppercase overflow-hidden border border-primary/20">
+                                  {record.user?.avatar ? (
+                                    <img src={getAssetUrl(record.user.avatar)} alt={record.user.name} className="h-full w-full object-cover" />
+                                  ) : (
+                                    (record.user?.name || record.user?.email || 'E').charAt(0).toUpperCase()
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-bold text-foreground truncate max-w-[150px]">
+                                    {record.user?.name || record.user?.email || 'Unknown Employee'}
+                                  </div>
+                                  {record.user?.email && (
+                                    <div className="text-[11px] text-muted-foreground truncate max-w-[150px]">
+                                      {record.user.email}
+                                    </div>
+                                  )}
+                                  <div className="text-[10px] text-primary/80 font-semibold truncate max-w-[150px]">
+                                    {record.user?.department || record.user?.position || record.user?.role || ''}
+                                  </div>
+                                </div>
                               </div>
-                              {record.user?.email && (
-                                <div className="text-[11px] text-muted-foreground truncate max-w-[150px]">
-                                  {record.user.email}
+                            </td>
+                          )}
+
+                          <td className="px-6 py-4">
+                            <div className="font-bold">
+                              {new Date(record.date).toLocaleDateString([], { weekday: 'short', day: 'numeric' })}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground uppercase">
+                              {new Date(record.date).toLocaleDateString([], { month: 'long', year: 'numeric' })}
+                            </div>
+                          </td>
+
+                          {/* Explicit 12-Hour AM/PM Format for Clock In and Out */}
+                          <td className="px-6 py-4">
+                            <div className="flex items-center space-x-2 text-xs">
+                              <span className="text-emerald-600 font-bold">
+                                {formatTime(record.clockIn)}
+                              </span>
+                              <span className="text-muted-foreground opacity-40">to</span>
+                              <span className="text-amber-600 font-bold">
+                                {formatTime(record.clockOut)}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="px-6 py-4 font-bold">{record.totalHours?.toFixed(1) || '0.0'} hrs</td>
+
+                          <td className="px-6 py-4">
+                            {record.status === 'holiday' ? (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            ) : (
+                              <span
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
+                                  record.eodReport?.submittedAt
+                                    ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                                    : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                                }`}
+                              >
+                                {record.eodReport?.submittedAt ? 'Submitted' : 'Pending'}
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col items-start gap-1">
+                              {record.approvalStatus === 'pending' ? (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center gap-1">
+                                  <AlertCircle size={11} />
+                                  Pending Approval: {(record.requestedStatus || record.status).replace(/_/g, ' ')}
+                                </span>
+                              ) : isApprovedLeave ? (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                                  <CheckCircle2 size={11} />
+                                  Leave Approved ✅
+                                </span>
+                              ) : record.approvalStatus === 'rejected' ? (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center gap-1">
+                                  <XCircle size={11} />
+                                  Rejected: {(record.requestedStatus || record.status).replace(/_/g, ' ')}
+                                </span>
+                              ) : (
+                                <span
+                                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase flex items-center gap-1 ${
+                                    statusColors[record.status] || 'bg-secondary/40 text-muted-foreground'
+                                  }`}
+                                >
+                                  {record.status?.replace(/_/g, ' ')}
+                                  {(record.notes || record.approvedBy) && <Info size={11} className="ml-0.5 opacity-80" />}
+                                </span>
+                              )}
+
+                              {record.notes && (
+                                <span className="text-xs font-medium text-foreground/90 truncate max-w-[180px]" title={record.notes}>
+                                  Reason: {record.notes}
+                                </span>
+                              )}
+
+                              {isAdmin && record.approvalStatus === 'pending' && (
+                                <div className="flex items-center gap-1.5 mt-1" onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    onClick={() => approveAttendanceMutation.mutate({ id: record._id, action: 'approve' })}
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold text-[10px] hover:bg-emerald-700 transition-all shadow-xs cursor-pointer"
+                                  >
+                                    <CheckCircle2 size={12} /> Approve
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      const reason = window.prompt('Rejection reason (optional):');
+                                      approveAttendanceMutation.mutate({ id: record._id, action: 'reject', rejectionReason: reason || '' });
+                                    }}
+                                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-600 text-white font-bold text-[10px] hover:bg-rose-700 transition-all shadow-xs cursor-pointer"
+                                  >
+                                    <XCircle size={12} /> Reject
+                                  </button>
                                 </div>
                               )}
-                              <div className="text-[10px] text-primary/80 font-semibold truncate max-w-[150px]">
-                                {record.user?.department || record.user?.position || record.user?.role || ''}
-                              </div>
+
+                              {record.approvedBy && (record.approvalStatus === 'approved' || isApprovedLeave) && (
+                                <span className="text-[10px] font-semibold text-primary flex items-center gap-1 mt-0.5">
+                                  <UserCheck size={10} />
+                                  Approved by: {record.approvedBy.name || 'Admin'}
+                                </span>
+                              )}
                             </div>
-                          </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {records.length === 0 && (
+                      <tr>
+                        <td colSpan={showEmployeeColumn ? 6 : 5} className="px-6 py-12 text-center text-muted-foreground italic">
+                          No attendance records found matching the current filters.
                         </td>
-                      )}
-
-                      <td className="px-6 py-4">
-                        <div className="font-bold">
-                          {new Date(record.date).toLocaleDateString([], { weekday: 'short', day: 'numeric' })}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground uppercase">
-                          {new Date(record.date).toLocaleDateString([], { month: 'long', year: 'numeric' })}
-                        </div>
-                      </td>
-
-                      {/* Explicit 12-Hour AM/PM Format for Clock In and Out */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-2 text-xs">
-                          <span className="text-emerald-600 font-bold">
-                            {formatTime(record.clockIn)}
-                          </span>
-                          <span className="text-muted-foreground opacity-40">to</span>
-                          <span className="text-amber-600 font-bold">
-                            {formatTime(record.clockOut)}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4 font-bold">{record.totalHours?.toFixed(1) || '0.0'} hrs</td>
-
-                      <td className="px-6 py-4">
-                        {record.status === 'holiday' ? (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        ) : (
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
-                              record.eodReport?.submittedAt
-                                ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                                : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
-                            }`}
-                          >
-                            {record.eodReport?.submittedAt ? 'Submitted' : 'Pending'}
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col items-start gap-1">
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase flex items-center gap-1 ${
-                              statusColors[record.status] || 'bg-secondary/40 text-muted-foreground'
-                            }`}
-                          >
-                            {record.status?.replace(/_/g, ' ')}
-                            {(record.notes || record.approvedBy) && <Info size={11} className="ml-0.5 opacity-80" />}
-                          </span>
-                          {record.notes && (
-                            <span className="text-xs font-medium text-foreground/90 truncate max-w-[180px]" title={record.notes}>
-                              {record.notes}
-                            </span>
-                          )}
-                          {record.approvedBy && (
-                            <span className="text-[10px] font-semibold text-primary flex items-center gap-1">
-                              <UserCheck size={10} />
-                              By: {record.approvedBy.name}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-
-                  {records.length === 0 && (
-                    <tr>
-                      <td colSpan={showEmployeeColumn ? 6 : 5} className="px-6 py-12 text-center text-muted-foreground italic">
-                        No attendance records found matching the current filters.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
 
-          {!isSuperAdmin && (
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-8 rounded-3xl text-white shadow-xl flex items-center justify-between mt-6">
-              <div>
-                <h3 className="text-xl font-bold">Daily Closeout</h3>
-                <p className="text-white/75 text-sm mt-1 max-w-[420px]">
-                  Submit your EOD report after logging work so managers can review progress and blockers.
-                </p>
-                <button
-                  onClick={() => setShowEOD(true)}
-                  className="mt-4 px-6 py-2.5 bg-white text-primary font-bold rounded-xl text-sm shadow-lg hover:bg-white/90 transition-all"
-                >
-                  {eodSubmitted ? 'Review Report' : 'Submit Report'}
-                </button>
+            {!isSuperAdmin && (
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-8 rounded-3xl text-white shadow-xl flex items-center justify-between mt-6">
+                <div>
+                  <h3 className="text-xl font-bold">Daily Closeout</h3>
+                  <p className="text-white/75 text-sm mt-1 max-w-[420px]">
+                    Submit your EOD report after logging work so managers can review progress and blockers.
+                  </p>
+                  <button
+                    onClick={() => setShowEOD(true)}
+                    className="mt-4 px-6 py-2.5 bg-white text-primary font-bold rounded-xl text-sm shadow-lg hover:bg-white/90 transition-all"
+                  >
+                    {eodSubmitted ? 'Review Report' : 'Submit Report'}
+                  </button>
+                </div>
+                <Calendar size={80} className="opacity-20 hidden md:block" />
               </div>
-              <Calendar size={80} className="opacity-20 hidden md:block" />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* EOD Report Modal */}
-      <EODReportModal open={showEOD} onOpenChange={setShowEOD} report={todayRecord?.eodReport} />
-
-      {/* Assign Holiday Modal */}
-      {showHolidayModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300">
-          <div className="w-full max-w-md rounded-[28px] border border-border bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                <Calendar className="text-primary h-5 w-5" />
-                Assign Company Holiday
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowHolidayModal(false)}
-                className="rounded-lg p-1 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={handleAssignHoliday} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Select Holiday Date *</label>
-                <input
-                  type="date"
-                  required
-                  value={holidayForm.date}
-                  onChange={(e) => setHolidayForm((prev) => ({ ...prev, date: e.target.value }))}
-                  className="app-input"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Reason / Description *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Christmas, Independence Day"
-                  value={holidayForm.notes}
-                  onChange={(e) => setHolidayForm((prev) => ({ ...prev, notes: e.target.value }))}
-                  className="app-input"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={assignHolidayMutation.isPending}
-                  className="flex-1 py-3 rounded-2xl bg-primary text-white font-bold text-sm shadow-md hover:bg-primary/90 transition-all disabled:opacity-50"
-                >
-                  {assignHolidayMutation.isPending ? 'Assigning...' : 'Assign Holiday'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowHolidayModal(false)}
-                  className="px-5 py-3 rounded-2xl border border-border bg-secondary/30 text-foreground font-semibold text-sm hover:bg-secondary/50 transition-all"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+            )}
           </div>
         </div>
       )}
 
-      {/* Assign Leave Modal */}
-      {showLeaveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300">
-          <div className="w-full max-w-md rounded-[28px] border border-border bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                <Calendar className="text-rose-500 h-5 w-5" />
-                Assign Leave
-              </h3>
+      {/* EOD Report Modal */}
+      <EODReportModal open={showEOD} onOpenChange={setShowEOD} report={todayRecord?.eodReport} />
+
+      {/* EOD Detail Modal for viewing full team EOD submission */}
+      <EODDetailModal
+        open={Boolean(selectedEodDetail)}
+        onOpenChange={(open) => { if (!open) setSelectedEodDetail(null); }}
+        record={selectedEodDetail}
+      />
+
+      {/* Assign Holiday Modal */}
+      <Dialog open={showHolidayModal} onOpenChange={setShowHolidayModal}>
+        <DialogContent size="default">
+          <DialogHeader>
+            <DialogTitle>Assign Company Holiday</DialogTitle>
+            <DialogDescription>
+              Record an official agency holiday across all employee attendance calendars.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleAssignHoliday} className="space-y-4 text-xs">
+            <div className="space-y-1.5">
+              <label className="font-semibold text-foreground">Select Holiday Date *</label>
+              <input
+                type="date"
+                required
+                value={holidayForm.date}
+                onChange={(e) => setHolidayForm((prev) => ({ ...prev, date: e.target.value }))}
+                className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="font-semibold text-foreground">Reason / Description *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Christmas, Independence Day, Diwali"
+                value={holidayForm.notes}
+                onChange={(e) => setHolidayForm((prev) => ({ ...prev, notes: e.target.value }))}
+                className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-4 border-t border-border">
               <button
                 type="button"
-                onClick={() => setShowLeaveModal(false)}
-                className="rounded-lg p-1 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                onClick={() => setShowHolidayModal(false)}
+                className="px-4 py-2 rounded-xl border border-border font-semibold text-xs hover:bg-secondary"
               >
-                ✕
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={assignHolidayMutation.isPending}
+                className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-sm hover:bg-primary/90 disabled:opacity-50"
+              >
+                {assignHolidayMutation.isPending ? 'Assigning...' : 'Assign Holiday'}
               </button>
             </div>
-            <form onSubmit={handleAssignLeave} className="space-y-4">
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign / Apply Leave Modal */}
+      <Dialog open={showLeaveModal} onOpenChange={setShowLeaveModal}>
+        <DialogContent size="default">
+          <DialogHeader>
+            <DialogTitle>{isAdmin ? 'Assign Employee Leave / Apply Leave' : 'Apply for Leave'}</DialogTitle>
+            <DialogDescription>
+              {isAdmin
+                ? 'Record an approved leave on behalf of a team member, or submit your own leave request.'
+                : 'Submit a formal leave application to Super Admin & Admin for review and approval.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleAssignLeave} className="space-y-4 text-xs">
+            {isAdmin && (
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Select Employee *</label>
+                <label className="font-semibold text-foreground">Select Employee (Optional / Self)</label>
                 <select
-                  required
                   value={leaveForm.userId}
                   onChange={(e) => setLeaveForm((prev) => ({ ...prev, userId: e.target.value }))}
-                  className="app-select"
+                  className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs outline-none focus:ring-2 focus:ring-primary/20"
                 >
-                  <option value="">Choose an employee...</option>
+                  <option value="">Myself ({user?.name || user?.email})</option>
                   {users
                     .filter((u) => ['employee', 'manager', 'superAdmin', 'organizationOwner', 'accountManager'].includes(u.role))
                     .map((u) => (
@@ -1253,203 +1502,201 @@ const Attendance = () => {
                     ))}
                 </select>
               </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Select Leave Date *</label>
+                <label className="font-semibold text-foreground">Leave Start Date *</label>
                 <input
                   type="date"
                   required
-                  value={leaveForm.date}
-                  onChange={(e) => setLeaveForm((prev) => ({ ...prev, date: e.target.value }))}
-                  className="app-input"
+                  value={leaveForm.startDate}
+                  onChange={(e) => {
+                    const newStart = e.target.value;
+                    setLeaveForm((prev) => ({
+                      ...prev,
+                      startDate: newStart,
+                      endDate: prev.endDate < newStart ? newStart : prev.endDate,
+                    }));
+                  }}
+                  className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Reason / Details *</label>
+                <label className="font-semibold text-foreground">Leave End Date *</label>
                 <input
-                  type="text"
+                  type="date"
                   required
-                  placeholder="e.g. Doctor appointment, personal work"
-                  value={leaveForm.notes}
-                  onChange={(e) => setLeaveForm((prev) => ({ ...prev, notes: e.target.value }))}
-                  className="app-input"
+                  min={leaveForm.startDate}
+                  value={leaveForm.endDate}
+                  onChange={(e) => setLeaveForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                  className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={submitLeaveMutation.isPending}
-                  className="flex-1 py-3 rounded-2xl bg-primary text-white font-bold text-sm shadow-md hover:bg-primary/90 transition-all disabled:opacity-50"
-                >
-                  {submitLeaveMutation.isPending ? 'Assigning...' : 'Assign Leave'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowLeaveModal(false)}
-                  className="px-5 py-3 rounded-2xl border border-border bg-secondary/30 text-foreground font-semibold text-sm hover:bg-secondary/50 transition-all"
-                >
-                  Cancel
-                </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-semibold text-foreground">Reason / Description *</label>
+              <textarea
+                required
+                rows={3}
+                placeholder="Explain the reason for leave (e.g. Medical emergency, Family function, Casual leave)..."
+                value={leaveForm.notes}
+                onChange={(e) => setLeaveForm((prev) => ({ ...prev, notes: e.target.value }))}
+                className="w-full rounded-xl border border-border bg-background p-3 text-xs outline-none focus:ring-2 focus:ring-primary/20 text-foreground resize-none"
+              />
+            </div>
+
+            {!isAdmin && (
+              <div className="p-3 rounded-xl bg-secondary/40 border border-border text-[11px] text-muted-foreground flex items-center gap-2">
+                <Info size={14} className="text-primary shrink-0" />
+                <span>Your application will be sent to Super Admin and Admin. Once approved, the status will show <strong>Leave Approved ✅</strong>.</span>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            )}
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-border">
+              <button
+                type="button"
+                onClick={() => setShowLeaveModal(false)}
+                className="px-4 py-2 rounded-xl border border-border font-semibold text-xs hover:bg-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitLeaveMutation.isPending}
+                className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-sm hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <Send size={13} />
+                {submitLeaveMutation.isPending
+                  ? 'Submitting...'
+                  : isAdmin && leaveForm.userId && leaveForm.userId !== user?._id
+                  ? 'Assign Leave'
+                  : 'Submit Leave Application'}
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Inform WFH Modal */}
-      {showWFHModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300">
-          <div className="w-full max-w-md rounded-[28px] border border-border bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                <Calendar className="text-indigo-500 h-5 w-5" />
-                Inform Work From Home
-              </h3>
+      <Dialog open={showWFHModal} onOpenChange={setShowWFHModal}>
+        <DialogContent size="default">
+          <DialogHeader>
+            <DialogTitle>Inform Work From Home (WFH)</DialogTitle>
+            <DialogDescription>
+              Submit in advance when working remotely.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleInformWFH} className="space-y-4 text-xs">
+            <div className="space-y-1.5">
+              <label className="font-semibold text-foreground">Select WFH Date *</label>
+              <input
+                type="date"
+                required
+                value={wfhForm.date}
+                onChange={(e) => setWfhForm((prev) => ({ ...prev, date: e.target.value }))}
+                className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs outline-none focus:ring-2 focus:ring-primary/20"
+              />
+              <span className="text-[11px] text-muted-foreground">Must be submitted at least one day in advance.</span>
+            </div>
+            <div className="space-y-1.5">
+              <label className="font-semibold text-foreground">Reason / Details *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Remote work, commute issue"
+                value={wfhForm.notes}
+                onChange={(e) => setWfhForm((prev) => ({ ...prev, notes: e.target.value }))}
+                className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-4 border-t border-border">
               <button
                 type="button"
                 onClick={() => setShowWFHModal(false)}
-                className="rounded-lg p-1 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                className="px-4 py-2 rounded-xl border border-border font-semibold text-xs hover:bg-secondary"
               >
-                ✕
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitWFHMutation.isPending}
+                className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-sm hover:bg-primary/90 disabled:opacity-50"
+              >
+                {submitWFHMutation.isPending ? 'Submitting...' : 'Submit WFH Notice'}
               </button>
             </div>
-            <form onSubmit={handleInformWFH} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Select WFH Date *</label>
-                <input
-                  type="date"
-                  required
-                  value={wfhForm.date}
-                  onChange={(e) => setWfhForm((prev) => ({ ...prev, date: e.target.value }))}
-                  className="app-input"
-                />
-                <span className="text-[10px] text-muted-foreground">Must be submitted at least one day in advance.</span>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Reason / Details *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Internet issue, personal commitment"
-                  value={wfhForm.notes}
-                  onChange={(e) => setWfhForm((prev) => ({ ...prev, notes: e.target.value }))}
-                  className="app-input"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={submitWFHMutation.isPending}
-                  className="flex-1 py-3 rounded-2xl bg-primary text-white font-bold text-sm shadow-md hover:bg-primary/90 transition-all disabled:opacity-50"
-                >
-                  {submitWFHMutation.isPending ? 'Submitting...' : 'Submit WFH Notice'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowWFHModal(false)}
-                  className="px-5 py-3 rounded-2xl border border-border bg-secondary/30 text-foreground font-semibold text-sm hover:bg-secondary/50 transition-all"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Attendance Detail Modal */}
-      {selectedRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300">
-          <div className="w-full max-w-lg rounded-[28px] border border-border bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 space-y-5">
-            <div className="flex items-center justify-between border-b border-border pb-4">
-              <div>
-                <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                  <Calendar className="text-primary h-5 w-5" />
-                  Attendance Record Details
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {new Date(selectedRecord.date).toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedRecord(null)}
-                className="rounded-lg p-1 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-              >
-                ✕
-              </button>
-            </div>
+      <Dialog open={Boolean(selectedRecord)} onOpenChange={(open) => { if (!open) setSelectedRecord(null); }}>
+        <DialogContent size="default">
+          <DialogHeader>
+            <DialogTitle>Attendance Record Details</DialogTitle>
+            <DialogDescription>
+              {selectedRecord?.date && new Date(selectedRecord.date).toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="space-y-4">
-              {/* Employee Info if present */}
+          {selectedRecord && (
+            <div className="space-y-4 text-xs">
+              {/* Employee Info */}
               {selectedRecord.user && typeof selectedRecord.user === 'object' && (
-                <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-secondary/30 border border-border">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary text-sm uppercase overflow-hidden border border-primary/20">
+                <div className="flex items-center gap-3 p-3 rounded-2xl bg-secondary/30 border border-border/80">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-bold text-primary text-xs uppercase overflow-hidden border border-primary/20">
                     {selectedRecord.user.avatar ? (
-                      <img src={selectedRecord.user.avatar} alt={selectedRecord.user.name} className="h-full w-full object-cover" />
+                      <img src={getAssetUrl(selectedRecord.user.avatar)} alt={selectedRecord.user.name} className="h-full w-full object-cover" />
                     ) : (
                       (selectedRecord.user.name || selectedRecord.user.email || 'E').charAt(0).toUpperCase()
                     )}
                   </div>
                   <div>
-                    <div className="font-bold text-foreground text-sm">
-                      {selectedRecord.user.name || selectedRecord.user.email || 'Unknown Employee'}
+                    <div className="font-bold text-foreground text-xs">
+                      {selectedRecord.user.name || selectedRecord.user.email || 'Employee'}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {selectedRecord.user.email} • {selectedRecord.user.department || selectedRecord.user.position || selectedRecord.user.role}
+                    <div className="text-[11px] text-muted-foreground">
+                      {selectedRecord.user.email} • {selectedRecord.user.role}
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-secondary/30 border border-border">
-                <span className="text-xs font-medium text-muted-foreground">Status</span>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${statusColors[selectedRecord.status] || 'bg-secondary text-muted-foreground'}`}>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/25 border border-border">
+                <span className="font-medium text-muted-foreground">Status</span>
+                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase ${statusColors[selectedRecord.status] || 'bg-secondary text-muted-foreground'}`}>
                   {selectedRecord.status?.replace(/_/g, ' ')}
                 </span>
               </div>
 
               {/* Reason / Notes */}
-              <div className="p-4 rounded-2xl bg-secondary/20 border border-border space-y-1.5">
-                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Reason / Description</div>
-                <div className="text-sm font-semibold text-foreground">
+              <div className="p-3.5 rounded-xl bg-secondary/20 border border-border space-y-1">
+                <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Reason / Description</div>
+                <div className="font-medium text-foreground">
                   {selectedRecord.notes || 'No notes or reason provided.'}
                 </div>
               </div>
 
-              {/* Assigned / Approved By */}
-              <div className="p-4 rounded-2xl bg-secondary/20 border border-border space-y-1.5">
-                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Assigned / Approved By</div>
-                <div className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <UserCheck className="h-4 w-4 text-primary" />
-                  {selectedRecord.approvedBy ? (
-                    <span>
-                      {selectedRecord.approvedBy.name} ({selectedRecord.approvedBy.role === 'superAdmin' ? 'Super Admin' : 'Manager'})
-                    </span>
-                  ) : selectedRecord.isApproved ? (
-                    <span>Manager / Admin</span>
-                  ) : (
-                    <span>Self Clock-in / System Recorded</span>
-                  )}
-                </div>
-              </div>
-
               {/* Times */}
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="p-3 rounded-2xl border border-border bg-card">
+              <div className="grid grid-cols-3 gap-2.5 text-center">
+                <div className="p-2.5 rounded-xl border border-border bg-card">
                   <div className="text-[10px] font-bold text-muted-foreground uppercase">Clock In</div>
-                  <div className="text-sm font-bold text-emerald-600 mt-1">
+                  <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-1">
                     {formatTime(selectedRecord.clockIn)}
                   </div>
                 </div>
-                <div className="p-3 rounded-2xl border border-border bg-card">
+                <div className="p-2.5 rounded-xl border border-border bg-card">
                   <div className="text-[10px] font-bold text-muted-foreground uppercase">Clock Out</div>
-                  <div className="text-sm font-bold text-amber-600 mt-1">
+                  <div className="text-xs font-bold text-amber-600 dark:text-amber-400 mt-1">
                     {formatTime(selectedRecord.clockOut)}
                   </div>
                 </div>
-                <div className="p-3 rounded-2xl border border-border bg-card">
+                <div className="p-2.5 rounded-xl border border-border bg-card">
                   <div className="text-[10px] font-bold text-muted-foreground uppercase">Total Time</div>
-                  <div className="text-sm font-bold text-foreground mt-1">
+                  <div className="text-xs font-bold text-foreground mt-1">
                     {selectedRecord.totalHours?.toFixed(1) || '0.0'} hrs
                   </div>
                 </div>
@@ -1457,29 +1704,29 @@ const Attendance = () => {
 
               {/* EOD Report if exists */}
               {selectedRecord.eodReport?.submittedAt && (
-                <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-1">
-                  <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1">
-                    <FileText size={13} /> EOD Report Submitted
+                <div className="p-3.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-1">
+                  <div className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1">
+                    <FileText size={12} /> EOD Report Submitted
                   </div>
                   <p className="text-xs text-foreground/80 line-clamp-3">
                     {selectedRecord.eodReport.summary || 'Summary submitted.'}
                   </p>
                 </div>
               )}
-            </div>
 
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => setSelectedRecord(null)}
-                className="w-full py-3 rounded-2xl border border-border bg-secondary/50 text-foreground font-bold text-sm hover:bg-secondary transition-all"
-              >
-                Close
-              </button>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedRecord(null)}
+                  className="w-full py-2.5 rounded-xl border border-border bg-secondary/50 text-foreground font-semibold text-xs hover:bg-secondary transition-all"
+                >
+                  Close
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

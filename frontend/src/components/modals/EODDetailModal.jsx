@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/dialog';
 import { FileText, CheckCircle2, AlertCircle, Clock, User, Calendar, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getAssetUrl } from '@/utils/assetUrl';
 
 export const EODDetailModal = ({ open, onOpenChange, record }) => {
   if (!record) return null;
@@ -27,10 +28,10 @@ export const EODDetailModal = ({ open, onOpenChange, record }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl w-[92vw] sm:w-full max-h-[85vh] sm:max-h-[88vh] flex flex-col p-0 overflow-hidden bg-card border-border rounded-2xl shadow-2xl">
+      <DialogContent noPadding className="max-w-xl w-[92vw] sm:w-full max-h-[85vh] sm:max-h-[88vh] flex flex-col min-h-0 p-0 overflow-hidden bg-card border-border rounded-2xl shadow-2xl">
         {/* Header styling */}
         <div className="shrink-0 bg-gradient-to-r from-primary/10 via-indigo-500/10 to-purple-500/10 p-5 sm:p-6 border-b border-border">
-          <DialogHeader>
+          <DialogHeader className="border-b-0 mb-0 pb-0">
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
                 <CheckCircle2 size={14} /> EOD Report Submitted
@@ -54,7 +55,7 @@ export const EODDetailModal = ({ open, onOpenChange, record }) => {
           <div className="mt-4 flex items-center gap-3 pt-3 border-t border-border/50">
             <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary font-bold text-sm overflow-hidden shrink-0">
               {user.avatar ? (
-                <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
+                <img src={getAssetUrl(user.avatar)} alt={user.name} className="h-full w-full object-cover" />
               ) : (
                 user.name ? user.name.charAt(0).toUpperCase() : 'U'
               )}
@@ -69,7 +70,7 @@ export const EODDetailModal = ({ open, onOpenChange, record }) => {
         </div>
 
         {/* Scrollable Modal content */}
-        <div className="p-4 sm:p-6 space-y-5 flex-1 overflow-y-auto">
+        <div className="p-4 sm:p-6 space-y-5 flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
           {/* Summary */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">

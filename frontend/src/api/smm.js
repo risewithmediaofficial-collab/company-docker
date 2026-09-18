@@ -1,33 +1,65 @@
 import api from './index';
 
 export const smmApi = {
-  // Dashboard
+  // Dashboard Command Center
   getDashboardStats: (params) => api.get('/smm/dashboard/stats', { params }),
 
-  // Clients
+  // Clients & Projects
   getClients: (params) => api.get('/smm/clients', { params }),
   getClient: (id) => api.get(`/smm/clients/${id}`),
   createClient: (data) => api.post('/smm/clients', data),
   updateClient: (id, data) => api.put(`/smm/clients/${id}`, data),
   deleteClient: (id) => api.delete(`/smm/clients/${id}`),
-
-  // Projects
   getProjects: (params) => api.get('/smm/projects', { params }),
   getProject: (id) => api.get(`/smm/projects/${id}`),
-  createProject: (data) => api.post('/smm/projects', data),
-  updateProject: (id, data) => api.put(`/smm/projects/${id}`, data),
-  deleteProject: (id) => api.delete(`/smm/projects/${id}`),
 
-  // Campaigns
+  // Central Video & Content Object
+  getContents: (params) => api.get('/smm/content', { params }),
+  getContentById: (id) => api.get(`/smm/content/${id}`),
+  getPublishedContentForAd: (params) => api.get('/smm/content/published-for-ad', { params }),
+  createContent: (data) => api.post('/smm/content', data),
+  updateContent: (id, data) => api.put(`/smm/content/${id}`, data),
+  updateContentPerformance: (id, data) => api.patch(`/smm/content/${id}/performance`, data),
+  deleteContent: (id) => api.delete(`/smm/content/${id}`),
+
+  // Campaigns & Budget Ledger
   getCampaigns: (params) => api.get('/smm/campaigns', { params }),
   getCampaign: (id) => api.get(`/smm/campaigns/${id}`),
   createCampaign: (data) => api.post('/smm/campaigns', data),
   updateCampaign: (id, data) => api.put(`/smm/campaigns/${id}`, data),
   updatePerformance: (id, data) => api.patch(`/smm/campaigns/${id}/performance`, data),
-  addDailyLog: (id, data) => api.post(`/smm/campaigns/${id}/daily-logs`, data),
-  deleteDailyLog: (id, logId) => api.delete(`/smm/campaigns/${id}/daily-logs/${logId}`),
   deleteCampaign: (id) => api.delete(`/smm/campaigns/${id}`),
   bulkUpdateCampaignStatus: (data) => api.put('/smm/campaigns/bulk-status', data),
+  addDailyLog: (campaignId, data) => api.post(`/smm/campaigns/${campaignId}/daily-log`, data),
+  deleteDailyLog: (campaignId, logId) => api.delete(`/smm/campaigns/${campaignId}/daily-log/${logId}`),
+
+  // Daily Ad Spend & Cash Ledger Logging
+  getAdSpendLogs: (params) => api.get('/smm/ad-spend', { params }),
+  addAdSpendLog: (data) => api.post('/smm/ad-spend', data),
+  updateAdSpendLog: (id, data) => api.put(`/smm/ad-spend/${id}`, data),
+  deleteAdSpendLog: (id) => api.delete(`/smm/ad-spend/${id}`),
+  getAdSpendSummary: (params) => api.get('/smm/ad-spend/summary', { params }),
+  exportAdSpendReport: (params) => api.get('/smm/ad-spend/report/export', { params, responseType: 'blob' }),
+
+  // Client Ad Budgets (Decoupled from campaigns)
+  getBudgets: (params) => api.get('/smm/budgets', { params }),
+  getBudgetSummary: (params) => api.get('/smm/budgets/summary', { params }),
+  addBudget: (data) => api.post('/smm/budgets', data),
+  updateBudget: (id, data) => api.put(`/smm/budgets/${id}`, data),
+  deleteBudget: (id) => api.delete(`/smm/budgets/${id}`),
+  exportBudgetReport: (params) => api.get('/smm/budgets/report/export', { params, responseType: 'blob' }),
+
+  // Daily Tracking & Social Media Reports
+  getDailyReports: (params) => api.get('/smm/daily-reports', { params }),
+  getDailyReportByDate: (params) => api.get('/smm/daily-reports/by-date', { params }),
+  saveDailyReport: (data) => api.post('/smm/daily-reports', data),
+
+  // Leads Tracking
+  getLeads: (params) => api.get('/smm/leads', { params }),
+  getLeadStats: (params) => api.get('/smm/leads/stats', { params }),
+  createLead: (data) => api.post('/smm/leads', data),
+  updateLead: (id, data) => api.put(`/smm/leads/${id}`, data),
+  deleteLead: (id) => api.delete(`/smm/leads/${id}`),
 
   // Ad Sets
   getAdSets: (params) => api.get('/smm/adsets', { params }),
@@ -51,15 +83,29 @@ export const smmApi = {
   updateCreative: (id, data) => api.put(`/smm/creatives/${id}`, data),
   deleteCreative: (id) => api.delete(`/smm/creatives/${id}`),
 
-  // Tasks
+  // Tasks & Notes
   getTasks: (params) => api.get('/smm/tasks', { params }),
   createTask: (data) => api.post('/smm/tasks', data),
   updateTask: (id, data) => api.put(`/smm/tasks/${id}`, data),
   deleteTask: (id) => api.delete(`/smm/tasks/${id}`),
-  addTaskComment: (id, data) => api.post(`/smm/tasks/${id}/comments`, data),
-
-  // Notes
   getNotes: (params) => api.get('/smm/notes', { params }),
   createNote: (data) => api.post('/smm/notes', data),
   deleteNote: (id) => api.delete(`/smm/notes/${id}`),
+
+  // Call Logs
+  getCallLogs: (params) => api.get('/smm/call-logs', { params }),
+  getCallLogStats: (params) => api.get('/smm/call-logs/stats', { params }),
+  createCallLog: (data) => api.post('/smm/call-logs', data),
+  updateCallLog: (id, data) => api.put(`/smm/call-logs/${id}`, data),
+  updateCallLogStatus: (id, data) => api.patch(`/smm/call-logs/${id}/status`, data),
+  deleteCallLog: (id) => api.delete(`/smm/call-logs/${id}`),
+
+  // ── Monthly One-Page Tracker ──────────────────────────────────────────────
+  getMonthlyTrackers: (params) => api.get('/smm/tracker', { params }),
+  upsertTracker: (data) => api.post('/smm/tracker', data),
+  updateTrackerDayCell: (id, day, data) => api.patch(`/smm/tracker/${id}/day/${day}`, data),
+  updateTrackerMeta: (id, data) => api.patch(`/smm/tracker/${id}/meta`, data),
+  deleteTracker: (id) => api.delete(`/smm/tracker/${id}`),
+  syncContentTracker: (data) => api.post('/smm/tracker/sync-content', data),
 };
+

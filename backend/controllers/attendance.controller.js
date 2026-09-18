@@ -6,12 +6,48 @@ export const clockIn = async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const existing = await Attendance.findOne({ user: req.user._id, date: today });
-    if (existing?.clockIn) return res.status(400).json({ success: false, message: 'Already clocked in today' });
+    let attendance = await Attendance.findOne({ user: req.user._id, date: today });
+    const now = new Date();
 
-    const attendance = existing
-      ? Object.assign(existing, { clockIn: new Date(), status: 'present' })
-      : new Attendance({ user: req.user._id, date: today, clockIn: new Date(), status: 'present' });
+    if (!attendance) {
+      attendance = new Attendance({
+        user: req.user._id,
+        date: today,
+        clockIn: now,
+        clockOut: null,
+        sessions: [{ clockIn: now, clockOut: null, durationHours: 0 }],
+        status: 'present',
+      });
+    } else {
+      if (!attendance.sessions) {
+        attendance.sessions = [];
+      }
+
+      // If sessions array is empty but legacy clockIn exists
+      if (attendance.sessions.length === 0 && attendance.clockIn) {
+        attendance.sessions.push({
+          clockIn: attendance.clockIn,
+          clockOut: attendance.clockOut || null,
+          durationHours: attendance.totalHours || 0,
+        });
+      }
+
+      // Check if user is currently clocked in (open session exists)
+      const hasOpenSession = attendance.sessions.some((s) => !s.clockOut);
+      if (hasOpenSession) {
+        return res.status(400).json({ success: false, message: 'Already clocked in' });
+      }
+
+      // Start new session (resuming shift after break)
+      if (!attendance.clockIn) {
+        attendance.clockIn = now;
+      }
+      attendance.clockOut = null; // Currently active in a session
+      attendance.sessions.push({ clockIn: now, clockOut: null, durationHours: 0 });
+      if (['absent', 'half_day'].includes(attendance.status) || !attendance.status) {
+        attendance.status = 'present';
+      }
+    }
 
     await attendance.save();
     res.json({ success: true, message: 'Clocked in successfully', attendance });
@@ -26,11 +62,40 @@ export const clockOut = async (req, res) => {
     today.setHours(0, 0, 0, 0);
 
     const attendance = await Attendance.findOne({ user: req.user._id, date: today });
-    if (!attendance?.clockIn) return res.status(400).json({ success: false, message: 'No clock-in found for today' });
-    if (attendance.clockOut) return res.status(400).json({ success: false, message: 'Already clocked out today' });
+    if (!attendance) {
+      return res.status(400).json({ success: false, message: 'No clock-in found for today' });
+    }
 
-    attendance.clockOut = new Date();
-    attendance.totalHours = parseFloat(((attendance.clockOut - attendance.clockIn) / 3600000).toFixed(2));
+    if (!attendance.sessions || attendance.sessions.length === 0) {
+      if (!attendance.clockIn) {
+        return res.status(400).json({ success: false, message: 'No clock-in found for today' });
+      }
+      attendance.sessions = [{
+        clockIn: attendance.clockIn,
+        clockOut: attendance.clockOut || null,
+        durationHours: attendance.totalHours || 0,
+      }];
+    }
+
+    const openSession = attendance.sessions.find((s) => !s.clockOut);
+    if (!openSession) {
+      return res.status(400).json({ success: false, message: 'Already clocked out' });
+    }
+
+    const now = new Date();
+    openSession.clockOut = now;
+    openSession.durationHours = parseFloat(((now - new Date(openSession.clockIn)) / 3600000).toFixed(2));
+
+    // Calculate total cumulative working hours for today across all sessions
+    const totalMs = attendance.sessions.reduce((sum, s) => {
+      if (s.clockIn && s.clockOut) {
+        return sum + (new Date(s.clockOut) - new Date(s.clockIn));
+      }
+      return sum;
+    }, 0);
+
+    attendance.clockOut = now;
+    attendance.totalHours = parseFloat((totalMs / 3600000).toFixed(2));
     await attendance.save();
 
     res.json({ success: true, message: 'Clocked out successfully', attendance });
@@ -92,7 +157,7 @@ export const submitEOD = async (req, res) => {
     try {
       const User = (await import('../models/user.model.js')).default;
       const managers = await User.find({
-        role: { $in: ['superAdmin', 'manager', 'organizationOwner', 'accountManager'] },
+        role: { $in: ['superAdmin', 'admin', 'manager', 'organizationOwner', 'accountManager'] },
         isActive: true,
       }).select('_id');
 
@@ -124,7 +189,7 @@ export const getAttendance = async (req, res) => {
     const { userId, status, month, year, page = 1, limit = 1000 } = req.query;
     const filter = {};
 
-    const isPrivileged = ['superAdmin', 'organizationOwner', 'manager', 'accountManager'].includes(req.user.role);
+    const isPrivileged = ['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager'].includes(req.user.role);
 
     if (!isPrivileged || req.user.role === 'employee') {
       filter.user = req.user._id;
@@ -303,47 +368,169 @@ export const assignHoliday = async (req, res) => {
   }
 };
 
-export const submitLeave = async (req, res) => {
+export const submitAbsent = async (req, res) => {
   try {
-    const { userId, date, notes } = req.body;
-    if (!userId) {
-      return res.status(400).json({ success: false, message: 'Employee userId is required' });
-    }
-    if (!date) {
-      return res.status(400).json({ success: false, message: 'Date is required' });
+    const { userId, date, notes, reason } = req.body;
+    const targetUserId = userId || req.user._id;
+    const reasonText = notes || reason;
+
+    if (!reasonText || !reasonText.trim()) {
+      return res.status(400).json({ success: false, message: 'Reason for marking absent is required' });
     }
 
-    const leaveDate = new Date(date);
-    leaveDate.setHours(0, 0, 0, 0);
+    const absentDate = date ? new Date(date) : new Date();
+    absentDate.setHours(0, 0, 0, 0);
 
-    const assignerRole = req.user.role === 'superAdmin' ? 'Super Admin' : 'Manager';
-    const reasonText = notes || 'Assigned Leave';
+    const isAdminOrManager = ['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager'].includes(req.user.role);
+
+    const updateObj = {
+      notes: reasonText.trim(),
+      requestedStatus: 'absent',
+      approvalStatus: isAdminOrManager ? 'approved' : 'pending',
+      isApproved: isAdminOrManager,
+      approvedBy: isAdminOrManager ? req.user._id : undefined,
+    };
+
+    if (isAdminOrManager) {
+      updateObj.status = 'absent';
+      updateObj.clockIn = null;
+      updateObj.clockOut = null;
+      updateObj.totalHours = 0;
+      updateObj.sessions = [];
+    }
 
     const attendance = await Attendance.findOneAndUpdate(
-      { user: userId, date: leaveDate },
-      {
-        status: 'leave',
-        notes: reasonText,
-        isApproved: true,
-        approvedBy: req.user._id,
-      },
+      { user: targetUserId, date: absentDate },
+      { $set: updateObj },
       { upsert: true, new: true }
+    ).populate('user', 'name avatar department position role email');
+
+    // Notify managers & admins if requested by an employee
+    if (!isAdminOrManager) {
+      try {
+        const User = (await import('../models/user.model.js')).default;
+        const managers = await User.find({ role: { $in: ['superAdmin', 'admin', 'manager', 'organizationOwner', 'accountManager'] }, isActive: true }).select('_id');
+        const formattedDate = absentDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        for (const mgr of managers) {
+          await createNotification({
+            recipient: mgr._id,
+            sender: req.user._id,
+            type: 'attendance',
+            title: 'Absence Request Pending Approval ⚠️',
+            message: `${req.user.name} requested Absent for ${formattedDate}: "${reasonText.trim()}"`,
+            link: '/attendance',
+          });
+        }
+      } catch (err) {
+        console.error('Notification error:', err);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: isAdminOrManager ? 'Marked absent successfully' : 'Absence request submitted for Admin/Manager approval',
+      attendance,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const submitLeave = async (req, res) => {
+  try {
+    const { userId, date, startDate, endDate, notes, reason } = req.body;
+    const targetUserId = userId || req.user._id;
+    const reasonText = notes || reason;
+
+    if (!reasonText || !reasonText.trim()) {
+      return res.status(400).json({ success: false, message: 'Reason for leave is required' });
+    }
+
+    const isAdminOrManager = ['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager'].includes(req.user.role);
+
+    // Compute dates list (single date or date range)
+    const datesToApply = [];
+    if (startDate && endDate) {
+      const cur = new Date(startDate);
+      cur.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(0, 0, 0, 0);
+      while (cur <= end) {
+        datesToApply.push(new Date(cur));
+        cur.setDate(cur.getDate() + 1);
+      }
+    } else {
+      const singleDate = date ? new Date(date) : new Date();
+      singleDate.setHours(0, 0, 0, 0);
+      datesToApply.push(singleDate);
+    }
+
+    const updateObj = {
+      notes: reasonText.trim(),
+      requestedStatus: 'leave',
+      approvalStatus: isAdminOrManager ? 'approved' : 'pending',
+      isApproved: isAdminOrManager,
+      approvedBy: isAdminOrManager ? req.user._id : undefined,
+    };
+
+    if (isAdminOrManager) {
+      updateObj.status = 'leave';
+      updateObj.clockIn = null;
+      updateObj.clockOut = null;
+      updateObj.totalHours = 0;
+      updateObj.sessions = [];
+    }
+
+    const results = await Promise.all(
+      datesToApply.map((d) =>
+        Attendance.findOneAndUpdate(
+          { user: targetUserId, date: d },
+          { $set: updateObj },
+          { upsert: true, new: true }
+        ).populate('user', 'name avatar department position role email').populate('approvedBy', 'name role')
+      )
     );
 
-    // Send notification to employee
-    await createNotification(
-      {
-        recipient: userId,
-        sender: req.user._id,
-        type: 'attendance',
-        title: 'Leave Assigned 🏖️',
-        message: `${req.user.name} (${assignerRole}) assigned you leave on ${date}: "${reasonText}"`,
-        link: '/attendance',
-      },
-      req.app.get('io')
-    );
+    const attendance = results[0];
 
-    res.json({ success: true, message: 'Leave assigned successfully', attendance });
+    // Notify managers & admins if requested by an employee
+    if (!isAdminOrManager) {
+      try {
+        const User = (await import('../models/user.model.js')).default;
+        const managers = await User.find({
+          role: { $in: ['superAdmin', 'admin', 'manager', 'organizationOwner', 'accountManager'] },
+          isActive: true,
+        }).select('_id');
+
+        let dateStr = datesToApply[0].toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        if (datesToApply.length > 1) {
+          const lastDateStr = datesToApply[datesToApply.length - 1].toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+          dateStr = `${dateStr} to ${lastDateStr} (${datesToApply.length} days)`;
+        }
+
+        for (const mgr of managers) {
+          await createNotification({
+            recipient: mgr._id,
+            sender: req.user._id,
+            type: 'attendance',
+            title: 'Leave Request Pending Approval 🏖️',
+            message: `${req.user.name} applied for leave for ${dateStr}: "${reasonText.trim()}"`,
+            link: '/attendance',
+          });
+        }
+      } catch (err) {
+        console.error('Notification error:', err);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: isAdminOrManager
+        ? `Leave marked successfully for ${datesToApply.length} day(s)`
+        : `Leave application submitted for Admin/Manager approval (${datesToApply.length} day(s))`,
+      attendance,
+      count: datesToApply.length,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -351,7 +538,9 @@ export const submitLeave = async (req, res) => {
 
 export const submitWFH = async (req, res) => {
   try {
-    const { date, notes } = req.body;
+    const { date, notes, reason } = req.body;
+    const reasonText = notes || reason || 'Work From Home Requested';
+
     if (!date) {
       return res.status(400).json({ success: false, message: 'Date is required' });
     }
@@ -359,29 +548,123 @@ export const submitWFH = async (req, res) => {
     const wfhDate = new Date(date);
     wfhDate.setHours(0, 0, 0, 0);
 
-    // Validation: WFH must be informed before the day itself (i.e. tomorrow or later)
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
+    const isAdminOrManager = ['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager'].includes(req.user.role);
 
-    if (wfhDate < tomorrow) {
-      return res.status(400).json({
-        success: false,
-        message: 'Work From Home must be informed at least one day in advance (for tomorrow or later)'
-      });
+    const updateObj = {
+      notes: reasonText.trim(),
+      requestedStatus: 'work_from_home',
+      approvalStatus: isAdminOrManager ? 'approved' : 'pending',
+      isApproved: isAdminOrManager,
+      approvedBy: isAdminOrManager ? req.user._id : undefined,
+    };
+
+    if (isAdminOrManager) {
+      updateObj.status = 'work_from_home';
     }
 
     const attendance = await Attendance.findOneAndUpdate(
       { user: req.user._id, date: wfhDate },
-      {
-        status: 'work_from_home',
-        notes: notes || 'Work From Home Informed',
-        isApproved: true,
-      },
+      { $set: updateObj },
       { upsert: true, new: true }
-    );
+    ).populate('user', 'name avatar department position role email');
 
-    res.json({ success: true, message: 'Work From Home informed successfully', attendance });
+    // Notify managers & admins if requested by an employee
+    if (!isAdminOrManager) {
+      try {
+        const User = (await import('../models/user.model.js')).default;
+        const managers = await User.find({ role: { $in: ['superAdmin', 'admin', 'manager', 'organizationOwner', 'accountManager'] }, isActive: true }).select('_id');
+        const formattedDate = wfhDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        for (const mgr of managers) {
+          await createNotification({
+            recipient: mgr._id,
+            sender: req.user._id,
+            type: 'attendance',
+            title: 'Work From Home Request Pending 🏠',
+            message: `${req.user.name} requested WFH for ${formattedDate}: "${reasonText.trim()}"`,
+            link: '/attendance',
+          });
+        }
+      } catch (err) {
+        console.error('Notification error:', err);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: isAdminOrManager ? 'Work From Home marked successfully' : 'Work From Home request submitted for Admin/Manager approval',
+      attendance,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const approveOrRejectAttendanceRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action, rejectionReason } = req.body; // action: 'approve' | 'reject'
+
+    const isAdminOrManager = ['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager'].includes(req.user.role);
+    if (!isAdminOrManager) {
+      return res.status(403).json({ success: false, message: 'Only Admins and Managers can approve/reject attendance requests.' });
+    }
+
+    const attendance = await Attendance.findById(id).populate('user', 'name avatar email');
+    if (!attendance) {
+      return res.status(404).json({ success: false, message: 'Attendance request record not found.' });
+    }
+
+    if (action === 'approve') {
+      attendance.approvalStatus = 'approved';
+      attendance.isApproved = true;
+      attendance.approvedBy = req.user._id;
+      if (attendance.requestedStatus && attendance.requestedStatus !== 'none') {
+        attendance.status = attendance.requestedStatus;
+      }
+      if (attendance.status === 'absent') {
+        attendance.clockIn = null;
+        attendance.clockOut = null;
+        attendance.totalHours = 0;
+        attendance.sessions = [];
+      }
+    } else if (action === 'reject') {
+      attendance.approvalStatus = 'rejected';
+      attendance.isApproved = false;
+      attendance.approvedBy = req.user._id;
+      attendance.rejectionReason = rejectionReason || 'Request rejected by manager.';
+    }
+
+    await attendance.save();
+    await attendance.populate('user', 'name avatar email department position role');
+    await attendance.populate('approvedBy', 'name role');
+
+    // Send notification to employee
+    const statusLabel = (attendance.requestedStatus || attendance.status).replace(/_/g, ' ');
+    const formattedDate = new Date(attendance.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    try {
+      await createNotification(
+        {
+          recipient: attendance.user._id,
+          sender: req.user._id,
+          type: 'attendance',
+          title: action === 'approve' ? `Attendance Request Approved ✅` : `Attendance Request Rejected ❌`,
+          message: action === 'approve'
+            ? `Your request for ${statusLabel} on ${formattedDate} was approved by ${req.user.name}.`
+            : `Your request for ${statusLabel} on ${formattedDate} was rejected: "${rejectionReason || 'No reason provided'}"`,
+          link: '/attendance',
+        },
+        req.app.get('io')
+      );
+    } catch (notifErr) {
+      console.error('Notification error:', notifErr);
+    }
+
+    res.json({
+      success: true,
+      message: `Attendance request ${action}d successfully.`,
+      attendance,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

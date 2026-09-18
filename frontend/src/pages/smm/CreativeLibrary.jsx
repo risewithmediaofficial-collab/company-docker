@@ -168,7 +168,7 @@ export default function CreativeLibrary() {
           ))}
         </div>
       ) : (
-        <div className="app-card divide-y divide-border">
+        <div className="app-card divide-y divide-border overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar">
           {creatives.map((item) => (
             <div key={item._id} className="p-4 flex items-center justify-between gap-4 hover:bg-secondary/20">
               <div className="flex items-center gap-3">

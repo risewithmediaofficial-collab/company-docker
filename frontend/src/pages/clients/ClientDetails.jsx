@@ -4,15 +4,19 @@ import { useQuery } from '@tanstack/react-query';
 import { useSelector } from 'react-redux';
 import api from '../../api';
 import {
-  ChevronLeft, Building2, Phone, Mail, Globe, IndianRupee,
+  Building2, Phone, Mail, IndianRupee,
   Briefcase, CheckCircle2, Clock, AlertCircle, Users,
-  FileText, TrendingUp, MoreHorizontal, Edit2, MessageSquare, FolderOpen
+  FileText, TrendingUp, Edit2, FolderOpen, Calendar
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AddClientModal } from '../../components/modals/AddClientModal';
 import { AddProjectModal } from '../../components/modals/AddProjectModal';
 import ClientFinancialSummary from '../../components/ui/ClientFinancialSummary';
 import ClientProjectsPanel from '../../components/ui/ClientProjectsPanel';
+import {
+  NotionDetailPage,
+  NotionTabs,
+} from '../../components/ui/NotionDetailTemplate';
 import { formatINR } from '../../utils/currency';
 
 const onboardingStepLabels = {
@@ -24,11 +28,11 @@ const onboardingStepLabels = {
 };
 
 const statusStyles = {
-  Active: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-  Inactive: 'bg-gray-500/10 text-gray-600 border-gray-500/20',
-  Churned: 'bg-red-500/10 text-red-600 border-red-500/20',
-  Prospect: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-  Renew: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  Active: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
+  Prospect: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+  Churned: 'bg-red-500/10 text-red-600 border-red-500/30',
+  Inactive: 'bg-secondary text-muted-foreground border-border',
+  Renew: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30',
 };
 
 const ClientDetails = () => {
@@ -38,24 +42,25 @@ const ClientDetails = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['client', id],
     queryFn: async () => {
-      const [clientRes, projectsRes, invoicesRes, financeRes, callRes, referralRes] = await Promise.all([
+      const [clientRes, projectsRes, invoicesRes, financeRes, callRes, referralRes] = await Promise.allSettled([
         api.get(`/clients/${id}`),
-        api.get(`/projects?client=${id}&limit=10`),
-        api.get(`/finance/invoices?client=${id}&limit=10`),
-        api.get(`/finance/records/client/${id}`),
-        api.get(`/finance/call-history/client/${id}`),
-        api.get(`/referrals/client/${id}`),
+        api.get(`/projects?client=${id}`),
+        api.get(`/finance/invoices?client=${id}`),
+        api.get(`/finance?client=${id}`),
+        api.get(`/finance/call-history?clientId=${id}`),
+        api.get(`/referrals?client=${id}`),
       ]);
+
       return {
-        client: clientRes.data.client,
-        projects: projectsRes.data.projects || [],
-        invoices: invoicesRes.data.invoices || [],
-        financeRecords: financeRes?.data?.records || [],
-        callHistory: callRes?.data?.calls || [],
-        referrals: referralRes?.data?.referrals || [],
+        client: clientRes.status === 'fulfilled' ? clientRes.value.data.client : null,
+        projects: projectsRes.status === 'fulfilled' ? (projectsRes.value.data.projects || projectsRes.value.data || []) : [],
+        invoices: invoicesRes.status === 'fulfilled' ? invoicesRes.value.data.invoices || [] : [],
+        financeRecords: financeRes.status === 'fulfilled' ? financeRes.value.data.records || [] : [],
+        callHistory: callRes.status === 'fulfilled' ? callRes.value.data.calls || [] : [],
+        referrals: referralRes.status === 'fulfilled' ? referralRes.value.data.referrals || [] : [],
       };
     },
   });
@@ -87,13 +92,14 @@ const ClientDetails = () => {
   const totalRevenue = paidInvoices.reduce((sum, inv) => sum + (inv.total || inv.amount || 0), 0);
   const paymentNotes = financeRecords.flatMap((record) => record.paymentHistory || []);
 
-  const isFinanceVisible = user?.role === 'superAdmin' || user?.role === 'manager' || !!user?.permissions?.canManageFinance;
+  const isFinanceVisible = user?.role === 'superAdmin' || user?.role === 'admin' || user?.role === 'manager' || !!user?.permissions?.canManageFinance;
 
   const stats = [
     ...(isFinanceVisible ? [
       { label: 'Total Revenue', value: formatINR(totalRevenue), icon: IndianRupee, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
     ] : []),
     { label: 'Active Projects', value: projects.filter(p => p.status === 'active').length, icon: Briefcase, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Account Created', value: client.createdAt ? new Date(client.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—', icon: Calendar, color: 'text-violet-500', bg: 'bg-violet-500/10' },
     ...(isFinanceVisible ? [
       { label: 'Paid Invoices', value: paidInvoices.length, icon: CheckCircle2, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
       { label: 'Pending Invoices', value: pendingInvoices.length, icon: AlertCircle, color: 'text-amber-500', bg: 'bg-amber-500/10' },
@@ -115,100 +121,73 @@ const ClientDetails = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
 
-      {/* Header Card */}
-      <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden relative">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-indigo-500 to-violet-500" />
-        <div className="p-7 flex flex-col md:flex-row md:items-center gap-6">
-          <Link to="/clients" className="absolute top-6 left-6 p-2 rounded-xl hover:bg-secondary transition-colors text-muted-foreground">
-            <ChevronLeft size={20} />
-          </Link>
-
-          <div className="flex items-center gap-5 md:ml-10">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-2xl font-black shadow-inner">
-              {client.company?.charAt(0) || client.name?.charAt(0)}
-            </div>
-            <div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl font-bold tracking-tight">{client.company || client.name}</h1>
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${statusStyles[client.status] || statusStyles.Active}`}>
-                  {client.status}
-                </span>
-                <span className="px-2 py-1 rounded-lg bg-secondary text-[10px] font-bold uppercase text-muted-foreground">
-                  {client.tier}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-                {client.email && <span className="flex items-center gap-1.5"><Mail size={14}/>{client.email}</span>}
-                {client.phone && <span className="flex items-center gap-1.5"><Phone size={14}/>{client.phone}</span>}
-                {client.website && <span className="flex items-center gap-1.5"><Globe size={14}/>{client.website}</span>}
-              </div>
-            </div>
-          </div>
-
-          <div className="ml-auto flex gap-3">
-            <Link to="/chat" className="flex items-center gap-2 px-4 py-2 border border-border rounded-xl text-sm font-medium hover:bg-secondary transition-colors">
-              <MessageSquare size={16}/> Message
-            </Link>
+      <NotionDetailPage
+        backTo="/clients"
+        backLabel="Clients"
+        title={client.company || client.name}
+        subtitle={[
+          client.email,
+          client.phone,
+          client.website,
+          client.createdAt ? `Created ${new Date(client.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}` : null,
+        ].filter(Boolean).join(' | ')}
+        icon={Building2}
+        status={client.status}
+        statusClassName={`border ${statusStyles[client.status] || statusStyles.Active}`}
+        actions={(
+          <>
+            {client.email && (
+              <a
+                href={`mailto:${client.email}`}
+                className="flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
+              >
+                <Mail size={16} /> Email Client
+              </a>
+            )}
             {client.driveLink && (
               <a
                 href={client.driveLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 border border-emerald-500/40 bg-emerald-500/10 text-emerald-600 rounded-xl text-sm font-semibold hover:bg-emerald-500/20 transition-colors"
+                className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-600 transition-colors hover:bg-emerald-500/20"
               >
-                <FolderOpen size={16}/> Drive Folder
+                <FolderOpen size={16} /> Drive Folder
               </a>
             )}
             {user?.role !== 'client' && (
               <button
                 onClick={() => setShowEditModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90"
               >
-                <Edit2 size={16}/> Edit Client
+                <Edit2 size={16} /> Edit Client
               </button>
             )}
-          </div>
-        </div>
-
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 border-t border-border">
+          </>
+        )}
+      >
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {stats.map((stat, i) => (
             <motion.div
               key={stat.label}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.07 }}
-              className={`p-5 flex items-center gap-4 ${i < stats.length - 1 ? 'border-r border-border' : ''}`}
+              className="flex items-center gap-4 rounded-2xl border border-border/70 bg-secondary/20 p-4"
             >
-              <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color}`}>
+              <div className={`rounded-2xl p-3 ${stat.bg} ${stat.color}`}>
                 <stat.icon size={20} />
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground">{stat.label}</p>
-                <p className="text-xl font-bold mt-0.5">{stat.value}</p>
+                <p className="mt-0.5 text-xl font-bold">{stat.value}</p>
               </div>
             </motion.div>
           ))}
         </div>
-      </div>
+      </NotionDetailPage>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 bg-card border border-border rounded-2xl p-1.5 w-full overflow-x-auto">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
-              activeTab === tab.id
-                ? 'bg-primary text-white shadow-md shadow-primary/20'
-                : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-            }`}
-          >
-            <tab.icon size={15} />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <NotionTabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
@@ -234,10 +213,13 @@ const ClientDetails = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm">
                 {[
                   ['Type / Sector', client.industry || 'Not set'],
-                  ['Contract Value', client.contractValue ? formatINR(client.contractValue) : '—'],
+                  [
+                    client.budgetType === 'overall' ? 'Overall Budget Amount' : 'Monthly Budget Amount',
+                    client.contractValue ? `${formatINR(client.contractValue)} (${client.budgetType === 'overall' ? 'Overall' : 'Monthly'})` : '—',
+                  ],
                   ['Billing Cycle', client.billingCycle || '—'],
                   ['Contract Start', client.contractStartDate ? new Date(client.contractStartDate).toLocaleDateString() : '—'],
-                  ['Contract End', client.contractEndDate ? new Date(client.contractEndDate).toLocaleDateString() : '—'],
+                  ['Contract End', client.contractEndDate ? new Date(client.contractEndDate).toLocaleDateString() : 'Ongoing / Retainer (No End Date)'],
                   ['Requirements', client.services?.join(', ') || 'Not set'],
                 ].map(([label, value]) => (
                   <div key={label} className="p-4 bg-secondary/30 rounded-2xl border border-border/50">

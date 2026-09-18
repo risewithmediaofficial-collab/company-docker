@@ -21,10 +21,20 @@ export const protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password -refreshToken');
+    const user = await User.findById(decoded.id).select('+passwordChangedAt -password -refreshToken');
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.passwordChangedAt && decoded.iat) {
+      const changedTimestamp = Math.floor(user.passwordChangedAt.getTime() / 1000);
+      if (decoded.iat < changedTimestamp) {
+        return res.status(401).json({
+          success: false,
+          message: 'Password or security settings were recently changed. Please log in again.',
+        });
+      }
     }
 
     if (user.approvalStatus && user.approvalStatus !== 'approved') {
@@ -48,7 +58,15 @@ export const protect = async (req, res, next) => {
  */
 export const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    // Admin and superAdmin have universal access across the entire platform
+    if (req.user && (req.user.role === 'superAdmin' || req.user.role === 'admin')) {
+      return next();
+    }
+    let allowedRoles = [...roles];
+    if (allowedRoles.includes('superAdmin') && !allowedRoles.includes('admin')) {
+      allowedRoles.push('admin');
+    }
+    if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: `Role '${req.user.role}' is not authorized to access this resource`,
@@ -63,8 +81,8 @@ export const authorize = (...roles) => {
  */
 export const requirePermission = (permissionKey) => {
   return (req, res, next) => {
-    // SuperAdmins bypass permission checks
-    if (req.user.role === 'superAdmin') return next();
+    // SuperAdmins & Admins bypass permission checks
+    if (req.user.role === 'superAdmin' || req.user.role === 'admin') return next();
     
     if (!req.user.permissions?.[permissionKey]) {
       return res.status(403).json({
@@ -84,7 +102,7 @@ export const withWorkspaceScope = (req, baseQuery = {}) => {
   const user = req.user;
   if (!user) return baseQuery;
   
-  if (user.role === 'superAdmin') {
+  if (user.role === 'superAdmin' || user.role === 'admin') {
     if (req.headers['x-workspace-id']) {
       return { ...baseQuery, brandId: req.headers['x-workspace-id'] };
     }

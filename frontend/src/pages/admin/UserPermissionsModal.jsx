@@ -1,12 +1,22 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import api from '../../api';
+import { toast } from 'sonner';
 
 const PERMISSIONS = [
   { key: 'canViewReports', label: 'View Reports' },
   { key: 'canApproveContent', label: 'Approve Content' },
+  { key: 'canViewFinanceOverview', label: 'View Finance Overview' },
   { key: 'canManageFinance', label: 'Manage Finance' },
+  { key: 'canManageLeads', label: 'Manage Leads' },
+  { key: 'canManageHR', label: 'Manage HR' },
   { key: 'canAssignTasks', label: 'Assign Tasks' },
   { key: 'canUploadAssets', label: 'Upload Assets' },
   { key: 'canViewAnalytics', label: 'View Analytics' },
@@ -15,8 +25,8 @@ const PERMISSIONS = [
 ];
 
 export default function UserPermissionsModal({ user, onClose, onSave }) {
-  const [permissions, setPermissions] = useState(user.permissions || {});
-  const [assignedBrands, setAssignedBrands] = useState(user.assignedBrands || []);
+  const [permissions, setPermissions] = useState(user?.permissions || {});
+  const [assignedBrands, setAssignedBrands] = useState(user?.assignedBrands || []);
   const [allBrands, setAllBrands] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -39,73 +49,87 @@ export default function UserPermissionsModal({ user, onClose, onSave }) {
   };
 
   const handleSave = async () => {
-    setLoading(true);
-    await onSave(user._id, { permissions, assignedBrands });
-    setLoading(false);
-    onClose();
+    try {
+      setLoading(true);
+      if (typeof onSave === 'function') {
+        await onSave(user._id, { permissions, assignedBrands });
+      } else {
+        await api.put(`/users/${user._id}`, { permissions, assignedBrands });
+      }
+      toast.success('Permissions & workspace access updated');
+      onClose();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || 'Failed to update permissions');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-lg bg-card rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between p-5 border-b border-border">
-          <div>
-            <h2 className="text-xl font-bold">Access Control</h2>
-            <p className="text-sm text-muted-foreground mt-1">Configure permissions for {user.name}</p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-secondary rounded-xl text-muted-foreground transition-colors">
-            <X size={20} />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle>Access Control & Permissions</DialogTitle>
+          <DialogDescription>
+            Configure granular role permissions and assigned workspaces for {user?.name}
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="p-5 overflow-y-auto flex-1 space-y-6">
+        <div className="space-y-6 text-xs">
           <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Granular Permissions</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <h3 className="text-xs font-bold text-foreground mb-3 flex items-center gap-1.5">
+              <span>🔒</span> Granular Permissions
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {PERMISSIONS.map(p => (
-                <label key={p.key} className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-secondary/50 cursor-pointer transition-colors">
+                <label key={p.key} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-border bg-background hover:bg-secondary/40 cursor-pointer transition-colors">
                   <input 
                     type="checkbox" 
                     checked={!!permissions[p.key]} 
                     onChange={() => handleTogglePermission(p.key)}
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
                   />
-                  <span className="text-sm font-medium">{p.label}</span>
+                  <span className="text-xs font-medium text-foreground">{p.label}</span>
                 </label>
               ))}
             </div>
           </div>
 
           <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Assigned Workspaces</h3>
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+            <h3 className="text-xs font-bold text-foreground mb-3 flex items-center gap-1.5">
+              <span>🏢</span> Assigned Workspaces
+            </h3>
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
               {allBrands.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">No workspaces available.</p>
+                <p className="text-xs text-muted-foreground italic">No workspaces available.</p>
               ) : (
                 allBrands.map(brand => (
-                  <label key={brand._id} className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-secondary/50 cursor-pointer transition-colors">
+                  <label key={brand._id} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-border bg-background hover:bg-secondary/40 cursor-pointer transition-colors">
                     <input 
                       type="checkbox" 
                       checked={assignedBrands.includes(brand._id)} 
                       onChange={() => handleToggleBrand(brand._id)}
-                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
                     />
-                    <span className="text-sm font-medium flex-1">{brand.name}</span>
-                    <span className="text-xs text-muted-foreground px-2 py-0.5 bg-secondary rounded-full">{brand.status}</span>
+                    <span className="text-xs font-medium flex-1 text-foreground">{brand.name}</span>
+                    <span className="text-[10px] text-muted-foreground px-2 py-0.5 bg-secondary rounded-full border border-border/60">{brand.status}</span>
                   </label>
                 ))
               )}
             </div>
           </div>
-        </div>
 
-        <div className="p-5 border-t border-border flex justify-end gap-3 bg-secondary/20">
-          <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
-          <Button onClick={handleSave} disabled={loading}>
-            {loading ? 'Saving...' : 'Save Configuration'}
-          </Button>
+          <div className="flex justify-end gap-2 pt-4 border-t border-border">
+            <Button variant="outline" onClick={onClose} disabled={loading} className="rounded-xl text-xs">
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={loading} className="rounded-xl bg-primary text-primary-foreground font-bold text-xs">
+              {loading ? 'Saving...' : 'Save Permissions'}
+            </Button>
+          </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -24,10 +24,13 @@ export const loginUser = createAsyncThunk(
 // Raw axios is safe here: on first load the token is fresh enough.
 export const fetchMe = createAsyncThunk(
   'auth/fetchMe',
-  async (_, { rejectWithValue, getState }) => {
+  async (_, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('accessToken');
-      if (!token) return rejectWithValue({ message: 'No token' });
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!token || !refreshToken) {
+        return rejectWithValue({ isAuthError: true, message: 'No active session' });
+      }
 
       const response = await axios.get('/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
@@ -36,10 +39,12 @@ export const fetchMe = createAsyncThunk(
     } catch (error) {
       // If 401 — try refreshing once before giving up
       if (error.response?.status === 401) {
-        try {
-          const refreshToken = localStorage.getItem('refreshToken');
-          if (!refreshToken) throw new Error('No refresh token');
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (!refreshToken) {
+          return rejectWithValue({ isAuthError: true, message: 'Session expired. Please log in again.' });
+        }
 
+        try {
           const refreshRes = await axios.post('/api/auth/refresh', { refreshToken });
           localStorage.setItem('accessToken', refreshRes.data.accessToken);
           if (refreshRes.data.refreshToken) {
@@ -53,10 +58,10 @@ export const fetchMe = createAsyncThunk(
           return retryRes.data;
         } catch (_refreshError) {
           // Refresh failed — session is truly expired
-          return rejectWithValue({ message: 'Session expired. Please log in again.' });
+          return rejectWithValue({ isAuthError: true, message: 'Session expired. Please log in again.' });
         }
       }
-      return rejectWithValue(error.response?.data || { message: 'Session expired' });
+      return rejectWithValue({ isAuthError: false, message: error.response?.data?.message || 'Server connection issue' });
     }
   }
 );
@@ -71,8 +76,9 @@ const authSlice = createSlice({
     accessToken: localStorage.getItem('accessToken') || null,
     activeWorkspace: localStorage.getItem('activeWorkspace') || null,
     loading: false,
+    authChecked: false,
     error: null,
-    isAuthenticated: !!localStorage.getItem('accessToken'),
+    isAuthenticated: Boolean(localStorage.getItem('accessToken') && localStorage.getItem('refreshToken')),
   },
   reducers: {
     logout: (state) => {
@@ -82,6 +88,7 @@ const authSlice = createSlice({
       state.activeWorkspace = null;
       state.isAuthenticated = false;
       state.loading = false;
+      state.authChecked = true;
       state.error = null;
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
@@ -91,6 +98,7 @@ const authSlice = createSlice({
       state.user = action.payload.user;
       state.accessToken = action.payload.accessToken;
       state.isAuthenticated = true;
+      state.authChecked = true;
       state.error = null;
     },
     updateCurrentUser: (state, action) => {
@@ -122,10 +130,12 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.accessToken = action.payload.accessToken;
         state.isAuthenticated = true;
+        state.authChecked = true;
         state.error = null;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
+        state.authChecked = true;
         state.error = action.payload?.message || 'Login failed';
       })
       // ── Fetch Me ──
@@ -138,17 +148,23 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.organization = action.payload.organization || null;
         state.isAuthenticated = true;
+        state.authChecked = true;
         state.error = null;
       })
       .addCase(fetchMe.rejected, (state, action) => {
         state.loading = false;
-        state.user = null;
-        state.organization = null;
-        state.accessToken = null;
-        state.isAuthenticated = false;
-        state.error = action.payload?.message || 'Session expired';
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        state.authChecked = true;
+        if (action.payload?.isAuthError) {
+          state.user = null;
+          state.organization = null;
+          state.accessToken = null;
+          state.isAuthenticated = false;
+          state.error = action.payload?.message || 'Session expired';
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+        } else {
+          state.error = action.payload?.message || 'Temporary connection issue';
+        }
       });
   },
 });

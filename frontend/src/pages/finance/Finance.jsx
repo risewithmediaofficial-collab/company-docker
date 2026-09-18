@@ -17,6 +17,31 @@ import {
   Pencil,
   Trash2,
   Filter,
+  TrendingUp,
+  TrendingDown,
+  CreditCard,
+  Building,
+  Sparkles,
+  ArrowUpRight,
+  ArrowDownRight,
+  PieChart,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Briefcase,
+  Layers,
+  Banknote,
+  Coins,
+  Printer,
+  Table as TableIcon,
+  LayoutGrid,
+  Zap,
+  Megaphone,
+  Video,
+  Wrench,
+  ShoppingBag,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import {
@@ -34,19 +59,16 @@ import { ShareInvoiceModal } from '../../components/modals/ShareInvoiceModal';
 import { AddExpenseModal } from '../../components/modals/AddExpenseModal';
 import { AddAdsCampaignModal } from '../../components/modals/AddAdsCampaignModal';
 import { MonthlyExpenseReportModal } from '../../components/modals/MonthlyExpenseReportModal';
+import { AddSalaryModal } from '../../components/modals/AddSalaryModal';
+import { PayslipModal } from '../../components/modals/PayslipModal';
 import { exportInvoiceToPDF } from '../../utils/pdfExport';
 import { DataTable } from '../../components/ui/DataTable';
-import {
-  MetricCard,
-  MetricGrid,
-  PageHeader,
-  PageToolbar,
-  SearchField,
-  SectionCard,
-  StatusBadge,
-} from '../../components/ui/page';
+import { useDateFilter } from '../../context/DateFilterContext';
+import { DateRangePicker } from '../../components/ui/DateRangePicker';
 import { useClients } from '../../hooks/useClients';
 import { useProjects } from '../../hooks/useProjects';
+import WorkspacePage from '../../components/ui/WorkspacePage';
+import { getCategoryTheme } from '../../utils/categoryColors';
 import {
   useAddInternalFinanceNote,
   useAddPartialPayment,
@@ -70,6 +92,13 @@ import {
   useApproveExpense,
   useDeleteExpense,
 } from '../../hooks/useFinance';
+import {
+  useSalaries,
+  useSalarySummary,
+  useUpdateSalaryStatus,
+  useDeleteSalary,
+  useGenerateMonthlyPayroll,
+} from '../../hooks/useSalary';
 
 const currency = new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -78,41 +107,74 @@ const currency = new Intl.NumberFormat('en-IN', {
 });
 
 const paymentStatusTone = {
-  'Not Paid': 'neutral',
-  'Partially Paid': 'warning',
-  Paid: 'success',
-  Overdue: 'danger',
+  'Not Paid': 'bg-slate-500/10 text-slate-600 border-slate-500/20',
+  'Partially Paid': 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  Paid: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+  Overdue: 'bg-rose-500/10 text-rose-600 border-rose-500/20',
 };
 
 const invoiceStatusTone = {
-  Draft: 'neutral',
-  Sent: 'info',
-  Viewed: 'info',
-  'Partially Paid': 'warning',
-  Paid: 'success',
-  Overdue: 'danger',
-  Cancelled: 'danger',
+  Draft: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
+  draft: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
+  Sent: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  sent: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  Viewed: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
+  viewed: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
+  'Partially Paid': 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  partially_paid: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  Paid: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+  paid: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+  Overdue: 'bg-rose-500/10 text-rose-600 border-rose-500/20',
+  overdue: 'bg-rose-500/10 text-rose-600 border-rose-500/20',
+  Cancelled: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
+  cancelled: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
 };
 
-const Finance = () => {
+const salaryStatusTone = {
+  paid: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+  pending: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  processing: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  hold: 'bg-rose-500/10 text-rose-600 border-rose-500/20',
+  draft: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
+};
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+export default function Finance() {
   const { user } = useSelector((state) => state.auth);
   const isManager = user?.role === 'manager';
-  const isAdmin = user?.role === 'superAdmin';
-  const canViewFinanceDetails = isAdmin || isManager || Boolean(user?.permissions?.canManageFinance);
+  const isAdmin = user?.role === 'superAdmin' || user?.role === 'admin';
+  const canViewFinanceOverview = isAdmin || isManager || Boolean(user?.permissions?.canViewFinanceOverview) || Boolean(user?.permissions?.canManageFinance);
+  const canManageFinanceAccess = isAdmin || isManager || Boolean(user?.permissions?.canManageFinance);
 
   const tabs = useMemo(() => {
-    if (canViewFinanceDetails) {
+    if (canViewFinanceOverview) {
       return [
-        { id: 'invoices', label: 'Invoices', icon: FileText },
-        { id: 'referrals', label: 'Referrals', icon: Users2 },
+        { id: 'invoices', label: 'Invoices & Billing', icon: FileText },
         { id: 'expenses', label: 'Expenses & Profits', icon: Receipt },
+        { id: 'salaries', label: 'Employee Salaries', icon: Banknote },
+        { id: 'referrals', label: 'Referral Payouts', icon: Users2 },
       ];
     }
-    return [{ id: 'invoices', label: 'Invoices', icon: FileText }];
-  }, [canViewFinanceDetails]);
+    return [{ id: 'invoices', label: 'Invoices & Billing', icon: FileText }];
+  }, [canViewFinanceOverview]);
 
   const [activeTab, setActiveTab] = useState('invoices');
   const [search, setSearch] = useState('');
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState('all');
   const [showFinanceModal, setShowFinanceModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -121,7 +183,25 @@ const Finance = () => {
   const [showAdsCampaignModal, setShowAdsCampaignModal] = useState(false);
   const [showMonthlyReportModal, setShowMonthlyReportModal] = useState(false);
 
+  // Salary module states
+  const [showSalaryModal, setShowSalaryModal] = useState(false);
+  const [selectedSalary, setSelectedSalary] = useState(null);
+  const [showPayslipModal, setShowPayslipModal] = useState(false);
+  const [payslipSalary, setPayslipSalary] = useState(null);
+  const [deleteSalaryId, setDeleteSalaryId] = useState(null);
+
+  const currentDate = new Date();
+  const currentMonthName = MONTH_NAMES[currentDate.getMonth()];
+  const currentYear = currentDate.getFullYear();
+
+  const [salaryMonthFilter, setSalaryMonthFilter] = useState(currentMonthName);
+  const [salaryYearFilter, setSalaryYearFilter] = useState(currentYear.toString());
+  const [salaryStatusFilter, setSalaryStatusFilter] = useState('all');
+  const [salaryDeptFilter, setSalaryDeptFilter] = useState('all');
+  const [salaryView, setSalaryView] = useState('table'); // 'table' | 'cards' | 'board'
+
   const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('all');
+  const [expenseApprovalFilter, setExpenseApprovalFilter] = useState('all'); // 'all' | 'approved' | 'pending'
   const [expenseTypeFilter, setExpenseTypeFilter] = useState('all');
   const [expenseSort, setExpenseSort] = useState('date_desc');
 
@@ -130,69 +210,100 @@ const Finance = () => {
   const [selectedExpense, setSelectedExpense] = useState(null);
   const [deleteInvoiceId, setDeleteInvoiceId] = useState(null);
   const [deleteExpenseId, setDeleteExpenseId] = useState(null);
+  const [showFinancials, setShowFinancials] = useState(false);
 
-  const [paymentForms, setPaymentForms] = useState({});
-  const [followupForms, setFollowupForms] = useState({});
-  const [callForm, setCallForm] = useState({
-    clientId: '',
-    projectId: '',
-    callType: 'Outgoing',
-    callPurpose: 'General Update',
-    callDate: new Date().toISOString().split('T')[0],
-    callTime: '',
-    spokenWith: '',
-    contactNumber: '',
-    callSummary: '',
-    clientResponse: '',
-    nextAction: '',
-    nextFollowUpDate: '',
-    visibleToClient: false,
-  });
-  const [referralForm, setReferralForm] = useState({
-    clientId: '',
-    projectId: '',
-    referralSource: 'LinkedIn',
-    referralPersonName: '',
-    referralPersonContact: '',
-    referralPlatformLink: '',
-    campaignName: '',
-    leadQuality: 'Warm',
-    conversionStatus: 'Lead',
-    notes: '',
-  });
+  const { startDate, endDate, isDateInRange } = useDateFilter();
 
-  const canManage = canViewFinanceDetails;
-  const canDeleteFinance = user?.role === 'superAdmin' || isManager;
-  const canDeleteInvoice = user?.role === 'superAdmin' || isManager;
+  const canManage = canManageFinanceAccess;
+  const canDeleteInvoice = canManageFinanceAccess;
 
-  const { data: clients = [] } = useClients({}, { enabled: canManage });
-  const { data: projects = [] } = useProjects({}, { enabled: canManage });
-  const { data: managerProjects = [] } = useProjects({ search }, { enabled: isManager });
-  const { data: financeRecords = [] } = useFinanceRecords({ search }, { enabled: canViewFinanceDetails });
-  const { data: invoices = [] } = useInvoices({ search }, { enabled: canViewFinanceDetails });
-  const { data: callHistory = [] } = useCallHistory({ search }, { enabled: canViewFinanceDetails });
-  const { data: referrals = [] } = useReferrals({ search }, { enabled: canViewFinanceDetails });
-  const { data: referralAnalytics = {} } = useReferralAnalytics({ enabled: canViewFinanceDetails });
-  const { data: financeSummary = {} } = useFinanceSummary({ enabled: canViewFinanceDetails });
-  const { data: expenses = [] } = useExpenses(
+  const { data: clients = [] } = useClients({}, { enabled: canViewFinanceOverview });
+  const { data: projects = [] } = useProjects({}, { enabled: canViewFinanceOverview });
+  const { data: rawInvoices = [], isLoading: invoicesLoading } = useInvoices({ search, startDate, endDate }, { enabled: canViewFinanceOverview });
+  const { data: referrals = [] } = useReferrals({ search }, { enabled: canViewFinanceOverview });
+  const { data: financeSummary = {} } = useFinanceSummary({ enabled: canViewFinanceOverview });
+  const { data: rawExpenses = [], isLoading: expensesLoading } = useExpenses(
     {
       search,
+      startDate,
+      endDate,
       category: expenseCategoryFilter !== 'all' ? expenseCategoryFilter : undefined,
       transactionType: expenseTypeFilter !== 'all' ? expenseTypeFilter : undefined,
       sort: expenseSort,
     },
-    { enabled: canViewFinanceDetails }
+    { enabled: canViewFinanceOverview }
   );
+
+  // Salary Queries
+  const { data: rawSalaries = [], isLoading: salariesLoading } = useSalaries(
+    {
+      month: salaryMonthFilter !== 'all' ? salaryMonthFilter : undefined,
+      year: salaryYearFilter !== 'all' ? Number(salaryYearFilter) : undefined,
+      status: salaryStatusFilter !== 'all' ? salaryStatusFilter : undefined,
+      department: salaryDeptFilter !== 'all' ? salaryDeptFilter : undefined,
+      search,
+    },
+    { enabled: canViewFinanceOverview }
+  );
+
+  const { data: salarySummary = {} } = useSalarySummary(
+    {
+      month: salaryMonthFilter !== 'all' ? salaryMonthFilter : undefined,
+      year: salaryYearFilter !== 'all' ? Number(salaryYearFilter) : undefined,
+    },
+    { enabled: canViewFinanceOverview }
+  );
+
+  const updateSalaryStatus = useUpdateSalaryStatus();
+  const deleteSalary = useDeleteSalary();
+  const generateMonthlyPayroll = useGenerateMonthlyPayroll();
+
+  // Client-side date filter refinement
+  const invoices = useMemo(() => {
+    return rawInvoices.filter((i) => {
+      const matchesDate = isDateInRange(i.issueDate || i.createdAt || i.dueDate);
+      const matchesStatus = invoiceStatusFilter === 'all' || (i.status || '').toLowerCase() === invoiceStatusFilter.toLowerCase();
+      const q = search.toLowerCase();
+      const clientName = (i.client?.company || i.client?.name || i.clientDetails?.businessName || '').toLowerCase();
+      const invNum = (i.invoiceNumber || '').toLowerCase();
+      const matchesSearch = !q || clientName.includes(q) || invNum.includes(q);
+      return matchesDate && matchesStatus && matchesSearch;
+    });
+  }, [rawInvoices, isDateInRange, invoiceStatusFilter, search]);
+
+  const expenses = useMemo(() => {
+    return rawExpenses.filter((e) => {
+      const matchesDate = isDateInRange(e.date || e.createdAt);
+      if (!matchesDate) return false;
+      if (expenseCategoryFilter !== 'all' && e.category !== expenseCategoryFilter) return false;
+      if (expenseApprovalFilter === 'approved' && e.status !== 'approved') return false;
+      if (expenseApprovalFilter === 'pending' && e.status === 'approved') return false;
+      if (search?.trim()) {
+        const q = search.toLowerCase();
+        const titleMatch = (e.title || e.description || '').toLowerCase().includes(q);
+        const notesMatch = (e.notes || e.vendor || '').toLowerCase().includes(q);
+        const catMatch = (e.category || '').toLowerCase().includes(q);
+        if (!titleMatch && !notesMatch && !catMatch) return false;
+      }
+      return true;
+    });
+  }, [rawExpenses, isDateInRange, expenseCategoryFilter, expenseApprovalFilter, search]);
+
+  const salaries = useMemo(() => {
+    return rawSalaries.filter((s) => {
+      if (salaryStatusFilter !== 'all' && s.status !== salaryStatusFilter) return false;
+      if (salaryDeptFilter !== 'all' && (s.employee?.department || '').toLowerCase() !== salaryDeptFilter.toLowerCase()) return false;
+      return true;
+    });
+  }, [rawSalaries, salaryStatusFilter, salaryDeptFilter]);
+
+  const departments = useMemo(() => {
+    const set = new Set(rawSalaries.map((s) => s.employee?.department).filter(Boolean));
+    return ['all', ...Array.from(set)];
+  }, [rawSalaries]);
+
   const approveExpense = useApproveExpense();
   const deleteExpense = useDeleteExpense();
-  const { data: payments = [] } = usePayments({ search }, { enabled: canViewFinanceDetails });
-  const { data: overdueRecords = [] } = useOverdueFinanceRecords({ enabled: canViewFinanceDetails });
-
-  const addPaymentNote = useAddPaymentNote();
-  const addInternalFinanceNote = useAddInternalFinanceNote();
-  const createCallHistory = useCreateCallHistory();
-  const createReferral = useCreateReferral();
-  const deleteFinanceRecord = useDeleteFinanceRecord();
   const deleteInvoice = useDeleteInvoice();
   const markInvoicePaid = useMarkInvoicePaid();
   const addPartialPayment = useAddPartialPayment();
@@ -214,813 +325,1445 @@ const Finance = () => {
     other: 'Other (Custom)',
   };
 
-  const categoryBreakdown = useMemo(() => {
-    const breakdown = {
-      rj: 0,
-      video_shoot: 0,
-      travel_allowance: 0,
-      ads_campaign: 0,
-      salary: 0,
-      tools: 0,
-      travel: 0,
-      office: 0,
-      freelance: 0,
-      misc: 0,
-      other: 0,
-    };
-    expenses.forEach((exp) => {
-      if (exp.status === 'approved' && exp.transactionType !== 'Profit') {
-        const cat = exp.category || 'misc';
-        breakdown[cat] = (breakdown[cat] || 0) + Number(exp.amount || 0);
+  // High-level dynamic financial calculations
+  const totalRevenue = useMemo(() => {
+    return invoices.reduce((sum, item) => sum + Number(item.totalAmount || item.amount || item.total || 0), 0);
+  }, [invoices]);
+
+  const totalCollected = useMemo(() => {
+    return invoices.reduce((sum, item) => {
+      if (String(item.status).toLowerCase() === 'paid') {
+        return sum + Number(item.totalAmount || item.amount || item.total || 0);
       }
-    });
-    return breakdown;
+      return sum + Number(item.paidAmount || 0);
+    }, 0);
+  }, [invoices]);
+
+  const totalReceivable = useMemo(() => {
+    return invoices.reduce((sum, item) => {
+      if (String(item.status).toLowerCase() === 'paid') return sum;
+      const total = Number(item.totalAmount || item.amount || item.total || 0);
+      const paid = Number(item.paidAmount || 0);
+      return sum + Math.max(total - paid, 0);
+    }, 0);
+  }, [invoices]);
+
+  const totalExpenses = useMemo(() => {
+    return expenses.reduce((sum, exp) => {
+      if (exp.transactionType === 'Profit') return sum;
+      return sum + Number(exp.amount || 0);
+    }, 0);
   }, [expenses]);
 
-  const profitMargin = useMemo(() => {
-    const revenue = Number(financeSummary.totalRevenue || 0);
-    const profit = Number(financeSummary.profit || 0);
-    return revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : '0';
-  }, [financeSummary]);
+  const netProfit = totalCollected - totalExpenses;
+  const profitMargin = totalCollected > 0 ? ((netProfit / totalCollected) * 100).toFixed(1) : '0.0';
 
-  const filteredReferrals = useMemo(() => referrals.filter((item) => {
-    const haystack = [
-      item.referralSource,
-      item.referralPersonName,
-      item.campaignName,
-      item.client?.name,
-      item.client?.company,
-    ].filter(Boolean).join(' ').toLowerCase();
-    return haystack.includes(search.toLowerCase());
-  }), [referrals, search]);
+  const openInvoicesCount = invoices.filter((item) => !['Paid', 'Cancelled', 'paid', 'cancelled'].includes(item.status)).length;
+  const overdueCount = invoices.filter((item) => item.status?.toLowerCase() === 'overdue' || (new Date(item.dueDate) < new Date() && !['paid', 'cancelled'].includes(item.status?.toLowerCase()))).length;
 
-  const selectedClientProjects = callForm.clientId
-    ? projects.filter((project) => project.client?._id === callForm.clientId || project.client === callForm.clientId)
-    : projects;
-
-  const referralClientProjects = referralForm.clientId
-    ? projects.filter((project) => project.client?._id === referralForm.clientId || project.client === referralForm.clientId)
-    : projects;
-
-  const metrics = {
-    totalReceivable: invoices.reduce((sum, item) => sum + Number(item.balanceAmount || Math.max((item.total || item.amount || 0) - (item.paidAmount || 0), 0)), 0),
-    totalPaid: invoices.reduce((sum, item) => sum + Number(item.paidAmount || (item.status?.toLowerCase() === 'paid' ? (item.total || item.amount || 0) : 0)), 0),
-    openInvoices: invoices.filter((item) => !['Paid', 'Cancelled', 'paid', 'cancelled'].includes(item.status)).length,
-    overdue: invoices.filter((item) => item.status?.toLowerCase() === 'overdue' || (new Date(item.dueDate) < new Date() && !['paid', 'cancelled'].includes(item.status?.toLowerCase()))).length,
-  };
-
-  const financeColumns = [
-    {
-      key: 'client',
-      label: 'Client / Project',
-      render: (row) => (
-        <div className="min-w-0">
-          <div className="font-semibold text-foreground">{row.clientName || row.clientId?.name || row.clientId?.company}</div>
-          <div className="mt-1 text-xs text-muted-foreground">{row.projectName || row.projectId?.name}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'serviceName',
-      label: 'Service',
-      render: (row) => row.serviceName,
-    },
-    {
-      key: 'amounts',
-      label: 'Amounts',
-      render: (row) => (
-        <div className="text-sm">
-          <div className="font-semibold text-foreground">Total: {currency.format(Number(row.totalProjectAmount || 0))}</div>
-          <div className="text-muted-foreground">Paid: {currency.format(Number(row.totalPaidAmount || 0))}</div>
-          <div className="text-muted-foreground">Balance: {currency.format(Number(row.balanceAmount || 0))}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'paymentStatus',
-      label: 'Payment Status',
-      render: (row) => <StatusBadge tone={paymentStatusTone[row.paymentStatus] || 'neutral'}>{row.paymentStatus}</StatusBadge>,
-    },
-    {
-      key: 'invoiceStatus',
-      label: 'Invoice Status',
-      render: (row) => <StatusBadge tone={invoiceStatusTone[row.invoiceStatus] || 'neutral'}>{row.invoiceStatus}</StatusBadge>,
-    },
-    {
-      key: 'dueDate',
-      label: 'Due / Follow-up',
-      render: (row) => (
-        <div className="text-sm text-foreground">
-          <div>{row.paymentDueDate ? new Date(row.paymentDueDate).toLocaleDateString() : 'No due date'}</div>
-          <div className="text-xs text-muted-foreground">{row.nextFollowUpDate ? `Next: ${new Date(row.nextFollowUpDate).toLocaleDateString()}` : 'No follow-up'}</div>
-        </div>
-      ),
-    },
-  ];
-
+  // Invoices Columns
   const invoiceColumns = [
     {
       key: 'invoiceNumber',
-      label: 'Invoice',
+      label: 'Invoice #',
       render: (row) => (
         <div className="min-w-0">
-          <div className="font-semibold text-foreground">{row.invoiceNumber}</div>
-          <div className="mt-1 text-xs text-muted-foreground">{row.project?.name || row.projectName || 'No linked project'}</div>
+          <span className="font-bold text-foreground hover:text-primary transition-colors text-xs flex items-center gap-1.5">
+            <FileText size={13} className="text-primary" />
+            <span>{row.invoiceNumber}</span>
+          </span>
+          <div className="text-[11px] text-muted-foreground truncate">{row.project?.name || row.projectName || 'General Billing'}</div>
         </div>
       ),
     },
     {
       key: 'client',
-      label: 'Client',
-      render: (row) => row.client?.company || row.client?.name || row.clientDetails?.businessName || row.clientDetails?.name,
-    },
-    {
-      key: 'amount',
-      label: 'Amount',
+      label: 'Client / Business',
       render: (row) => (
-        <div className="text-sm">
-          <div className="font-semibold text-foreground">Total: {currency.format(Number(row.totalAmount || row.amount || 0))}</div>
-          <div className="text-muted-foreground">Paid: {currency.format(Number(row.paidAmount || 0))}</div>
-          <div className="text-muted-foreground">Balance: {currency.format(Number(row.balanceAmount || 0))}</div>
+        <div className="font-semibold text-foreground text-xs flex items-center gap-1.5">
+          <Building size={12} className="text-muted-foreground/70 shrink-0" />
+          <span className="truncate">{row.client?.company || row.client?.name || row.clientDetails?.businessName || row.clientDetails?.name || 'Unnamed Client'}</span>
         </div>
       ),
     },
     {
+      key: 'amount',
+      label: 'Amount Breakdown',
+      render: (row) => {
+        const total = Number(row.totalAmount || row.amount || row.total || 0);
+        const paid = Number(row.paidAmount || (String(row.status).toLowerCase() === 'paid' ? total : 0));
+        const balance = Math.max(total - paid, 0);
+
+        return (
+          <div className="text-xs space-y-0.5">
+            <div className="font-bold text-foreground">{currency.format(total)}</div>
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
+              <span className="text-emerald-600 font-semibold">Paid: {currency.format(paid)}</span>
+              {balance > 0 && <span className="text-rose-600 font-semibold">Bal: {currency.format(balance)}</span>}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
       key: 'status',
-      label: 'Status',
-      render: (row) => <StatusBadge tone={invoiceStatusTone[row.status] || 'neutral'}>{row.status}</StatusBadge>,
+      label: 'Payment Status',
+      render: (row) => {
+        const st = (row.status || 'draft').toLowerCase();
+        if (st === 'paid') {
+          return (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/25 shadow-xs">
+              <CheckCircle2 size={13} className="text-emerald-600" />
+              <span>Paid</span>
+            </span>
+          );
+        }
+        if (st === 'partially_paid') {
+          return (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-600 border border-amber-500/25 shadow-xs">
+              <Clock size={13} className="text-amber-600" />
+              <span>Partially Paid</span>
+            </span>
+          );
+        }
+        if (st === 'overdue') {
+          return (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-rose-500/15 text-rose-600 border border-rose-500/30 shadow-xs animate-pulse">
+              <AlertCircle size={13} className="text-rose-600" />
+              <span>Overdue</span>
+            </span>
+          );
+        }
+        if (st === 'sent') {
+          return (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-blue-500/10 text-blue-600 border border-blue-500/25 shadow-xs">
+              <Send size={13} className="text-blue-600" />
+              <span>Sent</span>
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-slate-500/10 text-slate-600 border border-slate-500/25 shadow-xs">
+            <FileText size={13} className="text-slate-600" />
+            <span>Draft</span>
+          </span>
+        );
+      },
+    },
+    {
+      key: 'dueDate',
+      label: 'Dates',
+      render: (row) => (
+        <div className="text-xs space-y-0.5">
+          <div className="text-foreground font-medium">Issued: {row.issueDate ? new Date(row.issueDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</div>
+          <div className="text-[11px] text-muted-foreground">Due: {row.dueDate ? new Date(row.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</div>
+        </div>
+      ),
     },
     {
       key: 'actions',
-      label: 'Actions',
+      label: '',
       render: (row) => (
-        <div className="flex flex-wrap gap-1.5" onClick={(event) => event.stopPropagation()}>
-          <Button size="sm" variant="outline" onClick={() => exportInvoiceToPDF(row, { save: true })} title="Download PDF" className="px-2">
-            <Download size={14} className="mr-1" /> PDF
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => { setShareInvoice(row); setShowShareModal(true); }} title="Share Invoice" className="px-2 text-primary border-primary/30">
-            <Share2 size={14} className="mr-1" /> Share
-          </Button>
-          {canManage ? <Button size="sm" variant="outline" onClick={() => sendInvoice.mutate(row._id)} title="Send via email/portal" className="px-2">
-            <Send size={14} className="mr-1" /> Send
-          </Button> : null}
-          {canManage && !['Paid', 'Cancelled'].includes(row.status) ? <Button size="sm" variant="outline" onClick={() => markInvoicePaid.mutate({ id: row._id })} className="px-2">
-            Mark Paid
-          </Button> : null}
+        <div className="flex items-center justify-end gap-1.5">
+          {String(row.status).toLowerCase() !== 'paid' && canManage && (
+            <button
+              onClick={() => markInvoicePaid.mutate(row._id)}
+              disabled={markInvoicePaid.isPending}
+              className="px-2.5 py-1 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white border border-emerald-500/20 text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+              title="Mark invoice as fully Paid"
+            >
+              <CheckCircle size={12} />
+              <span>Mark Paid</span>
+            </button>
+          )}
+          <button
+            onClick={() => exportInvoiceToPDF(row)}
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            title="Download PDF Invoice"
+          >
+            <Download size={13} />
+          </button>
+          <button
+            onClick={() => {
+              setShareInvoice(row);
+              setShowShareModal(true);
+            }}
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            title="Share / Send Invoice"
+          >
+            <Share2 size={13} />
+          </button>
+          {canManage && (
+            <button
+              onClick={() => {
+                setSelectedInvoice(row);
+                setShowInvoiceModal(true);
+              }}
+              className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              title="Edit Invoice"
+            >
+              <Pencil size={13} />
+            </button>
+          )}
+          {canDeleteInvoice && (
+            <button
+              onClick={() => setDeleteInvoiceId(row._id)}
+              className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 transition-colors"
+              title="Delete Invoice"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
         </div>
       ),
     },
   ];
 
+  // Expense Columns - Modern Structured UI with Action Buttons
   const expenseColumns = [
     {
       key: 'title',
-      label: 'Expense / Profit Title',
-      render: (row) => (
-        <div className="min-w-0">
-          <div className="font-semibold text-foreground">{row.title}</div>
-          {row.notes ? <div className="mt-1 text-xs text-muted-foreground line-clamp-1">{row.notes}</div> : null}
-        </div>
-      ),
+      label: 'Expense Details',
+      render: (row) => {
+        const catTheme = getCategoryTheme(row.category);
+        const CatIcon = catTheme.icon;
+
+        return (
+          <div className="flex items-start gap-3 min-w-0">
+            <div className={`p-2 rounded-xl border shrink-0 mt-0.5 ${catTheme.badgeClass}`}>
+              <CatIcon size={15} />
+            </div>
+            <div className="min-w-0">
+              <div className="font-bold text-foreground text-xs">{row.title || row.description}</div>
+              <div className="text-[11px] text-muted-foreground truncate max-w-[280px]">
+                {row.notes || row.vendor || 'General expense'}
+              </div>
+              {row.project && (
+                <div className="text-[10px] text-primary/80 font-semibold mt-0.5 flex items-center gap-1">
+                  <span>📁 {row.project?.name || 'Project Expense'}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      },
     },
     {
       key: 'category',
-      label: 'Type / Category',
-      render: (row) => (
-        <StatusBadge tone="neutral">
-          {row.category === 'other' && row.customCategory
-            ? row.customCategory
-            : categoryLabels[row.category] || row.category}
-        </StatusBadge>
-      ),
-    },
-    {
-      key: 'transactionType',
-      label: 'Transaction',
-      render: (row) => (
-        <StatusBadge tone={row.transactionType === 'Profit' ? 'success' : 'danger'}>
-          {row.transactionType || 'Expense'}
-        </StatusBadge>
-      ),
+      label: 'Category',
+      render: (row) => {
+        const catTheme = getCategoryTheme(row.category);
+        const Icon = catTheme.icon;
+
+        return (
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold border ${catTheme.badgeClass}`}>
+            <Icon size={12} className="shrink-0" />
+            <span className="capitalize">{categoryLabels[row.category] || catTheme.shortLabel || row.category || 'Misc'}</span>
+          </span>
+        );
+      },
     },
     {
       key: 'amount',
-      label: 'Amount',
+      label: 'Amount & Method',
       render: (row) => (
-        <span className="font-bold text-foreground">{currency.format(Number(row.amount || 0))}</span>
+        <div className="space-y-0.5">
+          <div className="text-xs font-black text-foreground">
+            {currency.format(Number(row.amount || 0))}
+          </div>
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-semibold">
+            <CreditCard size={10} className="text-muted-foreground/70" />
+            <span className="capitalize">{row.paymentMethod || 'Direct / Bank'}</span>
+          </div>
+        </div>
       ),
     },
     {
       key: 'date',
       label: 'Date',
       render: (row) => (
-        <span className="text-xs">{row.date ? new Date(row.date).toLocaleDateString('en-IN') : 'N/A'}</span>
-      ),
-    },
-    {
-      key: 'submittedBy',
-      label: 'Submitted By',
-      render: (row) => (
-        <span className="text-xs text-muted-foreground">{row.submittedBy?.name || 'Admin'}</span>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+          <Calendar size={12} className="text-muted-foreground/70" />
+          <span>{row.date ? new Date(row.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</span>
+        </div>
       ),
     },
     {
       key: 'status',
-      label: 'Status',
-      render: (row) => (
-        <StatusBadge tone={
-          row.status === 'approved' ? 'success' :
-          row.status === 'pending' ? 'warning' : 'danger'
-        }>
-          {row.status}
-        </StatusBadge>
-      ),
+      label: 'Approval Status',
+      render: (row) => {
+        const isApproved = row.status === 'approved';
+        return isApproved ? (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/25 shadow-xs">
+            <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+            <span>Approved</span>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (canManage) approveExpense.mutate(row._id);
+            }}
+            disabled={!canManage || approveExpense.isPending}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all shadow-xs cursor-pointer group"
+            title={canManage ? "Click to Approve this expense" : "Pending manager approval"}
+          >
+            <Clock size={13} className="group-hover:hidden text-amber-600 shrink-0" />
+            <CheckCircle size={13} className="hidden group-hover:inline-block shrink-0" />
+            <span>Pending (Approve)</span>
+          </button>
+        );
+      },
     },
     {
       key: 'actions',
-      label: 'Actions',
+      label: '',
       render: (row) => (
-        <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
-          {row.status === 'pending' && canManage ? (
-            <>
-              <Button size="sm" variant="outline" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-7 px-2 text-xs" onClick={() => approveExpense.mutate({ id: row._id, action: 'approve' })} disabled={approveExpense.isPending}>Approve</Button>
-              <Button size="sm" variant="outline" className="text-rose-600 border-rose-200 hover:bg-rose-50 h-7 px-2 text-xs" onClick={() => approveExpense.mutate({ id: row._id, action: 'reject' })} disabled={approveExpense.isPending}>Reject</Button>
-            </>
-          ) : null}
-          {canManage ? (
-            <>
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => {
-                setSelectedExpense(row);
-                setShowExpenseModal(true);
-              }}>
-                <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-              </Button>
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 hover:text-destructive" onClick={() => setDeleteExpenseId(row._id)}>
-                <Trash2 className="h-3.5 w-3.5 text-destructive" />
-              </Button>
-            </>
-          ) : null}
+        <div className="flex items-center justify-end gap-1">
+          {canManage && (
+            <button
+              onClick={() => setDeleteExpenseId(row._id)}
+              className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 transition-colors cursor-pointer"
+              title="Delete Expense"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
         </div>
       ),
     },
   ];
 
-  const handleAddPaymentNote = async (recordId) => {
-    const form = paymentForms[recordId];
-    if (!form?.noteTitle) return;
-    await addPaymentNote.mutateAsync({ id: recordId, data: form });
-    setPaymentForms((current) => ({
-      ...current,
-      [recordId]: { noteTitle: '', noteDescription: '', amountPaid: '', paymentMode: 'UPI', paymentDate: '', nextFollowUpDate: '', visibleToClient: false },
-    }));
-  };
-
-  const handleAddFollowup = async (recordId) => {
-    const form = followupForms[recordId];
-    if (!form?.followUpNote) return;
-    await addInternalFinanceNote.mutateAsync({ id: recordId, data: form });
-    setFollowupForms((current) => ({
-      ...current,
-      [recordId]: { followUpNote: '', nextFollowUpDate: '', spokenWith: '', clientResponse: '', paymentPromiseDate: '', amountPromised: '' },
-    }));
-  };
-
-  const handleCreateCall = async () => {
-    await createCallHistory.mutateAsync(callForm);
-    setCallForm({
-      clientId: '',
-      projectId: '',
-      callType: 'Outgoing',
-      callPurpose: 'General Update',
-      callDate: new Date().toISOString().split('T')[0],
-      callTime: '',
-      spokenWith: '',
-      contactNumber: '',
-      callSummary: '',
-      clientResponse: '',
-      nextAction: '',
-      nextFollowUpDate: '',
-      visibleToClient: false,
-    });
-  };
-
-  const handleCreateReferral = async () => {
-    await createReferral.mutateAsync(referralForm);
-    setReferralForm({
-      clientId: '',
-      projectId: '',
-      referralSource: 'LinkedIn',
-      referralPersonName: '',
-      referralPersonContact: '',
-      referralPlatformLink: '',
-      campaignName: '',
-      leadQuality: 'Warm',
-      conversionStatus: 'Lead',
-      notes: '',
-    });
-  };
-
-  const adsBudgetProjects = useMemo(() => {
-    const projList = isAdmin ? projects : managerProjects;
-    const filteredProjList = isAdmin
-      ? projList.filter((p) => {
-          const haystack = `${p.name} ${p.client?.company || ''} ${p.client?.name || ''}`.toLowerCase();
-          return haystack.includes(search.toLowerCase());
-        })
-      : projList;
-
-    return filteredProjList.map((project) => {
-      const adsBudget = Number(project.budgetDetails?.adsAmount || 0);
-      return {
-        ...project,
-        adsBudget,
-      };
-    });
-  }, [isAdmin, projects, managerProjects, search]);
-
-  const totalAdsBudget = adsBudgetProjects.reduce((sum, project) => sum + project.adsBudget, 0);
-
-
+  // Employee Salary Columns (Notion Agency OS Table View)
+  const salaryColumns = [
+    {
+      key: 'employee',
+      label: 'Team Member',
+      render: (row) => {
+        const emp = row.employee || {};
+        return (
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+              {emp.name?.charAt(0) || 'E'}
+            </div>
+            <div className="min-w-0">
+              <div className="font-bold text-foreground text-xs truncate">{emp.name || 'Unknown Employee'}</div>
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <span>{emp.position || 'Team Member'}</span>
+                <span>•</span>
+                <span className="font-semibold text-primary/80">{emp.department || 'General'}</span>
+              </div>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'baseSalary',
+      label: 'Base Pay',
+      render: (row) => (
+        <div className="text-xs font-semibold text-foreground">
+          {currency.format(Number(row.baseSalary || 0))}
+        </div>
+      ),
+    },
+    {
+      key: 'incentive',
+      label: 'Incentive',
+      render: (row) => {
+        const inc = Number(row.incentive || 0);
+        return (
+          <div className="text-xs">
+            {inc > 0 ? (
+              <div className="flex flex-col">
+                <span className="font-bold text-amber-600 flex items-center gap-0.5">
+                  <Sparkles size={11} />
+                  +{currency.format(inc)}
+                </span>
+                {row.incentiveReason && (
+                  <span className="text-[10px] text-muted-foreground truncate max-w-[120px]" title={row.incentiveReason}>
+                    {row.incentiveReason}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span className="text-muted-foreground/60">₹0</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'ots',
+      label: 'OTS (Overtime)',
+      render: (row) => {
+        const ots = Number(row.ots || 0);
+        return (
+          <div className="text-xs">
+            {ots > 0 ? (
+              <div className="flex flex-col">
+                <span className="font-bold text-purple-600 flex items-center gap-0.5">
+                  <Clock size={11} />
+                  +{currency.format(ots)}
+                </span>
+                <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                  {row.otsHours ? `${row.otsHours} hrs` : ''} {row.otsReason ? `(${row.otsReason})` : ''}
+                </span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground/60">₹0</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'otherAllowances',
+      label: 'Other Perks',
+      render: (row) => {
+        const oth = Number(row.otherAllowances || 0);
+        return (
+          <div className="text-xs">
+            {oth > 0 ? (
+              <div className="flex flex-col">
+                <span className="font-bold text-emerald-600">+{currency.format(oth)}</span>
+                {row.otherAllowancesReason && (
+                  <span className="text-[10px] text-muted-foreground truncate max-w-[120px]" title={row.otherAllowancesReason}>
+                    {row.otherAllowancesReason}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span className="text-muted-foreground/60">₹0</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'deductions',
+      label: 'Deductions',
+      render: (row) => {
+        const ded = Number(row.deductions || 0);
+        return (
+          <div className="text-xs">
+            {ded > 0 ? (
+              <div className="flex flex-col">
+                <span className="font-bold text-rose-600">-{currency.format(ded)}</span>
+                {row.deductionReason && (
+                  <span className="text-[10px] text-muted-foreground truncate max-w-[120px]" title={row.deductionReason}>
+                    {row.deductionReason}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span className="text-muted-foreground/60">₹0</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'netSalary',
+      label: 'Net Take-Home',
+      render: (row) => {
+        const net = Number(row.netSalary || 0);
+        return (
+          <div className="text-xs font-black text-foreground bg-primary/10 px-2.5 py-1 rounded-xl inline-block border border-primary/20">
+            {currency.format(net)}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (row) => (
+        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border capitalize ${salaryStatusTone[row.status] || salaryStatusTone.pending}`}>
+          {row.status}
+        </span>
+      ),
+    },
+    {
+      key: 'paymentMethod',
+      label: 'Payment Info',
+      render: (row) => (
+        <div className="text-xs space-y-0.5">
+          <div className="font-semibold text-foreground">{row.paymentMethod || 'Bank Transfer'}</div>
+          {row.paymentDate && (
+            <div className="text-[10px] text-muted-foreground">{new Date(row.paymentDate).toLocaleDateString()}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'actions',
+      label: '',
+      render: (row) => (
+        <div className="flex items-center justify-end gap-1">
+          <button
+            onClick={() => {
+              setPayslipSalary(row);
+              setShowPayslipModal(true);
+            }}
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            title="View & Download Payslip"
+          >
+            <FileText size={13} />
+          </button>
+          {row.status !== 'paid' && canManage && (
+            <button
+              onClick={() => updateSalaryStatus.mutate({ id: row._id, status: 'paid' })}
+              className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 text-xs font-bold transition-colors"
+              title="Mark as Settled / Paid"
+            >
+              Pay
+            </button>
+          )}
+          {canManage && (
+            <button
+              onClick={() => {
+                setSelectedSalary(row);
+                setShowSalaryModal(true);
+              }}
+              className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              title="Edit Salary"
+            >
+              <Pencil size={13} />
+            </button>
+          )}
+          {canManage && (
+            <button
+              onClick={() => setDeleteSalaryId(row._id)}
+              className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 transition-colors"
+              title="Delete Record"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-6">
-      <div className="overflow-hidden rounded-[28px] border border-slate-200/90 dark:border-border bg-gradient-to-br from-indigo-50/90 via-white to-slate-50 dark:from-card dark:to-secondary/50 p-6 text-slate-900 dark:text-foreground shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="mb-3 inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-              Finance
+    <WorkspacePage
+      breadcrumbs={['RiseWithMedia', 'Business & Finance', 'Finance Operations']}
+      title="Finance & Revenue Hub"
+      subtitle="Complete Notion-style command center for client billings, accounts receivable, agency spend, employee salaries, and net margins."
+      icon="💰"
+      properties={[
+        { label: 'Collected', value: showFinancials ? currency.format(totalCollected) : '••••••••', tone: 'success' },
+        { label: 'Outstanding', value: showFinancials ? currency.format(totalReceivable) : '••••••••', tone: totalReceivable > 0 ? 'warning' : 'neutral' },
+        { label: 'Total Expenses', value: showFinancials ? currency.format(totalExpenses) : '••••••••', tone: 'danger' },
+        { label: 'Net Profit', value: showFinancials ? currency.format(netProfit) : '••••••••', tone: netProfit >= 0 ? 'success' : 'danger' },
+      ]}
+      actions={
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowFinancials((v) => !v)}
+            className={`rounded-xl text-xs font-bold gap-1.5 h-9 cursor-pointer transition-all ${
+              !showFinancials
+                ? 'border-amber-500/30 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20'
+                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
+            }`}
+          >
+            {showFinancials ? <EyeOff size={14} /> : <Eye size={14} />}
+            <span>{showFinancials ? 'Hide Financials' : 'Unhide Financials'}</span>
+          </Button>
+          {canManage && (
+            <>
+              {activeTab === 'salaries' ? (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      generateMonthlyPayroll.mutate({
+                        month: salaryMonthFilter !== 'all' ? salaryMonthFilter : currentMonthName,
+                        year: salaryYearFilter !== 'all' ? Number(salaryYearFilter) : currentYear,
+                      })
+                    }
+                    disabled={generateMonthlyPayroll.isPending}
+                    className="rounded-xl text-xs font-bold gap-1.5 h-9"
+                  >
+                    <Zap size={14} className="text-amber-500 fill-amber-500" />
+                    <span>Auto-Generate ({salaryMonthFilter !== 'all' ? salaryMonthFilter : currentMonthName})</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setSelectedSalary(null);
+                      setShowSalaryModal(true);
+                    }}
+                    className="rounded-xl text-xs font-bold gap-1.5 h-9 shadow-sm"
+                  >
+                    <Plus size={14} className="stroke-[2.5]" />
+                    <span>+ Add Salary Entry</span>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowExpenseModal(true)}
+                    className="rounded-xl text-xs font-bold gap-1.5 h-9"
+                  >
+                    <Receipt size={14} />
+                    <span>+ Record Spend</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setSelectedInvoice(null);
+                      setShowInvoiceModal(true);
+                    }}
+                    className="rounded-xl text-xs font-bold gap-1.5 h-9 shadow-sm"
+                  >
+                    <Plus size={14} className="stroke-[2.5]" />
+                    <span>Create Invoice</span>
+                  </Button>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      }
+    >
+      {/* Notion-Style Executive Financial KPI Matrix */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-6">
+        {/* Card 1: Collected Cash */}
+        <div className="p-4 rounded-2xl border border-border bg-card shadow-xs space-y-2 hover:border-primary/30 transition-all">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-xs font-bold uppercase tracking-wider">Collected Cash</span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setShowFinancials((v) => !v)}
+                className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                title={showFinancials ? "Hide" : "Unhide"}
+              >
+                {showFinancials ? <EyeOff size={13} /> : <Eye size={13} className="text-emerald-600" />}
+              </button>
+              <div className="h-7 w-7 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                <CheckCircle2 size={15} />
+              </div>
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-foreground">{isManager ? 'Ads Campaigns' : 'Finance Operations'}</h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-muted-foreground">
-              {isManager ? 'Review ads budgets, actual spends, and log monthly campaign metrics for clients.' : 'Track partial payments, follow-ups, visible payment history, invoice status, and client communication from one workspace.'}
-            </p>
           </div>
-
-          <div className="flex flex-wrap gap-3">
-            {!isManager && canManage ? <Button onClick={() => { setSelectedInvoice(null); setShowInvoiceModal(true); }} className="bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary/90 rounded-2xl px-4 py-2.5 font-bold"><Plus size={16} className="mr-2" />Invoice</Button> : null}
-            {isAdmin && activeTab === 'expenses' ? <Button onClick={() => setShowExpenseModal(true)} className="bg-slate-900 text-white dark:bg-card dark:text-foreground hover:bg-slate-800 rounded-2xl px-4 py-2.5 font-bold"><Plus size={16} className="mr-2" />Record Expense</Button> : null}
+          <div className="flex items-baseline justify-between gap-1">
+            <div className="text-xl sm:text-2xl font-black text-foreground">
+              {showFinancials ? currency.format(totalCollected) : <span className="text-muted-foreground/50 tracking-widest text-lg select-none">••••••••</span>}
+            </div>
+            {!showFinancials && (
+              <button
+                type="button"
+                onClick={() => setShowFinancials(true)}
+                className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-0.5 rounded-md transition-all cursor-pointer shrink-0"
+              >
+                Unhide
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold">
+            <ArrowUpRight size={13} />
+            <span>{invoices.filter((i) => String(i.status).toLowerCase() === 'paid').length} fully settled invoices</span>
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {isManager ? (
-            <>
-              <MetricCard label="Projects" value={adsBudgetProjects.length} helper="Total tracked projects" icon={FileText} tone="info" />
-              <MetricCard label="Total Ads Budget" value={currency.format(totalAdsBudget)} helper="Combined ads allocation only" icon={IndianRupee} tone="primary" />
-              <MetricCard label="Active Campaigns" value={adsBudgetProjects.filter((project) => project.status === 'In Progress' || project.status === 'active').length} helper="Campaigns currently running" icon={CheckCircle2} tone="success" />
-              <MetricCard label="No Ads Budget" value={adsBudgetProjects.filter((project) => project.adsBudget <= 0).length} helper="Projects missing ads allocation" icon={AlertCircle} tone="warning" />
-            </>
-          ) : (
-            <>
-              <MetricCard label="Outstanding" value={currency.format(metrics.totalReceivable)} helper="Pending receivable balance" icon={AlertCircle} tone={metrics.totalReceivable > 0 ? 'warning' : 'success'} />
-              <MetricCard label="Collected" value={currency.format(metrics.totalPaid)} helper="Total payments recorded" icon={CheckCircle2} tone="success" />
-              <MetricCard label="Open Invoices" value={metrics.openInvoices} helper="Draft, sent, viewed, or partial" icon={Receipt} tone="info" />
-              <MetricCard label="Overdue" value={metrics.overdue} helper="Finance records past due date" icon={FileText} tone={metrics.overdue ? 'danger' : 'neutral'} />
-            </>
-          )}
+        {/* Card 2: Outstanding Receivables */}
+        <div className="p-4 rounded-2xl border border-border bg-card shadow-xs space-y-2 hover:border-primary/30 transition-all">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-xs font-bold uppercase tracking-wider">Receivables Due</span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setShowFinancials((v) => !v)}
+                className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                title={showFinancials ? "Hide" : "Unhide"}
+              >
+                {showFinancials ? <EyeOff size={13} /> : <Eye size={13} className="text-amber-600" />}
+              </button>
+              <div className="h-7 w-7 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                <Clock size={15} />
+              </div>
+            </div>
+          </div>
+          <div className="flex items-baseline justify-between gap-1">
+            <div className="text-xl sm:text-2xl font-black text-foreground">
+              {showFinancials ? currency.format(totalReceivable) : <span className="text-muted-foreground/50 tracking-widest text-lg select-none">••••••••</span>}
+            </div>
+            {!showFinancials && (
+              <button
+                type="button"
+                onClick={() => setShowFinancials(true)}
+                className="text-[10px] font-bold text-amber-600 bg-amber-500/10 hover:bg-amber-500/20 px-2 py-0.5 rounded-md transition-all cursor-pointer shrink-0"
+              >
+                Unhide
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-amber-600 font-semibold">
+            <span>{openInvoicesCount} open invoice balances</span>
+          </div>
+        </div>
+
+        {/* Card 3: Operating Expenses */}
+        <div className="p-4 rounded-2xl border border-border bg-card shadow-xs space-y-2 hover:border-primary/30 transition-all">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-xs font-bold uppercase tracking-wider">Operating Spend</span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setShowFinancials((v) => !v)}
+                className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                title={showFinancials ? "Hide" : "Unhide"}
+              >
+                {showFinancials ? <EyeOff size={13} /> : <Eye size={13} className="text-rose-600" />}
+              </button>
+              <div className="h-7 w-7 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center">
+                <ArrowDownRight size={15} />
+              </div>
+            </div>
+          </div>
+          <div className="flex items-baseline justify-between gap-1">
+            <div className="text-xl sm:text-2xl font-black text-foreground">
+              {showFinancials ? currency.format(totalExpenses) : <span className="text-muted-foreground/50 tracking-widest text-lg select-none">••••••••</span>}
+            </div>
+            {!showFinancials && (
+              <button
+                type="button"
+                onClick={() => setShowFinancials(true)}
+                className="text-[10px] font-bold text-rose-600 bg-rose-500/10 hover:bg-rose-500/20 px-2 py-0.5 rounded-md transition-all cursor-pointer shrink-0"
+              >
+                Unhide
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-rose-600 font-semibold">
+            <span>{expenses.length} logged expense items</span>
+          </div>
+        </div>
+
+        {/* Card 4: Net Margin */}
+        <div className="p-4 rounded-2xl border border-border bg-card shadow-xs space-y-2 hover:border-primary/30 transition-all">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-xs font-bold uppercase tracking-wider">Net Profit & Margin</span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setShowFinancials((v) => !v)}
+                className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                title={showFinancials ? "Hide" : "Unhide"}
+              >
+                {showFinancials ? <EyeOff size={13} /> : <Eye size={13} className="text-primary" />}
+              </button>
+              <div className="h-7 w-7 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                <PieChart size={15} />
+              </div>
+            </div>
+          </div>
+          <div className="flex items-baseline justify-between gap-1">
+            <div className="text-xl sm:text-2xl font-black text-foreground">
+              {showFinancials ? currency.format(netProfit) : <span className="text-muted-foreground/50 tracking-widest text-lg select-none">••••••••</span>}
+            </div>
+            {!showFinancials && (
+              <button
+                type="button"
+                onClick={() => setShowFinancials(true)}
+                className="text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded-md transition-all cursor-pointer shrink-0"
+              >
+                Unhide
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-primary">
+            <span>{profitMargin}% net agency margin</span>
+          </div>
         </div>
       </div>
 
-      {tabs.length > 1 && (
-        <div className="flex items-center gap-1 rounded-2xl border border-border bg-card p-1.5">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
-                activeTab === tab.id ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-              }`}
-            >
-              <tab.icon size={15} />
-              {tab.label}
-            </button>
-          ))}
+      {/* Database View Switcher Tabs */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pb-2 border-b border-border">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 max-w-full">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                }`}
+              >
+                <tab.icon size={14} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
-      )}
 
-      <PageToolbar>
-        <SearchField value={search} onChange={(event) => setSearch(event.target.value)} placeholder={isManager ? "Search campaigns..." : "Search clients, projects, invoices, calls, or referrals..."} />
-        <div className="flex flex-wrap items-center gap-2">
-          {isManager ? (
-            <div className="app-pill">{adsBudgetProjects.length} campaigns</div>
-          ) : (
-            <>
-              <div className="app-pill">{invoices.length} invoices</div>
-              <div className="app-pill">{payments.length} payments</div>
-              {isAdmin && <div className="app-pill">{expenses.length} expenses</div>}
-            </>
-          )}
+        {/* Search Bar & Filter Quick Controls */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Filter records..."
+            className="h-8 px-3 text-xs rounded-xl border border-border bg-background placeholder:text-muted-foreground w-full sm:w-56 focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
         </div>
-      </PageToolbar>
+      </div>
 
-      {activeTab === 'records' ? (
-        <SectionCard title="Finance Records" description="Track total amount, paid amount, balance, follow-up notes, and client-visible payment updates.">
-          <div className="max-h-[400px] overflow-y-auto pr-1 border border-border/40 rounded-2xl">
-            <DataTable
-              data={financeRecords}
-              columns={financeColumns}
-              onRowClick={(row) => {
-                setSelectedRecord(row);
-                setShowFinanceModal(true);
-              }}
-              onEdit={canManage ? (row) => {
-                setSelectedRecord(row);
-                setShowFinanceModal(true);
-              } : null}
-              onDelete={canDeleteFinance ? (id) => deleteFinanceRecord.mutate(id) : null}
-              emptyTitle="No finance records yet"
-              emptyDescription="Create a finance record for each client project to start tracking balance and follow-up."
-            />
-          </div>
-
-          <div className="mt-6 grid gap-4 max-h-[500px] overflow-y-auto pr-1">
-            {financeRecords.map((record) => (
-              <div key={record._id} className="rounded-3xl border border-border bg-background p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-bold text-foreground">{record.serviceName}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{record.clientName} • {record.projectName}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <StatusBadge tone={paymentStatusTone[record.paymentStatus] || 'neutral'}>{record.paymentStatus}</StatusBadge>
-                    <StatusBadge tone={invoiceStatusTone[record.invoiceStatus] || 'neutral'}>{record.invoiceStatus}</StatusBadge>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                  <div className="rounded-2xl border border-border bg-card p-4">
-                    <p className="text-sm font-semibold text-foreground">Add Payment Note</p>
-                    <div className="mt-3 grid gap-3 md:grid-cols-2">
-                      <input className="rounded-2xl border border-border bg-background px-4 py-3 text-sm" placeholder="Note title" value={paymentForms[record._id]?.noteTitle || ''} onChange={(event) => setPaymentForms((current) => ({ ...current, [record._id]: { ...current[record._id], noteTitle: event.target.value } }))} />
-                      <input className="rounded-2xl border border-border bg-background px-4 py-3 text-sm" type="number" placeholder="Amount paid" value={paymentForms[record._id]?.amountPaid || ''} onChange={(event) => setPaymentForms((current) => ({ ...current, [record._id]: { ...current[record._id], amountPaid: event.target.value } }))} />
-                      <select className="rounded-2xl border border-border bg-background px-4 py-3 text-sm" value={paymentForms[record._id]?.paymentMode || 'UPI'} onChange={(event) => setPaymentForms((current) => ({ ...current, [record._id]: { ...current[record._id], paymentMode: event.target.value } }))}>
-                        {['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque', 'Other'].map((mode) => <option key={mode}>{mode}</option>)}
-                      </select>
-                      <input className="rounded-2xl border border-border bg-background px-4 py-3 text-sm" type="date" value={paymentForms[record._id]?.paymentDate || ''} onChange={(event) => setPaymentForms((current) => ({ ...current, [record._id]: { ...current[record._id], paymentDate: event.target.value } }))} />
-                    </div>
-                    <textarea className="mt-3 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm" placeholder="Payment note description" value={paymentForms[record._id]?.noteDescription || ''} onChange={(event) => setPaymentForms((current) => ({ ...current, [record._id]: { ...current[record._id], noteDescription: event.target.value } }))} />
-                    <div className="mt-3 flex items-center gap-3">
-                      <label className="text-sm text-muted-foreground"><input type="checkbox" className="mr-2" checked={Boolean(paymentForms[record._id]?.visibleToClient)} onChange={(event) => setPaymentForms((current) => ({ ...current, [record._id]: { ...current[record._id], visibleToClient: event.target.checked } }))} />Visible to client</label>
-                      <Button type="button" onClick={() => handleAddPaymentNote(record._id)} disabled={addPaymentNote.isPending}>Save Payment Note</Button>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-border bg-card p-4">
-                    <p className="text-sm font-semibold text-foreground">Internal Follow-up Note</p>
-                    <textarea className="mt-3 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm" placeholder="Follow-up summary, client promise, next action..." value={followupForms[record._id]?.followUpNote || ''} onChange={(event) => setFollowupForms((current) => ({ ...current, [record._id]: { ...current[record._id], followUpNote: event.target.value } }))} />
-                    <div className="mt-3 grid gap-3 md:grid-cols-2">
-                      <input className="rounded-2xl border border-border bg-background px-4 py-3 text-sm" placeholder="Spoken with" value={followupForms[record._id]?.spokenWith || ''} onChange={(event) => setFollowupForms((current) => ({ ...current, [record._id]: { ...current[record._id], spokenWith: event.target.value } }))} />
-                      <input className="rounded-2xl border border-border bg-background px-4 py-3 text-sm" type="date" value={followupForms[record._id]?.nextFollowUpDate || ''} onChange={(event) => setFollowupForms((current) => ({ ...current, [record._id]: { ...current[record._id], nextFollowUpDate: event.target.value } }))} />
-                    </div>
-                    <Button type="button" className="mt-3" onClick={() => handleAddFollowup(record._id)} disabled={addInternalFinanceNote.isPending}>Save Follow-up</Button>
-                  </div>
-                </div>
-              </div>
+      {/* Tab 1: Invoices & Billing */}
+      {activeTab === 'invoices' && (
+        <div className="space-y-3">
+          {/* Status filter pills */}
+          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+            {['all', 'paid', 'partially_paid', 'sent', 'draft', 'overdue'].map((st) => (
+              <button
+                key={st}
+                onClick={() => setInvoiceStatusFilter(st)}
+                className={`px-3 py-1 rounded-xl text-[11px] font-bold capitalize transition-all whitespace-nowrap ${
+                  invoiceStatusFilter === st
+                    ? 'bg-secondary text-foreground border border-border shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {st.replace(/_/g, ' ')}
+              </button>
             ))}
           </div>
-        </SectionCard>
-      ) : null}
 
-      {activeTab === 'invoices' ? (
-        <SectionCard title="Invoices" description="Create invoices, send them to the client dashboard, and track partial or completed payment updates.">
-          <div className="max-h-[400px] overflow-y-auto pr-1 border border-border/40 rounded-2xl">
+          <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs">
             <DataTable
               data={invoices}
               columns={invoiceColumns}
-              onRowClick={(row) => {
-                setSelectedInvoice(row);
-                setShowInvoiceModal(true);
-              }}
-              onEdit={canManage ? (row) => {
-                setSelectedInvoice(row);
-                setShowInvoiceModal(true);
-              } : null}
-              onDelete={canDeleteInvoice ? (id) => setDeleteInvoiceId(id) : null}
-              emptyTitle="No invoices created yet"
-              emptyDescription="Create your first invoice to share payment details with the client."
+              loading={invoicesLoading}
+              emptyTitle="No invoices found"
+              emptyDescription="Create client invoices with line items, partial payments, and PDF generation."
             />
           </div>
+        </div>
+      )}
 
-          <div className="mt-6 grid gap-4 max-h-[500px] overflow-y-auto pr-1">
-            {invoices.map((invoice) => (
-              <div key={invoice._id} className="rounded-3xl border border-border bg-background p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-bold text-foreground">{invoice.invoiceNumber}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{invoice.client?.company || invoice.client?.name} • {invoice.project?.name || 'No linked project'}</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StatusBadge tone={invoiceStatusTone[invoice.status] || 'neutral'}>{invoice.status}</StatusBadge>
-                    <Button size="sm" variant="outline" onClick={() => exportInvoiceToPDF(invoice, { save: true })} className="h-8 text-xs gap-1">
-                      <Download size={13} /> PDF
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => { setShareInvoice(invoice); setShowShareModal(true); }} className="h-8 text-xs gap-1 text-primary border-primary/30">
-                      <Share2 size={13} /> Share
-                    </Button>
-                  </div>
-                </div>
-                <div className="mt-4 grid gap-4 md:grid-cols-3">
-                  <div className="rounded-2xl border border-border bg-card p-4 text-sm">
-                    <p className="font-semibold text-foreground">Total</p>
-                    <p className="mt-2 text-muted-foreground">{currency.format(Number(invoice.totalAmount || invoice.amount || 0))}</p>
-                  </div>
-                  <div className="rounded-2xl border border-border bg-card p-4 text-sm">
-                    <p className="font-semibold text-foreground">Paid</p>
-                    <p className="mt-2 text-muted-foreground">{currency.format(Number(invoice.paidAmount || 0))}</p>
-                  </div>
-                  <div className="rounded-2xl border border-border bg-card p-4 text-sm">
-                    <p className="font-semibold text-foreground">Balance</p>
-                    <p className="mt-2 text-muted-foreground">{currency.format(Number(invoice.balanceAmount || 0))}</p>
-                  </div>
-                </div>
-                {canManage && !['Paid', 'Cancelled'].includes(invoice.status) ? (
-                  <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-                    <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" type="number" placeholder="Partial payment amount" value={paymentForms[`invoice-${invoice._id}`]?.amountPaid || ''} onChange={(event) => setPaymentForms((current) => ({ ...current, [`invoice-${invoice._id}`]: { ...current[`invoice-${invoice._id}`], amountPaid: event.target.value } }))} />
-                    <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={paymentForms[`invoice-${invoice._id}`]?.paymentMode || 'UPI'} onChange={(event) => setPaymentForms((current) => ({ ...current, [`invoice-${invoice._id}`]: { ...current[`invoice-${invoice._id}`], paymentMode: event.target.value } }))}>
-                      {['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque', 'Other'].map((mode) => <option key={mode}>{mode}</option>)}
-                    </select>
-                    <Button type="button" onClick={() => addPartialPayment.mutate({ id: invoice._id, data: paymentForms[`invoice-${invoice._id}`] || {} })} disabled={addPartialPayment.isPending}>Add Partial Payment</Button>
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-      ) : null}
+      {/* Tab 2: Expenses & Profits */}
+      {activeTab === 'expenses' && (
+        <div className="space-y-4">
+          {/* Quick Expense Category Filter Cards with Icons & Numbers */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            {[
+              { id: 'all', label: 'All Spend', icon: Receipt },
+              { id: 'ads_campaign', label: 'Ads Spend', icon: Megaphone },
+              { id: 'salary', label: 'Salary', icon: Banknote },
+              { id: 'video_shoot', label: 'Video Shoot', icon: Video },
+              { id: 'tools', label: 'Software Tools', icon: Wrench },
+              { id: 'office', label: 'Office & Rent', icon: Building },
+              { id: 'travel', label: 'Travel & Food', icon: ShoppingBag },
+              { id: 'rj', label: 'RJ / Voice', icon: Sparkles },
+            ].map((cat) => {
+              const catTheme = getCategoryTheme(cat.id);
+              const Icon = cat.icon || catTheme.icon;
+              const isSelected = expenseCategoryFilter === cat.id;
+              const matchingExpenses = rawExpenses.filter((e) => {
+                if (!isDateInRange(e.date || e.createdAt)) return false;
+                return cat.id === 'all' || e.category === cat.id;
+              });
+              const totalCatAmount = matchingExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
-
-      {activeTab === 'referrals' ? (
-        <SectionCard title="Referral Tracking" description="Track source platforms, conversion quality, and revenue contribution from converted clients.">
-          {canManage ? (
-            <div className="mb-6 grid gap-3 rounded-3xl border border-border bg-background p-5 md:grid-cols-2 xl:grid-cols-4">
-              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={referralForm.clientId} onChange={(event) => setReferralForm((current) => ({ ...current, clientId: event.target.value, projectId: '' }))}>
-                <option value="">Select client</option>
-                {clients.map((client) => <option key={client._id} value={client._id}>{client.company || client.name}</option>)}
-              </select>
-              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={referralForm.projectId} onChange={(event) => setReferralForm((current) => ({ ...current, projectId: event.target.value }))}>
-                <option value="">Select project</option>
-                {referralClientProjects.map((project) => <option key={project._id} value={project._id}>{project.name}</option>)}
-              </select>
-              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={referralForm.referralSource} onChange={(event) => setReferralForm((current) => ({ ...current, referralSource: event.target.value }))}>
-                {['LinkedIn', 'Instagram', 'Facebook', 'WhatsApp', 'Website', 'Google Search', 'Google Ads', 'Existing Client Referral', 'Direct Call', 'Walk-in', 'Friend Referral', 'Partner Referral', 'Other'].map((item) => <option key={item}>{item}</option>)}
-              </select>
-              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={referralForm.leadQuality} onChange={(event) => setReferralForm((current) => ({ ...current, leadQuality: event.target.value }))}>
-                {['Hot', 'Warm', 'Cold'].map((item) => <option key={item}>{item}</option>)}
-              </select>
-              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" placeholder="Referral person name" value={referralForm.referralPersonName} onChange={(event) => setReferralForm((current) => ({ ...current, referralPersonName: event.target.value }))} />
-              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" placeholder="Referral contact" value={referralForm.referralPersonContact} onChange={(event) => setReferralForm((current) => ({ ...current, referralPersonContact: event.target.value }))} />
-              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" placeholder="Platform link" value={referralForm.referralPlatformLink} onChange={(event) => setReferralForm((current) => ({ ...current, referralPlatformLink: event.target.value }))} />
-              <input className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" placeholder="Campaign name" value={referralForm.campaignName} onChange={(event) => setReferralForm((current) => ({ ...current, campaignName: event.target.value }))} />
-              <select className="rounded-2xl border border-border bg-card px-4 py-3 text-sm" value={referralForm.conversionStatus} onChange={(event) => setReferralForm((current) => ({ ...current, conversionStatus: event.target.value }))}>
-                {['Lead', 'Contacted', 'Proposal Sent', 'Converted', 'Not Converted'].map((item) => <option key={item}>{item}</option>)}
-              </select>
-              <textarea className="min-h-24 rounded-2xl border border-border bg-card px-4 py-3 text-sm md:col-span-2" placeholder="Referral notes" value={referralForm.notes} onChange={(event) => setReferralForm((current) => ({ ...current, notes: event.target.value }))} />
-              <Button type="button" onClick={handleCreateReferral} disabled={createReferral.isPending}>Save Referral</Button>
-            </div>
-          ) : null}
-
-          <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <MetricCard label="Total Leads" value={referralAnalytics.totalLeads || 0} helper="Tracked referral leads" icon={Users2} tone="info" />
-            <MetricCard label="Converted" value={referralAnalytics.convertedLeads || 0} helper="Converted referral clients" icon={CheckCircle2} tone="success" />
-            <MetricCard label="Pending" value={referralAnalytics.pendingLeads || 0} helper="Leads not converted yet" icon={AlertCircle} tone="warning" />
-            <MetricCard label="Revenue" value={currency.format(Number(referralAnalytics.totalRevenueFromConvertedClients || 0))} helper={referralAnalytics.bestPerformingReferralSource ? `Best source: ${referralAnalytics.bestPerformingReferralSource}` : 'No best source yet'} icon={IndianRupee} tone="primary" />
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setExpenseCategoryFilter(cat.id)}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-1.5 group shadow-xs ${
+                    isSelected
+                      ? 'border-primary bg-primary/10 text-primary font-bold ring-2 ring-primary/20 shadow-sm'
+                      : 'border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground hover:bg-secondary/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-bold tracking-wider truncate max-w-[90px]">{cat.label}</span>
+                    <div className={`p-1 rounded-lg border shrink-0 ${isSelected ? 'bg-primary text-white border-primary' : catTheme.badgeClass}`}>
+                      <Icon size={12} />
+                    </div>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-1">
+                    <span className="text-xs font-black text-foreground">{currency.format(totalCatAmount)}</span>
+                    <span className="text-[10px] font-bold text-muted-foreground px-1.5 py-0.2 rounded-md bg-secondary">
+                      {matchingExpenses.length}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
-          <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
-            {filteredReferrals.map((item) => (
-              <div key={item._id} className="rounded-3xl border border-border bg-background p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-bold text-foreground">{item.client?.company || item.client?.name || item.referralPersonName || 'Referral record'}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{item.referralSource || 'Other'} • {item.campaignName || 'No campaign name'}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {item.leadQuality ? <StatusBadge tone={item.leadQuality === 'Hot' ? 'danger' : item.leadQuality === 'Warm' ? 'warning' : 'neutral'}>{item.leadQuality}</StatusBadge> : null}
-                    {item.conversionStatus ? <StatusBadge tone={item.conversionStatus === 'Converted' ? 'success' : 'info'}>{item.conversionStatus}</StatusBadge> : null}
-                  </div>
-                </div>
-                <p className="mt-3 text-sm text-foreground">{item.notes || 'No notes added.'}</p>
-                {canDeleteFinance ? (
-                  <div className="mt-3">
-                    <Button type="button" variant="outline" onClick={() => deleteReferral.mutate(item._id)}>Delete Referral</Button>
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-      ) : null}
-
-      {activeTab === 'expenses' && (canViewFinanceDetails || isManager) ? (
-        <div className="space-y-6">
-          <SectionCard
-            title="Expenses & Profits Management"
-            description="Track company expenses (RJ fees, Video Shoot, Travel Allowance, Ads Spend), profit adjustments, and monthly reports."
-          >
-            {/* Metric Overview inside the Tab */}
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-6">
-              <MetricCard 
-                label="Total Revenue" 
-                value={currency.format(Number(financeSummary.totalRevenue || 0))} 
-                helper="Client invoices & payments received" 
-                icon={IndianRupee} 
-                tone="success" 
-              />
-              <MetricCard 
-                label="Total Expenses" 
-                value={currency.format(Number(financeSummary.totalExpenses || 0))} 
-                helper="Approved company expenses" 
-                icon={Receipt} 
-                tone="danger" 
-              />
-              <MetricCard 
-                label="Net Profit" 
-                value={currency.format(Number(financeSummary.profit || 0))} 
-                helper="Revenue minus approved expenses" 
-                icon={CheckCircle2} 
-                tone={Number(financeSummary.profit || 0) >= 0 ? 'success' : 'danger'} 
-              />
-              <MetricCard 
-                label="Profit Margin" 
-                value={`${profitMargin}%`} 
-                helper="Net profitability ratio" 
-                icon={AlertCircle} 
-                tone={Number(financeSummary.profit || 0) >= 0 ? 'primary' : 'warning'} 
-              />
+          {/* Approval Status Filter & Action Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2 bg-secondary/30 rounded-2xl border border-border">
+            <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+              <span className="text-[11px] font-bold text-muted-foreground px-2 uppercase">Approval:</span>
+              {[
+                { id: 'all', label: 'All Status' },
+                { id: 'approved', label: 'Approved' },
+                { id: 'pending', label: 'Pending Approval' },
+              ].map((st) => (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() => setExpenseApprovalFilter(st.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    expenseApprovalFilter === st.id
+                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                  }`}
+                >
+                  {st.label}
+                </button>
+              ))}
             </div>
 
-            {/* Filter & Action Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-6 bg-card/60 p-4 rounded-2xl border border-border/40">
-              <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
-                <SearchField value={search} onChange={setSearch} placeholder="Search title, category, notes..." />
-                
-                {/* Category Filter */}
-                <select
-                  className="rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  value={expenseCategoryFilter}
-                  onChange={(e) => setExpenseCategoryFilter(e.target.value)}
+            {canManage && (
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <Button
+                  size="sm"
+                  onClick={() => setShowExpenseModal(true)}
+                  className="bg-primary text-primary-foreground h-8 text-xs font-bold rounded-xl gap-1.5 shadow-xs"
                 >
-                  <option value="all">All Categories</option>
-                  <option value="rj">RJ / Voice Over</option>
-                  <option value="video_shoot">Video Shoot</option>
-                  <option value="travel_allowance">Travel Allowance</option>
-                  <option value="ads_campaign">Ads Campaign Spend</option>
-                  <option value="salary">Salary</option>
-                  <option value="tools">Software Tools</option>
-                  <option value="office">Office & Rent</option>
-                  <option value="freelance">Freelance Fees</option>
-                  <option value="misc">Miscellaneous</option>
-                  <option value="other">Other (Custom)</option>
-                </select>
-
-                {/* Transaction Type Filter */}
-                <select
-                  className="rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  value={expenseTypeFilter}
-                  onChange={(e) => setExpenseTypeFilter(e.target.value)}
-                >
-                  <option value="all">All Transactions</option>
-                  <option value="Expense">Expenses Only</option>
-                  <option value="Profit">Profits Only</option>
-                </select>
-
-                {/* Date Sort Filter */}
-                <select
-                  className="rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  value={expenseSort}
-                  onChange={(e) => setExpenseSort(e.target.value)}
-                >
-                  <option value="date_desc">Date: Newest First</option>
-                  <option value="date_asc">Date: Oldest First</option>
-                  <option value="amount_desc">Amount: High to Low</option>
-                  <option value="amount_asc">Amount: Low to High</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={() => setShowMonthlyReportModal(true)}>
-                  <Calendar size={15} className="mr-1.5" /> Monthly Expense Report
-                </Button>
-                <Button size="sm" onClick={() => {
-                  setSelectedExpense(null);
-                  setShowExpenseModal(true);
-                }}>
-                  <Plus size={15} className="mr-1.5" /> Record Expense / Profit
+                  <Plus size={13} className="stroke-[2.5]" />
+                  <span>Log Expense</span>
                 </Button>
               </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs">
+            <DataTable
+              data={expenses}
+              columns={expenseColumns}
+              loading={expensesLoading}
+              emptyTitle="No matching expenses found"
+              emptyDescription="Record agency operating costs, video shoot expenses, and marketing spend."
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Employee Salaries & Payroll (Notion Agency OS Hub) */}
+      {activeTab === 'salaries' && (
+        <div className="space-y-4">
+          {/* Notion Agency OS Payroll KPI Matrix */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3.5 rounded-2xl bg-card border border-border space-y-1 shadow-xs">
+              <div className="flex items-center justify-between text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+                <span>Total Net Payroll</span>
+                <Banknote size={14} className="text-primary" />
+              </div>
+              <div className="text-lg sm:text-xl font-black text-foreground">
+                {currency.format(salarySummary.totalPayroll || 0)}
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                {salarySummary.totalEmployees || salaries.length} team members
+              </div>
             </div>
 
-            {/* Category Breakdown list */}
-            <div className="rounded-3xl border border-border bg-background p-6 mb-6">
-              <h3 className="text-lg font-bold text-foreground mb-4">Category-Wise Overheads & Costs</h3>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {Object.entries(categoryBreakdown).map(([catKey, val]) => {
-                  const maxVal = Math.max(...Object.values(categoryBreakdown), 1);
-                  const pct = Math.round((val / maxVal) * 100);
-                  return (
-                    <div key={catKey} className="rounded-2xl border border-border bg-card p-4 flex flex-col justify-between">
-                      <div>
-                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{categoryLabels[catKey] || catKey}</span>
-                        <div className="text-xl font-bold text-foreground mt-1">{currency.format(val)}</div>
+            <div className="p-3.5 rounded-2xl bg-card border border-border space-y-1 shadow-xs">
+              <div className="flex items-center justify-between text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+                <span>Base Salaries</span>
+                <CreditCard size={14} className="text-blue-500" />
+              </div>
+              <div className="text-lg sm:text-xl font-black text-foreground">
+                {currency.format(salarySummary.totalBaseSalary || 0)}
+              </div>
+              <div className="text-[11px] text-muted-foreground">Contracted fixed pay</div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-card border border-border space-y-1 shadow-xs">
+              <div className="flex items-center justify-between text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+                <span>Incentives & OTS</span>
+                <Sparkles size={14} className="text-amber-500" />
+              </div>
+              <div className="text-lg sm:text-xl font-black text-amber-600">
+                +{currency.format(Number(salarySummary.totalIncentive || 0) + Number(salarySummary.totalOts || 0))}
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <span>Inc: {currency.format(salarySummary.totalIncentive || 0)}</span>
+                <span>•</span>
+                <span>OTS: {currency.format(salarySummary.totalOts || 0)}</span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-card border border-border space-y-1 shadow-xs">
+              <div className="flex items-center justify-between text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+                <span>Pending Disbursals</span>
+                <Clock size={14} className="text-rose-500" />
+              </div>
+              <div className="text-lg sm:text-xl font-black text-rose-600">
+                {currency.format(salarySummary.totalPending || 0)}
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                {salarySummary.pendingCount || 0} unpaid entries
+              </div>
+            </div>
+          </div>
+
+          {/* Month & Period Filter Bar + View Switcher */}
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 p-2 bg-secondary/30 rounded-2xl border border-border">
+            {/* Months Selector */}
+            <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 lg:pb-0">
+              <span className="text-[11px] font-bold text-muted-foreground px-2 uppercase">Period:</span>
+              <select
+                value={salaryMonthFilter}
+                onChange={(e) => setSalaryMonthFilter(e.target.value)}
+                className="h-8 px-2.5 text-xs font-bold rounded-xl border border-border bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="all">All Months</option>
+                {MONTH_NAMES.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={salaryYearFilter}
+                onChange={(e) => setSalaryYearFilter(e.target.value)}
+                className="h-8 px-2.5 text-xs font-bold rounded-xl border border-border bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="all">All Years</option>
+                {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
+                  <option key={y} value={y.toString()}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+
+              {/* Status Filter */}
+              <div className="hidden sm:flex items-center gap-1 ml-2 pl-2 border-l border-border">
+                {['all', 'pending', 'paid', 'processing'].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setSalaryStatusFilter(st)}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-bold capitalize transition-all whitespace-nowrap ${
+                      salaryStatusFilter === st
+                        ? 'bg-primary text-primary-foreground shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Department Quick Filter & View Switcher */}
+            <div className="flex items-center gap-2 self-end lg:self-auto">
+              <select
+                value={salaryDeptFilter}
+                onChange={(e) => setSalaryDeptFilter(e.target.value)}
+                className="h-8 px-2.5 text-xs font-bold rounded-xl border border-border bg-card text-foreground capitalize focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="all">All Departments</option>
+                {departments.filter((d) => d !== 'all').map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+              </select>
+
+              {/* View Switcher (Table / Cards / Board) */}
+              <div className="flex items-center p-0.5 rounded-xl bg-card border border-border">
+                <button
+                  onClick={() => setSalaryView('table')}
+                  className={`p-1.5 rounded-lg text-xs transition-all ${
+                    salaryView === 'table' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="Table View"
+                >
+                  <TableIcon size={14} />
+                </button>
+                <button
+                  onClick={() => setSalaryView('cards')}
+                  className={`p-1.5 rounded-lg text-xs transition-all ${
+                    salaryView === 'cards' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="Cards Grid View"
+                >
+                  <LayoutGrid size={14} />
+                </button>
+                <button
+                  onClick={() => setSalaryView('board')}
+                  className={`p-1.5 rounded-lg text-xs transition-all ${
+                    salaryView === 'board' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="Status Board View"
+                >
+                  <Layers size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* View 1: Notion Table View */}
+          {salaryView === 'table' && (
+            <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs">
+              <DataTable
+                data={salaries}
+                columns={salaryColumns}
+                loading={salariesLoading}
+                emptyTitle="No salary records found"
+                emptyDescription="Generate monthly payroll or add custom employee salary records with incentives and OTS."
+              />
+            </div>
+          )}
+
+          {/* View 2: Notion Cards Grid View */}
+          {salaryView === 'cards' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {salaries.map((row) => {
+                const emp = row.employee || {};
+                return (
+                  <div
+                    key={row._id}
+                    className="p-4 rounded-2xl border border-border bg-card shadow-xs space-y-3 hover:border-primary/40 transition-all flex flex-col justify-between"
+                  >
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-secondary uppercase tracking-wider text-muted-foreground">
+                          {row.month} {row.year}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border capitalize ${salaryStatusTone[row.status] || salaryStatusTone.pending}`}>
+                          {row.status}
+                        </span>
                       </div>
-                      <div className="mt-3">
-                        <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                          <div className="h-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} />
+
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black text-sm">
+                          {emp.name?.charAt(0) || 'E'}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-black text-sm text-foreground truncate">{emp.name || 'Team Member'}</h4>
+                          <p className="text-xs text-muted-foreground truncate">{emp.position || 'Employee'} • {emp.department || 'General'}</p>
+                        </div>
+                      </div>
+
+                      {/* Itemized Chips */}
+                      <div className="p-2.5 rounded-xl bg-secondary/40 border border-border/60 space-y-1.5 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Base Pay:</span>
+                          <span className="font-semibold text-foreground">{currency.format(Number(row.baseSalary || 0))}</span>
+                        </div>
+                        {Number(row.incentive || 0) > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-amber-600 font-medium">Incentive:</span>
+                            <span className="font-bold text-amber-600">+{currency.format(Number(row.incentive))}</span>
+                          </div>
+                        )}
+                        {Number(row.ots || 0) > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-purple-600 font-medium">OTS Allowance:</span>
+                            <span className="font-bold text-purple-600">+{currency.format(Number(row.ots))}</span>
+                          </div>
+                        )}
+                        {Number(row.otherAllowances || 0) > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-emerald-600 font-medium">Other Perks:</span>
+                            <span className="font-bold text-emerald-600">+{currency.format(Number(row.otherAllowances))}</span>
+                          </div>
+                        )}
+                        {Number(row.deductions || 0) > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-rose-600 font-medium">Deductions:</span>
+                            <span className="font-bold text-rose-600">-{currency.format(Number(row.deductions))}</span>
+                          </div>
+                        )}
+                        <div className="pt-1 border-t border-border/60 flex justify-between items-center">
+                          <span className="font-bold text-foreground">Net Pay:</span>
+                          <span className="font-black text-sm text-foreground text-primary">{currency.format(Number(row.netSalary || 0))}</span>
                         </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-border/40">
+                      <button
+                        onClick={() => {
+                          setPayslipSalary(row);
+                          setShowPayslipModal(true);
+                        }}
+                        className="text-xs font-bold text-muted-foreground hover:text-foreground flex items-center gap-1"
+                      >
+                        <FileText size={13} />
+                        <span>Payslip</span>
+                      </button>
+                      <div className="flex items-center gap-1">
+                        {row.status !== 'paid' && canManage && (
+                          <button
+                            onClick={() => updateSalaryStatus.mutate({ id: row._id, status: 'paid' })}
+                            className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 text-xs font-bold transition-colors"
+                          >
+                            Mark Paid
+                          </button>
+                        )}
+                        {canManage && (
+                          <button
+                            onClick={() => {
+                              setSelectedSalary(row);
+                              setShowSalaryModal(true);
+                            }}
+                            className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                        )}
+                        {canManage && (
+                          <button
+                            onClick={() => setDeleteSalaryId(row._id)}
+                            className="p-1 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+          )}
 
-            {/* Table of all expenses */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-foreground">Logged Expenses & Profit Entries</h3>
-              </div>
+          {/* View 3: Notion Kanban Status Board */}
+          {salaryView === 'board' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              {['pending', 'processing', 'paid'].map((statusKey) => {
+                const columnItems = salaries.filter((s) => s.status === statusKey);
+                const columnTotal = columnItems.reduce((sum, s) => sum + Number(s.netSalary || 0), 0);
+                return (
+                  <div key={statusKey} className="p-3.5 rounded-2xl bg-secondary/20 border border-border space-y-3">
+                    <div className="flex items-center justify-between pb-1 border-b border-border">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold border capitalize ${salaryStatusTone[statusKey]}`}>
+                          {statusKey}
+                        </span>
+                        <span className="text-xs font-bold text-muted-foreground">({columnItems.length})</span>
+                      </div>
+                      <span className="text-xs font-extrabold text-foreground">{currency.format(columnTotal)}</span>
+                    </div>
 
-              <div className="max-h-[500px] overflow-y-auto pr-1 border border-border/40 rounded-2xl">
-                <DataTable
-                  data={expenses}
-                  columns={expenseColumns}
-                  emptyTitle="No financial records found"
-                  emptyDescription="Try adjusting your search or category filters, or record a new expense."
-                />
-              </div>
+                    <div className="space-y-2.5 min-h-[160px]">
+                      {columnItems.length === 0 ? (
+                        <div className="text-center py-8 text-xs text-muted-foreground/60">No entries in {statusKey}</div>
+                      ) : (
+                        columnItems.map((item) => {
+                          const emp = item.employee || {};
+                          return (
+                            <div
+                              key={item._id}
+                              className="p-3 rounded-xl bg-card border border-border shadow-xs space-y-2 hover:border-primary/40 transition-all"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-xs text-foreground">{emp.name}</span>
+                                <span className="text-[11px] font-black text-primary">{currency.format(Number(item.netSalary || 0))}</span>
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">{emp.position} • {emp.department}</div>
+                              <div className="flex items-center justify-between pt-1 border-t border-border/40 text-[10px]">
+                                <span className="text-muted-foreground">{item.month}</span>
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => {
+                                      setPayslipSalary(item);
+                                      setShowPayslipModal(true);
+                                    }}
+                                    className="text-primary hover:underline font-bold"
+                                  >
+                                    Slip
+                                  </button>
+                                  {statusKey !== 'paid' && canManage && (
+                                    <button
+                                      onClick={() => updateSalaryStatus.mutate({ id: item._id, status: 'paid' })}
+                                      className="text-emerald-600 font-bold hover:underline"
+                                    >
+                                      Pay
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-
-          </SectionCard>
+          )}
         </div>
-      ) : null}
-
-      <AlertDialog open={!!deleteInvoiceId} onOpenChange={(open) => !open && setDeleteInvoiceId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this invoice? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex justify-end gap-3">
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={async () => {
-                if (deleteInvoiceId) {
-                  await deleteInvoice.mutateAsync(deleteInvoiceId);
-                  setDeleteInvoiceId(null);
-                }
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={!!deleteExpenseId} onOpenChange={(open) => !open && setDeleteExpenseId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Expense Record</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this financial entry? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex justify-end gap-3">
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={async () => {
-                if (deleteExpenseId) {
-                  await deleteExpense.mutateAsync(deleteExpenseId);
-                  setDeleteExpenseId(null);
-                }
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AddFinanceModal open={showFinanceModal} onOpenChange={setShowFinanceModal} entry={selectedRecord} />
-      <AddInvoiceModal open={showInvoiceModal} onOpenChange={setShowInvoiceModal} invoice={selectedInvoice} />
-      {showShareModal && shareInvoice && (
-        <ShareInvoiceModal open={showShareModal} onOpenChange={setShowShareModal} invoice={shareInvoice} />
       )}
-      <AddExpenseModal
-        open={showExpenseModal}
-        onOpenChange={(open) => {
-          setShowExpenseModal(open);
-          if (!open) setSelectedExpense(null);
-        }}
-        expense={selectedExpense}
-      />
-      <AddAdsCampaignModal open={showAdsCampaignModal} onOpenChange={setShowAdsCampaignModal} />
-      <MonthlyExpenseReportModal open={showMonthlyReportModal} onOpenChange={setShowMonthlyReportModal} />
-    </div>
-  );
-};
 
-export default Finance;
+      {/* Tab 4: Referral Hub */}
+      {activeTab === 'referrals' && (
+        <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs">
+          <DataTable
+            data={referrals}
+            columns={[
+              {
+                key: 'referralPersonName',
+                label: 'Partner / Referrer',
+                render: (row) => (
+                  <div className="font-bold text-foreground text-xs">{row.referralPersonName || 'Unknown Partner'}</div>
+                ),
+              },
+              {
+                key: 'referralSource',
+                label: 'Channel',
+                render: (row) => (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-secondary text-foreground capitalize">
+                    {row.referralSource || 'Direct'}
+                  </span>
+                ),
+              },
+              {
+                key: 'campaignName',
+                label: 'Campaign',
+                render: (row) => <span className="text-xs text-muted-foreground">{row.campaignName || 'N/A'}</span>,
+              },
+              {
+                key: 'conversionStatus',
+                label: 'Status',
+                render: (row) => (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                    {row.conversionStatus || 'Active'}
+                  </span>
+                ),
+              },
+            ]}
+            emptyTitle="No referral payouts found"
+            emptyDescription="Track referral partner rewards and campaign commission payouts."
+          />
+        </div>
+      )}
+
+      {/* Modals */}
+      {showInvoiceModal && (
+        <AddInvoiceModal
+          open={showInvoiceModal}
+          onOpenChange={setShowInvoiceModal}
+          invoice={selectedInvoice}
+          clients={clients}
+          projects={projects}
+        />
+      )}
+
+      {showExpenseModal && (
+        <AddExpenseModal
+          open={showExpenseModal}
+          onOpenChange={setShowExpenseModal}
+          expense={selectedExpense}
+        />
+      )}
+
+      {showSalaryModal && (
+        <AddSalaryModal
+          open={showSalaryModal}
+          onOpenChange={setShowSalaryModal}
+          salary={selectedSalary}
+          initialMonth={salaryMonthFilter !== 'all' ? salaryMonthFilter : currentMonthName}
+          initialYear={salaryYearFilter !== 'all' ? Number(salaryYearFilter) : currentYear}
+        />
+      )}
+
+      {showPayslipModal && (
+        <PayslipModal
+          open={showPayslipModal}
+          onOpenChange={setShowPayslipModal}
+          salary={payslipSalary}
+        />
+      )}
+
+      {showShareModal && (
+        <ShareInvoiceModal
+          open={showShareModal}
+          onOpenChange={setShowShareModal}
+          invoice={shareInvoice}
+        />
+      )}
+
+      {/* Delete Invoice Confirmation */}
+      <AlertDialog open={Boolean(deleteInvoiceId)} onOpenChange={(open) => !open && setDeleteInvoiceId(null)}>
+        <AlertDialogContent className="bg-card border border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold">Delete Invoice?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs">
+              This invoice and its payment records will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <AlertDialogCancel className="rounded-xl text-xs">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteInvoiceId) deleteInvoice.mutate(deleteInvoiceId);
+                setDeleteInvoiceId(null);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl text-xs font-bold"
+            >
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Expense Confirmation */}
+      <AlertDialog open={Boolean(deleteExpenseId)} onOpenChange={(open) => !open && setDeleteExpenseId(null)}>
+        <AlertDialogContent className="bg-card border border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold">Delete Expense Record?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs">
+              This expense entry will be permanently removed from finance calculations.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <AlertDialogCancel className="rounded-xl text-xs">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteExpenseId) deleteExpense.mutate(deleteExpenseId);
+                setDeleteExpenseId(null);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl text-xs font-bold"
+            >
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Salary Confirmation */}
+      <AlertDialog open={Boolean(deleteSalaryId)} onOpenChange={(open) => !open && setDeleteSalaryId(null)}>
+        <AlertDialogContent className="bg-card border border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold">Delete Salary Record?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs">
+              This employee compensation record and any linked expense will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <AlertDialogCancel className="rounded-xl text-xs">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteSalaryId) deleteSalary.mutate(deleteSalaryId);
+                setDeleteSalaryId(null);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl text-xs font-bold"
+            >
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+    </WorkspacePage>
+  );
+}

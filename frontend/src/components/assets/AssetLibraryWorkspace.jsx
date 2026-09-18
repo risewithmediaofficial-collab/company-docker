@@ -11,6 +11,8 @@ import { useProjects } from '../../hooks/useProjects';
 import { useAssets, useCreateAsset, useDeleteAsset, useUpdateAsset } from '../../hooks/useAssets';
 import { uploadFiles } from '../../utils/taskFields';
 import { getAssetUrl } from '../../utils/assetUrl';
+import { useDateFilter } from '../../context/DateFilterContext';
+import { DateRangePicker } from '../ui/DateRangePicker';
 
 export const assetCategories = [
   { value: 'logo', label: 'Logo' },
@@ -197,12 +199,15 @@ export const AssetLibraryWorkspace = ({
   const [formOpen, setFormOpen] = useState(false);
 
   const { data: clients = [] } = useClients({}, { enabled: canManage });
+  const { isDateInRange } = useDateFilter();
   const { data: projects = [] } = useProjects({}, { enabled: canManage });
-  const { data: assets = [], isLoading } = useAssets({
+  const { data: rawAssets = [], isLoading } = useAssets({
     search,
     client: clientFilter || undefined,
     category: categoryFilter || undefined,
   });
+  const assets = useMemo(() => rawAssets.filter((a) => isDateInRange(a.createdAt)), [rawAssets, isDateInRange]);
+
   const createAsset = useCreateAsset();
   const updateAsset = useUpdateAsset();
   const deleteAsset = useDeleteAsset();

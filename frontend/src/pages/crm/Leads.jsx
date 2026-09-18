@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import React, { Fragment, useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Plus,
@@ -11,11 +11,13 @@ import {
   ClipboardList,
   LayoutGrid,
   List,
+  Table as TableIcon,
   Edit2,
   Trash2,
   Target,
   TrendingUp,
   MessageSquarePlus,
+  Clock,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAddLeadActivity, useLeadsKanban, useLeads, useUpdateLeadStage, useDeleteLead } from '../../hooks/useLeads';
@@ -25,6 +27,7 @@ import { TableSkeleton } from '../../components/ui/Skeleton';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
+import { useAutoScrollOnDrag } from '../../hooks/useAutoScrollOnDrag';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +44,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { WorkspacePage } from '../../components/ui/WorkspacePage';
+import { DatabaseView } from '../../components/ui/DatabaseView';
+import { useDateFilter } from '../../context/DateFilterContext';
+import { DateRangePicker } from '../../components/ui/DateRangePicker';
 
 const PIPELINE_STAGES = ['new', 'contacted', 'qualified', 'meeting_booked', 'proposal_sent', 'negotiation', 'won', 'lost', 'refollow_later'];
 
@@ -263,10 +270,18 @@ const Leads = () => {
   const navigate = useNavigate();
   const dragLeadRef = useRef(false);
   const [searchParams] = useSearchParams();
-  const [view, setView] = useState('list');
+  const [view, setView] = useState('kanban');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [deleteLeadId, setDeleteLeadId] = useState(null);
+  const [draggingLeadId, setDraggingLeadId] = useState(null);
+  const [dragOverStage, setDragOverStage] = useState(null);
+  const [dragOverLeadIndex, setDragOverLeadIndex] = useState(null);
+  const leadsBoardRef = useRef(null);
+
+  // Smooth side auto-scroll while dragging leads
+  useAutoScrollOnDrag(leadsBoardRef, Boolean(draggingLeadId));
+
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [followUpFilter, setFollowUpFilter] = useState('');
   const [activityLead, setActivityLead] = useState(null);
@@ -292,8 +307,14 @@ const Leads = () => {
   const totalLeads = PIPELINE_STAGES.reduce((sum, stage) => sum + (kanbanData[stage]?.length || 0), 0);
   const activeLeads = totalLeads - (kanbanData.won?.length || 0) - (kanbanData.lost?.length || 0);
   const proposalLeads = (kanbanData.proposal_sent?.length || 0) + (kanbanData.negotiation?.length || 0);
-  const hasSearch = searchTerm.trim().length > 0;
+  const hasSearch = Boolean(searchTerm?.trim()?.length > 0);
   const allKanbanLeads = PIPELINE_STAGES.flatMap((stage) => kanbanData[stage] || []);
+  const totalPipelineValue = allKanbanLeads.reduce((sum, lead) => {
+    if (['lost'].includes(lead.stage)) return sum;
+    return sum + (Number(lead.value) || 0);
+  }, 0);
+  const pipelineValue = formatINR(totalPipelineValue);
+
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const todayEnd = new Date();
@@ -404,8 +425,11 @@ const Leads = () => {
     },
   ];
 
+  const { isDateInRange } = useDateFilter();
+
   const filteredListLeads = useMemo(() => {
     return leads.filter((lead) => {
+      if (!isDateInRange(lead.createdAt || lead.followUpDate || lead.updatedAt)) return false;
       if (selectedFollowUpDate) {
         if (!lead.followUpDate) return false;
         const d = new Date(lead.followUpDate).toISOString().split('T')[0];
@@ -425,13 +449,13 @@ const Leads = () => {
       }
       return true;
     });
-  }, [leads, selectedFollowUpDate, selectedTodayFollowedOnly, todayStart, todayEnd]);
+  }, [leads, selectedFollowUpDate, selectedTodayFollowedOnly, todayStart, todayEnd, isDateInRange]);
 
   const filteredKanbanData = useMemo(() => {
-    if (!selectedFollowUpDate && !selectedTodayFollowedOnly) return kanbanData;
     const filtered = {};
     PIPELINE_STAGES.forEach((stage) => {
       filtered[stage] = (kanbanData[stage] || []).filter((lead) => {
+        if (!isDateInRange(lead.createdAt || lead.followUpDate || lead.updatedAt)) return false;
         if (selectedFollowUpDate) {
           if (!lead.followUpDate) return false;
           const d = new Date(lead.followUpDate).toISOString().split('T')[0];
@@ -453,7 +477,7 @@ const Leads = () => {
       });
     });
     return filtered;
-  }, [kanbanData, selectedFollowUpDate, selectedTodayFollowedOnly, todayStart, todayEnd]);
+  }, [kanbanData, selectedFollowUpDate, selectedTodayFollowedOnly, todayStart, todayEnd, isDateInRange]);
 
   const handleDeleteLead = async () => {
     if (deleteLeadId) {
@@ -474,12 +498,17 @@ const Leads = () => {
     if (!open) setSelectedLead(null);
   };
 
-  const handleDrop = async (e, stage) => {
+  const handleDrop = async (e, stage, dropIdx = null) => {
     e.preventDefault();
+    e.stopPropagation();
     const leadId = e.dataTransfer.getData('leadId');
     if (leadId) {
       await updateStageMutation.mutateAsync({ id: leadId, stage });
     }
+    setDraggingLeadId(null);
+    setDragOverStage(null);
+    setDragOverLeadIndex(null);
+    dragLeadRef.current = false;
   };
 
   const renderKanban = () => {
@@ -487,7 +516,7 @@ const Leads = () => {
       <div className="min-w-0">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">Pipeline Board</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">Leads Board</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Drag leads between stages to keep the funnel current.
             </p>
@@ -497,18 +526,32 @@ const Leads = () => {
           </div>
         </div>
 
-        <div className="w-full overflow-x-auto pb-4">
+        <div ref={leadsBoardRef} className="w-full overflow-x-auto pb-4 custom-scrollbar">
           <div className="grid w-max min-w-full auto-cols-[minmax(280px,320px)] grid-flow-col gap-5 pr-1">
             {PIPELINE_STAGES.map((stage) => {
               const stageInfo = STAGE_META[stage];
               const stageLeads = filteredKanbanData[stage] || [];
+              const isColActive = dragOverStage === stage;
 
               return (
                 <section
                   key={stage}
-                  className={`flex min-h-[520px] flex-col rounded-[28px] border bg-card/90 shadow-sm backdrop-blur-sm ${stageInfo.surface}`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragOverStage !== stage) setDragOverStage(stage);
+                  }}
+                  onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget)) {
+                      if (dragOverStage === stage) setDragOverStage(null);
+                    }
+                  }}
+                  onDrop={(e) => handleDrop(e, stage)}
+                  className={`flex flex-col min-h-[500px] max-h-[calc(100vh-300px)] rounded-[28px] border bg-card/90 shadow-sm backdrop-blur-sm transition-all ${stageInfo.surface} ${
+                    isColActive ? 'ring-2 ring-primary/40 border-primary bg-primary/5 shadow-md' : ''
+                  }`}
                 >
-                  <div className="border-b border-border/70 px-4 py-4">
+                  <div className="border-b border-border/70 px-4 py-4 shrink-0">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2">
@@ -522,37 +565,59 @@ const Leads = () => {
                   </div>
 
                   <div
-                    className="flex min-h-0 flex-1 flex-col gap-3 p-4"
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => handleDrop(e, stage)}
+                    className="flex min-h-0 flex-1 flex-col gap-3 p-4 overflow-y-auto max-h-[calc(100vh-370px)] custom-scrollbar pr-1"
                   >
                     {stageLeads.length > 0 ? (
-                      stageLeads.map((lead) => {
+                      <>
+                        {stageLeads.map((lead, idx) => {
                         const leadValue = getLeadValue(lead);
+                        const isBeingDragged = draggingLeadId === lead._id;
+                        const showDropIndicatorBefore = isColActive && dragOverLeadIndex === idx && !isBeingDragged;
 
                         return (
-                          <motion.article
-                            layoutId={lead._id}
-                            key={lead._id}
-                            draggable
-                            onDragStart={(e) => {
-                              dragLeadRef.current = true;
-                              e.dataTransfer.setData('leadId', lead._id);
-                            }}
-                            onDragEnd={() => { dragLeadRef.current = false; }}
-                            onClick={() => {
-                              if (!dragLeadRef.current) navigate(`/crm/leads/${lead._id}`);
-                            }}
-                            onKeyDown={(event) => {
-                              if (event.key === 'Enter' || event.key === ' ') {
-                                event.preventDefault();
-                                navigate(`/crm/leads/${lead._id}`);
-                              }
-                            }}
-                            role="button"
-                            tabIndex={0}
-                            className="group cursor-pointer rounded-2xl border border-border/80 bg-background/95 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/60 active:cursor-grabbing"
-                          >
+                          <React.Fragment key={lead._id}>
+                            {showDropIndicatorBefore && (
+                              <div className="h-1.5 rounded-full bg-primary/70 animate-pulse my-1 shadow-xs" />
+                            )}
+                            <motion.article
+                              draggable
+                              onDragStart={(e) => {
+                                dragLeadRef.current = true;
+                                setDraggingLeadId(lead._id);
+                                e.dataTransfer.setData('leadId', lead._id);
+                                e.dataTransfer.effectAllowed = 'move';
+                              }}
+                              onDragEnd={() => {
+                                setTimeout(() => { dragLeadRef.current = false; }, 50);
+                                setDraggingLeadId(null);
+                                setDragOverStage(null);
+                                setDragOverLeadIndex(null);
+                              }}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.dataTransfer.dropEffect = 'move';
+                                setDragOverStage(stage);
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const midY = rect.top + rect.height / 2;
+                                setDragOverLeadIndex(e.clientY < midY ? idx : idx + 1);
+                              }}
+                              onDrop={(e) => handleDrop(e, stage, idx)}
+                              onClick={() => {
+                                if (!dragLeadRef.current) navigate(`/crm/leads/${lead._id}`);
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                  event.preventDefault();
+                                  navigate(`/crm/leads/${lead._id}`);
+                                }
+                              }}
+                              role="button"
+                              tabIndex={0}
+                              className={`group cursor-grab rounded-2xl border border-border/80 bg-background/95 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/60 active:cursor-grabbing ${
+                                isBeingDragged ? 'opacity-30 scale-95 border-dashed border-primary ring-1 ring-primary/40' : ''
+                              }`}
+                            >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${PRIORITY_META[lead.priority] || PRIORITY_META.medium}`}>
@@ -561,6 +626,12 @@ const Leads = () => {
                                 {lead.source && (
                                   <span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
                                     {lead.source}
+                                  </span>
+                                )}
+                                {lead.createdAt && (
+                                  <span className="rounded-full bg-secondary/80 px-2 py-0.5 text-[10px] font-medium text-muted-foreground flex items-center gap-1">
+                                    <Clock size={10} />
+                                    {new Date(lead.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                   </span>
                                 )}
                               </div>
@@ -643,15 +714,22 @@ const Leads = () => {
                               </div>
                             </div>
                           </motion.article>
-                        );
-                      })
-                    ) : (
-                      <div className="flex flex-1 items-center justify-center rounded-[24px] border border-dashed border-border bg-background/80 p-6 text-center">
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">No leads in {stageInfo.label.toLowerCase()}</p>
-                        </div>
-                      </div>
+                        </React.Fragment>
+                      );
+                    })}
+                    {isColActive && dragOverLeadIndex >= stageLeads.length && (
+                      <div className="h-1.5 rounded-full bg-primary/70 animate-pulse my-1 shadow-xs" />
                     )}
+                    </>
+                  ) : (
+                    <div className={`flex flex-1 items-center justify-center rounded-[24px] border border-dashed p-6 text-center transition-all ${
+                      isColActive ? 'border-primary bg-primary/10 text-primary font-semibold' : 'border-border bg-background/80 text-muted-foreground'
+                    }`}>
+                      <div>
+                        <p className="text-sm font-semibold">{isColActive ? `Drop here to move to ${stageInfo.label}` : `No leads in ${stageInfo.label.toLowerCase()}`}</p>
+                      </div>
+                    </div>
+                  )}
                   </div>
                 </section>
               );
@@ -663,141 +741,86 @@ const Leads = () => {
   };
 
   return (
-    <div className="min-w-0 space-y-6">
-      <section className="overflow-hidden rounded-[32px] border border-border bg-gradient-to-br from-background via-background to-secondary/70 shadow-sm">
-        <div className="p-5 sm:p-6 lg:p-7">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-2xl">
-              <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                CRM Pipeline
-              </h1>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 xl:justify-end">
-              <div className="inline-flex items-center rounded-2xl border border-border bg-card p-1 shadow-sm">
-                <button
-                  onClick={() => setView('kanban')}
-                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all ${
-                    view === 'kanban'
-                      ? 'bg-primary text-white shadow-md shadow-primary/20'
-                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                  }`}
-                >
-                  <LayoutGrid size={16} />
-                  Board
-                </button>
-                <button
-                  onClick={() => setView('list')}
-                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all ${
-                    view === 'list'
-                      ? 'bg-primary text-white shadow-md shadow-primary/20'
-                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                  }`}
-                >
-                  <List size={16} />
-                  List
-                </button>
-              </div>
-
-              <Button
-                onClick={() => {
-                  setSelectedLead(null);
-                  setShowAddModal(true);
-                }}
-                className="w-full justify-center sm:w-auto"
-              >
-                <Plus size={18} className="mr-2" />
-                Add Lead
-              </Button>
-            </div>
+    <WorkspacePage
+      breadcrumbs={['RiseWithMedia', 'Growth & Sales', 'CRM & Leads']}
+      title="Sales Pipeline & Lead Management"
+      subtitle="Track lead conversions, assign team owners, schedule follow-ups, and manage deal stages."
+      icon={Target}
+      properties={[
+        { label: 'Active Leads', value: activeLeads, tone: 'info', icon: Target },
+        { label: 'Pipeline Value', value: pipelineValue, tone: 'success', icon: TrendingUp },
+        { label: 'Today Follow-ups', value: followUpToday, tone: followUpToday > 0 ? 'warning' : 'neutral', icon: Calendar },
+        { label: 'Overdue Follow-ups', value: overdueFollowUps, tone: overdueFollowUps > 0 ? 'danger' : 'neutral', icon: ClipboardList },
+      ]}
+      actions={
+        <Button
+          size="sm"
+          onClick={() => {
+            setSelectedLead(null);
+            setShowAddModal(true);
+          }}
+          className="rounded-xl text-xs font-bold gap-1.5 shadow-sm"
+        >
+          <Plus size={14} className="stroke-[2.5]" />
+          <span>Add Lead</span>
+        </Button>
+      }
+    >
+      <DatabaseView
+        views={[
+          { id: 'kanban', label: 'Board', icon: LayoutGrid },
+          { id: 'list', label: 'Table', icon: TableIcon },
+        ]}
+        activeView={view}
+        onViewChange={setView}
+        searchQuery={searchTerm}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder="Search leads, companies, phone numbers..."
+        totalCount={filteredListLeads.length}
+        filters={
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => {
+                setFollowUpFilter(followUpFilter === 'today' ? '' : 'today');
+                setView('list');
+              }}
+              className={`rounded-xl border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                followUpFilter === 'today'
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground'
+              }`}
+            >
+              Today ({followUpToday})
+            </button>
+            <button
+              onClick={() => {
+                setFollowUpFilter(followUpFilter === 'overdue' ? '' : 'overdue');
+                setView('list');
+              }}
+              className={`rounded-xl border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                followUpFilter === 'overdue'
+                  ? 'border-destructive bg-destructive text-destructive-foreground'
+                  : 'border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground'
+              }`}
+            >
+              Overdue ({overdueFollowUps})
+            </button>
+            <button
+              onClick={() => {
+                setFollowUpFilter(followUpFilter === 'refollow' ? '' : 'refollow');
+                setView('list');
+              }}
+              className={`rounded-xl border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                followUpFilter === 'refollow'
+                  ? 'border-amber-500 bg-amber-500 text-white'
+                  : 'border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground'
+              }`}
+            >
+              Refollow ({refollowLeads})
+            </button>
           </div>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {pipelineHighlights.map((item) => (
-              <div
-                key={item.label}
-                onClick={item.onClick}
-                className={`rounded-[24px] border border-border/80 bg-gradient-to-br px-4 py-4 shadow-sm ${item.tone}`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                      {item.label}
-                    </p>
-                    <p className="mt-3 text-3xl font-bold tracking-tight text-foreground">{item.value}</p>
-                  </div>
-                  <div className="rounded-2xl bg-background/80 p-3">
-                    <item.icon size={18} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 rounded-[26px] border border-border/80 bg-card/80 p-3 shadow-sm backdrop-blur-sm">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-              <div className="relative flex-1">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search leads, companies, phone numbers..."
-                  value={searchTerm}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="w-full rounded-2xl border border-border bg-background py-3 pl-11 pr-4 text-sm shadow-inner outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15"
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => {
-                    setFollowUpFilter(followUpFilter === 'today' ? '' : 'today');
-                    setView('list');
-                  }}
-                  className={`rounded-2xl border px-3 py-2 text-xs font-semibold transition-colors ${
-                    followUpFilter === 'today'
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-border bg-background text-muted-foreground hover:bg-secondary hover:text-foreground'
-                  }`}
-                >
-                  Today {followUpToday}
-                </button>
-                <button
-                  onClick={() => {
-                    setFollowUpFilter(followUpFilter === 'overdue' ? '' : 'overdue');
-                    setView('list');
-                  }}
-                  className={`rounded-2xl border px-3 py-2 text-xs font-semibold transition-colors ${
-                    followUpFilter === 'overdue'
-                      ? 'border-destructive bg-destructive text-destructive-foreground'
-                      : 'border-border bg-background text-muted-foreground hover:bg-secondary hover:text-foreground'
-                  }`}
-                >
-                  Overdue {overdueFollowUps}
-                </button>
-                <button
-                  onClick={() => {
-                    setFollowUpFilter(followUpFilter === 'refollow' ? '' : 'refollow');
-                    setView('list');
-                  }}
-                  className={`rounded-2xl border px-3 py-2 text-xs font-semibold transition-colors ${
-                    followUpFilter === 'refollow'
-                      ? 'border-orange-500 bg-orange-500 text-white'
-                      : 'border-border bg-background text-muted-foreground hover:bg-secondary hover:text-foreground'
-                  }`}
-                >
-                  Refollow {refollowLeads}
-                </button>
-                <div className="rounded-2xl border border-border bg-background px-3 py-2 text-xs font-medium text-muted-foreground">
-                  {view === 'kanban' ? 'Board view active' : 'List view active'}
-                </div>
-                <div className="rounded-2xl border border-border bg-background px-3 py-2 text-xs font-medium text-muted-foreground">
-                  {hasSearch ? `${filteredListLeads.length} matching leads` : `${totalLeads} total leads`}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
+        }
+      >
       {isLoading ? (
         <TableSkeleton columns={5} rows={6} dark={false} />
       ) : (
@@ -823,6 +846,7 @@ const Leads = () => {
                       <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">Interest</th>
                       <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">Value</th>
                       <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">Follow-up</th>
+                      <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">Created</th>
                       <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">Stage</th>
                       <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6">Owner</th>
                       <th className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 font-semibold sm:px-6 text-right">Actions</th>
@@ -861,6 +885,9 @@ const Leads = () => {
                             {lead.refollowDate ? (
                               <div className="mt-1 text-xs text-orange-700">Refollow {formatDate(lead.refollowDate)}</div>
                             ) : null}
+                          </td>
+                          <td className="px-4 py-4 sm:px-6 text-xs text-muted-foreground whitespace-nowrap">
+                            {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                           </td>
                           <td className="px-4 py-4 sm:px-6">
                             <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${stageInfo.badge}`}>
@@ -920,6 +947,7 @@ const Leads = () => {
           </div>
         )
       )}
+      </DatabaseView>
 
       <AddLeadModal
         open={showAddModal}
@@ -954,7 +982,7 @@ const Leads = () => {
           </div>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </WorkspacePage>
   );
 };
 

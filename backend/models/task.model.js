@@ -4,10 +4,23 @@
 
 import mongoose from 'mongoose';
 
+const fileAttachmentSchema = new mongoose.Schema(
+  {
+    name: { type: String, default: '' },
+    url: { type: String, required: true },
+    type: { type: String, default: '' },
+    fileType: { type: String, default: '' },
+    size: { type: Number, default: 0 },
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    uploadedAt: { type: Date, default: Date.now },
+  },
+  { _id: true }
+);
+
 const commentSchema = new mongoose.Schema({
   content: { type: String, required: true },
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  attachments: [{ name: String, url: String }],
+  attachments: [fileAttachmentSchema],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
@@ -19,7 +32,7 @@ const progressUpdateSchema = new mongoose.Schema({
   completedAt: { type: Date, default: Date.now }, // when this progress was logged
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // who logged this
   workNotes: { type: String, default: '' },
-  attachments: [{ name: String, url: String, type: String, size: Number }],
+  attachments: [fileAttachmentSchema],
 });
 
 const taskSchema = new mongoose.Schema(
@@ -82,23 +95,29 @@ const taskSchema = new mongoose.Schema(
     },
     clientName: { type: String, default: '' },
     assignedPersonName: { type: String, default: '' },
-    assignedManager: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    assignedManager: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
-    client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
+    client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', default: null },
     parent: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
     assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 
     // Multi-Role Sub-Assignments (Notion / ClickUp style)
-    scriptWriterAssigned: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    scriptWriterAssigned: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     scriptWriterName: { type: String, default: '' },
 
-    videographerAssigned: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    videographerName: { type: String, default: '' },
+    voiceArtistAssigned: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    voiceArtistName: { type: String, default: '' },
+    voiceScriptText: { type: String, default: '' },
+    voiceInstructions: { type: String, default: '' },
 
-    editorAssigned: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    videographerAssigned: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    videographerName: { type: String, default: '' },
+    videographerContentNeeded: { type: String, default: '' },
+
+    editorAssigned: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     editorName: { type: String, default: '' },
 
-    publisherAssigned: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    publisherAssigned: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     publisherName: { type: String, default: '' },
 
     shootDate: { type: Date },
@@ -107,8 +126,15 @@ const taskSchema = new mongoose.Schema(
 
     postingPlatforms: [{ type: String }],
     postingScheduleDate: { type: Date },
+    publishingDate: { type: Date },
+    publishingTime: { type: String, default: '' },
 
     // Role Workflow Sub-statuses
+    voiceStatus: {
+      type: String,
+      enum: ['pending', 'in_progress', 'completed', 'not_applicable'],
+      default: 'pending',
+    },
     shootStatus: {
       type: String,
       enum: ['pending', 'in_progress', 'completed', 'not_applicable'],
@@ -195,16 +221,7 @@ const taskSchema = new mongoose.Schema(
     clientVisibleNotes: { type: String, default: '' },
     tags: [{ type: String }],
     comments: [commentSchema],
-    attachments: [
-      {
-        name: String,
-        url: String,
-        type: String,
-        size: Number,
-        uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        uploadedAt: { type: Date, default: Date.now },
-      },
-    ],
+    attachments: [fileAttachmentSchema],
     orderIndex: { type: Number, default: 0 },
     isPersonalTask: { type: Boolean, default: false },
     isRecurring: { type: Boolean, default: false },
@@ -236,20 +253,81 @@ const taskSchema = new mongoose.Schema(
         date: { type: Date, default: Date.now },
       },
     ],
-    completedFiles: [
-      {
-        name: String,
-        url: String,
-        type: String,
-        size: Number,
-        uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        uploadedAt: { type: Date, default: Date.now },
-      },
-    ],
+    completedFiles: [fileAttachmentSchema],
     progressUpdates: [progressUpdateSchema],
+    isOverTarget: { type: Boolean, default: false },
+    targetExceededBy: { type: Number, default: 0 },
+
+    // ── Development Management Extension ──────────────────────────────
+    department: { type: String, default: '', trim: true },
+    development: {
+      isDevTask: { type: Boolean, default: false },
+      stage: {
+        type: String,
+        enum: [
+          'backlog',
+          'analysis',
+          'ready_for_dev',
+          'in_development',
+          'code_review',
+          'qa_testing',
+          'client_uat',
+          'approved',
+          'deployment',
+          'live',
+          'closed',
+          'blocked',
+        ],
+        default: 'backlog',
+      },
+      previousStage: { type: String, default: '' },
+      isBlocked: { type: Boolean, default: false },
+      blockedReason: { type: String, default: '' },
+      blockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      blockedAt: { type: Date, default: null },
+      developer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      reviewer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      reviewStatus: {
+        type: String,
+        enum: ['none', 'pending', 'approved', 'changes_requested'],
+        default: 'none',
+      },
+      reviewComments: { type: String, default: '' },
+      reviewedAt: { type: Date, default: null },
+      tester: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      testStatus: {
+        type: String,
+        enum: ['none', 'pending', 'passed', 'failed', 'blocked'],
+        default: 'none',
+      },
+      testNotes: { type: String, default: '' },
+      testDate: { type: Date, default: null },
+      testAttachments: [fileAttachmentSchema],
+      branch: { type: String, default: '', trim: true },
+      pullRequestUrl: { type: String, default: '', trim: true },
+      pullRequestNumber: { type: String, default: '', trim: true },
+      commitHash: { type: String, default: '', trim: true },
+      sprint: { type: mongoose.Schema.Types.ObjectId, ref: 'Sprint', default: null },
+      release: { type: mongoose.Schema.Types.ObjectId, ref: 'Release', default: null },
+      isBug: { type: Boolean, default: false },
+      bugSeverity: {
+        type: String,
+        enum: ['low', 'medium', 'high', 'critical', ''],
+        default: '',
+      },
+      stepsToReproduce: { type: String, default: '' },
+      expectedResult: { type: String, default: '' },
+      actualResult: { type: String, default: '' },
+      environment: { type: String, default: '' },
+    },
   },
   { timestamps: true }
 );
+
+taskSchema.index({ department: 1 });
+taskSchema.index({ 'development.isDevTask': 1, 'development.stage': 1 });
+taskSchema.index({ 'development.sprint': 1 });
+taskSchema.index({ 'development.release': 1 });
 
 taskSchema.index({ project: 1, status: 1 });
 taskSchema.index({ assignedTo: 1 });

@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { useDateFilter } from '../../context/DateFilterContext';
 import {
   addDays,
   addMonths,
@@ -32,6 +34,8 @@ import {
   Plus,
   Rows3,
   TimerReset,
+  X,
+  Palette,
 } from 'lucide-react';
 import { AddTaskModal } from '../../components/modals/AddTaskModal';
 import { ClientTaskResponsePanel } from '../../components/tasks/ClientTaskResponsePanel';
@@ -80,8 +84,103 @@ const VIEW_OPTIONS = [
   { value: 'month', label: 'Monthly', icon: LayoutGrid },
   { value: 'week', label: 'Weekly', icon: Rows3 },
   { value: 'day', label: 'Daily', icon: PanelTop },
-  { value: 'list', label: 'List', icon: List },
+  { value: 'list', label: 'Cards', icon: List },
+  { value: 'agenda', label: 'List', icon: CalendarDays },
 ];
+
+export const TASK_STATUS_COLORS = {
+  'To Do': {
+    label: 'To Do / Scheduled',
+    dot: 'bg-slate-400',
+    border: 'border-slate-300 dark:border-slate-700',
+    bg: 'bg-slate-500/10 hover:bg-slate-500/20 text-slate-800 dark:text-slate-200',
+    badge: 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700',
+    sign: '⚪ To Do',
+  },
+  'On Process': {
+    label: 'In Process / Active',
+    dot: 'bg-blue-500',
+    border: 'border-blue-400/70 dark:border-blue-600/70',
+    bg: 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-900 dark:text-blue-200',
+    badge: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-400/40',
+    sign: '🔵 In Process',
+  },
+  'Waiting for Client': {
+    label: 'Waiting for Client',
+    dot: 'bg-amber-500',
+    border: 'border-amber-400/70 dark:border-amber-600/70',
+    bg: 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 dark:text-amber-200',
+    badge: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-400/40',
+    sign: '🟡 Waiting Client',
+  },
+  'Review Required': {
+    label: 'Review Required',
+    dot: 'bg-purple-500',
+    border: 'border-purple-400/70 dark:border-purple-600/70',
+    bg: 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-900 dark:text-purple-200',
+    badge: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-400/40',
+    sign: '🟣 Review Needed',
+  },
+  'Rework': {
+    label: 'Rework Required',
+    dot: 'bg-rose-500',
+    border: 'border-rose-400/70 dark:border-rose-600/70',
+    bg: 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-900 dark:text-rose-200',
+    badge: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-400/40',
+    sign: '🟠 Rework',
+  },
+  'Completed': {
+    label: 'Completed / Approved',
+    dot: 'bg-emerald-500',
+    border: 'border-emerald-400/70 dark:border-emerald-600/70',
+    bg: 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-900 dark:text-emerald-200',
+    badge: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-400/40',
+    sign: '🟢 Completed',
+  },
+  'Approved': {
+    label: 'Approved',
+    dot: 'bg-emerald-500',
+    border: 'border-emerald-400/70 dark:border-emerald-600/70',
+    bg: 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-900 dark:text-emerald-200',
+    badge: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-400/40',
+    sign: '🟢 Approved',
+  },
+};
+
+export const TASK_PRIORITY_COLORS = {
+  Urgent: {
+    label: 'Urgent',
+    dot: 'bg-rose-500',
+    badge: 'bg-rose-500 text-white font-black shadow-xs ring-1 ring-rose-600',
+    pill: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-400/40',
+    sign: '🔴 Urgent',
+    borderLeft: 'border-l-4 border-l-rose-500',
+  },
+  High: {
+    label: 'High',
+    dot: 'bg-amber-500',
+    badge: 'bg-amber-500 text-white font-bold',
+    pill: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-400/40',
+    sign: '🟠 High',
+    borderLeft: 'border-l-3 border-l-amber-500',
+  },
+  Medium: {
+    label: 'Medium',
+    dot: 'bg-blue-500',
+    badge: 'bg-blue-500 text-white font-semibold',
+    pill: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-400/40',
+    sign: '🔵 Medium',
+    borderLeft: '',
+  },
+  Low: {
+    label: 'Low',
+    dot: 'bg-slate-400',
+    badge: 'bg-slate-500 text-white font-medium',
+    pill: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-400/40',
+    sign: '🟢 Low',
+    borderLeft: '',
+  },
+};
 
 const statusTone = {
   'To Do': 'neutral',
@@ -449,54 +548,84 @@ const ClientTaskDialog = ({ task, open, onOpenChange, onSubmitted }) => {
 
 const TaskSummaryCard = ({ task, onOpen }) => {
   const normalizedStatus = normalizeTaskStatusLabel(task.status);
+  const statusTheme = TASK_STATUS_COLORS[normalizedStatus] || TASK_STATUS_COLORS['To Do'];
+  const priorityTheme = TASK_PRIORITY_COLORS[task.priority] || TASK_PRIORITY_COLORS['Medium'];
+  const isUrgent = task.priority === 'Urgent';
+  const isHigh = task.priority === 'High';
 
   return (
     <button
       type="button"
       onClick={() => onOpen(task)}
-      className="w-full rounded-[24px] border border-border bg-card p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-md"
+      className={cn(
+        "w-full rounded-[24px] border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md relative overflow-hidden",
+        statusTheme.border,
+        statusTheme.bg,
+        isUrgent && "ring-2 ring-rose-500/50 border-l-6 border-l-rose-500 bg-rose-500/10 shadow-rose-500/10",
+        isHigh && !isUrgent && "border-l-4 border-l-amber-500",
+        task.isOverdue && "border-rose-500 bg-rose-500/15"
+      )}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className={cn('px-2.5 py-0.5 rounded-lg text-[11px] font-bold border flex items-center gap-1', statusTheme.badge)}>
+              <span className={cn('h-2 w-2 rounded-full', statusTheme.dot)} />
+              <span>{normalizedStatus}</span>
+            </span>
+
+            {isUrgent ? (
+              <span className="px-2.5 py-0.5 rounded-lg text-[11px] font-black bg-rose-500 text-white shadow-xs animate-pulse flex items-center gap-1">
+                <span>🔴</span>
+                <span>URGENT PRIORITY</span>
+              </span>
+            ) : isHigh ? (
+              <span className="px-2 py-0.5 rounded-lg text-[11px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                🟠 High Priority
+              </span>
+            ) : task.priority ? (
+              <span className="px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-secondary text-muted-foreground border border-border">
+                {priorityTheme.sign || task.priority}
+              </span>
+            ) : null}
+
             <StatusBadge tone={categoryTone[task.taskCategory] || 'neutral'}>
               {task.taskCategory === 'non_content' ? 'Non-Content' : 'Content'}
             </StatusBadge>
-            <StatusBadge tone={statusTone[normalizedStatus] || 'neutral'}>
-              {normalizedStatus}
-            </StatusBadge>
-            <StatusBadge tone={priorityTone[task.priority] || 'neutral'}>
-              {task.priority}
-            </StatusBadge>
+
             {task.isOverdue ? <StatusBadge tone="danger">Overdue</StatusBadge> : null}
           </div>
-          <h3 className="mt-3 text-base font-bold text-foreground">{task.taskTitle || task.title}</h3>
-          <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
+
+          <h3 className="mt-3 text-base font-bold text-foreground hover:text-primary transition-colors">
+            {task.taskTitle || task.title}
+          </h3>
+          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
             {task.description || task.websiteRequirements || task.scriptText || 'No requirements added yet.'}
           </p>
         </div>
-        <div className="rounded-2xl bg-secondary px-3 py-2 text-right">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Due</p>
-          <p className="mt-1 text-sm font-semibold text-foreground">
+
+        <div className="rounded-2xl bg-card border border-border px-3 py-2 text-right shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Due Date</p>
+          <p className="mt-0.5 text-xs font-black text-foreground">
             {task.dueDate ? format(new Date(task.dueDate), 'MMM d, yyyy') : 'No date'}
           </p>
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl border border-border bg-secondary/20 px-3 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Client</p>
-          <p className="mt-2 text-sm font-semibold text-foreground">{task.client?.name || task.client?.company || task.clientName || 'No client linked'}</p>
+      <div className="mt-3.5 grid gap-2.5 md:grid-cols-3">
+        <div className="rounded-xl border border-border/80 bg-background/80 px-3 py-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Client</p>
+          <p className="mt-0.5 text-xs font-semibold text-foreground truncate">{task.client?.name || task.client?.company || task.clientName || 'No client linked'}</p>
         </div>
-        <div className="rounded-2xl border border-border bg-secondary/20 px-3 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Assigned To</p>
-          <p className="mt-2 text-sm font-semibold text-foreground">
+        <div className="rounded-xl border border-border/80 bg-background/80 px-3 py-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Assigned To</p>
+          <p className="mt-0.5 text-xs font-semibold text-foreground truncate">
             {task.assignedPersonName || task.assignedTo?.map((item) => item.name).join(', ') || 'Unassigned'}
           </p>
         </div>
-        <div className="rounded-2xl border border-border bg-secondary/20 px-3 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Project</p>
-          <p className="mt-2 text-sm font-semibold text-foreground">{task.project?.name || task.projectName || 'No project linked'}</p>
+        <div className="rounded-xl border border-border/80 bg-background/80 px-3 py-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Project</p>
+          <p className="mt-0.5 text-xs font-semibold text-foreground truncate">{task.project?.name || task.projectName || 'No project linked'}</p>
         </div>
       </div>
     </button>
@@ -504,6 +633,7 @@ const TaskSummaryCard = ({ task, onOpen }) => {
 };
 
 const ContentCalendar = ({ embedded = false, defaultView = 'month' }) => {
+  const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState(defaultView);
@@ -532,11 +662,23 @@ const ContentCalendar = ({ embedded = false, defaultView = 'month' }) => {
   const [showDailyTaskDialog, setShowDailyTaskDialog] = useState(false);
 
   const isClient = user?.role === 'client';
-  const canManageCalendar = ['superAdmin', 'manager'].includes(user?.role);
-  const canFilterAssignee = ['superAdmin', 'manager'].includes(user?.role);
-  const canFilterClientProject = ['superAdmin', 'manager', 'employee'].includes(user?.role);
+  const canManageCalendar = ['superAdmin', 'admin', 'manager'].includes(user?.role);
+  const canFilterAssignee = ['superAdmin', 'admin', 'manager'].includes(user?.role);
+  const canFilterClientProject = ['superAdmin', 'admin', 'manager', 'employee'].includes(user?.role);
   const canLogDailyUpdates = EMPLOYEE_ROLES.includes(user?.role);
   const canDownloadWeeklyReport = canLogDailyUpdates || canManageCalendar;
+
+  const { startDate: globalStartDate, endDate: globalEndDate, isDateInRange } = useDateFilter();
+
+  // Auto-sync calendar view date when global navbar date changes
+  useEffect(() => {
+    if (globalStartDate) {
+      const parsed = new Date(globalStartDate);
+      if (!Number.isNaN(parsed.getTime())) {
+        setCurrentDate(parsed);
+      }
+    }
+  }, [globalStartDate]);
 
   const visibleRange = useMemo(() => getRangeForView(currentDate, view), [currentDate, view]);
 
@@ -544,9 +686,9 @@ const ContentCalendar = ({ embedded = false, defaultView = 'month' }) => {
     ...filters,
     search,
     parent: 'all',
-    startDate: filters.startDate || format(visibleRange.start, 'yyyy-MM-dd'),
-    endDate: filters.endDate || format(visibleRange.end, 'yyyy-MM-dd'),
-  }), [filters, search, visibleRange]);
+    startDate: filters.startDate || globalStartDate || format(visibleRange.start, 'yyyy-MM-dd'),
+    endDate: filters.endDate || globalEndDate || format(visibleRange.end, 'yyyy-MM-dd'),
+  }), [filters, search, globalStartDate, globalEndDate, visibleRange]);
 
   const { data: calendarData, isLoading, refetch } = useTaskCalendar(queryFilters);
   const { data: employeeTasks = [] } = useTasks(
@@ -558,8 +700,10 @@ const ContentCalendar = ({ embedded = false, defaultView = 'month' }) => {
   const { data: users = [] } = useUsers({ enabled: canFilterAssignee });
 
   const tasks = useMemo(
-    () => (calendarData?.tasks || []).map((task) => ({ ...task, status: normalizeTaskStatusLabel(task.status) })),
-    [calendarData],
+    () => (calendarData?.tasks || [])
+      .filter((task) => isDateInRange(task.dueDate || task.startDate || task.createdAt))
+      .map((task) => ({ ...task, status: normalizeTaskStatusLabel(task.status) })),
+    [calendarData, isDateInRange],
   );
 
   const summary = calendarData?.summary || {
@@ -622,7 +766,7 @@ const ContentCalendar = ({ embedded = false, defaultView = 'month' }) => {
   );
 
   const assignableUsers = useMemo(
-    () => users.filter((person) => ['superAdmin', 'manager', 'employee'].includes(person.role)),
+    () => users.filter((person) => ['superAdmin', 'admin', 'manager', 'employee'].includes(person.role)),
     [users],
   );
 
@@ -694,84 +838,235 @@ const ContentCalendar = ({ embedded = false, defaultView = 'month' }) => {
   };
 
   const renderMonthView = () => (
-    <div className="overflow-x-auto rounded-[24px] border border-border">
-      <div className="min-w-[760px]">
-      <div className="grid grid-cols-7 border-b border-border bg-secondary/40">
-        {DAY_NAMES.map((day) => (
-          <div key={day} className="px-2 py-3 text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:text-sm">
-            {day}
-          </div>
-        ))}
-      </div>
+    <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-xs">
+      <div className="min-w-[680px]">
+        <div className="grid grid-cols-7 border-b border-border bg-secondary/40">
+          {DAY_NAMES.map((day) => (
+            <div key={day} className="py-1.5 px-1 text-center text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+              {day}
+            </div>
+          ))}
+        </div>
 
-      <div className="grid grid-cols-7">
-        {daysInView.map((day) => {
-          const key = format(day, 'yyyy-MM-dd');
-          const dayTasks = tasksByDate.get(key) || [];
-          const inCurrentMonth = isSameMonth(day, currentDate);
+        <div className="grid grid-cols-7">
+          {daysInView.map((day) => {
+            const key = format(day, 'yyyy-MM-dd');
+            const dayTasks = tasksByDate.get(key) || [];
+            const inCurrentMonth = isSameMonth(day, currentDate);
+            const isDayToday = isToday(day);
 
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => openDateDetails(day)}
-              className={cn(
-                'min-h-[132px] border-b border-r border-border p-2 text-left align-top transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 sm:min-h-[160px] sm:p-3',
-                !inCurrentMonth && 'bg-secondary/20 text-muted-foreground',
-                isToday(day) && 'bg-primary/5',
-                dayTasks.length ? 'hover:bg-secondary/35' : 'hover:bg-secondary/20',
-              )}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div
-                  className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold',
-                    isToday(day) ? 'bg-primary text-primary-foreground' : 'bg-transparent text-foreground',
-                  )}
-                >
-                  {format(day, 'd')}
-                </div>
-                {dayTasks.length ? (
-                  <span className="rounded-full bg-secondary px-2 py-1 text-[11px] font-semibold text-muted-foreground">
-                    {dayTasks.length}
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="mt-3 space-y-2">
-                {dayTasks.slice(0, 3).map((task) => (
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => openDateDetails(day)}
+                className={cn(
+                  'min-h-[72px] sm:min-h-[80px] max-h-[105px] overflow-hidden border-b border-r border-border/70 p-1 sm:p-1.5 text-left align-top transition-colors focus:outline-none focus:ring-1 focus:ring-primary/30',
+                  !inCurrentMonth && 'bg-secondary/15 opacity-55',
+                  isDayToday && 'bg-primary/5 ring-1 ring-inset ring-primary/25',
+                  dayTasks.length ? 'hover:bg-secondary/35' : 'hover:bg-secondary/15',
+                )}
+              >
+                <div className="flex items-center justify-between gap-1 leading-none">
                   <div
-                    key={task._id}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleOpenTask(task);
-                    }}
-                    className="rounded-2xl border border-border bg-background/90 px-2.5 py-2 text-left shadow-sm transition-all hover:border-primary/30 hover:bg-background"
+                    className={cn(
+                      'flex h-6 w-6 sm:h-6 sm:w-6 items-center justify-center rounded-full text-xs sm:text-sm font-black tracking-tight',
+                      isDayToday
+                        ? 'bg-primary text-primary-foreground font-black shadow-xs ring-1 ring-primary/40'
+                        : inCurrentMonth
+                        ? 'text-foreground font-black'
+                        : 'text-muted-foreground font-bold',
+                    )}
                   >
-                    <p className="truncate text-xs font-semibold text-foreground">{task.taskTitle || task.title}</p>
-                    <p className="mt-1 truncate text-[11px] text-muted-foreground">
-                      {task.client?.name || task.clientName || formatTaskTypeLabel(task.taskType)}
-                    </p>
+                    {format(day, 'd')}
                   </div>
-                ))}
+                  {dayTasks.length ? (
+                    <span className="rounded-full bg-primary/10 border border-primary/20 px-1.5 py-0.2 text-[10px] font-black text-primary leading-none">
+                      {dayTasks.length}
+                    </span>
+                  ) : null}
+                </div>
 
-                {dayTasks.length > 3 ? (
-                  <div className="text-xs font-semibold text-primary">+{dayTasks.length - 3} more tasks</div>
-                ) : null}
+                <div className="mt-1 space-y-1">
+                  {dayTasks.slice(0, 2).map((task) => {
+                    const normalizedStatus = normalizeTaskStatusLabel(task.status);
+                    const statusTheme = TASK_STATUS_COLORS[normalizedStatus] || TASK_STATUS_COLORS['To Do'];
+                    const isUrgent = task.priority === 'Urgent';
+                    const isHigh = task.priority === 'High';
 
-                {!dayTasks.length ? (
-                  <div className="pt-6 text-xs leading-5 text-muted-foreground">
-                   
-                  </div>
-                ) : null}
-              </div>
-            </button>
-          );
-        })}
-      </div>
+                    return (
+                      <div
+                        key={task._id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleOpenTask(task);
+                        }}
+                        className={cn(
+                          'group/task relative rounded-md border px-1.5 py-0.5 text-left shadow-2xs transition-all hover:scale-[1.01] hover:shadow-xs cursor-pointer',
+                          statusTheme.border,
+                          statusTheme.bg,
+                          isUrgent && 'border-l-[3px] border-l-rose-500 ring-1 ring-rose-500/50 bg-rose-500/10',
+                          isHigh && !isUrgent && 'border-l-[3px] border-l-amber-500',
+                          task.isOverdue && 'border-rose-500/80 bg-rose-500/15',
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', statusTheme.dot, isUrgent && 'animate-pulse')} />
+                            <p className="truncate text-[10px] font-bold text-foreground group-hover/task:text-primary transition-colors leading-tight">
+                              {task.taskTitle || task.title}
+                            </p>
+                          </div>
+                          {isUrgent ? (
+                            <span className="shrink-0 px-1 py-0.2 rounded text-[7px] font-black bg-rose-500 text-white leading-none">
+                              !
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {dayTasks.length > 2 ? (
+                    <div className="text-[9px] font-black text-primary px-0.5 leading-none">
+                      +{dayTasks.length - 2} more
+                    </div>
+                  ) : null}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
+
+  const renderAgendaView = () => {
+    // Group tasks by due date
+    const grouped = new Map();
+    listTasks.forEach((task) => {
+      const key = task.dueDate ? format(new Date(task.dueDate), 'yyyy-MM-dd') : 'no-date';
+      const label = task.dueDate ? format(new Date(task.dueDate), 'EEEE, MMMM d, yyyy') : 'No Due Date';
+      if (!grouped.has(key)) grouped.set(key, { label, tasks: [] });
+      grouped.get(key).tasks.push(task);
+    });
+
+    const groups = Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b));
+
+    if (!groups.length) {
+      return (
+        <EmptyState
+          title="No tasks found"
+          description="Adjust your filters or date range to see tasks."
+          action={canManageCalendar ? (
+            <Button onClick={() => navigate('/tasks/new')}>
+              <Plus size={16} className="mr-2" />
+              Create Task
+            </Button>
+          ) : null}
+        />
+      );
+    }
+
+    return (
+      <div className="space-y-1 rounded-[20px] overflow-hidden border border-border">
+        {/* Header Row */}
+        <div className="grid items-center gap-2 bg-secondary/60 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground"
+          style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 100px' }}>
+          <span>Task</span>
+          <span>Client</span>
+          <span>Assigned To</span>
+          <span>Status</span>
+          <span>Priority</span>
+          <span className="text-right">Due Date</span>
+        </div>
+
+        {groups.map(([dateKey, { label, tasks: dateTasks }]) => (
+          <div key={dateKey}>
+            {/* Date Group Header */}
+            <div className={cn(
+              'sticky top-0 z-10 flex items-center gap-3 border-y border-border bg-card/95 px-4 py-2 backdrop-blur-sm',
+              dateKey !== 'no-date' && isToday(new Date(dateKey)) && 'bg-primary/5 border-primary/20',
+            )}>
+              <div className={cn(
+                'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black',
+                dateKey !== 'no-date' && isToday(new Date(dateKey))
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-foreground',
+              )}>
+                {dateKey !== 'no-date' ? format(new Date(dateKey), 'd') : '—'}
+              </div>
+              <p className="text-xs font-bold text-foreground">{label}</p>
+              <span className="ml-auto rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                {dateTasks.length} {dateTasks.length === 1 ? 'task' : 'tasks'}
+              </span>
+            </div>
+
+            {/* Task Rows */}
+            {dateTasks.map((task, idx) => {
+              const normalizedStatus = normalizeTaskStatusLabel(task.status);
+              const assignees = task.assignedTo?.map((a) => a.name).join(', ') || task.assignedPersonName || 'Unassigned';
+              return (
+                <button
+                  key={task._id}
+                  type="button"
+                  onClick={() => handleOpenTask(task)}
+                  className={cn(
+                    'w-full grid items-center gap-2 border-b border-border/50 px-4 py-3 text-left transition-all hover:bg-secondary/30',
+                    idx % 2 === 0 ? 'bg-background' : 'bg-secondary/10',
+                    task.isOverdue && 'border-l-2 border-l-rose-500',
+                  )}
+                  style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 100px' }}
+                >
+                  {/* Title + Category */}
+                  <div className="min-w-0 flex items-center gap-2">
+                    <span className={cn(
+                      'h-2 w-2 shrink-0 rounded-full',
+                      task.taskCategory === 'content' ? 'bg-blue-500' : 'bg-amber-500',
+                    )} />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">{task.taskTitle || task.title}</p>
+                      <p className="truncate text-[11px] text-muted-foreground">{formatTaskTypeLabel(task.taskType)}</p>
+                    </div>
+                    {task.isOverdue && (
+                      <span className="ml-1 shrink-0 rounded-full bg-rose-100 px-1.5 py-0.5 text-[9px] font-bold text-rose-600 uppercase">Overdue</span>
+                    )}
+                  </div>
+
+                  {/* Client */}
+                  <p className="truncate text-xs text-muted-foreground">
+                    {task.client?.name || task.client?.company || task.clientName || '—'}
+                  </p>
+
+                  {/* Assignees */}
+                  <p className="truncate text-xs text-muted-foreground">{assignees}</p>
+
+                  {/* Status */}
+                  <div>
+                    <StatusBadge tone={statusTone[normalizedStatus] || 'neutral'}>
+                      {normalizedStatus}
+                    </StatusBadge>
+                  </div>
+
+                  {/* Priority */}
+                  <div>
+                    <StatusBadge tone={priorityTone[task.priority] || 'neutral'}>
+                      {task.priority || '—'}
+                    </StatusBadge>
+                  </div>
+
+                  {/* Due Date */}
+                  <p className="text-right text-xs font-semibold text-foreground">
+                    {task.dueDate ? format(new Date(task.dueDate), 'MMM d') : '—'}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const renderWeekOrDayView = () => (
     <div className="grid gap-4 lg:grid-cols-7">
@@ -815,316 +1110,225 @@ const ContentCalendar = ({ embedded = false, defaultView = 'month' }) => {
   );
 
   return (
-    <div className={cn('space-y-6', embedded && 'p-4 sm:p-6')}>
-      <PageHeader
-        title={isClient ? 'Client Task Calendar' : user?.role === 'employee' ? 'Assigned Task Calendar' : 'Task Calendar'}
-        description={isClient
-          ? 'Track only your own tasks with client-visible details, alerts, and approval actions.'
-          : 'Switch between monthly, weekly, daily, and list views to manage deadlines, priorities, and follow-ups.'}
-        actions={(
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <div className="grid grid-cols-4 rounded-2xl border border-border bg-card p-1 shadow-sm sm:inline-flex">
-              {VIEW_OPTIONS.map(({ value, label, icon: Icon }) => (
-                <button
-                  key={value}
-                  onClick={() => setView(value)}
-                  className={cn(
-                    'inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all',
-                    view === value
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-                  )}
-                >
-                  <Icon size={16} />
-                  <span className="hidden sm:inline">{label}</span>
-                </button>
-              ))}
-            </div>
-
-            {canLogDailyUpdates ? (
-              <Button
-                variant="outline"
-                onClick={() => setShowDailyTaskDialog(true)}
-                className="w-full justify-center sm:w-auto"
-              >
-                <Plus size={16} className="mr-2" />
-                Add Daily Task
-              </Button>
-            ) : null}
-
-            {canManageCalendar ? (
-              <Button
-                onClick={() => {
-                  setSelectedTask(null);
-                  setDraftDueDate('');
-                  setShowAddModal(true);
-                }}
-                className="w-full justify-center sm:w-auto"
-              >
-                <Plus size={16} className="mr-2" />
-                Create Task
-              </Button>
-            ) : null}
-          </div>
-        )}
-      >
-        <MetricGrid>
-          <MetricCard label="Visible Tasks" value={summary.total} helper="Within your current calendar scope" icon={CalendarDays} tone="primary" />
-          <MetricCard label="Waiting for Client" value={summary.waitingForClient} helper="Needs client action or feedback" icon={Clock3} tone="warning" />
-          <MetricCard label="Completed / Approved" value={summary.completed} helper="Finished work in this view" icon={CheckCircle2} tone="success" />
-          <MetricCard label="Overdue" value={summary.overdue} helper="Tasks that need immediate attention" icon={TimerReset} tone={summary.overdue > 0 ? 'danger' : 'neutral'} />
-        </MetricGrid>
-      </PageHeader>
-
-      <CollapsibleFilterBar
-        search={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Search task titles, clients, scripts, website requirements, or notes..."
-        activeFilterCount={Object.values(filters).filter(Boolean).length}
-        onResetFilters={() => setFilters({ client: '', project: '', assignedTo: '', taskCategory: '', taskType: '', status: '', priority: '', startDate: '', endDate: '' })}
-      >
-        <div className="grid w-full gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {canFilterClientProject ? (
-            <select
-              value={filters.client}
-              onChange={(event) => setFilters((current) => ({ ...current, client: event.target.value }))}
-              className="app-select"
-            >
-              <option value="">All clients</option>
-              {clients.map((client) => (
-                <option key={client._id} value={client._id}>{client.name || client.company}</option>
-              ))}
-            </select>
-          ) : null}
-
-          {canFilterClientProject ? (
-            <select
-              value={filters.project}
-              onChange={(event) => setFilters((current) => ({ ...current, project: event.target.value }))}
-              className="app-select"
-            >
-              <option value="">All projects</option>
-              {projects.map((project) => (
-                <option key={project._id} value={project._id}>{project.name}</option>
-              ))}
-            </select>
-          ) : null}
-
-          {canFilterAssignee ? (
-            <select
-              value={filters.assignedTo}
-              onChange={(event) => setFilters((current) => ({ ...current, assignedTo: event.target.value }))}
-              className="app-select"
-            >
-              <option value="">All assignees</option>
-              {assignableUsers.map((person) => (
-                <option key={person._id} value={person._id}>{person.name}</option>
-              ))}
-            </select>
-          ) : null}
-
-          <select
-            value={filters.taskCategory}
-            onChange={(event) => setFilters((current) => ({ ...current, taskCategory: event.target.value, taskType: '' }))}
-            className="app-select"
-          >
-            <option value="">All categories</option>
-            {TASK_CATEGORY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-
-          <select
-            value={filters.taskType}
-            onChange={(event) => setFilters((current) => ({ ...current, taskType: event.target.value }))}
-            className="app-select"
-          >
-            <option value="">All task types</option>
-            {(filters.taskCategory === 'content'
-              ? CONTENT_TASK_TYPE_OPTIONS
-              : filters.taskCategory === 'non_content'
-                ? NON_CONTENT_TASK_TYPE_OPTIONS
-                : ALL_TASK_TYPES
-            ).map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-
-          <select
-            value={filters.status}
-            onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
-            className="app-select"
-          >
-            <option value="">All statuses</option>
-            {TASK_STATUS_OPTIONS.map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-
-          <select
-            value={filters.priority}
-            onChange={(event) => setFilters((current) => ({ ...current, priority: event.target.value }))}
-            className="app-select"
-          >
-            <option value="">All priorities</option>
-            {PRIORITY_OPTIONS.map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-
-          <div className="relative">
-            <span className="absolute left-4 top-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Start Date</span>
-            <input
-              type="date"
-              value={filters.startDate}
-              onChange={(event) => setFilters((current) => ({ ...current, startDate: event.target.value }))}
-              className="app-input pb-1.5 pt-5"
-            />
+    <div className={cn('space-y-2.5', embedded && 'p-3 sm:p-4')}>
+      {/* ── Compact Header & View Toolbar ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 bg-card rounded-2xl border border-border p-3 shadow-xs">
+        {/* Left: Title + Date Range Period + Nav Arrows */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-5 w-5 text-primary" />
+            <h1 className="text-base sm:text-lg font-black tracking-tight text-foreground">
+              {isClient ? 'Client Calendar' : user?.role === 'employee' ? 'My Task Calendar' : 'Task Calendar'}
+            </h1>
           </div>
 
-          <div className="relative">
-            <span className="absolute left-4 top-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider">End Date</span>
-            <input
-              type="date"
-              value={filters.endDate}
-              onChange={(event) => setFilters((current) => ({ ...current, endDate: event.target.value }))}
-              className="app-input pb-1.5 pt-5"
-            />
+          {/* Date Navigation & Period Label */}
+          <div className="flex items-center gap-1.5 bg-secondary/50 rounded-xl p-0.5 border border-border/70">
+            <button
+              type="button"
+              onClick={() => setCurrentDate((current) => shiftDateByView(current, view, -1))}
+              className="p-1 rounded-lg hover:bg-background text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+              title="Previous"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentDate(new Date())}
+              className="px-2 py-0.5 text-xs font-bold rounded-md hover:bg-background text-foreground transition-all cursor-pointer"
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentDate((current) => shiftDateByView(current, view, 1))}
+              className="p-1 rounded-lg hover:bg-background text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+              title="Next"
+            >
+              <ChevronRight size={15} />
+            </button>
+            <span className="text-xs font-black text-primary px-2 border-l border-border/80">
+              {toolbarTitle}
+            </span>
           </div>
         </div>
-      </CollapsibleFilterBar>
 
-      {canDownloadWeeklyReport ? (
-        <SectionCard
-          title="Weekly Work Report"
-          description={`Daily work logs saved from ${format(weeklyRange.start, 'MMM d')} to ${format(weeklyRange.end, 'MMM d, yyyy')}.`}
-          action={(
-            <div className="flex flex-wrap items-center gap-2">
-              {canLogDailyUpdates ? (
-                <Button onClick={() => setShowDailyUpdateDialog(true)}>
-                  <Plus size={16} className="mr-2" />
-                  Log Daily Update
-                </Button>
-              ) : null}
-              <Button
-                variant="outline"
-                onClick={handleDownloadWeeklyReport}
-                disabled={!weeklyReport?.rows?.length || isWeeklyReportLoading}
+        {/* Right: View Options + Action Button */}
+        <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+          <div className="inline-flex rounded-xl border border-border bg-secondary/40 p-0.5 shadow-2xs">
+            {VIEW_OPTIONS.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                onClick={() => setView(value)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition-all cursor-pointer',
+                  view === value
+                    ? 'bg-primary text-primary-foreground shadow-xs font-black'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/60',
+                )}
               >
-                <Download size={16} className="mr-2" />
-                {isWeeklyReportLoading ? 'Preparing...' : 'Download Weekly Report'}
-              </Button>
-            </div>
-          )}
-        >
-          <div className="grid gap-4 lg:grid-cols-4">
-            <div className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Report Owner</p>
-              <p className="mt-3 text-lg font-bold text-foreground">{weeklyReportOwnerLabel}</p>
-            </div>
-            <div className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Total Updates</p>
-              <p className="mt-3 text-3xl font-bold text-foreground">{weeklyReport?.summary?.totalUpdates || 0}</p>
-            </div>
-            <div className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Hours Logged</p>
-              <p className="mt-3 text-3xl font-bold text-foreground">{Number(weeklyReport?.summary?.totalHours || 0).toFixed(2)}</p>
-            </div>
-            <div className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Unique Tasks</p>
-              <p className="mt-3 text-3xl font-bold text-foreground">{weeklyReport?.summary?.uniqueTasks || 0}</p>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-            <div className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Daily Breakdown</p>
-              <div className="mt-4 space-y-3">
-                {(weeklyReport?.dailyBreakdown || []).length ? (
-                  weeklyReport.dailyBreakdown.map((item) => (
-                    <div key={item.date} className="flex items-center justify-between rounded-2xl border border-border bg-background px-4 py-3">
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{format(new Date(item.date), 'EEE, MMM d')}</p>
-                        <p className="text-xs text-muted-foreground">{item.updates} updates</p>
-                      </div>
-                      <p className="text-sm font-bold text-foreground">{Number(item.hours || 0).toFixed(2)}h</p>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-8 text-center text-sm text-muted-foreground">
-                    No daily updates saved for this week yet.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-border bg-card p-5 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Recent Logged Work</p>
-              <div className="mt-4 space-y-3">
-                {(weeklyReport?.rows || []).length ? (
-                  weeklyReport.rows.slice(0, 5).map((row, index) => (
-                    <div key={`${row.taskId}-${row.workDate}-${index}`} className="rounded-2xl border border-border bg-background px-4 py-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-foreground">{row.taskTitle}</p>
-                        <p className="text-xs text-muted-foreground">{format(new Date(row.workDate), 'MMM d')} • {Number(row.hours || 0).toFixed(2)}h</p>
-                      </div>
-                      <p className="mt-2 text-sm text-muted-foreground">{row.description}</p>
-                      <p className="mt-2 text-xs text-muted-foreground">{row.clientName || 'No client'} • {row.projectName || 'No project'}</p>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-8 text-center text-sm text-muted-foreground">
-                    Weekly exports will populate once the team starts logging daily updates.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </SectionCard>
-      ) : null}
-
-      <SectionCard
-        title={toolbarTitle}
-        description={isClient
-          ? 'Only your own tasks and client-visible information are shown here.'
-          : 'Open any task for details, progress, files, and status updates based on your role.'}
-        action={(
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => setCurrentDate((current) => shiftDateByView(current, view, -1))}>
-              <ChevronLeft size={16} />
-            </Button>
-            <Button variant="outline" onClick={() => setCurrentDate(new Date())}>Today</Button>
-            <Button variant="outline" size="icon" onClick={() => setCurrentDate((current) => shiftDateByView(current, view, 1))}>
-              <ChevronRight size={16} />
-            </Button>
-          </div>
-        )}
-      >
-        {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {[1, 2, 3, 4, 5, 6].map((item) => (
-              <div key={item} className="h-40 animate-pulse rounded-[24px] border border-border bg-secondary/50" />
+                <Icon size={13} />
+                <span>{label}</span>
+              </button>
             ))}
           </div>
+
+          {canManageCalendar ? (
+            <Button
+              size="sm"
+              onClick={() => navigate('/tasks/new')}
+              className="h-8 rounded-xl text-xs font-bold gap-1 px-3 shadow-xs"
+            >
+              <Plus size={14} className="stroke-[2.5]" />
+              <span>Create Task</span>
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      {/* ── Compact Metric Badges & Search Ribbon ── */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 bg-card/60 backdrop-blur-sm rounded-xl border border-border/80 px-3 py-1.5 shadow-2xs">
+        {/* Metric Badges */}
+        <div className="flex items-center gap-2 flex-wrap text-xs">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-primary/10 border border-primary/20 text-primary font-bold">
+            <CalendarDays size={12} />
+            <span>Visible Tasks: <strong className="font-black text-sm">{summary.total}</strong></span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 font-bold">
+            <Clock3 size={12} />
+            <span>Waiting for Client: <strong className="font-black text-sm">{summary.waitingForClient}</strong></span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 font-bold">
+            <CheckCircle2 size={12} />
+            <span>Completed / Approved: <strong className="font-black text-sm">{summary.completed}</strong></span>
+          </div>
+          <div className={cn(
+            'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg font-bold border',
+            summary.overdue > 0
+              ? 'bg-rose-500/10 border-rose-500/20 text-rose-600'
+              : 'bg-secondary border-border/80 text-muted-foreground'
+          )}>
+            <TimerReset size={12} />
+            <span>Overdue: <strong className="font-black text-sm">{summary.overdue}</strong></span>
+          </div>
+        </div>
+
+        {/* Quick Search */}
+        <div className="relative w-full lg:w-72">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search task titles, clients, scripts..."
+            className="w-full h-7 rounded-lg bg-background border border-border px-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/40"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Sleek Interactive Color Signs & Status Legend Bar ── */}
+      <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 custom-scrollbar">
+        <span className="text-[11px] font-bold text-muted-foreground shrink-0 flex items-center gap-1 mr-1">
+          <Palette size={12} className="text-primary" /> Filter:
+        </span>
+        {Object.entries(TASK_STATUS_COLORS).filter(([key]) => key !== 'Approved').map(([statusKey, meta]) => {
+          const isSelected = filters.status === statusKey;
+          const count = tasks.filter((t) => t.status === statusKey || (statusKey === 'Completed' && ['Completed', 'Approved'].includes(t.status))).length;
+
+          return (
+            <button
+              key={statusKey}
+              type="button"
+              onClick={() => setFilters((current) => ({ ...current, status: isSelected ? '' : statusKey }))}
+              className={cn(
+                'inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer shrink-0 shadow-2xs select-none',
+                meta.badge,
+                isSelected
+                  ? 'ring-2 ring-primary ring-offset-1 scale-105 shadow-xs font-black'
+                  : 'hover:opacity-90 hover:scale-[1.02]'
+              )}
+            >
+              <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', meta.dot)} />
+              <span>{meta.label}</span>
+              <span className="ml-0.5 px-1 py-0.2 rounded-full text-[9px] font-black bg-black/10 dark:bg-white/10">
+                {count}
+              </span>
+            </button>
+          );
+        })}
+
+        <div className="h-3 w-px bg-border mx-1 shrink-0" />
+
+        {Object.entries(TASK_PRIORITY_COLORS).map(([prioKey, meta]) => {
+          const isSelected = filters.priority === prioKey;
+          const count = tasks.filter((t) => t.priority === prioKey).length;
+
+          return (
+            <button
+              key={prioKey}
+              type="button"
+              onClick={() => setFilters((current) => ({ ...current, priority: isSelected ? '' : prioKey }))}
+              className={cn(
+                'inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer shrink-0 shadow-2xs select-none',
+                meta.pill,
+                prioKey === 'Urgent' && 'border-rose-500/50',
+                isSelected
+                  ? 'ring-2 ring-primary ring-offset-1 scale-105 shadow-xs font-black'
+                  : 'hover:opacity-90 hover:scale-[1.02]'
+              )}
+            >
+              <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', meta.dot, prioKey === 'Urgent' && 'animate-ping')} />
+              <span>{meta.sign}</span>
+              <span className="ml-0.5 px-1 py-0.2 rounded-full text-[9px] font-black bg-black/10 dark:bg-white/10">
+                {count}
+              </span>
+            </button>
+          );
+        })}
+
+        {(filters.status || filters.priority) && (
+          <button
+            type="button"
+            onClick={() => setFilters((current) => ({ ...current, status: '', priority: '' }))}
+            className="text-[10px] font-bold text-primary hover:underline flex items-center gap-0.5 shrink-0 ml-1 cursor-pointer"
+          >
+            <span>Reset</span>
+            <X size={10} />
+          </button>
+        )}
+      </div>
+
+      {/* ── Main Calendar Container ── */}
+      <div>
+        {isLoading ? (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((item) => (
+              <div key={item} className="h-32 animate-pulse rounded-2xl border border-border bg-secondary/50" />
+            ))}
+          </div>
+        ) : view === 'agenda' ? (
+          renderAgendaView()
         ) : view === 'list' ? (
           listTasks.length ? (
-            <div className="grid gap-4 xl:grid-cols-2">
+            <div className="grid gap-3 xl:grid-cols-2">
               {listTasks.map((task) => (
                 <TaskSummaryCard key={task._id} task={task} onOpen={handleOpenTask} />
               ))}
             </div>
           ) : (
             <EmptyState
-              title="No tasks found for this list view"
+              title="No tasks found for this view"
               description="Adjust your filters or date range to surface the tasks you want to review."
               action={canManageCalendar ? (
-                <Button
-                  onClick={() => {
-                    setSelectedTask(null);
-                    setDraftDueDate('');
-                    setShowAddModal(true);
-                  }}
-                >
+                <Button onClick={() => navigate('/tasks/new')}>
                   <Plus size={16} className="mr-2" />
                   Create Task
                 </Button>
@@ -1136,25 +1340,7 @@ const ContentCalendar = ({ embedded = false, defaultView = 'month' }) => {
         ) : (
           renderWeekOrDayView()
         )}
-      </SectionCard>
-
-      <AddTaskModal
-        open={showAddModal}
-        onOpenChange={(open) => {
-          setShowAddModal(open);
-          if (!open) {
-            setSelectedTask(null);
-            setDraftDueDate('');
-            refetch();
-          }
-        }}
-        task={selectedTask}
-        initialValues={{
-          dueDate: draftDueDate,
-          status: 'To Do',
-          isClientVisible: true,
-        }}
-      />
+      </div>
 
       <DailyTaskUpdateDialog
         open={showDailyUpdateDialog}
@@ -1172,9 +1358,9 @@ const ContentCalendar = ({ embedded = false, defaultView = 'month' }) => {
       />
 
       <Dialog open={showDayDialog} onOpenChange={setShowDayDialog}>
-        <DialogContent className="max-h-[88vh] overflow-hidden p-0 sm:max-w-4xl">
+        <DialogContent noPadding className="max-h-[88vh] overflow-hidden p-0 sm:max-w-4xl">
           <div className="border-b border-border bg-gradient-to-br from-background via-background to-secondary/60 px-6 py-5">
-            <DialogHeader className="mb-0">
+            <DialogHeader className="border-b-0 mb-0 pb-0">
               <DialogTitle className="text-2xl tracking-tight">
                 {selectedDate ? format(selectedDate, 'EEEE, MMMM d, yyyy') : 'Tasks'}
               </DialogTitle>

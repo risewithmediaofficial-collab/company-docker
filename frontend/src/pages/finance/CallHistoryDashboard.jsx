@@ -8,6 +8,8 @@ import { useCallHistory, useCreateCallHistory, useUpdateCallHistory, useDeleteCa
 import { SelectDropdown } from '../../components/ui/SelectDropdown';
 import { Button } from '../../components/ui/button';
 import { PageHeader, PageToolbar, SectionCard, StatusBadge } from '../../components/ui/page';
+import { useDateFilter } from '../../context/DateFilterContext';
+import { DateRangePicker } from '../../components/ui/DateRangePicker';
 
 const CALL_TYPES = ['Incoming', 'Outgoing', 'Missed', 'WhatsApp Call', 'Google Meet', 'Zoom', 'Direct Meeting'];
 const CALL_PURPOSES = ['Payment Follow-up', 'Task Discussion', 'Requirement Collection', 'Approval Follow-up', 'Rework Discussion', 'General Update', 'Complaint', 'Other'];
@@ -17,7 +19,7 @@ const LEAD_SOURCES = ['website', 'referral', 'social_media', 'cold_call', 'email
 
 export default function CallHistoryDashboard() {
   const { user } = useSelector((state) => state.auth);
-  const canManage = ['superAdmin', 'manager', 'employee'].includes(user?.role);
+  const canManage = ['superAdmin', 'admin', 'manager', 'employee'].includes(user?.role);
 
   // Queries
   const { data: clients = [] } = useClients();
@@ -211,10 +213,13 @@ export default function CallHistoryDashboard() {
     }
   };
 
+  const { isDateInRange } = useDateFilter();
+
   // Filter Call Logs
   const filteredCalls = useMemo(() => {
     const calls = callHistoryQuery.data || [];
     return calls.filter((call) => {
+      if (!isDateInRange(call.calledAt || call.callDate || call.createdAt)) return false;
       // Type filter
       if (filterType === 'client' && !call.clientId) return false;
       if (filterType === 'lead' && !call.leadId) return false;
@@ -242,7 +247,7 @@ export default function CallHistoryDashboard() {
 
       return true;
     });
-  }, [callHistoryQuery.data, filterType, searchQuery]);
+  }, [callHistoryQuery.data, filterType, searchQuery, isDateInRange]);
 
   return (
     <div className="space-y-6">

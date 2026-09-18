@@ -14,10 +14,12 @@ router.get('/', getCampaigns);
 router.get('/:id', getCampaign);
 router.post('/', authorize('superAdmin', 'manager', 'employee'), createCampaign);
 router.post('/:id/daily-logs', authorize('superAdmin', 'manager', 'employee'), addDailyLog);
+router.post('/:id/daily-log', authorize('superAdmin', 'manager', 'employee'), addDailyLog);
 router.delete('/:id/daily-logs/:logId', authorize('superAdmin', 'manager', 'employee'), deleteDailyLog);
-router.put('/bulk-status', authorize('superAdmin', 'manager'), bulkUpdateCampaignStatus);
+router.delete('/:id/daily-log/:logId', authorize('superAdmin', 'manager', 'employee'), deleteDailyLog);
+router.put('/bulk-status', authorize('superAdmin', 'manager', 'employee'), bulkUpdateCampaignStatus);
 router.put('/:id', authorize('superAdmin', 'manager', 'employee'), updateCampaign);
 router.patch('/:id/performance', authorize('superAdmin', 'manager', 'employee'), updateCampaignPerformance);
-router.delete('/:id', authorize('superAdmin', 'manager'), deleteCampaign);
+router.delete('/:id', authorize('superAdmin', 'manager', 'employee'), deleteCampaign);
 
 export default router;

@@ -10,15 +10,18 @@ import Organization from '../models/organization.model.js';
 import { sendEmail } from '../utils/email.js';
 import { createNotification } from '../utils/notification.js';
 
-
-// Generate access token
+// Generate access token (set to long lifetime: 365 days so users stay logged in)
 const generateAccessToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '15m' });
+  const secret = process.env.JWT_SECRET || 'dev-super-secret-jwt-key';
+  const expire = process.env.JWT_EXPIRE || '365d';
+  return jwt.sign({ id, role }, secret, { expiresIn: expire });
 };
 
-// Generate refresh token
+// Generate refresh token (set to long lifetime: 3650 days)
 const generateRefreshToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRE || '7d' });
+  const secret = process.env.JWT_REFRESH_SECRET || 'dev-super-secret-refresh-key';
+  const expire = process.env.JWT_REFRESH_EXPIRE || '3650d';
+  return jwt.sign({ id }, secret, { expiresIn: expire });
 };
 
 // @desc    Register user
@@ -251,6 +254,8 @@ export const resetPassword = async (req, res) => {
     }
 
     user.password = req.body.password;
+    user.passwordChangedAt = new Date();
+    user.refreshToken = null;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
     await user.save();
@@ -304,7 +309,20 @@ export const changePassword = async (req, res) => {
     }
 
     user.password = newPassword;
+    user.passwordChangedAt = new Date();
+    user.refreshToken = null;
     await user.save();
+
+    const io = req.app?.get('io') || global.io;
+    if (io) {
+      const msg = 'Your password has been changed. Please log in again.';
+      if (typeof io.sendToUser === 'function') {
+        io.sendToUser(user._id.toString(), 'forceLogout', { reason: 'password_changed', message: msg });
+      } else if (io.to) {
+        io.to(`user:${user._id.toString()}`).emit('forceLogout', { reason: 'password_changed', message: msg });
+      }
+    }
+
     res.json({ success: true, message: 'Password changed successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

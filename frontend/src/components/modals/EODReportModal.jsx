@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -33,15 +33,20 @@ export const EODReportModal = ({ open, onOpenChange, report }) => {
     },
   });
   const submitEOD = useSubmitEOD();
+  const wasOpenRef = useRef(false);
 
   useEffect(() => {
-    form.reset({
-      date: report?.date ? new Date(report.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-      summary: report?.summary || '',
-      tasksCompleted: report?.tasksCompleted?.join(', ') || '',
-      blockers: report?.blockers || '',
-    });
-  }, [form, open, report]);
+    // Only reset form values when modal transitions from closed to open
+    if (open && !wasOpenRef.current) {
+      form.reset({
+        date: report?.date ? new Date(report.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        summary: report?.summary || '',
+        tasksCompleted: Array.isArray(report?.tasksCompleted) ? report.tasksCompleted.join(', ') : (report?.tasksCompleted || ''),
+        blockers: report?.blockers || '',
+      });
+    }
+    wasOpenRef.current = open;
+  }, [open, report, form]);
 
   const onSubmit = async (data) => {
     await submitEOD.mutateAsync({
@@ -55,16 +60,16 @@ export const EODReportModal = ({ open, onOpenChange, report }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl w-[92vw] sm:w-full max-h-[85vh] sm:max-h-[88vh] flex flex-col p-0 overflow-hidden bg-card border-border rounded-2xl shadow-2xl">
+      <DialogContent noPadding className="max-w-2xl w-[92vw] sm:w-full max-h-[85vh] sm:max-h-[88vh] flex flex-col min-h-0 p-0 overflow-hidden bg-card border-border rounded-2xl shadow-2xl">
         <div className="shrink-0 p-5 sm:p-6 border-b border-border bg-secondary/20">
-          <DialogHeader>
+          <DialogHeader className="border-b-0 mb-0 pb-0">
             <DialogTitle>End of Day Report</DialogTitle>
             <DialogDescription>Share progress, completed work, and blockers for today or a previous date.</DialogDescription>
           </DialogHeader>
         </div>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
-            <div className="p-5 sm:p-6 space-y-4 flex-1 overflow-y-auto">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+            <div className="p-5 sm:p-6 space-y-4 flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
               <FormField
                 control={form.control}
                 name="date"

@@ -26,14 +26,17 @@ export const useTeamTodayAttendance = (options = {}) => {
 export const useClockIn = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
-      const response = await api.post('/attendance/clock-in');
+    mutationFn: async (locationData = {}) => {
+      const response = await api.post('/attendance/clock-in', locationData);
       return response.data.attendance;
     },
-    onSuccess: () => {
+    onSuccess: (attendance) => {
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['team-attendance-today'] });
+      queryClient.invalidateQueries({ queryKey: ['hr-employees'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
-      toast.success('Clocked in successfully');
+      const verified = attendance?.locationVerification?.locationVerified || attendance?.locationVerified;
+      toast.success(verified ? 'Clocked in with location verified' : 'Clocked in successfully');
     },
     onError: (error) => toast.error(error.response?.data?.message || 'Clock in failed'),
   });
@@ -48,6 +51,8 @@ export const useClockOut = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['team-attendance-today'] });
+      queryClient.invalidateQueries({ queryKey: ['hr-employees'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
       toast.success('Clocked out successfully');
     },
@@ -98,10 +103,28 @@ export const useSubmitLeave = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['team-attendance-today'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
-      toast.success(data?.message || 'Leave informed successfully');
+      toast.success(data?.message || 'Leave marked successfully');
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to submit leave notice'),
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to submit leave'),
+  });
+};
+
+export const useSubmitAbsent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data) => {
+      const response = await api.post('/attendance/absent', data);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['team-attendance-today'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      toast.success(data?.message || 'Absent marked successfully');
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to mark absent'),
   });
 };
 
@@ -118,5 +141,22 @@ export const useSubmitWFH = () => {
       toast.success(data?.message || 'Work From Home informed successfully');
     },
     onError: (error) => toast.error(error.response?.data?.message || 'Failed to submit WFH notice'),
+  });
+};
+
+export const useApproveAttendanceRequest = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, action, rejectionReason }) => {
+      const response = await api.put(`/attendance/${id}/approve`, { action, rejectionReason });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['team-attendance-today'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      toast.success(data?.message || 'Attendance request updated');
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to update attendance request'),
   });
 };

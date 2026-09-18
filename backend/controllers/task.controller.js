@@ -2,15 +2,18 @@
 // TASK CONTROLLER
 // =============================================
 
+import mongoose from 'mongoose';
 import Task from '../models/task.model.js';
 import Client from '../models/client.model.js';
 import Project from '../models/project.model.js';
+import ProjectMonthlyDeliverable from '../models/projectMonthlyDeliverable.model.js';
 import ActivityLog from '../models/activityLog.model.js';
 import User from '../models/user.model.js';
 import { createNotification } from '../utils/notification.js';
 import { runAutomation } from '../services/automation.service.js';
 import { createActivityLog } from '../utils/activity.js';
 import { withWorkspaceScope } from '../middleware/auth.middleware.js';
+import { matchesContentType, getMonthDateRange } from './projectMonthlyDeliverable.controller.js';
 
 const taskStatusMap = {
   'To Do': 'todo',
@@ -47,6 +50,7 @@ const statusLabels = {
 
 const priorityMap = {
   Low: 'low',
+
   Medium: 'medium',
   High: 'high',
   Urgent: 'urgent',
@@ -76,17 +80,31 @@ const normalizeStringArray = (value) => {
 };
 
 const normalizeFiles = (value) => {
-  if (!Array.isArray(value)) return [];
-  return value
+  if (!value) return [];
+  const list = Array.isArray(value) ? value : [value];
+  return list
     .filter(Boolean)
-    .map((file) => ({
-      name: file.name || file.originalname || 'Attachment',
-      url: file.url || '',
-      type: file.type || '',
-      size: Number(file.size) || 0,
-      uploadedBy: file.uploadedBy || undefined,
-      uploadedAt: file.uploadedAt || undefined,
-    }))
+    .map((file) => {
+      if (typeof file === 'string') {
+        const name = file.split('/').pop() || 'Attachment';
+        return {
+          name,
+          url: file,
+          type: '',
+          size: 0,
+          uploadedBy: undefined,
+          uploadedAt: new Date(),
+        };
+      }
+      return {
+        name: file.name || file.originalname || 'Attachment',
+        url: file.url || '',
+        type: file.type || '',
+        size: Number(file.size) || 0,
+        uploadedBy: file.uploadedBy || undefined,
+        uploadedAt: file.uploadedAt || new Date(),
+      };
+    })
     .filter((file) => file.url);
 };
 
@@ -102,9 +120,44 @@ const toIdString = (value) => {
   return value.toString();
 };
 
-const uniqueIds = (items = []) => [...new Set(items.filter(Boolean).map(toIdString))];
+const toObjectIdOrNull = (value) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'object' && value._id) value = value._id;
+  const str = value.toString().trim();
+  if (!str || str === 'null' || str === 'undefined' || str === 'none' || str === '_none' || str === '__saas_internal__') return null;
+  if (mongoose.Types.ObjectId.isValid(str)) return new mongoose.Types.ObjectId(str);
+  return null;
+};
+
+const uniqueIds = (items = []) => {
+  const ids = items
+    .map(toIdString)
+    .map((id) => (mongoose.Types.ObjectId.isValid(id) ? id : null))
+    .filter(Boolean);
+  return [...new Set(ids)];
+};
 
 const isEmployeeLikeRole = (role) => ['employee', 'intern', 'editor', 'designer', 'adsManager'].includes(role);
+
+const buildUserTaskAssignmentOr = (userId) => [
+  { assignedTo: userId },
+  { scriptWriterAssigned: userId },
+  { voiceArtistAssigned: userId },
+  { videographerAssigned: userId },
+  { editorAssigned: userId },
+  { publisherAssigned: userId },
+];
+
+const isTaskAssignedToUser = (task, userId) => {
+  const id = toIdString(userId);
+  const assigneeIds = toArray(task.assignedTo).map(toIdString);
+  return assigneeIds.includes(id)
+    || toIdString(task.scriptWriterAssigned) === id
+    || toIdString(task.voiceArtistAssigned) === id
+    || toIdString(task.videographerAssigned) === id
+    || toIdString(task.editorAssigned) === id
+    || toIdString(task.publisherAssigned) === id;
+};
 
 const isTaskOverdue = (item) => {
   if (!item?.dueDate) return false;
@@ -130,6 +183,8 @@ const serializeTask = (task) => {
       || (Array.isArray(item.assignedTo) ? item.assignedTo.map((user) => user?.name).filter(Boolean).join(', ') : ''),
     assignedManagerName: item.assignedManager?.name || '',
     isOverdue: isTaskOverdue(item),
+    isOverTarget: Boolean(item.isOverTarget),
+    targetExceededBy: Number(item.targetExceededBy) || 0,
   };
 };
 
@@ -138,8 +193,24 @@ const normalizeTaskPayload = (body = {}) => {
 
   if (payload.status) payload.status = taskStatusMap[payload.status] || payload.status;
   if (payload.priority) payload.priority = priorityMap[payload.priority] || payload.priority;
-  if (payload.assignedTo !== undefined) payload.assignedTo = uniqueIds(toArray(payload.assignedTo));
-  if (payload.assignedManager !== undefined) payload.assignedManager = toIdString(payload.assignedManager) || undefined;
+  if (payload.assignedTo !== undefined) {
+    const list = toArray(payload.assignedTo)
+      .map(toObjectIdOrNull)
+      .filter(Boolean);
+    payload.assignedTo = [...new Set(list.map((id) => id.toString()))].map((id) => new mongoose.Types.ObjectId(id));
+  }
+  if (payload.assignedManager !== undefined) payload.assignedManager = toObjectIdOrNull(payload.assignedManager);
+  if (payload.scriptWriterAssigned !== undefined) payload.scriptWriterAssigned = toObjectIdOrNull(payload.scriptWriterAssigned);
+  if (payload.voiceArtistAssigned !== undefined) payload.voiceArtistAssigned = toObjectIdOrNull(payload.voiceArtistAssigned);
+  if (payload.videographerAssigned !== undefined) payload.videographerAssigned = toObjectIdOrNull(payload.videographerAssigned);
+  if (payload.editorAssigned !== undefined) payload.editorAssigned = toObjectIdOrNull(payload.editorAssigned);
+  if (payload.publisherAssigned !== undefined) payload.publisherAssigned = toObjectIdOrNull(payload.publisherAssigned);
+  if (payload.client !== undefined) payload.client = toObjectIdOrNull(payload.client);
+  if (payload.project !== undefined) payload.project = toObjectIdOrNull(payload.project);
+  if (payload.parent !== undefined) payload.parent = toObjectIdOrNull(payload.parent);
+  if (payload.brandId !== undefined) payload.brandId = toObjectIdOrNull(payload.brandId);
+  if (payload.organizationId !== undefined) payload.organizationId = toObjectIdOrNull(payload.organizationId);
+
   if (payload.tags !== undefined) payload.tags = Array.isArray(payload.tags)
     ? payload.tags.filter(Boolean)
     : payload.tags
@@ -161,14 +232,13 @@ const normalizeTaskPayload = (body = {}) => {
   if (payload.scriptLink !== undefined) payload.scriptLink = normalizeLink(payload.scriptLink);
   if (payload.pagesNeeded !== undefined) payload.pagesNeeded = normalizeStringArray(payload.pagesNeeded);
   if (payload.attachments !== undefined) payload.attachments = normalizeFiles(payload.attachments);
-  if (payload.scriptWriterAssigned !== undefined) payload.scriptWriterAssigned = toIdString(payload.scriptWriterAssigned) || undefined;
-  if (payload.videographerAssigned !== undefined) payload.videographerAssigned = toIdString(payload.videographerAssigned) || undefined;
-  if (payload.editorAssigned !== undefined) payload.editorAssigned = toIdString(payload.editorAssigned) || undefined;
-  if (payload.publisherAssigned !== undefined) payload.publisherAssigned = toIdString(payload.publisherAssigned) || undefined;
   if (payload.shootDate !== undefined) payload.shootDate = payload.shootDate ? new Date(payload.shootDate) : undefined;
   if (payload.shootLocation !== undefined) payload.shootLocation = payload.shootLocation ? payload.shootLocation.trim() : '';
   if (payload.rawFootageLink !== undefined) payload.rawFootageLink = normalizeLink(payload.rawFootageLink);
   if (payload.postingScheduleDate !== undefined) payload.postingScheduleDate = payload.postingScheduleDate ? new Date(payload.postingScheduleDate) : undefined;
+  if (payload.publishingDate !== undefined) payload.publishingDate = payload.publishingDate ? new Date(payload.publishingDate) : undefined;
+  if (payload.publishingTime !== undefined) payload.publishingTime = payload.publishingTime ? payload.publishingTime.toString().trim() : '';
+  if (payload.publishingDate && !payload.postingScheduleDate) payload.postingScheduleDate = payload.publishingDate;
   if (payload.postingPlatforms !== undefined) payload.postingPlatforms = normalizeStringArray(payload.postingPlatforms);
   if (payload.clientFeedback !== undefined) payload.clientFeedback = payload.clientFeedback?.toString?.().trim?.() || '';
 
@@ -201,7 +271,7 @@ const buildScopedTaskFilter = async (req, baseFilter = {}) => {
   const baseOr = filter.$or;
   if (baseOr) delete filter.$or;
 
-  if (req.user.role === 'superAdmin') return baseOr ? { ...filter, $or: baseOr } : filter;
+  if (req.user.role === 'superAdmin' || req.user.role === 'admin') return baseOr ? { ...filter, $or: baseOr } : filter;
 
   if (req.user.role === 'manager') {
     const { projectIds, clientIds } = await getManagedScope(req.user._id);
@@ -216,13 +286,7 @@ const buildScopedTaskFilter = async (req, baseFilter = {}) => {
   }
 
   if (isEmployeeLikeRole(req.user.role)) {
-    const teamProjects = await Project.find({ team: req.user._id }).select('_id');
-    const projectIds = teamProjects.map((project) => project._id);
-    const scopedOr = [
-      { assignedTo: req.user._id },
-      { createdBy: req.user._id },
-      ...(projectIds.length ? [{ project: { $in: projectIds } }] : []),
-    ];
+    const scopedOr = buildUserTaskAssignmentOr(req.user._id);
     return baseOr ? { ...filter, $and: [{ $or: baseOr }, { $or: scopedOr }] } : { ...filter, $or: scopedOr };
   }
 
@@ -244,25 +308,15 @@ const buildScopedTaskFilter = async (req, baseFilter = {}) => {
 
 const assertTaskAccess = async (req, task) => {
   if (!task) return { allowed: false, status: 404, message: 'Task not found' };
-  if (req.user.role === 'superAdmin') return { allowed: true };
+  if (req.user.role === 'superAdmin' || req.user.role === 'admin') return { allowed: true };
 
   const userId = req.user._id.toString();
-  const assigneeIds = toArray(task.assignedTo).map(toIdString);
-  const isAssigned = assigneeIds.includes(userId);
+  const isAssigned = isTaskAssignedToUser(task, userId);
   const isCreator = toIdString(task.createdBy) === userId;
 
   if (isEmployeeLikeRole(req.user.role)) {
-    if (isAssigned || isCreator) {
+    if (isAssigned) {
       return { allowed: true };
-    }
-
-    const projectId = toIdString(task.project);
-    if (projectId) {
-      const project = await Project.findById(projectId).select('team');
-      const isTeamMember = toArray(project?.team).some((member) => toIdString(member) === userId);
-      if (isTeamMember) {
-        return { allowed: true };
-      }
     }
 
     return { allowed: false, status: 403, message: 'Access denied' };
@@ -303,6 +357,7 @@ const hydrateTask = async (taskId) => Task.findById(taskId)
   .populate('assignedManager', 'name email avatar role')
   .populate('createdBy', 'name email avatar role')
   .populate('scriptWriterAssigned', 'name email avatar role')
+  .populate('voiceArtistAssigned', 'name email avatar role')
   .populate('videographerAssigned', 'name email avatar role')
   .populate('editorAssigned', 'name email avatar role')
   .populate('publisherAssigned', 'name email avatar role')
@@ -324,24 +379,39 @@ const syncTaskDerivedFields = async (task) => {
 
   if (task.scriptWriterAssigned) {
     const swUser = await User.findById(task.scriptWriterAssigned).select('name');
-    if (swUser) task.scriptWriterName = swUser.name;
+    task.scriptWriterName = swUser ? swUser.name : '';
+  } else {
+    task.scriptWriterName = '';
+  }
+  if (task.voiceArtistAssigned) {
+    const vaUser = await User.findById(task.voiceArtistAssigned).select('name');
+    task.voiceArtistName = vaUser ? vaUser.name : '';
+  } else {
+    task.voiceArtistName = '';
   }
   if (task.videographerAssigned) {
     const vUser = await User.findById(task.videographerAssigned).select('name');
-    if (vUser) task.videographerName = vUser.name;
+    task.videographerName = vUser ? vUser.name : '';
+  } else {
+    task.videographerName = '';
   }
   if (task.editorAssigned) {
     const eUser = await User.findById(task.editorAssigned).select('name');
-    if (eUser) task.editorName = eUser.name;
+    task.editorName = eUser ? eUser.name : '';
+  } else {
+    task.editorName = '';
   }
   if (task.publisherAssigned) {
     const pUser = await User.findById(task.publisherAssigned).select('name');
-    if (pUser) task.publisherName = pUser.name;
+    task.publisherName = pUser ? pUser.name : '';
+  } else {
+    task.publisherName = '';
   }
 
   const allSubAssignees = [
     ...toArray(task.assignedTo),
     task.scriptWriterAssigned,
+    task.voiceArtistAssigned,
     task.videographerAssigned,
     task.editorAssigned,
     task.publisherAssigned,
@@ -561,6 +631,11 @@ export const getTasks = async (req, res) => {
       .populate('assignedTo', 'name avatar')
       .populate('assignedManager', 'name avatar')
       .populate('createdBy', 'name avatar')
+      .populate('scriptWriterAssigned', 'name avatar')
+      .populate('voiceArtistAssigned', 'name avatar')
+      .populate('videographerAssigned', 'name avatar')
+      .populate('editorAssigned', 'name avatar')
+      .populate('publisherAssigned', 'name avatar')
       .populate('project', 'name')
       .populate('client', 'name company')
       .sort({ dueDate: 1, orderIndex: 1, createdAt: -1 })
@@ -587,7 +662,7 @@ export const getTask = async (req, res) => {
     }
 
     if (
-      req.user.role !== 'superAdmin'
+      !['superAdmin', 'admin'].includes(req.user.role)
       && req.user.organizationId
       && task.organizationId
       && task.organizationId.toString() !== req.user.organizationId.toString()
@@ -673,14 +748,64 @@ export const createTask = async (req, res) => {
 
       for (let i = 0; i < duplicateCount; i++) {
         const taskTitle = duplicateCount > 1 ? `${payload.title} - ${i + 1}` : payload.title;
+        let isOverTarget = false;
+        let targetExceededBy = 0;
+
+        if (payload.project && payload.taskCategory === 'content') {
+          const taskDate = payload.dueDate || payload.deadline || new Date();
+          const m = new Date(taskDate).getMonth() + 1;
+          const y = new Date(taskDate).getFullYear();
+          const targets = await ProjectMonthlyDeliverable.find({
+            projectId: payload.project,
+            month: m,
+            year: y,
+          });
+
+          if (targets && targets.length > 0) {
+            const matchingTarget = targets.find((t) => matchesContentType(payload, t.contentType));
+            if (matchingTarget) {
+              const { start, end } = getMonthDateRange(m, y);
+              const existingMatchingTasks = await Task.find({
+                project: payload.project,
+                taskCategory: 'content',
+                status: { $nin: ['rejected', 'cancelled'] },
+                $or: [
+                  { dueDate: { $gte: start, $lte: end } },
+                  { dueDate: { $exists: false }, postingScheduleDate: { $gte: start, $lte: end } },
+                  { dueDate: { $exists: false }, postingScheduleDate: { $exists: false }, createdAt: { $gte: start, $lte: end } },
+                ],
+              }).select('taskType contentType videoType taskCategory');
+
+              const matchedCount = existingMatchingTasks.filter((t) => matchesContentType(t, matchingTarget.contentType)).length + i;
+              if (matchedCount >= matchingTarget.targetQuantity) {
+                isOverTarget = true;
+                targetExceededBy = matchedCount + 1 - matchingTarget.targetQuantity;
+              }
+            }
+          }
+        }
+
         const currentPayload = {
           ...payload,
           title: taskTitle,
           taskTitle: taskTitle,
         };
 
+        if (
+          currentPayload.department === 'Development' ||
+          isWebsiteTaskType(currentPayload.taskType) ||
+          ['development_task', 'bug_fix'].includes(currentPayload.nonContentCategory)
+        ) {
+          if (!currentPayload.development) currentPayload.development = {};
+          currentPayload.development.isDevTask = true;
+          if (!currentPayload.development.stage) currentPayload.development.stage = 'backlog';
+          currentPayload.department = 'Development';
+        }
+
         const task = await Task.create({
           ...currentPayload,
+          isOverTarget,
+          targetExceededBy,
           dueDate: currentPayload.dueDate || currentPayload.deadline || new Date(),
           organizationId: req.user.organizationId,
           brandId: req.user.brandId,
@@ -776,10 +901,10 @@ export const updateTask = async (req, res) => {
       }
     }
 
-    if (req.user.role === 'superAdmin' && payload.assignedManager) {
+    if (['superAdmin', 'admin'].includes(req.user.role) && payload.assignedManager) {
       const manager = await User.findById(payload.assignedManager).select('role');
-      if (!manager || manager.role !== 'manager') {
-        return res.status(400).json({ success: false, message: 'Assigned manager must be a manager user' });
+      if (!manager || !['manager', 'admin', 'superAdmin'].includes(manager.role)) {
+        return res.status(400).json({ success: false, message: 'Assigned manager must be a manager or admin user' });
       }
     }
 
@@ -794,6 +919,43 @@ export const updateTask = async (req, res) => {
     }
     await syncTaskDerivedFields(task);
     updateCompletionState(task);
+
+    if (task.project) {
+      const taskDate = task.dueDate || task.deadline || task.createdAt || new Date();
+      const m = new Date(taskDate).getMonth() + 1;
+      const y = new Date(taskDate).getFullYear();
+      const targets = await ProjectMonthlyDeliverable.find({
+        projectId: task.project,
+        month: m,
+        year: y,
+      });
+      if (targets && targets.length > 0) {
+        const matchingTarget = targets.find((t) => matchesContentType(task, t.contentType));
+        if (matchingTarget) {
+          const { start, end } = getMonthDateRange(m, y);
+          const existingTasks = await Task.find({
+            project: task.project,
+            _id: { $ne: task._id },
+            status: { $nin: ['rejected', 'cancelled'] },
+            $or: [
+              { dueDate: { $gte: start, $lte: end } },
+              { dueDate: { $exists: false }, postingScheduleDate: { $gte: start, $lte: end } },
+              { dueDate: { $exists: false }, postingScheduleDate: { $exists: false }, createdAt: { $gte: start, $lte: end } },
+            ],
+          }).select('taskType contentType videoType');
+          const matchedCount = existingTasks.filter((t) => matchesContentType(t, matchingTarget.contentType)).length;
+          task.isOverTarget = matchedCount >= matchingTarget.targetQuantity;
+          task.targetExceededBy = task.isOverTarget ? (matchedCount + 1 - matchingTarget.targetQuantity) : 0;
+        } else {
+          task.isOverTarget = false;
+          task.targetExceededBy = 0;
+        }
+      } else {
+        task.isOverTarget = false;
+        task.targetExceededBy = 0;
+      }
+    }
+
     await task.save();
 
     if (payload.status && ['done', 'approved'].includes(task.status)) {

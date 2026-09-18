@@ -10,11 +10,19 @@ import { createActivityLog } from '../utils/activity.js';
 const sanitizeCredential = (credential) => {
   const item = credential.toObject ? credential.toObject() : credential;
 
+  // Strip per-account encrypted passwords, add a mask flag
+  const socialAccounts = (item.socialAccounts || []).map((acc) => ({
+    ...acc,
+    encryptedPassword: undefined,
+    hasPassword: Boolean(acc.encryptedPassword),
+  }));
+
   return {
     ...item,
     encryptedPassword: undefined,
     encryptedData: undefined,
     passwordMask: item.encryptedPassword ? '********' : '',
+    socialAccounts,
   };
 };
 
@@ -26,7 +34,7 @@ const assertCredentialAccess = (req, credential) => {
     return { allowed: false, status: 404, message: 'Credential not found' };
   }
 
-  if (req.user.role === 'superAdmin') return { allowed: true };
+  if (req.user.role === 'superAdmin' || req.user.role === 'admin') return { allowed: true };
 
   if (req.user.role === 'manager') {
     // Managers can only access credentials for clients they manage
@@ -192,6 +200,18 @@ export const getCredential = async (req, res) => {
       credentialObj.encryptedData = undefined;
     }
 
+    // Decrypt per-platform social account passwords
+    if (credentialObj.socialAccounts && credentialObj.socialAccounts.length > 0) {
+      credentialObj.socialAccounts = credentialObj.socialAccounts.map((acc) => {
+        const decryptedAcc = { ...acc };
+        if (acc.encryptedPassword) {
+          decryptedAcc.password = decryptData(acc.encryptedPassword);
+          decryptedAcc.encryptedPassword = undefined;
+        }
+        return decryptedAcc;
+      });
+    }
+
     // Update last accessed info
     await ClientCredential.findByIdAndUpdate(credentialId, {
       lastAccessedBy: req.user._id,
@@ -220,7 +240,7 @@ export const getCredential = async (req, res) => {
 export const createCredential = async (req, res) => {
   try {
     const { clientId } = req.params;
-    const { credentialName, credentialType, username, password, data, url, notes, expiryDate, tags } =
+    const { credentialName, credentialType, username, password, data, url, notes, email, mobileNumber, expiryDate, tags, socialAccounts } =
       req.body;
 
     // Validate client exists
@@ -241,6 +261,8 @@ export const createCredential = async (req, res) => {
       credentialName,
       credentialType: credentialType || 'password',
       username: username || '',
+      email: email || '',
+      mobileNumber: mobileNumber || '',
       url: url || '',
       notes: notes || '',
       tags: tags || [],
@@ -256,6 +278,18 @@ export const createCredential = async (req, res) => {
     // Encrypt additional data if provided
     if (data && typeof data === 'object') {
       credentialData.encryptedData = encryptData(JSON.stringify(data));
+    }
+
+    // Encrypt per-platform social account passwords
+    if (socialAccounts && Array.isArray(socialAccounts)) {
+      credentialData.socialAccounts = socialAccounts.map((acc) => {
+        const entry = { ...acc };
+        if (acc.password) {
+          entry.encryptedPassword = encryptData(acc.password);
+          delete entry.password;
+        }
+        return entry;
+      });
     }
 
     if (expiryDate) {
@@ -291,7 +325,7 @@ export const createCredential = async (req, res) => {
 export const updateCredential = async (req, res) => {
   try {
     const { credentialId } = req.params;
-    const { credentialName, credentialType, username, password, data, url, notes, expiryDate, tags, isActive } =
+    const { credentialName, credentialType, username, password, data, url, notes, email, mobileNumber, expiryDate, tags, isActive, socialAccounts } =
       req.body;
 
     const credential = await ClientCredential.findById(credentialId);
@@ -310,6 +344,8 @@ export const updateCredential = async (req, res) => {
     if (credentialName !== undefined) credential.credentialName = credentialName;
     if (credentialType !== undefined) credential.credentialType = credentialType;
     if (username !== undefined) credential.username = username;
+    if (email !== undefined) credential.email = email;
+    if (mobileNumber !== undefined) credential.mobileNumber = mobileNumber;
     if (url !== undefined) credential.url = url;
     if (notes !== undefined) credential.notes = notes;
     if (tags !== undefined) credential.tags = tags;
@@ -323,6 +359,27 @@ export const updateCredential = async (req, res) => {
     // Handle data update
     if (data && typeof data === 'object') {
       credential.encryptedData = encryptData(JSON.stringify(data));
+    }
+
+    // Update social accounts (re-encrypt passwords)
+    if (socialAccounts !== undefined && Array.isArray(socialAccounts)) {
+      credential.socialAccounts = socialAccounts.map((acc) => {
+        const entry = { ...acc };
+        if (acc.password) {
+          // New plain-text password provided — encrypt it
+          entry.encryptedPassword = encryptData(acc.password);
+          delete entry.password;
+        } else if (!acc.encryptedPassword) {
+          // No password field at all — try to preserve existing one if _id matches
+          const existing = credential.socialAccounts?.find(
+            (e) => e._id?.toString() === acc._id?.toString()
+          );
+          if (existing?.encryptedPassword) {
+            entry.encryptedPassword = existing.encryptedPassword;
+          }
+        }
+        return entry;
+      });
     }
 
     if (expiryDate !== undefined) {

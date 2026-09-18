@@ -16,6 +16,7 @@ import {
   User,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { toggleDarkMode } from '../store/slices/uiSlice';
 import { updateCurrentUser } from '../store/slices/authSlice';
@@ -82,6 +83,11 @@ const Settings = () => {
     newPassword: '',
     confirmPassword: '',
   });
+  const [showPasswordFields, setShowPasswordFields] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
 
   useEffect(() => {
     if (!profileUser) return;
@@ -119,7 +125,24 @@ const Settings = () => {
     });
   }, [settings]);
 
-  const permissions = useMemo(() => profileUser?.permissions || {}, [profileUser]);
+  const permissions = useMemo(() => {
+    if (profileUser?.role === 'superAdmin' || profileUser?.role === 'admin') {
+      return {
+        canViewReports: true,
+        canManageFinance: true,
+        canManageLeads: true,
+        canManageHR: true,
+        canApproveContent: true,
+        canAssignTasks: true,
+        canUploadAssets: true,
+        canViewAnalytics: true,
+        canManageEmployees: true,
+        canAccessSmm: true,
+        canViewFinanceOverview: true,
+      };
+    }
+    return profileUser?.permissions || {};
+  }, [profileUser]);
 
   const handleProfileChange = (event) => {
     setProfileData({ ...profileData, [event.target.name]: event.target.value });
@@ -201,11 +224,15 @@ const Settings = () => {
       return;
     }
 
-    await changePassword.mutateAsync({
-      currentPassword: passwordData.currentPassword,
-      newPassword: passwordData.newPassword,
-    });
-    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    try {
+      await changePassword.mutateAsync({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch {
+      // Error handled by mutation onError toast
+    }
   };
 
   const savePreferences = async (nextPreferences = preferences) => {
@@ -409,7 +436,7 @@ const Settings = () => {
                         <input value={companyProfile.logoUrl} onChange={(event) => setCompanyProfile((current) => ({ ...current, logoUrl: event.target.value }))} className="flex-1 rounded-xl border border-border bg-background px-4 py-3 text-sm" placeholder="https://domain.com/logo.png" />
                         {companyProfile.logoUrl && (
                           <div className="h-11 w-11 shrink-0 rounded-xl border border-border bg-white p-1 shadow-sm flex items-center justify-center overflow-hidden">
-                            <img src={companyProfile.logoUrl} alt="Company Logo" className="h-full w-full object-contain" />
+                            <img src={getAssetUrl(companyProfile.logoUrl)} alt="Company Logo" className="h-full w-full object-contain" />
                           </div>
                         )}
                       </div>
@@ -527,13 +554,23 @@ const Settings = () => {
                     ].map(([name, label]) => (
                       <label key={name} className="space-y-2">
                         <span className="ml-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
-                        <input
-                          type="password"
-                          name={name}
-                          value={passwordData[name]}
-                          onChange={handlePasswordFieldChange}
-                          className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm transition-all focus:ring-2 focus:ring-primary/20"
-                        />
+                        <div className="relative">
+                          <input
+                            type={showPasswordFields[name] ? 'text' : 'password'}
+                            name={name}
+                            value={passwordData[name]}
+                            onChange={handlePasswordFieldChange}
+                            className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-11 text-sm transition-all focus:ring-2 focus:ring-primary/20"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPasswordFields((prev) => ({ ...prev, [name]: !prev[name] }))}
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                            aria-label={showPasswordFields[name] ? 'Hide password' : 'Show password'}
+                          >
+                            {showPasswordFields[name] ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
                       </label>
                     ))}
                   </div>

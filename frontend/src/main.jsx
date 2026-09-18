@@ -6,12 +6,15 @@ import { store } from './store'
 import App from './App.jsx'
 import './index.css'
 import { SocketProvider } from './context/SocketContext'
+import { DateFilterProvider } from './context/DateFilterContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      staleTime: 5000,
     },
   },
 })
@@ -21,9 +24,20 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <SocketProvider>
-          <App />
+          <DateFilterProvider>
+            <App />
+          </DateFilterProvider>
         </SocketProvider>
       </QueryClientProvider>
     </Provider>
   </React.StrictMode>,
 )
+
+// Register Service Worker for Browser Push Notifications
+if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('Service worker registration bypassed:', err.message);
+    });
+  });
+}

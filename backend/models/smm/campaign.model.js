@@ -1,5 +1,5 @@
 // =============================================
-// SMM CAMPAIGN MODEL
+// SMM CAMPAIGN MODEL (Paid Advertisements & Spend Ledger)
 // =============================================
 import mongoose from 'mongoose';
 
@@ -18,89 +18,95 @@ const performanceSchema = new mongoose.Schema({
   roas: { type: Number, default: 0 },
   videoViews: { type: Number, default: 0 },
   engagement: { type: Number, default: 0 },
-  shares: { type: Number, default: 0 },
-  comments: { type: Number, default: 0 },
-  likes: { type: Number, default: 0 },
-  landingPageViews: { type: Number, default: 0 },
   costPerLead: { type: Number, default: 0 },
-  costPerPurchase: { type: Number, default: 0 },
-  // Future: synced from Meta/Google Ads API
   lastSyncedAt: { type: Date },
   apiSource: { type: String, enum: ['manual', 'meta', 'google', 'linkedin'], default: 'manual' },
 }, { _id: false });
 
-const dailyLogSchema = new mongoose.Schema({
-  date: { type: Date, default: Date.now },
-  leads: { type: Number, default: 0 },
-  spend: { type: Number, default: 0 },
-  revenue: { type: Number, default: 0 },
-  clicks: { type: Number, default: 0 },
-  impressions: { type: Number, default: 0 },
-  notes: { type: String, default: '' },
-  loggedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-}, { timestamps: true });
-
 const campaignSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
-    dailyLogs: [dailyLogSchema],
-    client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
-    project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
-    objective: {
-      type: String,
-      enum: ['Awareness', 'Traffic', 'Engagement', 'Leads', 'App Promotion', 'Sales'],
-      required: true,
-    },
-    campaignType: {
-      type: String,
-      enum: ['New Campaign', 'Scaling', 'Retargeting', 'Testing'],
-      default: 'New Campaign',
-    },
-    status: {
-      type: String,
-      enum: ['Draft', 'Pending Approval', 'Scheduled', 'Active', 'Paused', 'Completed'],
-      default: 'Draft',
-    },
+    client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: true },
+    project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
     platform: {
       type: String,
-      enum: ['Meta', 'Google', 'LinkedIn', 'YouTube', 'TikTok'],
+      enum: ['Meta', 'Google', 'LinkedIn', 'YouTube', 'TikTok', 'Instagram', 'Twitter', 'Facebook', 'Meta Ads', 'Google Ads', 'LinkedIn Ads', 'YouTube Ads', 'X Ads', 'TikTok Ads', 'Other'],
       required: true,
     },
+    adSource: {
+      type: String,
+      enum: ['Existing Posted Content', 'Manual Ad', 'existing', 'manual'],
+      default: 'Manual Ad',
+    },
+    sourceContentId: { type: mongoose.Schema.Types.ObjectId, ref: 'SmmContent' },
+    sourceContentIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SmmContent' }],
+    
+    // Manual Ad Fields if not linked to post
+    adDescription: { type: String, default: '' },
+    creativeUrl: { type: String, default: '' },
+    landingPageUrl: { type: String, default: '' },
+    cta: { type: String, default: 'Learn More' },
+    adCopy: { type: String, default: '' },
+
+    objective: {
+      type: String,
+      enum: ['Awareness', 'Engagement', 'Page Engagement', 'Leads', 'App Promotion', 'Sales', 'Lead Generation', 'Website Traffic', 'Traffic', 'Reach', 'Video Views', 'Conversions', 'Messages', 'Other'],
+      required: true,
+    },
+    destination: { type: String, default: '' },
+    destinationPlatforms: [{ type: String }],
+    status: {
+      type: String,
+      enum: ['Draft', 'Scheduled', 'Running', 'Active', 'Paused', 'Stopped', 'Completed', 'Archived'],
+      default: 'Draft',
+    },
+    
+    // Dates & Duration
+    startDate: { type: Date },
+    startTime: { type: String, default: '' },
+    endDate: { type: Date },
+    endTime: { type: String, default: '' },
+    durationDays: { type: Number, default: 0 },
+
+    // Budget & Financials (Amount Added vs Amount Spent)
     budgetType: {
       type: String,
-      enum: ['Daily Budget', 'Lifetime Budget'],
-      default: 'Daily Budget',
+      enum: ['Daily Budget', 'Lifetime Budget', 'Monthly Budget', 'daily', 'lifetime', 'monthly'],
+      default: 'Monthly Budget',
     },
     dailyBudget: { type: Number, default: 0 },
+    monthlyBudget: { type: Number, default: 0 },
     lifetimeBudget: { type: Number, default: 0 },
+    amountAdded: { type: Number, default: 0 }, // Total funds added / deposited to campaign
+    amountSpent: { type: Number, default: 0 }, // Auto-updated from daily spend tracking logs
+    remainingBalance: { type: Number, default: 0 }, // (amountAdded - amountSpent) or (monthlyBudget - amountSpent)
     currency: { type: String, default: 'INR' },
-    goal: { type: String, default: '' },
+    
+    // Alerts triggered (e.g. ['50%', '75%', '80%', '90%', '100%'])
+    budgetAlerts: [{ type: String }],
+
     landingPage: { type: String, default: '' },
     pixelConnected: { type: Boolean, default: false },
     conversionApiEnabled: { type: Boolean, default: false },
-    startDate: { type: Date },
-    endDate: { type: Date },
+    
     team: {
       campaignManager: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       performanceMarketer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       designer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      videoEditor: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       copywriter: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     },
     internalNotes: { type: String, default: '' },
     performance: { type: performanceSchema, default: () => ({}) },
-    // Future API integration fields
-    externalCampaignId: { type: String, default: '' }, // Meta campaign_id or Google campaign_id
-    adAccountId: { type: String, default: '' },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }
 );
 
+campaignSchema.index({ client: 1 });
 campaignSchema.index({ project: 1 });
 campaignSchema.index({ status: 1 });
 campaignSchema.index({ platform: 1 });
-campaignSchema.index({ 'team.campaignManager': 1 });
+campaignSchema.index({ sourceContentId: 1 });
 
 const Campaign = mongoose.model('SmmCampaign', campaignSchema);
 export default Campaign;

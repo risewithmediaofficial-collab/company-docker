@@ -41,7 +41,6 @@ import CallHistoryDashboard from './pages/finance/CallHistoryDashboard';
 import HR from './pages/hr/HR';
 import Reports from './pages/reports/Reports';
 import Attendance from './pages/employee/Attendance';
-import Communication from './pages/employee/Communication';
 import ReferralDashboard from './pages/referral/ReferralDashboard';
 import Users from './pages/admin/Users';
 import DomainRenewals from './pages/admin/DomainRenewals';
@@ -58,6 +57,8 @@ import PortalGuidelines from './pages/portal/sections/PortalGuidelines';
 
 // Social Media Manager Module Pages
 import SMMDashboard from './pages/smm/SMMDashboard';
+import SMMContent from './pages/smm/SMMContent';
+import SMMLeads from './pages/smm/SMMLeads';
 import SMMClients from './pages/smm/SMMClients';
 
 // Platform Admin Pages (SaaS)
@@ -73,11 +74,24 @@ import CreativeLibrary from './pages/smm/CreativeLibrary';
 import SMMContentCalendar from './pages/smm/ContentCalendar';
 import SMMPerformance from './pages/smm/Performance';
 import SMMReports from './pages/smm/Reports';
+import SMMDailyTracking from './pages/smm/DailyTracking';
+import SMMCallLogs from './pages/smm/SMMCallLogs';
 import SMMTeam from './pages/smm/Team';
+import AdBudgetDashboard from './pages/smm/AdBudgetDashboard';
+import SMMOnePageTracker from './pages/smm/SMMOnePageTracker';
+
+// Development Module Pages
+import DevelopmentDashboard from './pages/development/DevelopmentDashboard';
+import DevelopmentBoard from './pages/development/DevelopmentBoard';
+import MyDevTasks from './pages/development/MyDevTasks';
+import DevelopmentSprints from './pages/development/DevelopmentSprints';
+import DevelopmentReviews from './pages/development/DevelopmentReviews';
+import DevelopmentQA from './pages/development/DevelopmentQA';
+import DevelopmentReleases from './pages/development/DevelopmentReleases';
 
 // ─── Shared Loading Screen ────────────────────────────────────────────────────
 const LoadingScreen = () => (
-  <div className="flex h-screen w-full flex-col items-center justify-center bg-[#090a0f] text-white">
+  <div className="flex h-screen w-full flex-col items-center justify-center bg-[#0a0a0a] text-white">
     <div className="relative flex items-center justify-center">
       <div className="h-16 w-16 animate-spin rounded-full border-4 border-indigo-500/20 border-t-indigo-500 border-r-indigo-500" />
       <div className="absolute h-10 w-10 animate-ping rounded-full bg-indigo-500/25" />
@@ -101,9 +115,33 @@ const ProtectedRoute = ({ isAuthenticated, user, loading, allowedRoles, children
   // Token valid but user profile not yet fetched (edge case)
   if (!user) return null;
 
+  // SuperAdmin and Admin have unrestricted access everywhere
+  if (user.role === 'superAdmin' || user.role === 'admin') {
+    return children;
+  }
+
   // RBAC & Granular Permission check
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    if (user.permissions?.canAccessSmm && allowedRoles.includes('employee')) {
+    const p = user.permissions || {};
+    if (p.canAccessSmm && (allowedRoles.includes('employee') || allowedRoles.includes('manager'))) {
+      return children;
+    }
+    if ((p.canManageFinance || p.canViewFinanceOverview) && (allowedRoles.includes('manager') || allowedRoles.includes('superAdmin'))) {
+      return children;
+    }
+    if (p.canManageLeads && (allowedRoles.includes('manager') || allowedRoles.includes('employee') || allowedRoles.includes('referral'))) {
+      return children;
+    }
+    if ((p.canManageHR || p.canManageEmployees) && (allowedRoles.includes('manager') || allowedRoles.includes('superAdmin'))) {
+      return children;
+    }
+    if ((p.canViewReports || p.canViewAnalytics) && (allowedRoles.includes('manager') || allowedRoles.includes('superAdmin'))) {
+      return children;
+    }
+    if (p.canUploadAssets && (allowedRoles.includes('employee') || allowedRoles.includes('manager'))) {
+      return children;
+    }
+    if (p.canAssignTasks && (allowedRoles.includes('manager') || allowedRoles.includes('superAdmin'))) {
       return children;
     }
     return <Navigate to="/" replace />;
@@ -115,20 +153,20 @@ const ProtectedRoute = ({ isAuthenticated, user, loading, allowedRoles, children
 // ─── App ──────────────────────────────────────────────────────────────────────
 const App = () => {
   const dispatch = useDispatch();
-  const { isAuthenticated, user, loading } = useSelector((state) => state.auth);
+  const { isAuthenticated, user, loading, authChecked } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    // Fetch user profile once: token present, no user object, not already loading
-    if (isAuthenticated && !user && !loading) {
+    // Fetch user profile once: token present, no user object, not already loading, and not yet checked
+    if (isAuthenticated && !user && !loading && !authChecked) {
       dispatch(fetchMe());
     }
-  }, [dispatch, isAuthenticated, user, loading]);
+  }, [dispatch, isAuthenticated, user, loading, authChecked]);
 
   // Global boot-screen while the very first /me call is in-flight
-  if (loading && !user && isAuthenticated) return null;
+  if (loading && !user && isAuthenticated && !authChecked) return null;
 
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <HotToaster position="top-right" reverseOrder={false} />
       <SonnerToaster position="top-right" richColors closeButton />
       <Suspense fallback={null}>
@@ -289,9 +327,14 @@ const App = () => {
           } />
           <Route path="/daily_tasks" element={<Navigate to="/daily-tasks" replace />} />
 
-          {/* Pending Notes – employee writes notes to send to manager */}
+          {/* Task Change Notes & Ideas Hub */}
           <Route path="/pending-notes" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <PendingNotes />
+            </ProtectedRoute>
+          } />
+          <Route path="/notes" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
               <PendingNotes />
             </ProtectedRoute>
           } />
@@ -346,13 +389,6 @@ const App = () => {
             </ProtectedRoute>
           } />
 
-          {/* Chat / Communication */}
-          <Route path="/chat" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
-              <Communication />
-            </ProtectedRoute>
-          } />
-
           {/* Referral */}
           <Route path="/referral" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'referral']}>
@@ -381,9 +417,19 @@ const App = () => {
               <SMMDashboard />
             </ProtectedRoute>
           } />
+          <Route path="/smm/content" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+              <SMMContent />
+            </ProtectedRoute>
+          } />
           <Route path="/smm/campaigns" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
               <Campaigns />
+            </ProtectedRoute>
+          } />
+          <Route path="/smm/leads" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+              <SMMLeads />
             </ProtectedRoute>
           } />
           <Route path="/smm/adsets" element={
@@ -396,6 +442,16 @@ const App = () => {
               <Ads />
             </ProtectedRoute>
           } />
+          <Route path="/smm/budget" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+              <AdBudgetDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/smm/tracker" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+              <SMMOnePageTracker />
+            </ProtectedRoute>
+          } />
           <Route path="/smm/creatives" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
               <CreativeLibrary />
@@ -404,6 +460,11 @@ const App = () => {
           <Route path="/smm/calendar" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
               <SMMContentCalendar />
+            </ProtectedRoute>
+          } />
+          <Route path="/smm/analytics" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+              <SMMPerformance />
             </ProtectedRoute>
           } />
           <Route path="/smm/performance" element={
@@ -416,9 +477,56 @@ const App = () => {
               <SMMReports />
             </ProtectedRoute>
           } />
+          <Route path="/smm/daily-tracking" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+              <SMMDailyTracking />
+            </ProtectedRoute>
+          } />
+          <Route path="/smm/call-logs" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee', 'adsManager']}>
+              <SMMCallLogs />
+            </ProtectedRoute>
+          } />
           <Route path="/smm/team" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
               <SMMTeam />
+            </ProtectedRoute>
+          } />
+
+          {/* Development Module Routes */}
+          <Route path="/development" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <DevelopmentDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/development/board" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <DevelopmentBoard />
+            </ProtectedRoute>
+          } />
+          <Route path="/development/my-tasks" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <MyDevTasks />
+            </ProtectedRoute>
+          } />
+          <Route path="/development/sprints" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <DevelopmentSprints />
+            </ProtectedRoute>
+          } />
+          <Route path="/development/reviews" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <DevelopmentReviews />
+            </ProtectedRoute>
+          } />
+          <Route path="/development/qa" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <DevelopmentQA />
+            </ProtectedRoute>
+          } />
+          <Route path="/development/releases" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <DevelopmentReleases />
             </ProtectedRoute>
           } />
 

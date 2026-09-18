@@ -1,0 +1,323 @@
+// =============================================
+// SMM MONTHLY TRACKER CONTROLLER
+// =============================================
+import SmmMonthlyTracker from '../../models/smm/smmMonthlyTracker.model.js';
+import SmmClient from '../../models/smm/smmClient.model.js';
+import SmmContent from '../../models/smm/smmContent.model.js';
+
+// ── Helper: build empty days array for a month ─────────────────────────────
+const buildEmptyDays = (year, month) => {
+  const daysInMonth = new Date(year, month, 0).getDate(); // month is 1-based
+  return Array.from({ length: daysInMonth }, (_, i) => ({
+    day: i + 1,
+    postLabel: '',
+    postStatus: 'pending',
+    storyLabel: '',
+    storyStatus: 'pending',
+    note: '',
+  }));
+};
+
+// ── GET all tracker rows for a given month/year ─────────────────────────────
+// GET /api/smm/tracker?month=9&year=2026
+export const getMonthlyTrackers = async (req, res) => {
+  try {
+    const month = parseInt(req.query.month) || new Date().getMonth() + 1;
+    const year  = parseInt(req.query.year)  || new Date().getFullYear();
+
+    // Fetch all active SMM clients
+    const clients = await SmmClient.find({ status: 'Active' }).sort({ companyName: 1 }).lean();
+
+    // Fetch existing tracker docs for this month/year
+    const existingTrackers = await SmmMonthlyTracker.find({ month, year })
+      .populate('client', 'companyName status')
+      .lean();
+
+    const trackerMap = {};
+    existingTrackers.forEach((t) => {
+      if (t.client?._id) trackerMap[t.client._id.toString()] = t;
+    });
+
+    // For every active client, return existing or a scaffold
+    const rows = clients.map((client, index) => {
+      const existing = trackerMap[client._id.toString()];
+      if (existing) return existing;
+
+      // Scaffold (not yet saved)
+      return {
+        _id: null,
+        client: { _id: client._id, companyName: client.companyName },
+        team: 'RWM',
+        plan: '',
+        storyPlan: '30 STORIES',
+        month,
+        year,
+        days: buildEmptyDays(year, month),
+        _scaffold: true,
+      };
+    });
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    res.json({ success: true, data: { rows, month, year, daysInMonth } });
+  } catch (err) {
+    console.error('getMonthlyTrackers error:', err);
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+};
+
+// ── GET single tracker row by clientId + month/year ─────────────────────────
+export const getTrackerByClient = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const month = parseInt(req.query.month) || new Date().getMonth() + 1;
+    const year  = parseInt(req.query.year)  || new Date().getFullYear();
+
+    const tracker = await SmmMonthlyTracker.findOne({ client: clientId, month, year })
+      .populate('client', 'companyName status');
+
+    if (!tracker) {
+      return res.status(404).json({ success: false, message: 'Tracker not found' });
+    }
+    res.json({ success: true, data: tracker });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+};
+
+// ── UPSERT (create or update) a tracker row ─────────────────────────────────
+// POST /api/smm/tracker  { clientId, month, year, plan, storyPlan, team, days }
+export const upsertTracker = async (req, res) => {
+  try {
+    const { clientId, month, year, plan, storyPlan, team, days } = req.body;
+
+    if (!clientId || !month || !year) {
+      return res.status(400).json({ success: false, message: 'clientId, month, year are required' });
+    }
+
+    const tracker = await SmmMonthlyTracker.findOneAndUpdate(
+      { client: clientId, month, year },
+      {
+        $set: {
+          team: team || 'RWM',
+          plan: plan || '',
+          storyPlan: storyPlan || '30 STORIES',
+          days: days || buildEmptyDays(year, month),
+          updatedBy: req.user?._id,
+        },
+        $setOnInsert: {
+          client: clientId,
+          month,
+          year,
+          createdBy: req.user?._id,
+        },
+      },
+      { upsert: true, new: true, runValidators: true }
+    ).populate('client', 'companyName status');
+
+    res.json({ success: true, data: tracker });
+  } catch (err) {
+    console.error('upsertTracker error:', err);
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+};
+
+// ── PATCH a single day cell status ─────────────────────────────────────────
+// PATCH /api/smm/tracker/:id/day/:day  { field: 'postStatus'|'storyStatus'|'postLabel'|'storyLabel'|'note', value }
+export const updateDayCell = async (req, res) => {
+  try {
+    const { id, day } = req.params;
+    const { field, value } = req.body;
+
+    const dayNum = parseInt(day);
+    const allowedFields = ['postStatus', 'postLabel', 'storyStatus', 'storyLabel', 'note'];
+    if (!allowedFields.includes(field)) {
+      return res.status(400).json({ success: false, message: 'Invalid field' });
+    }
+
+    // Find the tracker and update the specific day cell
+    const tracker = await SmmMonthlyTracker.findById(id);
+    if (!tracker) {
+      return res.status(404).json({ success: false, message: 'Tracker not found' });
+    }
+
+    const dayCell = tracker.days.find((d) => d.day === dayNum);
+    if (!dayCell) {
+      // Add missing day cell
+      tracker.days.push({ day: dayNum, [field]: value });
+    } else {
+      dayCell[field] = value;
+    }
+
+    tracker.updatedBy = req.user?._id;
+    await tracker.save();
+
+    res.json({ success: true, data: tracker });
+  } catch (err) {
+    console.error('updateDayCell error:', err);
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+};
+
+// ── PATCH plan/team/storyPlan meta for a tracker ─────────────────────────────
+// PATCH /api/smm/tracker/:id/meta  { plan, storyPlan, team }
+export const updateTrackerMeta = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { plan, storyPlan, team } = req.body;
+
+    const tracker = await SmmMonthlyTracker.findByIdAndUpdate(
+      id,
+      { $set: { plan, storyPlan, team, updatedBy: req.user?._id } },
+      { new: true }
+    ).populate('client', 'companyName status');
+
+    if (!tracker) {
+      return res.status(404).json({ success: false, message: 'Tracker not found' });
+    }
+    res.json({ success: true, data: tracker });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+};
+
+// ── Helper: format "18:30" -> "6:30P", "10:00" -> "10A"
+const formatShortTime = (timeStr) => {
+  if (!timeStr) return '';
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return timeStr;
+  let h = parseInt(match[1], 10);
+  const m = match[2];
+  const ampm = h >= 12 ? 'P' : 'A';
+  h = h % 12 || 12;
+  return m === '00' ? `${h}${ampm}` : `${h}:${m}${ampm}`;
+};
+
+// ── POST /api/smm/tracker/sync-content ──────────────────────────────────────
+// Auto-pulls Reels, Posts, and Stories from SmmContent module into the tracker
+export const syncContentWithTracker = async (req, res) => {
+  try {
+    const month = parseInt(req.body.month) || new Date().getMonth() + 1;
+    const year  = parseInt(req.body.year)  || new Date().getFullYear();
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    const startOfMonth = new Date(year, month - 1, 1);
+    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+
+    // Fetch all content items for this month
+    const contents = await SmmContent.find({
+      $or: [
+        { scheduledDate: { $gte: startOfMonth, $lte: endOfMonth } },
+        { actualPostedDate: { $gte: startOfMonth, $lte: endOfMonth } },
+        { createdAt: { $gte: startOfMonth, $lte: endOfMonth } },
+      ],
+    }).populate('client', 'companyName name company').lean();
+
+    // Map contents by client ID and client companyName
+    const contentByClient = {};
+    contents.forEach((item) => {
+      const cId = item.client?._id?.toString();
+      const cName = (item.client?.companyName || item.client?.company || item.client?.name || '').trim().toUpperCase();
+      if (cId) {
+        if (!contentByClient[cId]) contentByClient[cId] = [];
+        contentByClient[cId].push(item);
+      }
+      if (cName) {
+        if (!contentByClient[cName]) contentByClient[cName] = [];
+        contentByClient[cName].push(item);
+      }
+    });
+
+    // Fetch all active SMM clients
+    const clients = await SmmClient.find({ status: 'Active' }).lean();
+
+    let updatedCount = 0;
+    for (const client of clients) {
+      const cId = client._id.toString();
+      const cName = (client.companyName || '').trim().toUpperCase();
+      const items = contentByClient[cId] || contentByClient[cName] || [];
+
+      if (items.length === 0) continue;
+
+      let tracker = await SmmMonthlyTracker.findOne({ client: client._id, month, year });
+      const days = tracker?.days && tracker.days.length > 0 ? tracker.days : buildEmptyDays(year, month);
+
+      let reelIdx = 1, postIdx = 1, storyIdx = 1;
+      let reelsCount = 0, postsCount = 0, storiesCount = 0;
+
+      // Sort items chronologically
+      items.sort((a, b) => new Date(a.scheduledDate || a.createdAt) - new Date(b.scheduledDate || b.createdAt));
+
+      items.forEach((item) => {
+        const dDate = item.scheduledDate || item.actualPostedDate || item.createdAt;
+        const dayNum = new Date(dDate).getDate();
+        if (dayNum < 1 || dayNum > daysInMonth) return;
+
+        const timeStr = formatShortTime(item.scheduledTime || item.actualPostedTime);
+        const status = item.postingStatus === 'Published' ? 'done' : item.postingStatus === 'Cancelled' ? 'skip' : 'pending';
+
+        const dayCell = days.find((d) => d.day === dayNum);
+        if (!dayCell) return;
+
+        if (['Reel', 'Video', 'Short'].includes(item.contentType)) {
+          reelsCount++;
+          dayCell.postLabel = `R${reelIdx++} ${timeStr}`.trim();
+          dayCell.postStatus = status;
+        } else if (item.contentType === 'Post') {
+          postsCount++;
+          dayCell.postLabel = `P${postIdx++} ${timeStr}`.trim();
+          dayCell.postStatus = status;
+        } else if (item.contentType === 'Story') {
+          storiesCount++;
+          dayCell.storyLabel = `S${storyIdx++} ${timeStr}`.trim();
+          dayCell.storyStatus = status;
+        } else if (item.contentType === 'Reel / Story') {
+          reelsCount++;
+          storiesCount++;
+          dayCell.postLabel = `R${reelIdx++} ${timeStr}`.trim();
+          dayCell.postStatus = status;
+          dayCell.storyLabel = `S${storyIdx++} ${timeStr}`.trim();
+          dayCell.storyStatus = status;
+        }
+      });
+
+      const plan = `${reelsCount}R + ${postsCount}P`;
+      const storyPlan = `${storiesCount || 30} STORIES`;
+
+      await SmmMonthlyTracker.findOneAndUpdate(
+        { client: client._id, month, year },
+        {
+          $set: {
+            plan,
+            storyPlan,
+            days,
+            updatedBy: req.user?._id,
+          },
+        },
+        { upsert: true, new: true }
+      );
+      updatedCount++;
+    }
+
+    res.json({
+      success: true,
+      message: `Successfully synced ${contents.length} content items across ${updatedCount} clients`,
+      syncedClients: updatedCount,
+      totalContents: contents.length,
+    });
+  } catch (err) {
+    console.error('syncContentWithTracker error:', err);
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+};
+
+// ── DELETE a tracker row ─────────────────────────────────────────────────────
+export const deleteTracker = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await SmmMonthlyTracker.findByIdAndDelete(id);
+    res.json({ success: true, message: 'Tracker deleted' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+};

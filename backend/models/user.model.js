@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['superAdmin', 'organizationOwner', 'manager', 'accountManager', 'editor', 'designer', 'adsManager', 'financeManager', 'clientAdmin', 'clientMember', 'intern', 'employee', 'referral', 'client'],
+      enum: ['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager', 'editor', 'designer', 'adsManager', 'financeManager', 'clientAdmin', 'clientMember', 'intern', 'employee', 'referral', 'client'],
       default: 'employee',
     },
     avatar: { type: String, default: '' },
@@ -60,6 +60,7 @@ const userSchema = new mongoose.Schema(
     refreshToken: { type: String, select: false },
     resetPasswordToken: { type: String, select: false },
     resetPasswordExpire: { type: Date, select: false },
+    passwordChangedAt: { type: Date, select: false },
 
     isActive: { type: Boolean, default: true },
     approvalStatus: {
@@ -76,6 +77,7 @@ const userSchema = new mongoose.Schema(
     permissions: {
       canViewReports: { type: Boolean, default: false },
       canApproveContent: { type: Boolean, default: false },
+      canViewFinanceOverview: { type: Boolean, default: false },
       canManageFinance: { type: Boolean, default: false },
       canAssignTasks: { type: Boolean, default: false },
       canUploadAssets: { type: Boolean, default: false },
