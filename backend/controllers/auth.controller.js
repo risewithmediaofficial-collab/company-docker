@@ -89,7 +89,7 @@ export const register = async (req, res) => {
 // @access  Public
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, companySlug } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Please provide email and password' });
@@ -112,19 +112,64 @@ export const login = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Your account has been deactivated' });
     }
 
-    const accessToken = generateAccessToken(user._id, user.role);
-    const refreshToken = generateRefreshToken(user._id);
-
-    user.refreshToken = refreshToken;
-    user.lastLogin = new Date();
-    await user.save({ validateBeforeSave: false });
-
+    // ── Tenant Portal URL Scoping Enforcement ────────────────────────────────
     let organization = null;
     if (user.organizationId) {
       organization = await Organization.findById(user.organizationId).select(
         'name slug logo industry website phone plan planStatus enabledModules maxUsers maxClients trialEndsAt settings'
       );
     }
+
+    // If the user belongs to a company (tenant user) and is not platform superAdmin:
+    if (user.role !== 'superAdmin' && user.organizationId) {
+      const orgSlug = organization?.slug || '';
+
+      // Rule 1: Cannot log in from general platform login (/login) without company URL
+      if (!companySlug) {
+        return res.status(403).json({
+          success: false,
+          requiresCompanyPortal: true,
+          companySlug: orgSlug,
+          companyName: organization?.name || 'Your Company',
+          portalUrl: `/login/${orgSlug}`,
+          message: `Company members must log in through their company URL: /login/${orgSlug}. You cannot log in from the main platform dashboard.`,
+        });
+      }
+
+      // Rule 2: Cannot log in to a different company's URL
+      if (orgSlug && companySlug.toLowerCase().trim() !== orgSlug.toLowerCase().trim()) {
+        return res.status(403).json({
+          success: false,
+          requiresCompanyPortal: true,
+          companySlug: orgSlug,
+          companyName: organization?.name || 'Your Company',
+          portalUrl: `/login/${orgSlug}`,
+          message: `This account does not belong to this portal. Please log in at your own company URL: /login/${orgSlug}`,
+        });
+      }
+
+      // Rule 3: Check tenant status
+      if (organization?.planStatus === 'pending') {
+        return res.status(403).json({
+          success: false,
+          message: `"${organization.name}" registration is pending approval by Platform Super Admin.`,
+        });
+      }
+
+      if (organization?.planStatus === 'suspended') {
+        return res.status(403).json({
+          success: false,
+          message: `"${organization.name}" workspace has been suspended. Please contact Platform Administration.`,
+        });
+      }
+    }
+
+    const accessToken = generateAccessToken(user._id, user.role);
+    const refreshToken = generateRefreshToken(user._id);
+
+    user.refreshToken = refreshToken;
+    user.lastLogin = new Date();
+    await user.save({ validateBeforeSave: false });
 
     res.json({
       success: true,

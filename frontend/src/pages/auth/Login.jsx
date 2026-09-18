@@ -14,6 +14,7 @@ const Login = () => {
   const { loading, error } = useSelector((state) => state.auth);
 
   const [showPassword, setShowPassword] = useState(false);
+  const [portalRedirect, setPortalRedirect] = useState(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -21,21 +22,51 @@ const Login = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (portalRedirect) setPortalRedirect(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = await dispatch(loginUser(formData));
+    setPortalRedirect(null);
+    const payload = {
+      ...formData,
+      companySlug: companySlug || undefined,
+    };
+    const result = await dispatch(loginUser(payload));
     if (loginUser.fulfilled.match(result)) {
       toast.success('Welcome back!');
       navigate('/');
     } else {
-      toast.error(result.payload?.message || 'Login failed');
+      const errData = result.payload;
+      if (errData?.requiresCompanyPortal) {
+        setPortalRedirect(errData);
+      }
+      toast.error(errData?.message || 'Login failed');
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Company Workspace Redirect Alert (if company user tried logging in on normal dashboard) */}
+      {portalRedirect && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-2.5 shadow-lg shadow-amber-500/5 animate-in fade-in">
+          <div className="flex items-center gap-2 font-bold text-amber-400 text-sm">
+            <Building2 size={18} />
+            <span>Company Workspace Login Required</span>
+          </div>
+          <p className="text-slate-300 leading-relaxed">
+            This account belongs to <strong className="text-white">{portalRedirect.companyName}</strong>. Company members cannot sign in through the public platform login and must use their company URL.
+          </p>
+          <Link
+            to={portalRedirect.portalUrl || `/login/${portalRedirect.companySlug}`}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-all shadow-md shadow-amber-500/20"
+          >
+            <span>Go to {portalRedirect.companyName} Login</span>
+            <span>→</span>
+          </Link>
+        </div>
+      )}
+
       {portalOrg && portalOrg.status === 'pending' && (
         <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs flex items-center gap-2 font-medium animate-in fade-in">
           <AlertCircle size={15} className="shrink-0 text-amber-600" />
@@ -50,7 +81,7 @@ const Login = () => {
         </div>
       )}
 
-      {error && (
+      {error && !portalRedirect && (
         <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm flex items-center border border-destructive/20 animate-in fade-in slide-in-from-top-1">
           <AlertCircle size={16} className="mr-2 flex-shrink-0" />
           {error}
