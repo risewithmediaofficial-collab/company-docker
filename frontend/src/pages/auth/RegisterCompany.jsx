@@ -253,7 +253,7 @@ const RegisterCompany = () => {
         </div>
 
         {/* Form Card (Light Theme) */}
-        <div className="bg-white/95 border border-slate-200/90 backdrop-blur-2xl rounded-3xl p-6 md:p-8 shadow-xl shadow-blue-900/5 relative">
+        <form onSubmit={(e) => { e.preventDefault(); if (step === 3) handleSubmit(); else nextStep(); }} className="bg-white/95 border border-slate-200/90 backdrop-blur-2xl rounded-3xl p-6 md:p-8 shadow-xl shadow-blue-900/5 relative">
 
           <AnimatePresence mode="wait">
 
@@ -442,6 +442,9 @@ const RegisterCompany = () => {
                       <Lock size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
                       <input
                         type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        id="password"
+                        autoComplete="new-password"
                         value={form.password}
                         onChange={(e) => update('password', e.target.value)}
                         placeholder="At least 6 characters"
@@ -462,12 +465,15 @@ const RegisterCompany = () => {
 
                   <div>
                     <label className="text-xs font-bold text-slate-700 mb-1.5 block">
-                      Confirm Password <span className="text-red-500">*</span>
+                       Confirm Password <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <Lock size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
                       <input
                         type={showConfirm ? 'text' : 'password'}
+                        name="confirmPassword"
+                        id="confirmPassword"
+                        autoComplete="new-password"
                         value={form.confirmPassword}
                         onChange={(e) => update('confirmPassword', e.target.value)}
                         placeholder="Repeat your password"
@@ -552,7 +558,7 @@ const RegisterCompany = () => {
             )}
           </div>
 
-        </div>
+        </form>
 
         {/* Bottom Login Link */}
         <div className="text-center mt-6">

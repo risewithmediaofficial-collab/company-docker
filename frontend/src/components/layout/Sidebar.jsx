@@ -27,6 +27,7 @@ import {
   ClipboardList,
   Sparkles,
   StickyNote,
+  Share2,
   Star,
   Search,
   UserCheck,
