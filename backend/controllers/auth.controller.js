@@ -4,6 +4,7 @@
 
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import mongoose from 'mongoose';
 import User from '../models/user.model.js';
 import Client from '../models/client.model.js';
 import Organization from '../models/organization.model.js';
@@ -118,6 +119,13 @@ export const login = async (req, res) => {
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
 
+    let organization = null;
+    if (user.organizationId) {
+      organization = await Organization.findById(user.organizationId).select(
+        'name slug logo industry website phone plan planStatus enabledModules maxUsers maxClients trialEndsAt settings'
+      );
+    }
+
     res.json({
       success: true,
       message: 'Login successful',
@@ -135,7 +143,9 @@ export const login = async (req, res) => {
         referralCode: user.referralCode,
         permissions: user.permissions,
         clientId: user.clientId,
+        organizationId: user.organizationId,
       },
+      organization,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -191,12 +201,17 @@ export const getMe = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
     let organization = null;
-    if (user.organizationId) {
-      organization = await Organization.findById(user.organizationId).select(
-        'name plan planStatus enabledModules maxUsers maxClients trialEndsAt settings'
+    const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
+    const targetOrgId = ((user.role === 'superAdmin' || user.role === 'admin') && ghostOrgId)
+      ? ghostOrgId
+      : user.organizationId;
+
+    if (targetOrgId) {
+      organization = await Organization.findById(targetOrgId).select(
+        'name slug logo industry website phone plan planStatus enabledModules maxUsers maxClients trialEndsAt settings'
       );
     }
-    res.json({ success: true, user, organization });
+    res.json({ success: true, user, organization, isGhostMode: Boolean(ghostOrgId) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -337,7 +352,7 @@ export const changePassword = async (req, res) => {
 // @access  Public
 export const registerCompany = async (req, res) => {
   try {
-    const { companyName, ownerName, email, password, phone, industry, website } = req.body;
+    const { companyName, ownerName, email, password, phone, industry, website, logo, slug, domainUrl } = req.body;
 
     if (!companyName || !ownerName || !email || !password) {
       return res.status(400).json({
@@ -350,6 +365,23 @@ export const registerCompany = async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'This email is already registered' });
+    }
+
+    // Clean and validate domain url slug
+    let cleanSlug = (slug || domainUrl || companyName || '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    if (!cleanSlug) {
+      cleanSlug = `company-${Date.now().toString(36)}`;
+    }
+
+    // Check if slug is taken
+    const existingOrgSlug = await Organization.findOne({ slug: cleanSlug });
+    if (existingOrgSlug) {
+      cleanSlug = `${cleanSlug}-${Math.random().toString(36).substring(2, 6)}`;
     }
 
     // Create the owner user first (inactive until approved)
@@ -366,10 +398,12 @@ export const registerCompany = async (req, res) => {
     // Create the organization (pending approval)
     const org = await Organization.create({
       name: companyName,
+      slug: cleanSlug,
       ownerId: owner._id,
       industry: industry || '',
       website: website || '',
       phone: phone || '',
+      logo: logo || '',
       planStatus: 'pending',
       plan: 'trial',
     });
@@ -388,19 +422,65 @@ export const registerCompany = async (req, res) => {
             recipient: admin._id,
             type: 'system',
             title: '🆕 New Company Registration',
-            message: `"${companyName}" registered by ${ownerName} (${email}). Awaiting your approval.`,
-            link: '/platform/companies',
+            message: `"${companyName}" (${cleanSlug}) registered by ${ownerName} (${email}). Awaiting your approval.`,
+            link: '/admin/company-requests',
           },
           io
         )
       )
     );
 
-    if (io) io.emit('newOrgRegistered', { orgId: org._id, companyName });
+    if (io) io.emit('newOrgRegistered', { orgId: org._id, companyName, slug: cleanSlug });
 
     res.status(201).json({
       success: true,
-      message: 'Registration successful! Your account is under review. You will be notified once approved.',
+      message: 'Registration successful! Your company account is under review. You will be notified once approved.',
+      portalUrl: `/login/${cleanSlug}`,
+      slug: cleanSlug,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get public company portal info for branded login
+// @route   GET /api/auth/company-portal/:slug
+// @access  Public
+export const getCompanyPortal = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const cleanSlug = String(slug || '').toLowerCase().trim();
+
+    // Find by slug, or backfill if existing organization matches name
+    let org = await Organization.findOne({ slug: cleanSlug });
+    if (!org) {
+      // Try regex match on name or id
+      org = await Organization.findOne({
+        $or: [
+          { name: { $regex: new RegExp(`^${cleanSlug.replace(/-/g, '[ -]')}$`, 'i') } },
+          ...(mongoose.Types.ObjectId.isValid(cleanSlug) ? [{ _id: cleanSlug }] : []),
+        ],
+      });
+      if (org && !org.slug) {
+        org.slug = cleanSlug;
+        await org.save();
+      }
+    }
+
+    if (!org) {
+      return res.status(404).json({ success: false, message: 'Company portal not found' });
+    }
+
+    res.json({
+      success: true,
+      company: {
+        _id: org._id,
+        name: org.name,
+        slug: org.slug || cleanSlug,
+        logo: org.logo || '',
+        industry: org.industry || '',
+        planStatus: org.planStatus,
+      },
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

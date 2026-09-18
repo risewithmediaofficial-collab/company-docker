@@ -8,6 +8,7 @@ const organizationSchema = new mongoose.Schema(
   {
     // ── Basic Info ───────────────────────────────────────────────────────────
     name: { type: String, required: true, trim: true },
+    slug: { type: String, trim: true, lowercase: true },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     industry: { type: String, default: '' },
     website: { type: String, default: '' },
@@ -79,6 +80,7 @@ const organizationSchema = new mongoose.Schema(
 
 organizationSchema.index({ planStatus: 1 });
 organizationSchema.index({ plan: 1 });
+organizationSchema.index({ slug: 1 });
 organizationSchema.index({ createdAt: -1 });
 organizationSchema.index({ ownerId: 1 });
 

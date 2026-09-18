@@ -5,6 +5,7 @@
 
 import Organization from '../models/organization.model.js';
 import User from '../models/user.model.js';
+import BrandWorkspace from '../models/brandWorkspace.model.js';
 
 // ─── Platform Stats Overview ──────────────────────────────────────────────────
 // GET /api/platform/stats
@@ -69,8 +70,20 @@ export const getAllOrganizations = async (req, res) => {
     if (status) filter.planStatus = status;
     if (plan) filter.plan = plan;
     if (search) {
+      const term = search.trim();
+      const matchingOwners = await User.find({
+        $or: [
+          { name: { $regex: term, $options: 'i' } },
+          { email: { $regex: term, $options: 'i' } },
+          { phone: { $regex: term, $options: 'i' } },
+        ],
+      }).select('_id');
+      const ownerIds = matchingOwners.map((u) => u._id);
+
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
+        { name: { $regex: term, $options: 'i' } },
+        { industry: { $regex: term, $options: 'i' } },
+        { ownerId: { $in: ownerIds } },
       ];
     }
 
@@ -298,3 +311,24 @@ export const getMyOrganization = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// ─── Get Live Ghost Context (Super Admin stealth view) ────────────────────────
+// GET /api/platform/organizations/:id/ghost-context
+export const getGhostContext = async (req, res) => {
+  try {
+    const org = await Organization.findById(req.params.id)
+      .populate('ownerId', 'name email phone');
+    if (!org) return res.status(404).json({ success: false, message: 'Organization not found' });
+
+    const defaultWorkspace = await BrandWorkspace.findOne({ organizationId: org._id });
+
+    res.json({
+      success: true,
+      organization: org,
+      defaultWorkspace: defaultWorkspace ? defaultWorkspace._id : null,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

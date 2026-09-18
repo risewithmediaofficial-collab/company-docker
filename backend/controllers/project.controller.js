@@ -431,7 +431,11 @@ export const getProject = async (req, res) => {
 
 export const createProject = async (req, res) => {
   try {
-    const project = await Project.create(normalizeProjectPayload(req.body));
+    const payload = normalizeProjectPayload(req.body);
+    if (req.user?.organizationId) {
+      payload.organizationId = req.user.organizationId;
+    }
+    const project = await Project.create(payload);
     const populated = await Project.findById(project._id)
       .populate('client', 'name email logo company')
       .populate('manager', 'name avatar')

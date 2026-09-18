@@ -79,7 +79,7 @@ import { useDateFilter } from '../context/DateFilterContext';
 import { DateRangePicker } from '../components/ui/DateRangePicker';
 
 const Dashboard = () => {
-  const { user } = useSelector((state) => state.auth);
+  const { user, organization } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const { startDate, endDate, period, setFromDate, setToDate, setPeriod, resetDateFilter } = useDateFilter();
   const queryClient = useQueryClient();
@@ -104,7 +104,7 @@ const Dashboard = () => {
   const [userMetricRoleFilter, setUserMetricRoleFilter] = useState('all');
 
   const socket = useSocket();
-  const isAdminOrManager = user?.role === 'superAdmin' || user?.role === 'admin' || user?.role === 'manager';
+  const isAdminOrManager = user?.role === 'superAdmin' || user?.role === 'admin' || user?.role === 'manager' || user?.role === 'organizationOwner';
 
   // Queries for manager and employee EOD views
   const { data: eodData } = useEodReports(eodDays, {}, { enabled: isAdminOrManager });
@@ -127,7 +127,7 @@ const Dashboard = () => {
     if (showLoader) setLoading(true);
     setIsRefreshing(true);
     try {
-      const endpoint = user.role === 'superAdmin' || user.role === 'admin' || user.role === 'manager'
+      const endpoint = user.role === 'superAdmin' || user.role === 'admin' || user.role === 'manager' || user.role === 'organizationOwner'
         ? '/reports/admin'
         : user.role === 'client'
           ? '/reports/client'
@@ -250,7 +250,7 @@ const Dashboard = () => {
                 {getGreeting()}, {user.name} 👋
               </h1>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                Real-time operational health, active revenue flow, project progress, and content velocity across RiseWithMedia.
+                Real-time operational health, active revenue flow, project progress, and content velocity across {organization?.name ? `${organization.name} + RWM` : 'RiseWithMedia'}.
               </p>
             </div>
 

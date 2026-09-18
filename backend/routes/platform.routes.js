@@ -15,6 +15,7 @@ import {
   rejectOrganization,
   toggleModule,
   getMyOrganization,
+  getGhostContext,
 } from '../controllers/platform.controller.js';
 
 const router = express.Router();
@@ -34,6 +35,7 @@ router.get('/stats', getPlatformStats);
 // Organization CRUD
 router.get('/organizations', getAllOrganizations);
 router.get('/organizations/:id', getOrganizationDetail);
+router.get('/organizations/:id/ghost-context', getGhostContext);
 
 // Actions
 router.put('/organizations/:id/approve', approveOrganization);

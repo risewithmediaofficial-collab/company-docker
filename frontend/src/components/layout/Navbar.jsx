@@ -148,7 +148,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { user } = useSelector((state) => state.auth);
+  const { user, organization } = useSelector((state) => state.auth);
   const { darkMode } = useSelector((state) => state.ui);
 
   const [searchOpen, setSearchOpen] = useState(false);
@@ -219,7 +219,7 @@ const Navbar = () => {
               to="/"
               className="font-bold text-foreground/80 hover:text-foreground transition-colors hidden sm:inline truncate"
             >
-              RiseWithMedia
+              {organization?.name ? `${organization.name} + RWM` : 'RiseWithMedia'}
             </Link>
             {breadcrumbs.map((crumb, idx) => {
               const isLast = idx === breadcrumbs.length - 1;

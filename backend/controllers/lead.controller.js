@@ -122,6 +122,17 @@ const assertLeadAccess = (req, lead) => {
 };
 
 const buildScopedLeadFilter = (req, filter = {}) => {
+  const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
+  const orgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
+
+  if (orgId) {
+    filter.$or = [
+      { organizationId: orgId },
+      { organizationId: null },
+      { organizationId: { $exists: false } },
+    ];
+  }
+
   if (req.user.role === 'referral') {
     filter.referredBy = req.user._id;
   }
@@ -193,27 +204,33 @@ export const getLeads = async (req, res) => {
 };
 
 // @desc   Get leads grouped by stage (for Kanban)
-// @route  GET /api/leads/kanban
-export const getLeadsKanban = async (req, res) => {
+// @route  GET /api/leads/pipeline
+export const getPipeline = async (req, res) => {
   try {
-    const stages = ['new', 'contacted', 'qualified', 'meeting_booked', 'proposal_sent', 'negotiation', 'won', 'lost', 'refollow_later'];
     const filter = buildScopedLeadFilter(req, {});
-
     const leads = await Lead.find(filter)
-      .populate('assignedTo', 'name avatar')
-      .sort({ stageOrder: 1, updatedAt: -1, createdAt: -1 });
+      .populate('assignedTo', 'name email avatar')
+      .populate('convertedToClient', 'name company')
+      .sort({ stageOrder: 1, createdAt: -1 });
 
-    const kanban = {};
-    stages.forEach((stage) => { kanban[stage] = []; });
-    leads.forEach((lead) => {
-      if (kanban[lead.stage]) kanban[lead.stage].push(serializeLead(lead));
+    const stages = Object.values(stageMap).reduce((acc, stage) => {
+      acc[stage] = [];
+      return acc;
+    }, {});
+
+    leads.forEach((l) => {
+      if (stages[l.stage]) {
+        stages[l.stage].push(serializeLead(l));
+      }
     });
 
-    res.json({ success: true, kanban });
+    res.json({ success: true, pipeline: stages });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getLeadsKanban = getPipeline;
 
 // @desc   Get single lead
 // @route  GET /api/leads/:id
@@ -241,7 +258,11 @@ export const getLead = async (req, res) => {
 // @route  POST /api/leads
 export const createLead = async (req, res) => {
   try {
-    const lead = await Lead.create(normalizeLeadPayload(req.body));
+    const leadPayload = normalizeLeadPayload(req.body);
+    if (req.user.organizationId) {
+      leadPayload.organizationId = req.user.organizationId;
+    }
+    const lead = await Lead.create(leadPayload);
 
     lead.activities.push({
       type: 'note',

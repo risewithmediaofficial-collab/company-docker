@@ -15,6 +15,7 @@ import {
   updateProfile,
   changePassword,
   registerCompany,
+  getCompanyPortal,
 } from '../controllers/auth.controller.js';
 import { getEnv } from '../config/env.js';
 import { protect } from '../middleware/auth.middleware.js';
@@ -33,6 +34,7 @@ const failedAuthAttemptLimiter = rateLimit({
 
 router.post('/register', failedAuthAttemptLimiter, register);
 router.post('/register-company', failedAuthAttemptLimiter, registerCompany);
+router.get('/company-portal/:slug', getCompanyPortal);
 router.post('/login', failedAuthAttemptLimiter, login);
 router.post('/refresh', refreshToken);
 router.post('/forgot-password', failedAuthAttemptLimiter, forgotPassword);

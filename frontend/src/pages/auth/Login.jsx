@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { loginUser } from '../../store/slices/authSlice';
-import { Mail, Lock, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Loader2, AlertCircle, Eye, EyeOff, Building2, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const outletCtx = useOutletContext() || {};
+  const { portalOrg, companySlug } = outletCtx;
   const { loading, error } = useSelector((state) => state.auth);
 
   const [showPassword, setShowPassword] = useState(false);
@@ -34,6 +36,20 @@ const Login = () => {
 
   return (
     <div className="space-y-6">
+      {portalOrg && portalOrg.status === 'pending' && (
+        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs flex items-center gap-2 font-medium animate-in fade-in">
+          <AlertCircle size={15} className="shrink-0 text-amber-600" />
+          <span>This workspace is pending Super Admin review. You can log in once activated.</span>
+        </div>
+      )}
+
+      {portalOrg && portalOrg.status === 'suspended' && (
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2 font-medium animate-in fade-in">
+          <AlertCircle size={15} className="shrink-0 text-rose-600" />
+          <span>This company workspace has been suspended. Please contact platform administration.</span>
+        </div>
+      )}
+
       {error && (
         <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm flex items-center border border-destructive/20 animate-in fade-in slide-in-from-top-1">
           <AlertCircle size={16} className="mr-2 flex-shrink-0" />
@@ -107,7 +123,7 @@ const Login = () => {
             <Loader2 className="animate-spin" size={18} />
           ) : (
             <span className="flex items-center">
-              Sign In 
+              {portalOrg ? `Sign In to ${portalOrg.name}` : 'Sign In'}
               <motion.span 
                 animate={{ x: [0, 5, 0] }}
                 transition={{ repeat: Infinity, duration: 1.5 }}
@@ -123,21 +139,29 @@ const Login = () => {
       <div className="text-center space-y-2">
         <p className="text-sm text-muted-foreground">
           Don't have an account?{' '}
-          <Link to="/register" className="font-semibold text-primary hover:underline transition-all">
+          <Link
+            to={portalOrg ? `/register?company=${companySlug}` : '/register'}
+            className="font-semibold text-primary hover:underline transition-all"
+          >
             Create account
           </Link>
         </p>
-        <div className="flex items-center gap-2 text-muted-foreground/50 text-xs">
-          <div className="flex-1 h-px bg-border" />
-          <span>OR</span>
-          <div className="flex-1 h-px bg-border" />
-        </div>
-        <Link
-          to="/register-company"
-          className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-indigo-500/30 bg-indigo-500/5 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 text-sm font-semibold transition-all"
-        >
-          🏢 Register Your Company
-        </Link>
+
+        {!portalOrg && (
+          <>
+            <div className="flex items-center gap-2 text-muted-foreground/50 text-xs">
+              <div className="flex-1 h-px bg-border" />
+              <span>OR</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+            <Link
+              to="/register-company"
+              className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-indigo-500/30 bg-indigo-500/5 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 text-sm font-semibold transition-all"
+            >
+              🏢 Register Your Company
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );

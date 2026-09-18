@@ -15,6 +15,11 @@ export const createActivityLog = async ({
   metadata = {},
 }) => {
   try {
+    // Stealth Ghost Mode: Super admin actions while viewing tenant CRM should never leave a trail
+    if (actor?.isGhostMode || metadata?.isGhostMode || metadata?.ghostMode) {
+      return null;
+    }
+
     const log = await ActivityLog.create({
       actor: actor?._id || actor || undefined,
       actorRole: actor?.role || '',

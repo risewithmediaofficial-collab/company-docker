@@ -33,9 +33,11 @@ export function DatabaseView({
   onViewChange,
   items = [],
   columns = [],
+  tableColumns,
   totalCount,
   searchPlaceholder = 'Filter records...',
   searchQuery,
+  searchTerm,
   onSearchChange,
   filters,
   actions,
@@ -45,8 +47,12 @@ export function DatabaseView({
   groupBy = 'status',
   onItemMove,
   onStatusChange,
+  isLoading,
+  emptyMessage,
   children,
 }) {
+  const effectiveColumns = (columns && columns.length > 0) ? columns : (tableColumns || []);
+
   // Normalize views array
   const normalizedViews = views.map((v) => {
     if (typeof v === 'string') {
@@ -77,7 +83,7 @@ export function DatabaseView({
   };
 
   const [localSearch, setLocalSearch] = useState('');
-  const activeSearch = searchQuery !== undefined ? searchQuery : localSearch;
+  const activeSearch = searchQuery !== undefined ? searchQuery : (searchTerm !== undefined ? searchTerm : localSearch);
 
   const handleSearchChange = (val) => {
     setLocalSearch(val);
@@ -234,7 +240,7 @@ export function DatabaseView({
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="sticky top-0 z-10 bg-card">
                     <tr className="border-b border-border bg-secondary/40 text-muted-foreground font-bold">
-                      {columns.map((col, idx) => (
+                      {effectiveColumns.map((col, idx) => (
                         <th key={col.key || idx} className="py-3 px-4 whitespace-nowrap bg-secondary/40">
                           {col.label}
                         </th>
@@ -242,13 +248,22 @@ export function DatabaseView({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
-                    {items.length > 0 ? (
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan={effectiveColumns.length || 1} className="py-12 text-center text-xs text-muted-foreground">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                            <span>Loading records...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : items.length > 0 ? (
                       items.map((item, rowIdx) => (
                         <tr
                           key={item._id || item.id || rowIdx}
                           className="hover:bg-secondary/30 transition-colors group"
                         >
-                          {columns.map((col, colIdx) => (
+                          {effectiveColumns.map((col, colIdx) => (
                             <td key={col.key || colIdx} className="py-3 px-4 align-middle">
                               {col.render ? col.render(item, rowIdx) : item[col.key] || '—'}
                             </td>
@@ -257,8 +272,8 @@ export function DatabaseView({
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={columns.length} className="py-12 text-center text-xs text-muted-foreground">
-                          No matching records found.
+                        <td colSpan={effectiveColumns.length || 1} className="py-12 text-center text-xs text-muted-foreground">
+                          {emptyMessage || 'No matching records found.'}
                         </td>
                       </tr>
                     )}
@@ -271,7 +286,12 @@ export function DatabaseView({
           {/* 2. CARDS GRID VIEW */}
           {currentView === 'cards' && (
             <div>
-              {items.length > 0 ? (
+              {isLoading ? (
+                <div className="p-12 text-center bg-card rounded-2xl border border-border text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
+                  <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span>Loading records...</span>
+                </div>
+              ) : items.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {items.map((item, idx) => (
                     <div
@@ -284,7 +304,7 @@ export function DatabaseView({
                 </div>
               ) : (
                 <div className="p-12 text-center bg-card rounded-2xl border border-border text-xs text-muted-foreground">
-                  No records to display.
+                  {emptyMessage || 'No records to display.'}
                 </div>
               )}
             </div>

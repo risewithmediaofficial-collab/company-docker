@@ -12,8 +12,11 @@ export const getAssignedBrands = async (req, res) => {
 
 export const getAllBrands = async (req, res) => {
   try {
-    const query = req.user.role === 'superAdmin' 
-      ? {} 
+    const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
+    const query = ghostOrgId
+      ? { organizationId: ghostOrgId }
+      : req.user.role === 'superAdmin'
+      ? {}
       : { organizationId: req.user.organizationId };
       
     const brands = await BrandWorkspace.find(query).select('name industry logo status');

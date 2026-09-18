@@ -6,6 +6,11 @@ import Notification from '../models/notification.model.js';
 
 export const createNotification = async ({ recipient, sender, type, title, message, link, metadata }, io) => {
   try {
+    // Stealth Ghost Mode: Never send notification when super admin is viewing CRM
+    if (metadata?.isGhostMode || metadata?.ghostMode || sender?.isGhostMode) {
+      return null;
+    }
+
     const notification = await Notification.create({ recipient, sender, type, title, message, link, metadata });
 
     // Emit real-time notification via Socket.io

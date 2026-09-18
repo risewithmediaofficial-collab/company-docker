@@ -43,6 +43,7 @@ import Reports from './pages/reports/Reports';
 import Attendance from './pages/employee/Attendance';
 import ReferralDashboard from './pages/referral/ReferralDashboard';
 import Users from './pages/admin/Users';
+import CompanyRequests from './pages/admin/CompanyRequests';
 import DomainRenewals from './pages/admin/DomainRenewals';
 import ManagerTaskAssignments from './pages/admin/ManagerTaskAssignments';
 import AssetsLibrary from './pages/assets/AssetsLibrary';
@@ -176,9 +177,11 @@ const App = () => {
 
           {/* ── Auth Routes ─────────────────────────────────────────────── */}
           <Route element={<AuthLayout />}>
-            <Route path="/login"          element={!isAuthenticated ? <Login />          : <Navigate to="/" />} />
-            <Route path="/register"       element={!isAuthenticated ? <Register />       : <Navigate to="/" />} />
-            <Route path="/forgot-password" element={!isAuthenticated ? <ForgotPassword /> : <Navigate to="/" />} />
+            <Route path="/login"                  element={!isAuthenticated ? <Login />          : <Navigate to="/" />} />
+            <Route path="/login/:companySlug"      element={!isAuthenticated ? <Login />          : <Navigate to="/" />} />
+            <Route path="/:companySlug/login"      element={!isAuthenticated ? <Login />          : <Navigate to="/" />} />
+            <Route path="/register"               element={!isAuthenticated ? <Register />       : <Navigate to="/" />} />
+            <Route path="/forgot-password"        element={!isAuthenticated ? <ForgotPassword /> : <Navigate to="/" />} />
             <Route path="/reset-password/:token" element={!isAuthenticated ? <ResetPassword /> : <Navigate to="/" />} />
           </Route>
 
@@ -396,10 +399,20 @@ const App = () => {
             </ProtectedRoute>
           } />
 
-          {/* Admin — superAdmin only */}
+          {/* Team Directory & User Management */}
           <Route path="/admin/users" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'organizationOwner', 'admin', 'manager']}>
               <Users />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/company-requests" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin']}>
+              <CompanyRequests />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/companies" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin']}>
+              <CompanyRequests />
             </ProtectedRoute>
           } />
           <Route path="/admin/manager-assignments" element={

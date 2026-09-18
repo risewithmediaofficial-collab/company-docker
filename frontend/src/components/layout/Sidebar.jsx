@@ -39,6 +39,7 @@ import {
   Rocket,
   Zap,
   Shield,
+  Building2,
 } from 'lucide-react';
 import { toggleSidebar } from '../../store/slices/uiSlice';
 import { motion } from 'framer-motion';
@@ -49,6 +50,8 @@ const badgePaths = {
   'Portal Manager': 'accessRequests',
   'Users': 'pendingUsers',
   'User Directory': 'pendingUsers',
+  'Company Requests': 'pendingCompanies',
+  'Company Registrations': 'pendingCompanies',
 };
 
 const SECTIONS_STORAGE_KEY = 'rwm_sidebar_open_sections_v4';
@@ -58,7 +61,7 @@ export default function Sidebar({ onOpenSearch }) {
   const location = useLocation();
   const dispatch = useDispatch();
   const { sidebarOpen } = useSelector((state) => state.ui);
-  const { user } = useSelector((state) => state.auth);
+  const { user, organization } = useSelector((state) => state.auth);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [pinnedPaths, setPinnedPaths] = useState(() => {
@@ -80,8 +83,9 @@ export default function Sidebar({ onOpenSearch }) {
     }
   });
 
+  const isSuperAdmin = user?.role === 'superAdmin';
   const canViewBadges = ['superAdmin', 'admin', 'manager'].includes(user?.role);
-  const { data: badgeCounts } = useSidebarBadges(canViewBadges);
+  const { data: badgeCounts } = useSidebarBadges(canViewBadges, isSuperAdmin);
 
   useEffect(() => {
     const handleResize = () => {
@@ -265,8 +269,11 @@ export default function Sidebar({ onOpenSearch }) {
         items: [
           { name: 'Attendance & EOD', icon: Clock, path: '/attendance' },
           { name: 'HR & Hiring', icon: Users2, path: '/hr' },
-          ...(role === 'superAdmin' || role === 'admin' ? [
+          ...(role === 'superAdmin' || role === 'organizationOwner' || role === 'admin' || role === 'manager' ? [
             { name: 'User Directory', icon: UserCheck, path: '/admin/users' },
+          ] : []),
+          ...(role === 'superAdmin' ? [
+            { name: 'Company Requests', icon: Building2, path: '/admin/company-requests' },
           ] : []),
         ],
       },
@@ -327,16 +334,20 @@ export default function Sidebar({ onOpenSearch }) {
         {/* Workspace Brand / Header */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-border bg-card shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-background border border-border/80 p-1 shadow-xs">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-background border border-border/80 p-1 shadow-xs overflow-hidden">
               <img
-                src="/branding/rise-with-media-logo.png"
-                alt="RWM logo"
+                src={organization?.logo || "/branding/rise-with-media-logo.png"}
+                alt={organization?.name || "RWM logo"}
                 className="h-full w-full object-contain"
+                onError={(e) => { e.currentTarget.src = "/branding/rise-with-media-logo.png"; }}
               />
             </div>
             <div className="flex min-w-0 flex-col leading-tight">
-              <span className="truncate text-sm font-extrabold tracking-tight text-foreground font-sans">
-                RiseWithMedia
+              <span
+                className="truncate text-sm font-extrabold tracking-tight text-foreground font-sans"
+                title={organization?.name ? `${organization.name} + RWM` : 'RiseWithMedia'}
+              >
+                {organization?.name ? `${organization.name} + RWM` : 'RiseWithMedia'}
               </span>
               <span className="truncate text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                 Agency OS

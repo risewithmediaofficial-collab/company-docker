@@ -1,5 +1,6 @@
 import express from 'express';
 import User from '../models/user.model.js';
+import Organization from '../models/organization.model.js';
 import { authorize, protect } from '../middleware/auth.middleware.js';
 import { createActivityLog } from '../utils/activity.js';
 
@@ -18,9 +19,21 @@ const mapEmploymentStatus = (status) => {
   }[normalized] || undefined;
 };
 
-router.get('/', authorize('superAdmin', 'manager'), async (req, res) => {
+router.get('/', authorize('superAdmin', 'organizationOwner', 'admin', 'manager'), async (req, res) => {
   try {
-    const users = await User.find()
+    const filter = {};
+    const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
+    const targetOrgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
+    if (targetOrgId) {
+      filter.organizationId = targetOrgId;
+      // Never show platform superAdmins in a tenant company's user list
+      filter.role = { $ne: 'superAdmin' };
+    }
+    if (req.query.role) {
+      filter.role = req.query.role;
+    }
+
+    const users = await User.find(filter)
       .select(safeUserProjection)
       .sort({ createdAt: -1 });
 
@@ -30,7 +43,7 @@ router.get('/', authorize('superAdmin', 'manager'), async (req, res) => {
   }
 });
 
-router.get('/:id', authorize('superAdmin', 'manager'), async (req, res) => {
+router.get('/:id', authorize('superAdmin', 'admin', 'manager'), async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select(safeUserProjection);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
@@ -40,11 +53,44 @@ router.get('/:id', authorize('superAdmin', 'manager'), async (req, res) => {
   }
 });
 
-router.post('/', authorize('superAdmin'), async (req, res) => {
+router.post('/', authorize('superAdmin', 'organizationOwner', 'admin'), async (req, res) => {
   try {
+    const isPlatformAdmin = req.user.role === 'superAdmin' && !req.isGhostMode;
+    let targetOrgId = req.user.organizationId;
+
+    if (isPlatformAdmin) {
+      targetOrgId = req.body.organizationId || null;
+    } else {
+      if (!targetOrgId) {
+        return res.status(400).json({ success: false, message: 'You must belong to a company to create users' });
+      }
+
+      // Check maxUsers plan limit for this company
+      const org = await Organization.findById(targetOrgId);
+      if (org) {
+        const currentUserCount = await User.countDocuments({ organizationId: targetOrgId });
+        if (currentUserCount >= (org.maxUsers || 3)) {
+          return res.status(403).json({
+            success: false,
+            message: `User limit reached for your plan (${org.maxUsers || 3} users). Upgrade your plan to add more team members.`,
+          });
+        }
+      }
+
+      // Tenant admins/owners cannot create a platform superAdmin or organizationOwner
+      const requestedRole = req.body.role || 'employee';
+      if (['superAdmin', 'organizationOwner'].includes(requestedRole)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Cannot create superAdmin or organizationOwner roles within a company workspace',
+        });
+      }
+    }
+
     const employmentStatus = mapEmploymentStatus(req.body.employmentStatus || req.body.status) || 'active';
     const user = await User.create({
       ...req.body,
+      organizationId: targetOrgId,
       employmentStatus,
       approvalStatus: req.body.approvalStatus || 'approved',
       isActive: req.body.isActive ?? employmentStatus === 'active',
@@ -69,8 +115,26 @@ router.post('/', authorize('superAdmin'), async (req, res) => {
   }
 });
 
-router.put('/:id', authorize('superAdmin'), async (req, res) => {
+router.put('/:id', authorize('superAdmin', 'organizationOwner', 'admin'), async (req, res) => {
   try {
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const isPlatformAdmin = req.user.role === 'superAdmin' && !req.isGhostMode;
+    if (!isPlatformAdmin) {
+      if (!req.user.organizationId || !targetUser.organizationId || targetUser.organizationId.toString() !== req.user.organizationId.toString()) {
+        return res.status(403).json({ success: false, message: 'Access denied: user belongs to another organization' });
+      }
+
+      if (req.user.role !== 'organizationOwner' && targetUser.role === 'organizationOwner') {
+        return res.status(403).json({ success: false, message: 'Cannot modify the Organization Owner account' });
+      }
+
+      if (req.body.role && ['superAdmin', 'organizationOwner'].includes(req.body.role)) {
+        return res.status(403).json({ success: false, message: 'Cannot assign superAdmin or organizationOwner roles' });
+      }
+    }
+
     const allowedFields = [
       'name',
       'email',
@@ -175,7 +239,7 @@ router.put('/:id', authorize('superAdmin'), async (req, res) => {
   }
 });
 
-router.put('/:id/password', authorize('superAdmin', 'admin'), async (req, res) => {
+router.put('/:id/password', authorize('superAdmin', 'organizationOwner', 'admin'), async (req, res) => {
   try {
     const { newPassword } = req.body;
 
@@ -187,25 +251,35 @@ router.put('/:id/password', authorize('superAdmin', 'admin'), async (req, res) =
       return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
     }
 
-    const user = await User.findById(req.params.id).select('+password +refreshToken');
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    const targetUser = await User.findById(req.params.id).select('+password +refreshToken');
+    if (!targetUser) return res.status(404).json({ success: false, message: 'User not found' });
 
-    user.password = newPassword;
-    user.passwordChangedAt = new Date();
-    user.refreshToken = null;
-    await user.save();
+    const isPlatformAdmin = req.user.role === 'superAdmin' && !req.isGhostMode;
+    if (!isPlatformAdmin) {
+      if (!req.user.organizationId || !targetUser.organizationId || targetUser.organizationId.toString() !== req.user.organizationId.toString()) {
+        return res.status(403).json({ success: false, message: 'Access denied: user belongs to another organization' });
+      }
+      if (req.user.role !== 'organizationOwner' && targetUser.role === 'organizationOwner') {
+        return res.status(403).json({ success: false, message: 'Cannot reset password of the Organization Owner' });
+      }
+    }
+
+    targetUser.password = newPassword;
+    targetUser.passwordChangedAt = new Date();
+    targetUser.refreshToken = null;
+    await targetUser.save();
 
     const io = req.app?.get('io') || global.io;
     if (io) {
-      const isSelf = String(req.user._id) === String(user._id);
+      const isSelf = String(req.user._id) === String(targetUser._id);
       const msg = isSelf
         ? 'Your password was changed. Please log in again with your new password.'
         : 'Your password was changed by an administrator. Please log in with your new password.';
 
       if (typeof io.sendToUser === 'function') {
-        io.sendToUser(user._id.toString(), 'forceLogout', { reason: 'password_changed', message: msg });
+        io.sendToUser(targetUser._id.toString(), 'forceLogout', { reason: 'password_changed', message: msg });
       } else if (io.to) {
-        io.to(`user:${user._id.toString()}`).emit('forceLogout', { reason: 'password_changed', message: msg });
+        io.to(`user:${targetUser._id.toString()}`).emit('forceLogout', { reason: 'password_changed', message: msg });
       }
     }
 
@@ -213,10 +287,10 @@ router.put('/:id/password', authorize('superAdmin', 'admin'), async (req, res) =
       actor: req.user,
       action: 'user.password.updated',
       entityType: 'user',
-      entityId: user._id,
+      entityId: targetUser._id,
       title: 'User password changed',
-      description: `${user.name}'s password was changed by an admin.`,
-      relatedUser: user._id,
+      description: `${targetUser.name}'s password was changed by an admin.`,
+      relatedUser: targetUser._id,
     });
 
     res.json({ success: true, message: 'Password updated successfully' });
@@ -225,11 +299,24 @@ router.put('/:id/password', authorize('superAdmin', 'admin'), async (req, res) =
   }
 });
 
-router.patch('/:id/approval', authorize('superAdmin'), async (req, res) => {
+router.patch('/:id/approval', authorize('superAdmin', 'organizationOwner', 'admin'), async (req, res) => {
   try {
     const { approvalStatus } = req.body;
     if (!['pending', 'approved', 'rejected'].includes(approvalStatus)) {
       return res.status(400).json({ success: false, message: 'Invalid approval status' });
+    }
+
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const isPlatformAdmin = req.user.role === 'superAdmin' && !req.isGhostMode;
+    if (!isPlatformAdmin) {
+      if (!req.user.organizationId || !targetUser.organizationId || targetUser.organizationId.toString() !== req.user.organizationId.toString()) {
+        return res.status(403).json({ success: false, message: 'Access denied: user belongs to another organization' });
+      }
+      if (targetUser.role === 'organizationOwner') {
+        return res.status(403).json({ success: false, message: 'Cannot modify Organization Owner approval status' });
+      }
     }
 
     const set = { approvalStatus };
@@ -251,8 +338,8 @@ router.patch('/:id/approval', authorize('superAdmin'), async (req, res) => {
       unset.rejectedAt = '';
     }
 
+    const updateDoc = Object.keys(unset).length ? { $set: set, $unset: unset } : { $set: set };
     const user = await User.findByIdAndUpdate(req.params.id, updateDoc, { new: true, runValidators: true }).select(safeUserProjection);
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     if (approvalStatus === 'rejected' || approvalStatus === 'pending') {
       await User.findByIdAndUpdate(req.params.id, {
@@ -288,19 +375,35 @@ router.patch('/:id/approval', authorize('superAdmin'), async (req, res) => {
   }
 });
 
-router.delete('/:id', authorize('superAdmin'), async (req, res) => {
+router.delete('/:id', authorize('superAdmin', 'organizationOwner', 'admin'), async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) return res.status(404).json({ success: false, message: 'User not found' });
+
+    if (String(req.user._id) === String(targetUser._id)) {
+      return res.status(400).json({ success: false, message: 'Cannot delete your own account' });
+    }
+
+    const isPlatformAdmin = req.user.role === 'superAdmin' && !req.isGhostMode;
+    if (!isPlatformAdmin) {
+      if (!req.user.organizationId || !targetUser.organizationId || targetUser.organizationId.toString() !== req.user.organizationId.toString()) {
+        return res.status(403).json({ success: false, message: 'Access denied: user belongs to another organization' });
+      }
+      if (targetUser.role === 'organizationOwner') {
+        return res.status(403).json({ success: false, message: 'Cannot delete the Organization Owner' });
+      }
+    }
+
+    await User.findByIdAndDelete(req.params.id);
 
     await createActivityLog({
       actor: req.user,
       action: 'user.deleted',
       entityType: 'user',
-      entityId: user._id,
+      entityId: targetUser._id,
       title: 'User deleted',
-      description: `${user.name} was deleted.`,
-      relatedUser: user._id,
+      description: `${targetUser.name} was deleted.`,
+      relatedUser: targetUser._id,
     });
 
     res.json({ success: true, message: 'User deleted' });

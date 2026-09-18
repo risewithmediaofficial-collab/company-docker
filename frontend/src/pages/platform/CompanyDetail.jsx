@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Building2, CheckCircle2, XCircle, AlertTriangle, Clock,
   Users2, Save, ToggleLeft, ToggleRight, Shield, Package, StickyNote,
-  RefreshCw, Globe, Phone, Mail, Calendar
+  RefreshCw, Globe, Phone, Mail, Calendar, Radio
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { enterGhostMode } from '../../store/slices/authSlice';
 
 // ── Module list for toggle grid
 const ALL_MODULES = [
@@ -40,11 +43,25 @@ const tabs = ['Overview', 'Plan & Modules', 'Users', 'Notes'];
 
 const CompanyDetail = () => {
   const { id } = useParams();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
   const [org, setOrg] = useState(null);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('Overview');
+
+  const handleLiveViewCRM = () => {
+    if (!org) return;
+    dispatch(enterGhostMode(org));
+    if (queryClient) {
+      queryClient.clear();
+    }
+    toast.success(`Stealth Live View Activated for "${org.name} + RWM". Tenant is unaware.`);
+    navigate('/');
+  };
 
   // Editable plan state
   const [plan, setPlan] = useState('trial');
@@ -195,21 +212,33 @@ const CompanyDetail = () => {
           <Link to="/platform/companies" className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all">
             <ArrowLeft size={18} />
           </Link>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 flex items-center justify-center text-indigo-300 font-bold text-xl">
-              {org.name?.charAt(0)}
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">{org.name}</h1>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusColor}`}>
-                {org.planStatus}
-              </span>
-            </div>
+          <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 flex items-center justify-center text-indigo-300 font-bold text-xl overflow-hidden border border-white/10">
+            {org.logo ? (
+              <img src={org.logo} alt={org.name} className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            ) : (
+              org.name?.charAt(0)
+            )}
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white">{org.name} + RWM</h1>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusColor}`}>
+              {org.planStatus}
+            </span>
           </div>
         </div>
-        <button onClick={fetch} className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10 transition-all">
-          <RefreshCw size={16} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleLiveViewCRM}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md"
+            title="Live View Company CRM (Stealth Ghost Mode)"
+          >
+            <Radio size={13} className="animate-pulse text-emerald-400" />
+            <span>Live View CRM</span>
+          </button>
+          <button onClick={fetch} className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10 transition-all">
+            <RefreshCw size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Pending Banner */}

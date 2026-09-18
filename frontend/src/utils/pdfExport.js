@@ -644,3 +644,408 @@ export const exportInvoiceToPDF = async (invoice, options = {}) => {
   }
   return { pdf, fileName };
 };
+
+/**
+ * Export a single company registration request / SaaS tenant dossier as PDF
+ * @param {object} org - Organization object with populated ownerId
+ */
+export const exportCompanyDetailsToPDF = (org) => {
+  if (!org) return;
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 14;
+  const contentWidth = pageWidth - margin * 2;
+  let y = margin;
+
+  const ensureSpace = (needed = 10) => {
+    if (y + needed > pageHeight - margin) {
+      pdf.addPage();
+      y = margin;
+    }
+  };
+
+  // Header branding bar
+  pdf.setFillColor(79, 70, 229); // Indigo 600
+  pdf.roundedRect(margin, y, contentWidth, 24, 3, 3, 'F');
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(14);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text('RISEWITHMEDIA AGENCY OS', margin + 6, y + 9);
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  pdf.setTextColor(224, 231, 255);
+  pdf.text('SaaS Tenant Onboarding & Company Registration Dossier', margin + 6, y + 16);
+
+  // Status chip on top right of header
+  const statusUpper = (org.planStatus || 'pending').toUpperCase();
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(8.5);
+  pdf.setFillColor(255, 255, 255);
+  pdf.setTextColor(79, 70, 229);
+  pdf.roundedRect(pageWidth - margin - 32, y + 6, 26, 7, 2, 2, 'F');
+  pdf.text(statusUpper, pageWidth - margin - 19, y + 10.8, { align: 'center' });
+
+  y += 30;
+
+  // Metadata bar
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+  pdf.setTextColor(100, 116, 139);
+  pdf.text(`Tenant ID: ${org._id || 'N/A'}`, margin, y);
+  pdf.text(`Generated: ${new Date().toLocaleString('en-IN')}`, pageWidth - margin, y, { align: 'right' });
+  y += 5;
+
+  // Divider
+  pdf.setDrawColor(226, 232, 240);
+  pdf.line(margin, y, pageWidth - margin, y);
+  y += 6;
+
+  // Box 1: Company Profile
+  pdf.setFillColor(248, 250, 252);
+  pdf.setDrawColor(203, 213, 225);
+  pdf.roundedRect(margin, y, contentWidth, 34, 2.5, 2.5, 'FD');
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10.5);
+  pdf.setTextColor(30, 41, 59);
+  pdf.text('COMPANY PROFILE', margin + 5, y + 7);
+
+  pdf.setFontSize(9);
+  const col1X = margin + 5;
+  const col2X = margin + contentWidth / 2 + 5;
+
+  // Row 1
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Company Name:', col1X, y + 14);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`${org.name || 'N/A'} + RWM`, col1X + 32, y + 14);
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Industry:', col2X, y + 14);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(String(org.industry || 'General Business'), col2X + 22, y + 14);
+
+  // Row 2
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Website:', col1X, y + 21);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(String(org.website || 'None'), col1X + 32, y + 21);
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Registration Date:', col2X, y + 21);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(new Date(org.createdAt).toLocaleString('en-IN'), col2X + 32, y + 21);
+
+  // Row 3
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Phone:', col1X, y + 28);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(String(org.phone || org.ownerId?.phone || 'Not provided'), col1X + 32, y + 28);
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Address:', col2X, y + 28);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(String(org.address || 'Not provided'), col2X + 22, y + 28);
+
+  y += 40;
+
+  // Box 2: Owner Information
+  pdf.setFillColor(248, 250, 252);
+  pdf.setDrawColor(203, 213, 225);
+  pdf.roundedRect(margin, y, contentWidth, 27, 2.5, 2.5, 'FD');
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10.5);
+  pdf.setTextColor(30, 41, 59);
+  pdf.text('ACCOUNT OWNER DETAILS', margin + 5, y + 7);
+
+  pdf.setFontSize(9);
+  // Row 1
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Owner Name:', col1X, y + 14);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(String(org.ownerId?.name || 'Pending Review'), col1X + 32, y + 14);
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Email Address:', col2X, y + 14);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(String(org.ownerId?.email || 'N/A'), col2X + 28, y + 14);
+
+  // Row 2
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('System Role:', col1X, y + 21);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('organizationOwner', col1X + 32, y + 21);
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('User Status:', col2X, y + 21);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(org.planStatus === 'active' ? 'Approved & Active' : 'Pending Verification', col2X + 28, y + 21);
+
+  y += 33;
+
+  // Box 3: SaaS Subscription & Limits
+  pdf.setFillColor(248, 250, 252);
+  pdf.setDrawColor(203, 213, 225);
+  pdf.roundedRect(margin, y, contentWidth, 27, 2.5, 2.5, 'FD');
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10.5);
+  pdf.setTextColor(30, 41, 59);
+  pdf.text('SUBSCRIPTION & CAPACITY LIMITS', margin + 5, y + 7);
+
+  pdf.setFontSize(9);
+  // Row 1
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Plan Tier:', col1X, y + 14);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(String(org.plan || 'trial').toUpperCase(), col1X + 32, y + 14);
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Trial Ends At:', col2X, y + 14);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(org.trialEndsAt ? new Date(org.trialEndsAt).toLocaleDateString('en-IN') : '14 Days Standard', col2X + 28, y + 14);
+
+  // Row 2
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Max Users:', col1X, y + 21);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(String(org.maxUsers || 3), col1X + 32, y + 21);
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Max Clients:', col2X, y + 21);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(String(org.maxClients || 5), col2X + 28, y + 21);
+
+  y += 33;
+
+  // Box 4: Enabled Application Modules
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10.5);
+  pdf.setTextColor(30, 41, 59);
+  pdf.text('MODULE CONFIGURATION PRIVILEGES', margin, y);
+  y += 4;
+
+  const modulesList = [
+    { key: 'crm', label: 'CRM & Leads' },
+    { key: 'clients', label: 'Clients' },
+    { key: 'projects', label: 'Projects' },
+    { key: 'tasks', label: 'Tasks' },
+    { key: 'finance', label: 'Finance & Invoicing' },
+    { key: 'hr', label: 'HR & Hiring' },
+    { key: 'attendance', label: 'Attendance & EOD' },
+    { key: 'proposals', label: 'Proposals' },
+    { key: 'portal', label: 'Client Portal' },
+    { key: 'reports', label: 'Reports & Analytics' },
+    { key: 'sop', label: 'SOP Library' },
+    { key: 'assets', label: 'Asset Library' },
+    { key: 'smm', label: 'SMM Module' },
+    { key: 'automations', label: 'Automations' },
+    { key: 'influencers', label: 'Influencer Hub' },
+    { key: 'ai', label: 'AI Features' },
+  ];
+
+  const modWidth = (contentWidth - 6) / 3;
+  let modY = y;
+  modulesList.forEach((m, idx) => {
+    const colIndex = idx % 3;
+    if (colIndex === 0 && idx > 0) modY += 7;
+    const modX = margin + colIndex * (modWidth + 3);
+    const isEnabled = Boolean(org.enabledModules?.[m.key]);
+
+    pdf.setFillColor(isEnabled ? 236 : 241, isEnabled ? 253 : 245, isEnabled ? 245 : 249);
+    pdf.setDrawColor(isEnabled ? 167 : 226, isEnabled ? 243 : 232, isEnabled ? 208 : 240);
+    pdf.roundedRect(modX, modY, modWidth, 6, 1.5, 1.5, 'FD');
+
+    pdf.setFont('helvetica', isEnabled ? 'bold' : 'normal');
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(isEnabled ? 16 : 100, isEnabled ? 122 : 116, isEnabled ? 87 : 139);
+    pdf.text(isEnabled ? `[x] ${m.label}` : `[ ] ${m.label}`, modX + 2.5, modY + 4.2);
+  });
+
+  y = modY + 12;
+
+  // Box 5: Admin Notes & Approval History
+  if (org.adminNotes || org.approvedAt || org.suspendReason) {
+    ensureSpace(20);
+    pdf.setFillColor(254, 243, 199);
+    pdf.setDrawColor(251, 191, 36);
+    pdf.roundedRect(margin, y, contentWidth, 18, 2, 2, 'FD');
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(146, 64, 14);
+    pdf.text('SUPER ADMIN RECORD & NOTES:', margin + 4, y + 6);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    let noteText = org.adminNotes || 'No special admin notes.';
+    if (org.suspendReason) noteText += ` | Suspended Reason: ${org.suspendReason}`;
+    if (org.approvedAt) noteText += ` | Approved on: ${new Date(org.approvedAt).toLocaleDateString('en-IN')}`;
+
+    pdf.text(pdf.splitTextToSize(noteText, contentWidth - 8), margin + 4, y + 12);
+    y += 24;
+  }
+
+  // Footer
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7.5);
+  pdf.setTextColor(148, 163, 184);
+  pdf.text('RiseWithMedia Agency OS Platform Administration — Confidential & Proprietary Document', margin, pageHeight - 8);
+  pdf.text(`Page 1 of 1`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+
+  // Clean filename
+  const cleanName = String(org.name || 'company')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-');
+  pdf.save(`${cleanName}-registration-dossier.pdf`);
+};
+
+/**
+ * Export all company registration requests as a structured PDF summary report
+ * @param {array} orgs - Array of organization objects
+ * @param {string} activeFilter - Current active filter name
+ */
+export const exportCompanyListToPDF = (orgs = [], activeFilter = 'all') => {
+  if (!orgs || orgs.length === 0) {
+    throw new Error('No company records to export');
+  }
+
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 12;
+  const contentWidth = pageWidth - margin * 2;
+  let y = margin;
+
+  // Header Banner
+  pdf.setFillColor(79, 70, 229);
+  pdf.roundedRect(margin, y, contentWidth, 18, 2.5, 2.5, 'F');
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(13);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text('RISEWITHMEDIA AGENCY OS — COMPANY REGISTRATIONS REPORT', margin + 6, y + 8);
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+  pdf.setTextColor(224, 231, 255);
+  pdf.text(`Filter: ${activeFilter.toUpperCase()}  |  Total Records: ${orgs.length}  |  Generated on ${new Date().toLocaleString('en-IN')}`, margin + 6, y + 14);
+
+  y += 24;
+
+  // Table Columns
+  const cols = [
+    { label: '#', width: 10 },
+    { label: 'Company Name', width: 55 },
+    { label: 'Industry', width: 35 },
+    { label: 'Owner Name', width: 45 },
+    { label: 'Email / Contact', width: 55 },
+    { label: 'Plan', width: 22 },
+    { label: 'Status', width: 25 },
+    { label: 'Registered', width: 26 },
+  ];
+
+  // Table Header
+  pdf.setFillColor(241, 245, 249);
+  pdf.setDrawColor(203, 213, 225);
+  pdf.rect(margin, y, contentWidth, 7, 'FD');
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(8);
+  pdf.setTextColor(30, 41, 59);
+
+  let currentX = margin;
+  cols.forEach((col) => {
+    pdf.text(col.label, currentX + 2, y + 4.8);
+    currentX += col.width;
+  });
+
+  y += 7;
+
+  // Rows
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7.5);
+
+  orgs.forEach((o, index) => {
+    if (y + 8 > pageHeight - margin) {
+      pdf.addPage();
+      y = margin;
+
+      // Repeat Table Header
+      pdf.setFillColor(241, 245, 249);
+      pdf.setDrawColor(203, 213, 225);
+      pdf.rect(margin, y, contentWidth, 7, 'FD');
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8);
+      pdf.setTextColor(30, 41, 59);
+
+      let repX = margin;
+      cols.forEach((col) => {
+        pdf.text(col.label, repX + 2, y + 4.8);
+        repX += col.width;
+      });
+      y += 7;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+    }
+
+    const isEven = index % 2 === 0;
+    if (isEven) {
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(margin, y, contentWidth, 7, 'F');
+    }
+
+    pdf.setDrawColor(241, 245, 249);
+    pdf.line(margin, y + 7, margin + contentWidth, y + 7);
+
+    pdf.setTextColor(15, 23, 42);
+    let rowX = margin;
+
+    // #
+    pdf.text(String(index + 1), rowX + 2, y + 4.8);
+    rowX += cols[0].width;
+
+    // Company Name
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(String(`${o.name || 'N/A'} + RWM`).substring(0, 32), rowX + 2, y + 4.8);
+    pdf.setFont('helvetica', 'normal');
+    rowX += cols[1].width;
+
+    // Industry
+    pdf.text(String(o.industry || 'General').substring(0, 20), rowX + 2, y + 4.8);
+    rowX += cols[2].width;
+
+    // Owner Name
+    pdf.text(String(o.ownerId?.name || 'N/A').substring(0, 25), rowX + 2, y + 4.8);
+    rowX += cols[3].width;
+
+    // Email
+    pdf.text(String(o.ownerId?.email || 'N/A').substring(0, 32), rowX + 2, y + 4.8);
+    rowX += cols[4].width;
+
+    // Plan
+    pdf.text(String(o.plan || 'trial').toUpperCase(), rowX + 2, y + 4.8);
+    rowX += cols[5].width;
+
+    // Status
+    pdf.text(String(o.planStatus || 'pending'), rowX + 2, y + 4.8);
+    rowX += cols[6].width;
+
+    // Registered
+    const regDate = new Date(o.createdAt).toLocaleDateString('en-IN');
+    pdf.text(regDate, rowX + 2, y + 4.8);
+
+    y += 7;
+  });
+
+  // Footer
+  pdf.setFontSize(7);
+  pdf.setTextColor(148, 163, 184);
+  pdf.text(`RiseWithMedia Platform Admin — Report generated on ${new Date().toLocaleString()}`, margin, pageHeight - 6);
+
+  pdf.save(`company-registrations-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+};

@@ -111,6 +111,15 @@ export const getClients = async (req, res) => {
       ];
     }
 
+    // Stealth Ghost Mode / Tenant Scoping
+    const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
+    const targetOrgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
+    if (targetOrgId) {
+      const orgMatch = [{ organizationId: targetOrgId }, { organizationId: null }, { organizationId: { $exists: false } }];
+      filter.$and = filter.$or ? [{ $or: filter.$or }, { $or: orgMatch }] : [{ $or: orgMatch }];
+      delete filter.$or;
+    }
+
     const total = await Client.countDocuments(filter);
     const clients = await Client.find(filter)
       .populate(clientPopulate)

@@ -79,8 +79,15 @@ export const fetchMe = createAsyncThunk(
         }
       }
 
+      const ghostOrgId = localStorage.getItem('rwm_ghost_org_id');
+      const reqHeaders = { Authorization: `Bearer ${activeToken}` };
+      if (ghostOrgId) {
+        reqHeaders['x-impersonate-org-id'] = ghostOrgId;
+        reqHeaders['x-ghost-org-id'] = ghostOrgId;
+      }
+
       const response = await axios.get('/api/auth/me', {
-        headers: { Authorization: `Bearer ${activeToken}` },
+        headers: reqHeaders,
       });
       return response.data;
     } catch (error) {
@@ -100,9 +107,28 @@ const authSlice = createSlice({
   name: 'auth',
   initialState: {
     user: null,
-    organization: null,
+    organization: (() => {
+      try {
+        const ghost = localStorage.getItem('rwm_ghost_org_data');
+        if (ghost) return JSON.parse(ghost);
+        const userOrg = localStorage.getItem('rwm_user_org');
+        if (userOrg) return JSON.parse(userOrg);
+        return null;
+      } catch {
+        return null;
+      }
+    })(),
     accessToken: localStorage.getItem('accessToken') || null,
     activeWorkspace: localStorage.getItem('activeWorkspace') || null,
+    ghostMode: Boolean(localStorage.getItem('rwm_ghost_org_id')),
+    ghostOrg: (() => {
+      try {
+        const d = localStorage.getItem('rwm_ghost_org_data');
+        return d ? JSON.parse(d) : null;
+      } catch {
+        return null;
+      }
+    })(),
     loading: false,
     authChecked: false,
     error: null,
@@ -118,6 +144,8 @@ const authSlice = createSlice({
       state.organization = null;
       state.accessToken = null;
       state.activeWorkspace = null;
+      state.ghostMode = false;
+      state.ghostOrg = null;
       state.isAuthenticated = false;
       state.loading = false;
       state.authChecked = true;
@@ -125,9 +153,29 @@ const authSlice = createSlice({
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('activeWorkspace');
+      localStorage.removeItem('rwm_ghost_org_id');
+      localStorage.removeItem('rwm_ghost_org_data');
+      localStorage.removeItem('rwm_user_org');
+    },
+    enterGhostMode: (state, action) => {
+      const org = action.payload;
+      state.ghostMode = true;
+      state.ghostOrg = org;
+      state.organization = org;
+      localStorage.setItem('rwm_ghost_org_id', org._id);
+      localStorage.setItem('rwm_ghost_org_data', JSON.stringify(org));
+    },
+    exitGhostMode: (state) => {
+      state.ghostMode = false;
+      state.ghostOrg = null;
+      state.organization = null;
+      localStorage.removeItem('rwm_ghost_org_id');
+      localStorage.removeItem('rwm_ghost_org_data');
+      localStorage.removeItem('activeWorkspace');
     },
     setAuth: (state, action) => {
       state.user = action.payload.user;
+      state.organization = action.payload.organization || state.organization || null;
       state.accessToken = action.payload.accessToken;
       state.isAuthenticated = true;
       state.authChecked = true;
@@ -160,6 +208,12 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload.user;
+        state.organization = action.payload.organization || null;
+        if (action.payload.organization) {
+          try {
+            localStorage.setItem('rwm_user_org', JSON.stringify(action.payload.organization));
+          } catch {}
+        }
         state.accessToken = action.payload.accessToken;
         state.isAuthenticated = true;
         state.authChecked = true;
@@ -179,6 +233,15 @@ const authSlice = createSlice({
         state.loading = false;
         state.user = action.payload.user;
         state.organization = action.payload.organization || null;
+        if (action.payload.organization && !action.payload.isGhostMode) {
+          try {
+            localStorage.setItem('rwm_user_org', JSON.stringify(action.payload.organization));
+          } catch {}
+        }
+        if (action.payload.isGhostMode && action.payload.organization) {
+          state.ghostMode = true;
+          state.ghostOrg = action.payload.organization;
+        }
         state.isAuthenticated = true;
         state.authChecked = true;
         state.error = null;
@@ -194,6 +257,7 @@ const authSlice = createSlice({
           state.error = action.payload?.message || 'Session expired';
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
+          localStorage.removeItem('rwm_user_org');
         } else {
           state.error = action.payload?.message || 'Temporary connection issue';
         }
@@ -201,6 +265,14 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, setAuth, updateCurrentUser, setActiveWorkspace, clearError } = authSlice.actions;
+export const {
+  logout,
+  setAuth,
+  updateCurrentUser,
+  setActiveWorkspace,
+  clearError,
+  enterGhostMode,
+  exitGhostMode,
+} = authSlice.actions;
 export default authSlice.reducer;
 

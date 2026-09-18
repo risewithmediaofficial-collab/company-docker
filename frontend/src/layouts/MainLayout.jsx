@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
+import GhostModeBanner from '../components/layout/GhostModeBanner';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import GlobalSearchModal from '../components/modals/GlobalSearchModal';
@@ -19,6 +20,7 @@ const MainLayout = () => {
 
       {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col transition-all duration-250 md:ml-[260px]">
+        <GhostModeBanner />
         <Navbar onOpenSearch={() => setGlobalSearchOpen(true)} />
         <main className="min-w-0 flex-1 overflow-y-auto bg-secondary/20 p-3 sm:p-5 md:p-6 custom-scrollbar">
           <div className="mx-auto min-w-0 max-w-7xl">

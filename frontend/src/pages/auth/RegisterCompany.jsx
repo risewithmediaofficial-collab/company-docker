@@ -18,6 +18,10 @@ import {
   Sparkles,
   Zap,
   Check,
+  Upload,
+  Image as ImageIcon,
+  Trash2,
+  Copy,
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -59,6 +63,8 @@ const RegisterCompany = () => {
 
   const [form, setForm] = useState({
     companyName: '',
+    slug: '',
+    logo: '',
     industry: '',
     website: '',
     ownerName: '',
@@ -67,6 +73,8 @@ const RegisterCompany = () => {
     password: '',
     confirmPassword: '',
   });
+  const [customSlugEdited, setCustomSlugEdited] = useState(false);
+  const [createdSlug, setCreatedSlug] = useState('');
   const [errors, setErrors] = useState({});
 
   const update = (field, value) => {
@@ -74,10 +82,42 @@ const RegisterCompany = () => {
     setErrors((e) => ({ ...e, [field]: '' }));
   };
 
+  const handleCompanyNameChange = (val) => {
+    const nextForm = { ...form, companyName: val };
+    if (!customSlugEdited) {
+      const autoSlug = val.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      nextForm.slug = autoSlug;
+    }
+    setForm(nextForm);
+    setErrors((e) => ({ ...e, companyName: '', slug: '' }));
+  };
+
+  const handleSlugChange = (val) => {
+    setCustomSlugEdited(true);
+    const clean = val.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/--+/g, '-');
+    update('slug', clean);
+  };
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo image must be smaller than 2MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      update('logo', reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const validateStep = () => {
     const errs = {};
     if (step === 1) {
       if (!form.companyName.trim()) errs.companyName = 'Company name is required';
+      if (!form.slug?.trim()) errs.slug = 'Domain URL slug is required (e.g. acme-media)';
+      else if (!/^[a-z0-9-]+$/.test(form.slug.trim())) errs.slug = 'Slug can only contain lowercase letters, numbers, and hyphens';
     }
     if (step === 2) {
       if (!form.ownerName.trim()) errs.ownerName = 'Your name is required';
@@ -103,8 +143,11 @@ const RegisterCompany = () => {
     if (!validateStep()) return;
     setLoading(true);
     try {
-      await axios.post('/api/auth/register-company', {
+      const cleanSlug = form.slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+      const res = await axios.post('/api/auth/register-company', {
         companyName: form.companyName,
+        slug: cleanSlug,
+        logo: form.logo,
         industry: form.industry,
         website: form.website,
         ownerName: form.ownerName,
@@ -112,6 +155,7 @@ const RegisterCompany = () => {
         phone: form.phone,
         password: form.password,
       });
+      setCreatedSlug(res.data?.organization?.slug || res.data?.slug || cleanSlug);
       setSuccess(true);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed. Please try again.');
@@ -146,7 +190,7 @@ const RegisterCompany = () => {
             Our platform administrator will review your workspace and activate your access shortly.
           </p>
 
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 mb-8 text-left space-y-3">
+          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 mb-4 text-left space-y-3">
             <div className="flex items-center justify-between text-xs text-slate-500 border-b border-slate-200 pb-2.5">
               <span>Status</span>
               <span className="text-amber-600 font-semibold flex items-center gap-1.5">
@@ -164,12 +208,53 @@ const RegisterCompany = () => {
             </div>
           </div>
 
-          <button
-            onClick={() => navigate('/login')}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
-          >
-            Return to Login Screen <ChevronRight size={16} />
-          </button>
+          {/* Dedicated Company Login Portal Card */}
+          <div className="bg-blue-50/90 border border-blue-200 rounded-2xl p-4 mb-6 text-left space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                <Globe size={14} className="text-blue-600" />
+                Your Dedicated Login Portal
+              </span>
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-xs">
+                Custom URL
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs text-slate-900 font-semibold bg-white px-3 py-2 rounded-xl border border-blue-200/80 flex-1 truncate select-all">
+                {`${window.location.origin}/login/${createdSlug || form.slug}`}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `${window.location.origin}/login/${createdSlug || form.slug}`;
+                  navigator.clipboard.writeText(url);
+                  toast.success('Copied your custom login portal URL!');
+                }}
+                className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-xs flex items-center gap-1.5 shrink-0"
+              >
+                <Copy size={13} />
+                <span>Copy</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Share this dedicated link with your team. Once approved, your team will sign into your workspace via this URL.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <button
+              onClick={() => navigate(`/login/${createdSlug || form.slug}`)}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+            >
+              Open Company Portal <ChevronRight size={16} />
+            </button>
+            <button
+              onClick={() => navigate('/login')}
+              className="w-full sm:w-auto py-3.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm transition-all whitespace-nowrap"
+            >
+              Main Login
+            </button>
+          </div>
         </motion.div>
       </div>
     );
@@ -286,7 +371,7 @@ const RegisterCompany = () => {
                     <input
                       type="text"
                       value={form.companyName}
-                      onChange={(e) => update('companyName', e.target.value)}
+                      onChange={(e) => handleCompanyNameChange(e.target.value)}
                       placeholder="e.g. Apex Digital Marketing"
                       className={`w-full bg-slate-50/80 border ${
                         errors.companyName ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'
@@ -294,6 +379,126 @@ const RegisterCompany = () => {
                     />
                   </div>
                   {errors.companyName && <p className="text-red-500 text-xs mt-1">{errors.companyName}</p>}
+                </div>
+
+                {/* Domain URL Slug Input */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-slate-700 block">
+                      Company Domain URL / Portal Slug <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[11px] text-slate-400">Custom login URL</span>
+                  </div>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3 text-xs font-mono text-slate-400 select-none font-medium">
+                      /login/
+                    </span>
+                    <input
+                      type="text"
+                      value={form.slug}
+                      onChange={(e) => handleSlugChange(e.target.value)}
+                      placeholder="apex-digital"
+                      className={`w-full bg-slate-50/80 border ${
+                        errors.slug ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'
+                      } rounded-xl py-3 pl-16 pr-4 text-slate-900 font-mono text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all`}
+                    />
+                  </div>
+                  {errors.slug && <p className="text-red-500 text-xs mt-1">{errors.slug}</p>}
+                  <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    Branded Login Portal: <code className="font-mono text-blue-600 font-semibold">{window.location.origin}/login/{form.slug || 'company-slug'}</code>
+                  </p>
+                </div>
+
+                {/* Company Logo Field */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-slate-700">
+                      Company Logo (optional)
+                    </label>
+                    <span className="text-[11px] text-slate-400">PNG, JPG, SVG or WebP (max 2MB)</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* File upload option */}
+                    <div className="relative border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-xl p-3 text-center bg-slate-50/50 hover:bg-blue-50/20 transition-all flex flex-col items-center justify-center cursor-pointer group">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                      />
+                      <Upload size={20} className="text-slate-400 group-hover:text-blue-600 transition-colors mb-1" />
+                      <p className="text-xs font-semibold text-slate-700 group-hover:text-blue-600 transition-colors">
+                        Click to upload logo image
+                      </p>
+                      <p className="text-[10px] text-slate-400">or drag and drop file here</p>
+                    </div>
+
+                    {/* Image URL input & thumbnail */}
+                    <div className="flex flex-col justify-between space-y-1.5">
+                      <div className="relative">
+                        <ImageIcon size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
+                        <input
+                          type="url"
+                          value={form.logo}
+                          onChange={(e) => update('logo', e.target.value)}
+                          placeholder="Or paste direct logo URL (https://...)"
+                          className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-slate-900 text-xs placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        />
+                      </div>
+                      {form.logo && (
+                        <div className="flex items-center justify-between p-2 rounded-xl bg-blue-50 border border-blue-200/60 text-xs">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <img
+                              src={form.logo}
+                              alt="Logo preview"
+                              className="w-7 h-7 rounded-lg object-contain bg-white border border-blue-200 shrink-0"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                            <span className="text-[11px] font-semibold text-blue-700 truncate">Logo attached</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => update('logo', '')}
+                            className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-white/60 transition-colors"
+                            title="Remove logo"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live Brand Preview Showing Company Name + RWM */}
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/90 to-indigo-50/90 border border-blue-200/80 shadow-xs flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-blue-200 p-1 flex items-center justify-center shrink-0 shadow-xs">
+                      {form.logo ? (
+                        <img
+                          src={form.logo}
+                          alt="Logo preview"
+                          className="h-full w-full object-contain"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <Building2 size={20} className="text-blue-600" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-blue-600">
+                        Dashboard Display Format
+                      </p>
+                      <h4 className="text-sm font-black text-slate-900 truncate">
+                        {form.companyName.trim() ? `${form.companyName.trim()} + RWM` : 'Your Company Name + RWM'}
+                      </h4>
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-blue-600 text-white shadow-xs">
+                    Live Preview
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

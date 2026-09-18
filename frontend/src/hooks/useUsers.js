@@ -104,3 +104,22 @@ export const useDeleteUser = () => {
     },
   });
 };
+
+export const useCreateUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userData) => {
+      const response = await api.post('/users', userData);
+      return response.data.user;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('Team member created successfully');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to create user');
+    },
+  });
+};
+

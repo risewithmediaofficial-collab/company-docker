@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   Building2, Search, Filter, CheckCircle2, Clock, AlertTriangle,
-  XCircle, Eye, RefreshCw, ChevronLeft, ChevronRight, Users2
+  XCircle, Eye, RefreshCw, ChevronLeft, ChevronRight, Users2, Radio
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { enterGhostMode } from '../../store/slices/authSlice';
 
 const planBadge = {
   trial:   'text-slate-400 bg-slate-400/10 border-slate-500/20',
@@ -25,6 +28,9 @@ const statusBadge = {
 const statusIcons = { pending: Clock, active: CheckCircle2, suspended: AlertTriangle, expired: XCircle };
 
 const Companies = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [orgs, setOrgs] = useState([]);
   const [total, setTotal] = useState(0);
@@ -60,6 +66,15 @@ const Companies = () => {
   };
 
   useEffect(() => { fetch(); }, [status, plan, search, page]);
+
+  const handleLiveViewCRM = (org) => {
+    dispatch(enterGhostMode(org));
+    if (queryClient) {
+      queryClient.clear();
+    }
+    toast.success(`Stealth Live View Activated for "${org.name} + RWM". Tenant is unaware.`);
+    navigate('/');
+  };
 
   const setFilter = (key, val) => {
     const p = new URLSearchParams(searchParams);
@@ -172,11 +187,15 @@ const Companies = () => {
                   >
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-indigo-600/20 flex items-center justify-center text-indigo-300 font-bold text-sm flex-shrink-0">
-                          {org.name?.charAt(0)?.toUpperCase()}
+                        <div className="w-9 h-9 rounded-xl bg-indigo-600/20 flex items-center justify-center text-indigo-300 font-bold text-sm flex-shrink-0 overflow-hidden border border-white/10">
+                          {org.logo ? (
+                            <img src={org.logo} alt={org.name} className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                          ) : (
+                            org.name?.charAt(0)?.toUpperCase()
+                          )}
                         </div>
                         <div>
-                          <p className="text-white text-sm font-semibold">{org.name}</p>
+                          <p className="text-white text-sm font-semibold">{org.name} + RWM</p>
                           {org.industry && <p className="text-slate-500 text-xs">{org.industry}</p>}
                         </div>
                       </div>
@@ -208,12 +227,22 @@ const Companies = () => {
                       </p>
                     </td>
                     <td className="px-5 py-4">
-                      <Link
-                        to={`/platform/companies/${org._id}`}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-xs font-semibold transition-all"
-                      >
-                        <Eye size={12} /> Manage
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleLiveViewCRM(org)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white text-xs font-bold transition-all border border-emerald-500/20 shadow-xs"
+                          title="Live View Company CRM (Stealth Ghost Mode)"
+                        >
+                          <Radio size={12} className="animate-pulse text-emerald-400" />
+                          <span>Live View</span>
+                        </button>
+                        <Link
+                          to={`/platform/companies/${org._id}`}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-xs font-semibold transition-all"
+                        >
+                          <Eye size={12} /> Manage
+                        </Link>
+                      </div>
                     </td>
                   </motion.tr>
                 );

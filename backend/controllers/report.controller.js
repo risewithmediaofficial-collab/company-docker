@@ -72,6 +72,10 @@ export const getAdminDashboard = async (req, res) => {
     }
 
     // 1. Core KPIs & Counts
+    const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
+    const orgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
+    const orgFilter = orgId ? { organizationId: orgId } : {};
+
     const [
       totalLeads, newLeadsThisMonth, wonLeads,
       totalClients, activeClients,
@@ -92,20 +96,21 @@ export const getAdminDashboard = async (req, res) => {
       allVideoShoots,
       leadsList,
     ] = await Promise.all([
-      Lead.countDocuments(),
-      Lead.countDocuments({ createdAt: { $gte: periodStart, $lte: periodEnd } }),
-      Lead.countDocuments({ stage: 'won', updatedAt: { $gte: periodStart, $lte: periodEnd } }),
-      Client.countDocuments(),
-      Client.countDocuments({ status: { $in: ['active', 'Active'] } }),
-      Project.countDocuments(),
-      Project.countDocuments({ status: { $in: ['active', 'In Progress'] } }),
-      Task.countDocuments({ parent: null }),
-      Task.countDocuments({ dueDate: { $lt: now }, status: { $nin: ['done', 'approved', 'Completed', 'Approved'] } }),
-      Invoice.aggregate([{ $match: { status: 'paid', paidDate: { $gte: periodStart, $lte: periodEnd } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
-      Invoice.aggregate([{ $match: { status: 'paid', paidDate: { $gte: priorPeriodStart, $lte: priorPeriodEnd } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
-      Invoice.aggregate([{ $match: { status: 'paid' } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
-      Expense.aggregate([{ $match: { status: { $in: ['approved', 'reimbursed'] }, date: { $gte: periodStart, $lte: periodEnd } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+      Lead.countDocuments(orgFilter),
+      Lead.countDocuments({ ...orgFilter, createdAt: { $gte: periodStart, $lte: periodEnd } }),
+      Lead.countDocuments({ ...orgFilter, stage: 'won', updatedAt: { $gte: periodStart, $lte: periodEnd } }),
+      Client.countDocuments(orgFilter),
+      Client.countDocuments({ ...orgFilter, status: { $in: ['active', 'Active'] } }),
+      Project.countDocuments(orgFilter),
+      Project.countDocuments({ ...orgFilter, status: { $in: ['active', 'In Progress'] } }),
+      Task.countDocuments({ parent: null, ...orgFilter }),
+      Task.countDocuments({ parent: null, ...orgFilter, dueDate: { $lt: now }, status: { $nin: ['done', 'approved', 'Completed', 'Approved'] } }),
+      Invoice.aggregate([{ $match: { ...orgFilter, status: 'paid', paidDate: { $gte: periodStart, $lte: periodEnd } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
+      Invoice.aggregate([{ $match: { ...orgFilter, status: 'paid', paidDate: { $gte: priorPeriodStart, $lte: priorPeriodEnd } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
+      Invoice.aggregate([{ $match: { ...orgFilter, status: 'paid' } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
+      Expense.aggregate([{ $match: { ...orgFilter, status: { $in: ['approved', 'reimbursed'] }, date: { $gte: periodStart, $lte: periodEnd } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
       Project.aggregate([
+        { $match: orgFilter },
         {
           $group: {
             _id: null,
@@ -113,9 +118,9 @@ export const getAdminDashboard = async (req, res) => {
           },
         },
       ]),
-      User.countDocuments({ isActive: true }),
+      User.countDocuments({ isActive: true, ...(orgId ? { organizationId: orgId } : { role: { $ne: 'organizationOwner' } }) }),
       DomainRenewal.find({
-        organizationId: req.user.organizationId,
+        ...(orgId ? { organizationId: orgId } : {}),
         expiryDate: { $gte: now, $lte: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59, 999) },
         status: { $in: ['active', 'pending'] },
       })
@@ -125,6 +130,7 @@ export const getAdminDashboard = async (req, res) => {
       Invoice.aggregate([
         {
           $match: {
+            ...orgFilter,
             status: { $in: ['sent', 'viewed', 'partially_paid', 'Sent', 'Partially Paid'] },
           },
         },
@@ -135,13 +141,13 @@ export const getAdminDashboard = async (req, res) => {
           },
         },
       ]),
-      TaskNote.countDocuments({ status: 'pending' }).catch(() => 0),
-      Project.find({}, 'name status priority startDate dueDate endDate progress budget client').populate('client', 'name company'),
-      Task.find({ parent: null }, 'title taskTitle status priority dueDate taskCategory postingPlatforms shootStatus editingStatus reviewStatus postingStatus assignedTo').populate('assignedTo', 'name email avatar role department'),
-      Client.find({}, 'name company status monthlyRetainer service createdAt'),
-      User.find({ isActive: true }, 'name email role department avatar position'),
-      DmVideoShoot.find({}, 'title date status client').catch(() => []),
-      Lead.find({}, 'name company stage value createdAt source'),
+      TaskNote.countDocuments({ status: 'pending', ...orgFilter }).catch(() => 0),
+      Project.find(orgFilter, 'name status priority startDate dueDate endDate progress budget client').populate('client', 'name company'),
+      Task.find({ parent: null, ...orgFilter }, 'title taskTitle status priority dueDate taskCategory postingPlatforms shootStatus editingStatus reviewStatus postingStatus assignedTo').populate('assignedTo', 'name email avatar role department'),
+      Client.find(orgFilter, 'name company status monthlyRetainer service createdAt'),
+      User.find({ isActive: true, ...(orgId ? { organizationId: orgId } : { role: { $ne: 'organizationOwner' } }) }, 'name email role department avatar position'),
+      DmVideoShoot.find(orgFilter, 'title date status client').catch(() => []),
+      Lead.find(orgFilter, 'name company stage value createdAt source'),
     ]);
 
     // 2. Revenue Month-by-Month Trend (Past 6 Months)

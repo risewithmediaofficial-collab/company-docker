@@ -9,16 +9,22 @@ const api = axios.create({
   },
 });
 
-// Request interceptor for adding JWT
+// Request interceptor for adding JWT and stealth ghost mode headers
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('accessToken');
     const workspaceId = localStorage.getItem('activeWorkspace');
+    const ghostOrgId = localStorage.getItem('rwm_ghost_org_id');
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     if (workspaceId && workspaceId !== 'global') {
       config.headers['x-workspace-id'] = workspaceId;
+    }
+    if (ghostOrgId) {
+      config.headers['x-impersonate-org-id'] = ghostOrgId;
+      config.headers['x-ghost-org-id'] = ghostOrgId;
     }
     return config;
   },

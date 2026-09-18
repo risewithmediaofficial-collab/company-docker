@@ -71,6 +71,7 @@ const leadSchema = new mongoose.Schema(
     convertedToClient: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
     isConverted: { type: Boolean, default: false },
     stageOrder: { type: Number, default: 0 }, // for kanban ordering
+    organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization' },
   },
   { timestamps: true }
 );
@@ -78,6 +79,7 @@ const leadSchema = new mongoose.Schema(
 leadSchema.index({ stage: 1 });
 leadSchema.index({ assignedTo: 1 });
 leadSchema.index({ email: 1 });
+leadSchema.index({ organizationId: 1 });
 leadSchema.index({ createdAt: -1 });
 
 const Lead = mongoose.model('Lead', leadSchema);

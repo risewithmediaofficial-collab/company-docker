@@ -46,6 +46,15 @@ export const protect = async (req, res, next) => {
     }
 
     req.user = user;
+
+    // Stealth Ghost Mode: When superAdmin or admin views a tenant company CRM
+    const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'];
+    if (ghostOrgId && (user.role === 'superAdmin' || user.role === 'admin')) {
+      req.isGhostMode = true;
+      req.ghostOrgId = ghostOrgId;
+      req.user.organizationId = ghostOrgId;
+    }
+
     next();
   } catch (error) {
     return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
@@ -65,6 +74,10 @@ export const authorize = (...roles) => {
     let allowedRoles = [...roles];
     if (allowedRoles.includes('superAdmin') && !allowedRoles.includes('admin')) {
       allowedRoles.push('admin');
+    }
+    // Organization owners have full managerial access within their tenant workspace
+    if ((allowedRoles.includes('manager') || allowedRoles.includes('admin')) && !allowedRoles.includes('organizationOwner')) {
+      allowedRoles.push('organizationOwner');
     }
     if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({
@@ -101,15 +114,35 @@ export const requirePermission = (permissionKey) => {
 export const withWorkspaceScope = (req, baseQuery = {}) => {
   const user = req.user;
   if (!user) return baseQuery;
+
+  // Stealth Ghost Mode: Scopes queries to the tenant company without notifying tenant admins
+  const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? user.organizationId : null);
+  if (ghostOrgId && (user.role === 'superAdmin' || user.role === 'admin')) {
+    const query = {
+      ...baseQuery,
+      $or: [
+        { organizationId: ghostOrgId },
+        { organizationId: null },
+        { organizationId: { $exists: false } },
+      ],
+    };
+    if (req.headers['x-workspace-id'] && req.headers['x-workspace-id'] !== 'global') {
+      query.brandId = req.headers['x-workspace-id'];
+    }
+    return query;
+  }
   
-  if (user.role === 'superAdmin' || user.role === 'admin') {
-    if (req.headers['x-workspace-id']) {
+  // Only platform superAdmin (when not in ghost mode) has global cross-tenant access
+  if (user.role === 'superAdmin' && !ghostOrgId) {
+    if (req.headers['x-workspace-id'] && req.headers['x-workspace-id'] !== 'global') {
       return { ...baseQuery, brandId: req.headers['x-workspace-id'] };
     }
     return baseQuery;
   }
   
-  const query = { ...baseQuery, organizationId: user.organizationId };
+  // All tenant-level users (organizationOwner, admin, manager, employee) are scoped to their organizationId
+  const targetOrgId = ghostOrgId || user.organizationId;
+  const query = targetOrgId ? { ...baseQuery, organizationId: targetOrgId } : { ...baseQuery };
   
   // Explicit workspace selection from UI
   if (req.headers['x-workspace-id']) {
