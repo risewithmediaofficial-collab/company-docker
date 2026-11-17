@@ -174,8 +174,7 @@ export const connectDB = async () => {
       dbName: env.mongoDbName,
       maxPoolSize,
       minPoolSize,
-      family: 4,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 15000,
       socketTimeoutMS: 45000,
     });
 
@@ -184,23 +183,13 @@ export const connectDB = async () => {
     console.log(`Database: ${conn.connection.name}`);
     return conn;
   } catch (error) {
-    // Retry on connection refused in development instead of crashing the API server
-    if (!env.isProduction && (error.code === 'ECONNREFUSED' || error.message?.includes('ECONNREFUSED'))) {
-      console.error(`MongoDB connection failed (${safeUri}): ${error.message}`);
-      if (!warnedServiceHint) {
-        warnedServiceHint = true;
-        console.warn('👉 MongoDB service is not running or stopped (check Windows Services -> MongoDB & C: drive free space).');
-      }
-      console.warn('MongoDB not reachable. Retrying in 5 seconds...');
-      retryTimer = setTimeout(() => {
-        retryTimer = null;
-        connectDB();
-      }, 5000);
-      retryTimer.unref?.();
-      return null;
-    }
-
     console.error(`MongoDB connection failed (${safeUri}): ${error.message}`);
-    process.exit(1);
+    console.warn('MongoDB not reachable yet. Retrying in 5 seconds...');
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      connectDB();
+    }, 5000);
+    retryTimer.unref?.();
+    return null;
   }
 };
