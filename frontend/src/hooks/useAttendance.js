@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import api from '../api';
+import { playClockOutAudio } from '../utils/attendanceSfx';
 
 export const useAttendance = (filters = {}) => {
   return useQuery({
@@ -31,10 +32,26 @@ export const useClockIn = () => {
       return response.data.attendance;
     },
     onSuccess: (attendance) => {
+      // Optimistically insert/update the attendance record in React Query cache
+      queryClient.setQueriesData({ queryKey: ['attendance'] }, (old) => {
+        if (!old) return old;
+        const records = old.records ? [...old.records] : [];
+        const idx = records.findIndex((r) => r._id === attendance._id);
+        if (idx >= 0) {
+          records[idx] = { ...records[idx], ...attendance };
+        } else {
+          records.unshift(attendance);
+        }
+        return { ...old, records };
+      });
+
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
       queryClient.invalidateQueries({ queryKey: ['team-attendance-today'] });
       queryClient.invalidateQueries({ queryKey: ['hr-employees'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+
+      window.dispatchEvent(new CustomEvent('attendanceStatusChanged', { detail: attendance }));
+
       const verified = attendance?.locationVerification?.locationVerified || attendance?.locationVerified;
       toast.success(verified ? 'Clocked in with location verified' : 'Clocked in successfully');
     },
@@ -49,12 +66,33 @@ export const useClockOut = () => {
       const response = await api.post('/attendance/clock-out');
       return response.data.attendance;
     },
-    onSuccess: () => {
+    onSuccess: (attendance) => {
+      queryClient.setQueriesData({ queryKey: ['attendance'] }, (old) => {
+        if (!old || !attendance) return old;
+        const records = old.records ? [...old.records] : [];
+        const idx = records.findIndex((r) => r._id === attendance._id);
+        if (idx >= 0) {
+          records[idx] = { ...records[idx], ...attendance };
+        }
+        return { ...old, records };
+      });
+
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
       queryClient.invalidateQueries({ queryKey: ['team-attendance-today'] });
       queryClient.invalidateQueries({ queryKey: ['hr-employees'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
-      toast.success('Clocked out successfully');
+
+      window.dispatchEvent(new CustomEvent('attendanceStatusChanged', { detail: attendance || null }));
+
+      // Authentic Vadivelu Clock-Out Dialogue: "Varataaa... mameee durrrrr!!!!"
+      playClockOutAudio();
+      toast.success('Varataaa... mameee durrrrr! 🛵💨 (Clocked Out)', {
+        duration: 4500,
+        action: {
+          label: '🔊 Replay',
+          onClick: () => playClockOutAudio(),
+        },
+      });
     },
     onError: (error) => toast.error(error.response?.data?.message || 'Clock out failed'),
   });

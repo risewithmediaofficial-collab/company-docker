@@ -1,0 +1,1645 @@
+import { useState, useEffect, useMemo } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  Plus,
+  Receipt,
+  FileText,
+  CreditCard,
+  UserPlus,
+  Banknote,
+  ShieldCheck,
+  ArrowRightLeft,
+  CalendarCheck,
+  Building,
+  CheckCircle2,
+  Trash2,
+  AlertCircle,
+  HelpCircle,
+  Loader2,
+} from '@/components/ui/muiIcons';
+import {
+  useCreateModuleInvoice,
+  useRecordPaymentReceipt,
+  useCreateModuleExpense,
+  useCreateInternalTransfer,
+  useCreateSubscription,
+  useCreateFounderTransaction,
+  useFinanceAccounts,
+  useModuleInvoices,
+  usePayrollEmployees,
+  useCreatePayrollRecord,
+} from '../../../hooks/useFinance';
+import { useClients, useCreateClient } from '../../../hooks/useClients';
+import { useVendors } from '../../../hooks/useVendors';
+import { formatINR } from '../../../utils/financeFormatters';
+import { toast } from 'sonner';
+import api from '../../../api';
+import DuplicateConfirmDialog from '../../../components/modals/DuplicateConfirmDialog';
+import { SelectDropdown } from '../../../components/ui/SelectDropdown';
+
+export default function FinanceQuickAddModal({
+  open,
+  onOpenChange,
+  initialAction = 'invoice',
+  defaultClientId = '',
+  defaultVendor = '',
+  onSuccess,
+}) {
+  const [activeAction, setActiveAction] = useState(initialAction);
+  const [duplicateDialog, setDuplicateDialog] = useState({
+    open: false,
+    title: 'Duplicate Record Detected',
+    message: '',
+    existingRecord: null,
+    onConfirm: null,
+  });
+
+  useEffect(() => {
+    if (open) {
+      if (initialAction) {
+        setActiveAction(initialAction);
+      }
+      setInvForm({
+        client: defaultClientId || '',
+        invoiceDate: new Date().toISOString().slice(0, 10),
+        dueDate: new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10),
+        servicePeriod: '',
+        taxType: 'exclusive',
+        taxRate: 18,
+        isRetainer: false,
+        workflowStatus: 'issued',
+        notes: '',
+        lineItems: [
+          { serviceName: '', description: '', quantity: '', rate: '', itemType: 'service' },
+        ],
+      });
+      setReceiptForm({
+        client: defaultClientId || '',
+        invoice: '',
+        amount: '',
+        receivedDate: new Date().toISOString().slice(0, 10),
+        paymentMode: 'Bank',
+        reference: '',
+        notes: '',
+      });
+      setExpForm({
+        title: '',
+        vendor: defaultVendor || '',
+        amount: '',
+        advanceAmount: '',
+        category: 'production_shoot',
+        costType: 'agency_overhead',
+        client: defaultClientId || '',
+        paymentStatus: 'paid',
+        paymentMode: 'Bank',
+        fundingAccount: '',
+        date: new Date().toISOString().slice(0, 10),
+        notes: '',
+      });
+      setSubForm({
+        serviceName: '',
+        vendor: defaultVendor || '',
+        frequency: 'monthly',
+        expectedAmount: '',
+        nextRenewalDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+        paymentAccount: '',
+        costClassification: 'software',
+        notes: '',
+      });
+    }
+  }, [initialAction, open, defaultClientId, defaultVendor]);
+
+  const { data: clients = [] } = useClients({}, { enabled: open });
+  const { vendorOptions, recordVendor } = useVendors({ enabled: open });
+  const { data: accounts = [] } = useFinanceAccounts({ enabled: open });
+  const { data: unpaidInvoices = [] } = useModuleInvoices({ status: 'unpaid' }, { enabled: open });
+  const { data: employees = [] } = usePayrollEmployees({ enabled: open });
+
+  // Mutations
+  const createInvoice = useCreateModuleInvoice();
+  const recordReceipt = useRecordPaymentReceipt();
+  const createExpense = useCreateModuleExpense();
+  const createTransfer = useCreateInternalTransfer();
+  const createSubscription = useCreateSubscription();
+  const createFounder = useCreateFounderTransaction();
+  const createClient = useCreateClient();
+  const createPayroll = useCreatePayrollRecord();
+
+  const isSubmitting =
+    createInvoice.isPending ||
+    recordReceipt.isPending ||
+    createExpense.isPending ||
+    createTransfer.isPending ||
+    createSubscription.isPending ||
+    createFounder.isPending ||
+    createClient.isPending ||
+    createPayroll.isPending;
+
+  // Form States
+  // 1. Invoice Form
+  const [invForm, setInvForm] = useState({
+    client: '',
+    invoiceDate: new Date().toISOString().slice(0, 10),
+    dueDate: new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10),
+    servicePeriod: '',
+    taxType: 'exclusive',
+    taxRate: 18,
+    isRetainer: false,
+    workflowStatus: 'issued',
+    notes: '',
+    lineItems: [
+      { serviceName: '', description: '', quantity: '', rate: '', itemType: 'service' },
+    ],
+  });
+
+  // 2. Payment Receipt Form
+  const [receiptForm, setReceiptForm] = useState({
+    client: '',
+    invoice: '',
+    amount: '',
+    receivedDate: new Date().toISOString().slice(0, 10),
+    paymentMode: 'Bank',
+    reference: '',
+    notes: '',
+  });
+
+  // 3. Expense Form
+  const [expForm, setExpForm] = useState({
+    title: '',
+    vendor: '',
+    amount: '',
+    advanceAmount: '',
+    category: 'office',
+    costType: 'agency_overhead',
+    client: '',
+    paymentStatus: 'paid',
+    paymentMode: 'Bank',
+    fundingAccount: '',
+    date: new Date().toISOString().slice(0, 10),
+    notes: '',
+  });
+
+  // 4. New Client Form
+  const [clientForm, setClientForm] = useState({
+    name: '',
+    company: '',
+    contactName: '',
+    email: '',
+    phone: '',
+    monthlyPlanFee: '',
+    servicePlan: '',
+    deliverables: '',
+    billingDate: '',
+    billingCycle: 'monthly',
+  });
+
+  // 5. Payroll Form
+  const [payrollForm, setPayrollForm] = useState({
+    employee: '',
+    month: new Date().toLocaleString('default', { month: 'long' }),
+    year: new Date().getFullYear(),
+    baseSalary: '',
+    additions: '',
+    additionReason: '',
+    deductions: '',
+    deductionReason: '',
+    netSalary: '',
+    status: 'pending',
+    paymentAccount: '',
+    notes: '',
+  });
+
+  // 6. Transfer Form
+  const [transferForm, setTransferForm] = useState({
+    fromAccount: '',
+    toAccount: '',
+    amount: '',
+    bankFee: '',
+    date: new Date().toISOString().slice(0, 10),
+    reference: '',
+    notes: '',
+  });
+
+  // 7. Subscription Form
+  const [subForm, setSubForm] = useState({
+    serviceName: '',
+    vendor: '',
+    frequency: 'monthly',
+    expectedAmount: '',
+    nextRenewalDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+    paymentAccount: '',
+    costClassification: 'software',
+    notes: '',
+  });
+
+  // 8. Founder Entry Form
+  const [founderForm, setFounderForm] = useState({
+    founderName: 'Dinesh M',
+    transactionType: 'capital_introduced',
+    amount: '',
+    date: new Date().toISOString().slice(0, 10),
+    paymentMode: 'Bank Transfer',
+    reference: '',
+    notes: '',
+  });
+
+  // Set default accounts once loaded (only for internal transfers if configured)
+  useEffect(() => {
+    if (accounts.length > 1 && !transferForm.fromAccount) {
+      setTransferForm((f) => ({ ...f, fromAccount: accounts[0]._id, toAccount: accounts[1]._id }));
+    }
+  }, [accounts]);
+
+  // Invoice Totals Calculation
+  const invoiceSubtotal = useMemo(() => {
+    return invForm.lineItems.reduce((acc, item) => {
+      const hasRate = item.rate !== '' && item.rate != null && !isNaN(Number(item.rate));
+      if (!hasRate) return acc;
+      const q = (item.quantity !== '' && item.quantity != null && !isNaN(Number(item.quantity)))
+        ? Number(item.quantity)
+        : 1;
+      const r = Number(item.rate || 0);
+      return acc + (q * r);
+    }, 0);
+  }, [invForm.lineItems]);
+
+  const invoiceTaxAmount = useMemo(() => {
+    if (invForm.taxType === 'exclusive' && invoiceSubtotal > 0) {
+      return Math.round(invoiceSubtotal * (Number(invForm.taxRate || 18) / 100));
+    }
+    if (invForm.taxType === 'inclusive' && invoiceSubtotal > 0) {
+      const rate = Number(invForm.taxRate || 18);
+      const baseSubtotal = invoiceSubtotal / (1 + rate / 100);
+      return Math.round(invoiceSubtotal - baseSubtotal);
+    }
+    return 0;
+  }, [invoiceSubtotal, invForm.taxType, invForm.taxRate]);
+
+  const invoiceTotal = invForm.taxType === 'inclusive' ? invoiceSubtotal : invoiceSubtotal + invoiceTaxAmount;
+
+  // Handlers
+  const executeInvoiceSubmit = async (validItems) => {
+    try {
+      await createInvoice.mutateAsync({
+        ...invForm,
+        lineItems: validItems,
+        taxRate: invForm.taxType === 'exempt' ? 0 : Number(invForm.taxRate || 18),
+      });
+      onOpenChange(false);
+      if (onSuccess) onSuccess();
+    } catch (err) {}
+  };
+
+  const handleInvoiceSubmit = async (e) => {
+    e.preventDefault();
+    if (!invForm.client) return toast.error('Select a client');
+
+    const validItems = invForm.lineItems
+      .filter((item) => (item.serviceName && item.serviceName.trim() !== '') || Number(item.rate || 0) > 0)
+      .map((item) => ({
+        ...item,
+        serviceName: item.serviceName?.trim() || 'Service Item',
+        quantity: Number(item.quantity) > 0 ? Number(item.quantity) : 1,
+        rate: Number(item.rate || 0),
+      }));
+
+    if (validItems.length === 0) {
+      return toast.error('Please enter at least one line item with service details');
+    }
+
+    try {
+      const res = await api.post('/check-duplicate', {
+        type: 'invoice',
+        data: { client: invForm.client, servicePeriod: invForm.servicePeriod },
+      });
+      if (res.data?.isDuplicate) {
+        setDuplicateDialog({
+          open: true,
+          title: 'Duplicate Invoice Detected',
+          message: res.data.message,
+          existingRecord: res.data.existingRecord,
+          onConfirm: () => executeInvoiceSubmit(validItems),
+        });
+        return;
+      }
+    } catch (err) {}
+
+    await executeInvoiceSubmit(validItems);
+  };
+
+  const handleReceiptSubmit = async (e) => {
+    e.preventDefault();
+    if (!receiptForm.client) return toast.error('Select a client');
+    if (!receiptForm.amount || Number(receiptForm.amount) <= 0) return toast.error('Enter valid amount');
+    try {
+      await recordReceipt.mutateAsync({
+        ...receiptForm,
+        amount: Number(receiptForm.amount),
+        destinationAccount: undefined,
+        invoice: receiptForm.invoice || undefined,
+      });
+      onOpenChange(false);
+      if (onSuccess) onSuccess();
+    } catch (err) {}
+  };
+
+  const executeExpenseSubmit = async () => {
+    try {
+      if (expForm.vendor) {
+        recordVendor(expForm.vendor);
+      }
+      await createExpense.mutateAsync({
+        ...expForm,
+        amount: Number(expForm.amount),
+        advanceAmount: expForm.paymentStatus === 'partially_paid' ? Number(expForm.advanceAmount || 0) : undefined,
+        fundingAccount: expForm.fundingAccount || undefined,
+        client: expForm.client || undefined,
+      });
+      onOpenChange(false);
+    } catch (err) {}
+  };
+
+  const handleExpenseSubmit = async (e) => {
+    e.preventDefault();
+    if (!expForm.title || !expForm.amount) return toast.error('Fill required expense details');
+    if (expForm.paymentStatus === 'partially_paid') {
+      const adv = Number(expForm.advanceAmount || 0);
+      const total = Number(expForm.amount || 0);
+      if (adv <= 0) return toast.error('Please enter a valid partial/advance amount greater than 0');
+      if (adv > total) return toast.error('Partial advance amount cannot exceed total bill amount');
+    }
+
+    try {
+      const res = await api.post('/check-duplicate', {
+        type: 'expense',
+        data: { title: expForm.title, amount: expForm.amount },
+      });
+      if (res.data?.isDuplicate) {
+        setDuplicateDialog({
+          open: true,
+          title: 'Duplicate Expense Detected',
+          message: res.data.message,
+          existingRecord: res.data.existingRecord,
+          onConfirm: executeExpenseSubmit,
+        });
+        return;
+      }
+    } catch (err) {}
+
+    await executeExpenseSubmit();
+  };
+
+  const executeClientSubmit = async () => {
+    try {
+      await createClient.mutateAsync({
+        ...clientForm,
+        monthlyPlanFee: Number(clientForm.monthlyPlanFee || 0),
+        billingDate: Number(clientForm.billingDate || 1),
+      });
+      onOpenChange(false);
+    } catch (err) {}
+  };
+
+  const handleClientSubmit = async (e) => {
+    e.preventDefault();
+    if (!clientForm.name) return toast.error('Enter client / business name');
+
+    try {
+      const res = await api.post('/check-duplicate', {
+        type: 'client',
+        data: {
+          name: clientForm.name,
+          company: clientForm.company,
+          email: clientForm.email,
+          phone: clientForm.phone,
+        },
+      });
+      if (res.data?.isDuplicate) {
+        setDuplicateDialog({
+          open: true,
+          title: 'Duplicate Client Detected',
+          message: res.data.message,
+          existingRecord: res.data.existingRecord,
+          onConfirm: executeClientSubmit,
+        });
+        return;
+      }
+    } catch (err) {}
+
+    await executeClientSubmit();
+  };
+
+  const handlePayrollSubmit = async (e) => {
+    e.preventDefault();
+    if (!payrollForm.employee) return toast.error('Select an employee');
+    if (!payrollForm.baseSalary || Number(payrollForm.baseSalary) < 0) return toast.error('Enter valid base salary');
+    try {
+      await createPayroll.mutateAsync({
+        ...payrollForm,
+        baseSalary: Number(payrollForm.baseSalary),
+        additions: Number(payrollForm.additions || 0),
+        deductions: Number(payrollForm.deductions || 0),
+        netSalary: Number(payrollForm.netSalary || payrollForm.baseSalary),
+        year: Number(payrollForm.year),
+        paymentAccount: payrollForm.paymentAccount || undefined,
+      });
+      onOpenChange(false);
+    } catch (err) {}
+  };
+
+  const handleTransferSubmit = async (e) => {
+    e.preventDefault();
+    if (!transferForm.fromAccount || !transferForm.toAccount) return toast.error('Select both accounts');
+    if (transferForm.fromAccount === transferForm.toAccount) return toast.error('Source and destination accounts must differ');
+    if (!transferForm.amount || Number(transferForm.amount) <= 0) return toast.error('Enter valid transfer amount');
+    try {
+      await createTransfer.mutateAsync({
+        ...transferForm,
+        amount: Number(transferForm.amount),
+        bankFee: Number(transferForm.bankFee || 0),
+      });
+      onOpenChange(false);
+    } catch (err) {}
+  };
+
+  const handleSubscriptionSubmit = async (e) => {
+    e.preventDefault();
+    if (!subForm.serviceName || !subForm.expectedAmount) return toast.error('Fill subscription details');
+    try {
+      if (subForm.vendor) {
+        recordVendor(subForm.vendor);
+      }
+      await createSubscription.mutateAsync({
+        ...subForm,
+        expectedAmount: Number(subForm.expectedAmount),
+        paymentAccount: subForm.paymentAccount || undefined,
+      });
+      onOpenChange(false);
+    } catch (err) {}
+  };
+
+  const handleFounderSubmit = async (e) => {
+    e.preventDefault();
+    if (!founderForm.amount || Number(founderForm.amount) <= 0) return toast.error('Enter valid amount');
+    try {
+      await createFounder.mutateAsync({
+        ...founderForm,
+        amount: Number(founderForm.amount),
+        account: undefined,
+      });
+      onOpenChange(false);
+    } catch (err) {}
+  };
+
+  const actionMeta = {
+    invoice: {
+      title: 'Create New Invoice',
+      subtitle: 'Generate and issue an official client invoice with deliverables, tax, and payment terms',
+      icon: FileText,
+    },
+    receipt: {
+      title: 'Record Client Payment',
+      subtitle: 'Record an advance, partial, or final payment receipt against an invoice',
+      icon: Receipt,
+    },
+    expense: {
+      title: 'Record Expense / Bill',
+      subtitle: 'Log a direct project cost or company operational overhead',
+      icon: CreditCard,
+    },
+    client: {
+      title: 'Add New Client',
+      subtitle: 'Add a new client profile to the agency directory',
+      icon: UserPlus,
+    },
+    payroll: {
+      title: 'Add Payroll Entry',
+      subtitle: 'Record an employee monthly salary, advance, or bonus',
+      icon: Banknote,
+    },
+    founder: {
+      title: 'Record Capital / Founder Entry',
+      subtitle: 'Record founder equity injection or drawing',
+      icon: Banknote,
+    },
+    transfer: {
+      title: 'Internal Account Transfer',
+      subtitle: 'Transfer funds between agency bank, cash, and UPI accounts',
+      icon: ArrowRightLeft,
+    },
+    subscription: {
+      title: 'Add Software Subscription',
+      subtitle: 'Track recurring software tools, hosting, and domains',
+      icon: CalendarCheck,
+    },
+  };
+
+  const currentMeta = actionMeta[activeAction] || actionMeta.invoice;
+  const CurrentIcon = currentMeta.icon || FileText;
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        variant="side"
+        size="xl"
+        noPadding={true}
+        className="bg-card overflow-hidden flex flex-col font-sans"
+      >
+        {/* ── DRAWER HEADER (PINNED) ───────────────────────────────────── */}
+        <div className="shrink-0 px-4 sm:px-6 py-4 bg-muted/20 pr-14 sm:pr-28 border-b border-border/40 select-none">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-base shrink-0 shadow-xs">
+              <CurrentIcon size={20} />
+            </div>
+            <div className="min-w-0">
+              <DialogTitle className="text-base sm:text-lg font-bold text-foreground tracking-tight truncate">
+                {currentMeta.title}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                {currentMeta.subtitle}
+              </DialogDescription>
+            </div>
+          </div>
+        </div>
+
+        {/* ── SCROLLABLE FORM BODY ─────────────────────────────────────── */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-7 space-y-5 sm:space-y-6 custom-scrollbar overscroll-contain text-left">
+          {/* 1. INVOICE FORM */}
+          {activeAction === 'invoice' && (
+            <form id="finance-modal-form" onSubmit={handleInvoiceSubmit} className="space-y-5 sm:space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Select Client *</label>
+                <SelectDropdown
+                  value={invForm.client}
+                  onChange={(val) => setInvForm({ ...invForm, client: val || '' })}
+                  options={clients.map((c) => ({
+                    value: c._id,
+                    label: c.company || c.name,
+                    subLabel: c.monthlyPlanFee ? `₹${c.monthlyPlanFee}/mo` : undefined,
+                  }))}
+                  placeholder="-- Choose Client --"
+                  allowCustom={false}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Service Period (e.g. October 2026)</label>
+                <input
+                  type="text"
+                  value={invForm.servicePeriod}
+                  onChange={(e) => setInvForm({ ...invForm, servicePeriod: e.target.value })}
+                  placeholder="e.g. October 2026"
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Invoice Date</label>
+                  <input
+                    type="date"
+                    value={invForm.invoiceDate}
+                    onChange={(e) => setInvForm({ ...invForm, invoiceDate: e.target.value })}
+                    onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
+                    className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground tabular-nums focus:outline-none focus:ring-2 focus:ring-ring/20 cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Due Date</label>
+                  <input
+                    type="date"
+                    value={invForm.dueDate}
+                    onChange={(e) => setInvForm({ ...invForm, dueDate: e.target.value })}
+                    onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
+                    className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground tabular-nums focus:outline-none focus:ring-2 focus:ring-ring/20 cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Tax Treatment</label>
+                <SelectDropdown
+                  value={invForm.taxType || 'exclusive'}
+                  onChange={(val) => setInvForm({ ...invForm, taxType: val || 'exclusive', taxRate: val === 'exempt' ? 0 : 18 })}
+                  options={[
+                    { value: 'exclusive', label: 'GST 18% Exclusive' },
+                    { value: 'inclusive', label: 'GST 18% Inclusive' },
+                    { value: 'exempt', label: 'Tax Exempt (0%)' },
+                  ]}
+                  placeholder="Tax Treatment"
+                  allowCustom={false}
+                  allowDeselect={false}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                />
+              </div>
+
+              {/* Line Items Card */}
+              <div className="rounded-2xl bg-muted/20 p-5 space-y-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="font-bold text-foreground text-sm">Deliverable Line Items</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setInvForm({
+                        ...invForm,
+                        lineItems: [
+                          ...invForm.lineItems,
+                          { serviceName: '', description: '', quantity: '', rate: '', itemType: 'service' },
+                        ],
+                      })
+                    }
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-secondary text-foreground font-semibold text-xs hover:bg-muted transition-colors cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4 shrink-0" /> Add Line Item
+                  </button>
+                </div>
+
+                {/* Item Cards */}
+                <div className="space-y-3">
+                  {invForm.lineItems.map((item, idx) => (
+                    <div key={idx} className="p-3.5 rounded-xl bg-card space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider tabular-nums">
+                          Item #{idx + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (invForm.lineItems.length > 1) {
+                              setInvForm({
+                                ...invForm,
+                                lineItems: invForm.lineItems.filter((_, i) => i !== idx),
+                              });
+                            } else {
+                              setInvForm({
+                                ...invForm,
+                                lineItems: [
+                                  { serviceName: '', description: '', quantity: '', rate: '', itemType: 'service' },
+                                ],
+                              });
+                            }
+                          }}
+                          className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary border-transparent transition-colors cursor-pointer"
+                          title={invForm.lineItems.length > 1 ? 'Delete line item' : 'Clear item fields'}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-semibold text-foreground mb-1.5">Service / Deliverable *</label>
+                          <input
+                            type="text"
+                            placeholder="Service name / Deliverable"
+                            value={item.serviceName || ''}
+                            onChange={(e) => {
+                              const copy = [...invForm.lineItems];
+                              copy[idx].serviceName = e.target.value;
+                              setInvForm({ ...invForm, lineItems: copy });
+                            }}
+                            className="h-11 w-full rounded-xl bg-background px-4 text-sm font-normal text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-foreground mb-1.5">Description</label>
+                          <input
+                            type="text"
+                            placeholder="Optional item description"
+                            value={item.description || ''}
+                            onChange={(e) => {
+                              const copy = [...invForm.lineItems];
+                              copy[idx].description = e.target.value;
+                              setInvForm({ ...invForm, lineItems: copy });
+                            }}
+                            className="h-11 w-full rounded-xl bg-background px-4 text-sm font-normal text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-foreground mb-1.5">Type</label>
+                          <SelectDropdown
+                            value={item.itemType || 'service'}
+                            onChange={(val) => {
+                              const copy = [...invForm.lineItems];
+                              copy[idx].itemType = val || 'service';
+                              setInvForm({ ...invForm, lineItems: copy });
+                            }}
+                            options={[
+                              { value: 'service', label: 'Service Fee' },
+                              { value: 'ad_budget_pass_through', label: 'Ad Budget (Pass)' },
+                              { value: 'management_fee', label: 'Mgmt Fee' },
+                            ]}
+                            placeholder="Type"
+                            allowCustom={false}
+                            allowDeselect={false}
+                            className="w-full"
+                            buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-normal text-foreground border border-border/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-foreground mb-1.5">Quantity</label>
+                          <input
+                            type="number"
+                            min="1"
+                            placeholder="1"
+                            value={item.quantity === '' || item.quantity == null ? '' : item.quantity}
+                            onChange={(e) => {
+                              const copy = [...invForm.lineItems];
+                              copy[idx].quantity = e.target.value;
+                              setInvForm({ ...invForm, lineItems: copy });
+                            }}
+                            className="h-11 w-full rounded-xl bg-background px-4 text-sm font-normal text-foreground tabular-nums focus:outline-none focus:ring-2 focus:ring-ring/20"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-foreground mb-1.5">Rate (₹)</label>
+                          <input
+                            type="number"
+                            placeholder="0.00"
+                            value={item.rate === '' || item.rate == null ? '' : item.rate}
+                            onChange={(e) => {
+                              const copy = [...invForm.lineItems];
+                              copy[idx].rate = e.target.value;
+                              setInvForm({ ...invForm, lineItems: copy });
+                            }}
+                            className="h-11 w-full rounded-xl bg-background px-4 text-sm font-semibold text-foreground tabular-nums focus:outline-none focus:ring-2 focus:ring-ring/20"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Subtotal & Totals Strip */}
+                <div className="pt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-muted-foreground font-medium tabular-nums">
+                  <span>Subtotal: <strong className="text-foreground">{formatINR(invoiceSubtotal)}</strong></span>
+                  <span>Tax ({invForm.taxType === 'exclusive' ? `${invForm.taxRate || 18}% GST Exclusive` : invForm.taxType === 'inclusive' ? `${invForm.taxRate || 18}% GST Inclusive` : 'Exempt'}): <strong className="text-foreground">{formatINR(invoiceTaxAmount)}</strong></span>
+                  <span className="text-base font-extrabold text-foreground">Total: {formatINR(invoiceTotal)}</span>
+                </div>
+              </div>
+            </form>
+          )}
+
+          {/* 2. PAYMENT RECEIPT FORM */}
+          {activeAction === 'receipt' && (
+            <form id="finance-modal-form" onSubmit={handleReceiptSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Client *</label>
+                <SelectDropdown
+                  value={receiptForm.client}
+                  onChange={(val) => setReceiptForm({ ...receiptForm, client: val || '' })}
+                  options={clients.map((c) => ({
+                    value: c._id,
+                    label: c.company || c.name,
+                  }))}
+                  placeholder="-- Choose Client --"
+                  allowCustom={false}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Allocate to Invoice (Optional)</label>
+                <SelectDropdown
+                  value={receiptForm.invoice}
+                  onChange={(val) => setReceiptForm({ ...receiptForm, invoice: val || '' })}
+                  options={[
+                    { value: '', label: '-- Unallocated / Advance Credit --' },
+                    ...unpaidInvoices
+                      .filter((inv) => !receiptForm.client || (inv.client?._id || inv.client) === receiptForm.client)
+                      .map((inv) => ({
+                        value: inv._id,
+                        label: `#${inv.invoiceNumber}`,
+                        subLabel: `Balance Due: ₹${inv.outstandingBalance || inv.balanceDue || inv.total}`,
+                      })),
+                  ]}
+                  placeholder="-- Unallocated / Advance Credit --"
+                  allowCustom={false}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Amount Received (₹) *</label>
+                <input
+                  type="number"
+                  value={receiptForm.amount}
+                  onChange={(e) => setReceiptForm({ ...receiptForm, amount: e.target.value })}
+                  placeholder="e.g. 25000"
+                  required
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm font-bold text-foreground tabular-nums focus:outline-none focus:ring-2 focus:ring-ring/20 "
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Payment Mode</label>
+                <SelectDropdown
+                  value={receiptForm.paymentMode || 'Bank'}
+                  onChange={(val) => setReceiptForm({ ...receiptForm, paymentMode: val || 'Bank' })}
+                  options={[
+                    { value: 'Bank', label: 'Bank Transfer (NEFT/RTGS/IMPS)' },
+                    { value: 'UPI', label: 'UPI (GPay / PhonePe / QR)' },
+                    { value: 'Cash', label: 'Cash Vault' },
+                  ]}
+                  placeholder="Payment Mode"
+                  allowCustom={false}
+                  allowDeselect={false}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Reference / UTR Number</label>
+                <input
+                  type="text"
+                  value={receiptForm.reference}
+                  onChange={(e) => setReceiptForm({ ...receiptForm, reference: e.target.value })}
+                  placeholder="e.g. UTR102938475"
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Date Received</label>
+                <input
+                  type="date"
+                  value={receiptForm.receivedDate}
+                  onChange={(e) => setReceiptForm({ ...receiptForm, receivedDate: e.target.value })}
+                  onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                />
+              </div>
+            </form>
+          )}
+
+          {/* 3. EXPENSE / BILL FORM */}
+          {activeAction === 'expense' && (
+            <form id="finance-modal-form" onSubmit={handleExpenseSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Expense Title / Item *</label>
+                <input
+                  type="text"
+                  value={expForm.title}
+                  onChange={(e) => setExpForm({ ...expForm, title: e.target.value })}
+                  placeholder="e.g. Freelance Videographer Shoot"
+                  required
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-semibold text-foreground">Vendor / Payee</label>
+                  {expForm.vendor && (
+                    <button
+                      type="button"
+                      onClick={() => setExpForm({ ...expForm, vendor: '' })}
+                      className="text-xs text-muted-foreground hover:text-foreground hover:underline font-semibold cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <SelectDropdown
+                  value={expForm.vendor}
+                  onChange={(val) => {
+                    setExpForm({ ...expForm, vendor: val || '' });
+                    if (val) recordVendor(val);
+                  }}
+                  options={vendorOptions}
+                  placeholder="Select or type vendor (e.g. Videographer, VJ, Saran)..."
+                  searchPlaceholder="Search vendors or type new name..."
+                  allowCustom={true}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                />
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span className="text-xs text-muted-foreground font-medium">Quick suggestions:</span>
+                  {['RJ', 'VJ', 'Videographer', 'Video Editor', 'Graphic Designer', 'Shoot Crew', 'Saran Bro'].map((sug) => (
+                    <button
+                      key={sug}
+                      type="button"
+                      onClick={() => {
+                        setExpForm({ ...expForm, vendor: sug });
+                        recordVendor(sug);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                        expForm.vendor === sug 
+                          ? 'bg-primary text-primary-foreground font-semibold' 
+                          : 'bg-secondary/60 text-secondary-foreground hover:bg-secondary'
+                      }`}
+                    >
+                      {sug}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Amount (₹) *</label>
+                <input
+                  type="number"
+                  value={expForm.amount}
+                  onChange={(e) => setExpForm({ ...expForm, amount: e.target.value })}
+                  placeholder="e.g. 4500"
+                  required
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm font-bold text-foreground tabular-nums focus:outline-none focus:ring-2 focus:ring-ring/20 "
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Category</label>
+                <SelectDropdown
+                  value={expForm.category || 'production_shoot'}
+                  onChange={(val) => setExpForm({ ...expForm, category: val || 'production_shoot' })}
+                  options={[
+                    { value: 'production_shoot', label: 'Production / Video Shoot' },
+                    { value: 'rj', label: 'RJ (Radio Jockey / Voice Talent)' },
+                    { value: 'vj', label: 'VJ (Video Jockey / Presenter / Anchor)' },
+                    { value: 'travel', label: 'Client / Shoot Travel' },
+                    { value: 'freelancers', label: 'Freelancers' },
+                    { value: 'software_subscriptions', label: 'Software & Subscriptions' },
+                    { value: 'rent', label: 'Office Rent' },
+                    { value: 'internet', label: 'Internet & Utilities' },
+                    { value: 'marketing', label: 'Agency Marketing' },
+                    { value: 'office', label: 'Office Expenses' },
+                    { value: 'other', label: 'Other' },
+                  ]}
+                  placeholder="Category"
+                  allowCustom={false}
+                  allowDeselect={false}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Cost Classification</label>
+                <SelectDropdown
+                  value={expForm.costType || 'agency_overhead'}
+                  onChange={(val) => setExpForm({ ...expForm, costType: val || 'agency_overhead' })}
+                  options={[
+                    { value: 'agency_overhead', label: 'Agency Overhead' },
+                    { value: 'client_project', label: 'Direct Client Project Cost' },
+                  ]}
+                  placeholder="Cost Classification"
+                  allowCustom={false}
+                  allowDeselect={false}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                />
+              </div>
+
+              {/* Client Selection */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-semibold text-foreground">
+                    Client {expForm.costType === 'client_project' ? <span className="text-primary">*</span> : <span className="text-muted-foreground text-xs font-normal">(Optional)</span>}
+                  </label>
+                  {expForm.client && (
+                    <button
+                      type="button"
+                      onClick={() => setExpForm({ ...expForm, client: '' })}
+                      className="text-xs text-muted-foreground hover:text-foreground hover:underline font-semibold cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <SelectDropdown
+                  value={expForm.client}
+                  onChange={(val) => setExpForm({ ...expForm, client: val || '', costType: val ? 'client_project' : expForm.costType })}
+                  options={[
+                    { value: '', label: '-- General Agency (No Client) --' },
+                    ...clients.map((c) => ({
+                      value: c._id,
+                      label: c.company || c.name,
+                      subLabel: c.monthlyPlanFee ? `Retainer: ₹${c.monthlyPlanFee}/mo` : undefined,
+                    })),
+                  ]}
+                  placeholder="-- Select Client --"
+                  searchPlaceholder="Search clients by name, company..."
+                  allowCustom={false}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Payment Status</label>
+                <SelectDropdown
+                  value={expForm.paymentStatus || 'paid'}
+                  onChange={(val) => setExpForm({ ...expForm, paymentStatus: val || 'paid' })}
+                  options={[
+                    { value: 'paid', label: 'Paid Now (Full Cash Outflow)' },
+                    { value: 'partially_paid', label: 'Partially Paid (Advance / 1st Installment)' },
+                    { value: 'unpaid', label: 'Unpaid Vendor Bill (Payable Later)' },
+                  ]}
+                  placeholder="Payment Status"
+                  allowCustom={false}
+                  allowDeselect={false}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Expense / Bill Date</label>
+                <input
+                  type="date"
+                  value={expForm.date}
+                  onChange={(e) => setExpForm({ ...expForm, date: e.target.value })}
+                  onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                />
+              </div>
+
+              {expForm.paymentStatus === 'partially_paid' && (
+                <div>
+                  <label className="block text-sm font-semibold text-primary mb-1.5">
+                    Advance / Paid Amount (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={expForm.amount || undefined}
+                    value={expForm.advanceAmount}
+                    onChange={(e) => setExpForm({ ...expForm, advanceAmount: e.target.value })}
+                    placeholder="e.g. 1500"
+                    required
+                    className="h-11 w-full rounded-xl bg-background px-4 text-sm font-bold text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                  />
+                  {expForm.amount && expForm.advanceAmount && (
+                    <div className="text-xs text-muted-foreground mt-1.5 font-medium">
+                      Remaining due: ₹{Math.max(0, Number(expForm.amount) - Number(expForm.advanceAmount))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(expForm.paymentStatus === 'paid' || expForm.paymentStatus === 'partially_paid') && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">Payment Mode</label>
+                    <SelectDropdown
+                      value={expForm.paymentMode || 'Bank'}
+                      onChange={(val) => setExpForm({ ...expForm, paymentMode: val || 'Bank' })}
+                      options={[
+                        { value: 'Bank', label: 'Bank Transfer (NEFT/RTGS/IMPS)' },
+                        { value: 'UPI', label: 'UPI (GPay / PhonePe / QR)' },
+                        { value: 'Cash', label: 'Cash' },
+                        { value: 'Card', label: 'Corporate / Credit Card' },
+                        { value: 'Cheque', label: 'Cheque' },
+                      ]}
+                      placeholder="Payment Mode"
+                      allowCustom={false}
+                      allowDeselect={false}
+                      className="w-full"
+                      buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">Paid From Account</label>
+                    <SelectDropdown
+                      value={expForm.fundingAccount}
+                      onChange={(val) => setExpForm({ ...expForm, fundingAccount: val || '' })}
+                      options={[
+                        { value: '', label: 'Default / Not specified' },
+                        ...accounts.map((acc) => ({
+                          value: acc._id,
+                          label: acc.accountName,
+                          subLabel: acc.accountType,
+                        })),
+                      ]}
+                      placeholder="Default / Not specified"
+                      allowCustom={false}
+                      className="w-full"
+                      buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Notes & Remarks text field */}
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">
+                  Internal Remarks & Notes
+                </label>
+                <textarea
+                  rows="3"
+                  value={expForm.notes}
+                  onChange={(e) => setExpForm({ ...expForm, notes: e.target.value })}
+                  placeholder="Optional notes, invoice / receipt reference, vendor payment arrangements..."
+                  className="w-full min-h-[96px] px-4 py-3 rounded-xl bg-background text-sm font-normal text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+            </form>
+          )}
+
+          {/* 4. NEW CLIENT FORM */}
+          {activeAction === 'client' && (
+            <form id="finance-modal-form" onSubmit={handleClientSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Client / Business Name *</label>
+                <input
+                  type="text"
+                  value={clientForm.name}
+                  onChange={(e) => setClientForm({ ...clientForm, name: e.target.value })}
+                  placeholder="e.g. Apex Dental Clinic"
+                  required
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Primary Contact Name</label>
+                <input
+                  type="text"
+                  value={clientForm.contactName}
+                  onChange={(e) => setClientForm({ ...clientForm, contactName: e.target.value })}
+                  placeholder="e.g. Dr. Rajesh Sharma"
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Email</label>
+                <input
+                  type="email"
+                  value={clientForm.email}
+                  onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })}
+                  placeholder="client@company.com"
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Phone Number</label>
+                <input
+                  type="text"
+                  value={clientForm.phone}
+                  onChange={(e) => setClientForm({ ...clientForm, phone: e.target.value })}
+                  placeholder="+91 98765 43210"
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Monthly Plan Fee (₹)</label>
+                <input
+                  type="number"
+                  value={clientForm.monthlyPlanFee}
+                  onChange={(e) => setClientForm({ ...clientForm, monthlyPlanFee: e.target.value })}
+                  placeholder="e.g. 35000"
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm font-bold text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Deliverables Package</label>
+                <input
+                  type="text"
+                  value={clientForm.deliverables}
+                  onChange={(e) => setClientForm({ ...clientForm, deliverables: e.target.value })}
+                  placeholder="e.g. 8 reels + 6 posts"
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Billing Date (Day of Month)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={clientForm.billingDate}
+                  onChange={(e) => setClientForm({ ...clientForm, billingDate: e.target.value })}
+                  placeholder="e.g. 1"
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+            </form>
+          )}
+
+          {/* 5. PAYROLL FORM */}
+          {activeAction === 'payroll' && (
+            <form id="finance-modal-form" onSubmit={handlePayrollSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Select Employee *</label>
+                <SelectDropdown
+                  value={payrollForm.employee}
+                  onChange={(val) => {
+                    const empId = val;
+                    const emp = employees.find((x) => x._id === empId);
+                    const base = emp?.salary ? Number(emp.salary) : 30000;
+                    setPayrollForm({
+                      ...payrollForm,
+                      employee: empId || '',
+                      baseSalary: String(base),
+                      netSalary: String(base + Number(payrollForm.additions || 0) - Number(payrollForm.deductions || 0)),
+                    });
+                  }}
+                  options={employees.map((emp) => ({
+                    value: emp._id,
+                    label: emp.name,
+                    subLabel: `${emp.department || emp.role || 'Staff'}${emp.salary ? ` — Base: ₹${emp.salary}` : ''}`,
+                  }))}
+                  placeholder="-- Choose Employee --"
+                  allowCustom={false}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Month Period</label>
+                <SelectDropdown
+                  value={payrollForm.month}
+                  onChange={(val) => setPayrollForm({ ...payrollForm, month: val || 'January' })}
+                  options={['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((m) => ({
+                    value: m,
+                    label: `${m} ${payrollForm.year}`,
+                  }))}
+                  placeholder="Month Period"
+                  allowCustom={false}
+                  allowDeselect={false}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-semibold text-foreground border border-border/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Base Monthly Salary (₹) *</label>
+                <input
+                  type="number"
+                  value={payrollForm.baseSalary}
+                  onChange={(e) => {
+                    const base = Number(e.target.value || 0);
+                    const net = Math.max(0, base + Number(payrollForm.additions || 0) - Number(payrollForm.deductions || 0));
+                    setPayrollForm({ ...payrollForm, baseSalary: e.target.value, netSalary: String(net) });
+                  }}
+                  placeholder="e.g. 30000"
+                  required
+                  min="0"
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Additions / OTS (₹)</label>
+                <input
+                  type="number"
+                  value={payrollForm.additions}
+                  onChange={(e) => {
+                    const add = Number(e.target.value || 0);
+                    const net = Math.max(0, Number(payrollForm.baseSalary || 0) + add - Number(payrollForm.deductions || 0));
+                    setPayrollForm({ ...payrollForm, additions: e.target.value, netSalary: String(net) });
+                  }}
+                  placeholder="0"
+                  min="0"
+                  className="h-11 w-full rounded-xl bg-background text-foreground font-semibold tabular-nums px-4 text-sm focus:outline-none focus:ring-2 focus:ring-ring/20 "
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Deductions (₹)</label>
+                <input
+                  type="number"
+                  value={payrollForm.deductions}
+                  onChange={(e) => {
+                    const ded = Number(e.target.value || 0);
+                    const net = Math.max(0, Number(payrollForm.baseSalary || 0) + Number(payrollForm.additions || 0) - ded);
+                    setPayrollForm({ ...payrollForm, deductions: e.target.value, netSalary: String(net) });
+                  }}
+                  placeholder="0"
+                  min="0"
+                  className="h-11 w-full rounded-xl bg-background text-foreground font-semibold tabular-nums px-4 text-sm focus:outline-none focus:ring-2 focus:ring-ring/20 "
+                />
+              </div>
+
+              <div className="p-4 bg-secondary rounded-2xl flex items-center justify-between gap-3">
+                <div>
+                  <div className="font-bold text-sm text-foreground">Calculated Net Payable:</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">Base + Additions − Deductions</div>
+                </div>
+                <div className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
+                  {formatINR(Number(payrollForm.netSalary || payrollForm.baseSalary || 0))}
+                </div>
+              </div>
+            </form>
+          )}
+
+          {/* 6. FOUNDER ENTRY FORM */}
+          {activeAction === 'founder' && (
+            <form id="finance-modal-form" onSubmit={handleFounderSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Founder *</label>
+                <SelectDropdown
+                  value={founderForm.founderName || 'Dinesh M'}
+                  onChange={(val) => setFounderForm({ ...founderForm, founderName: val || 'Dinesh M' })}
+                  options={[
+                    { value: 'Dinesh M', label: 'Dinesh M', subLabel: 'Founder / CEO' },
+                    { value: 'Sathish Kumar', label: 'Sathish Kumar', subLabel: 'Founder / Partner' },
+                  ]}
+                  placeholder="Founder"
+                  allowCustom={false}
+                  allowDeselect={false}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-semibold text-foreground border border-border/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Transaction Type *</label>
+                <SelectDropdown
+                  value={founderForm.transactionType || 'capital_introduced'}
+                  onChange={(val) => setFounderForm({ ...founderForm, transactionType: val || 'capital_introduced' })}
+                  options={[
+                    { value: 'capital_introduced', label: 'Capital Introduced (Equity Inflow)' },
+                    { value: 'drawings', label: 'Drawings (Equity Outflow)' },
+                    { value: 'loan_to_company', label: 'Founder Loan to Company (Liability)' },
+                    { value: 'loan_repayment', label: 'Founder Loan Repayment' },
+                    { value: 'profit_allocation', label: 'Profit Allocation (Paper Entry)' },
+                  ]}
+                  placeholder="Transaction Type"
+                  allowCustom={false}
+                  allowDeselect={false}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Amount (₹) *</label>
+                <input
+                  type="number"
+                  value={founderForm.amount}
+                  onChange={(e) => setFounderForm({ ...founderForm, amount: e.target.value })}
+                  placeholder="e.g. 100000"
+                  required
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm font-bold text-foreground tabular-nums focus:outline-none focus:ring-2 focus:ring-ring/20 "
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Date</label>
+                <input
+                  type="date"
+                  value={founderForm.date}
+                  onChange={(e) => setFounderForm({ ...founderForm, date: e.target.value })}
+                  onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground tabular-nums focus:outline-none focus:ring-2 focus:ring-ring/20 cursor-pointer"
+                />
+              </div>
+
+              <div className="p-4 bg-secondary/50 rounded-2xl text-foreground text-xs flex items-center gap-2.5">
+                <CheckCircle2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span>Founder movements are equity/liability records and strictly isolated from agency operational revenue.</span>
+              </div>
+            </form>
+          )}
+
+          {/* 7. INTERNAL TRANSFER FORM */}
+          {activeAction === 'transfer' && (
+            <form id="finance-modal-form" onSubmit={handleTransferSubmit} className="space-y-6">
+              {accounts.length < 2 ? (
+                <div className="p-4 bg-secondary/60 rounded-2xl text-foreground text-xs flex items-center gap-2.5">
+                  <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span>No company bank accounts configured yet. Once bank accounts are added, you can record internal transfers between accounts here.</span>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">From Account (Source Outflow) *</label>
+                    <SelectDropdown
+                      value={transferForm.fromAccount}
+                      onChange={(val) => setTransferForm({ ...transferForm, fromAccount: val || '' })}
+                      options={accounts.map((a) => ({
+                        value: a._id,
+                        label: a.accountName,
+                        subLabel: `Balance: ₹${a.currentBalance}`,
+                      }))}
+                      placeholder="-- Source Account --"
+                      allowCustom={false}
+                      className="w-full"
+                      buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">To Account (Destination Inflow) *</label>
+                    <SelectDropdown
+                      value={transferForm.toAccount}
+                      onChange={(val) => setTransferForm({ ...transferForm, toAccount: val || '' })}
+                      options={accounts.map((a) => ({
+                        value: a._id,
+                        label: a.accountName,
+                        subLabel: `Balance: ₹${a.currentBalance}`,
+                      }))}
+                      placeholder="-- Destination Account --"
+                      allowCustom={false}
+                      className="w-full"
+                      buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Transfer Amount (₹) *</label>
+                <input
+                  type="number"
+                  value={transferForm.amount}
+                  onChange={(e) => setTransferForm({ ...transferForm, amount: e.target.value })}
+                  placeholder="e.g. 50000"
+                  required
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Bank Fee / Charges (₹)</label>
+                <input
+                  type="number"
+                  value={transferForm.bankFee}
+                  onChange={(e) => setTransferForm({ ...transferForm, bankFee: e.target.value })}
+                  placeholder="0.00"
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Date</label>
+                <input
+                  type="date"
+                  value={transferForm.date}
+                  onChange={(e) => setTransferForm({ ...transferForm, date: e.target.value })}
+                  onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                />
+              </div>
+            </form>
+          )}
+
+          {/* 8. SUBSCRIPTION FORM */}
+          {activeAction === 'subscription' && (
+            <form id="finance-modal-form" onSubmit={handleSubscriptionSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Service / Tool Name *</label>
+                <input
+                  type="text"
+                  value={subForm.serviceName}
+                  onChange={(e) => setSubForm({ ...subForm, serviceName: e.target.value })}
+                  placeholder="e.g. Figma / Adobe Suite"
+                  required
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-semibold text-foreground">Vendor / Service Provider</label>
+                  {subForm.vendor && (
+                    <button
+                      type="button"
+                      onClick={() => setSubForm({ ...subForm, vendor: '' })}
+                      className="text-xs text-muted-foreground hover:text-foreground hover:underline font-semibold cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <SelectDropdown
+                  value={subForm.vendor}
+                  onChange={(val) => {
+                    setSubForm({ ...subForm, vendor: val || '' });
+                    if (val) recordVendor(val);
+                  }}
+                  options={vendorOptions}
+                  placeholder="Select or type vendor (e.g. Adobe, AWS, Google)..."
+                  searchPlaceholder="Search vendors or type new name..."
+                  allowCustom={true}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Expected Amount (₹) *</label>
+                <input
+                  type="number"
+                  value={subForm.expectedAmount}
+                  onChange={(e) => setSubForm({ ...subForm, expectedAmount: e.target.value })}
+                  placeholder="e.g. 2400"
+                  required
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Frequency</label>
+                <SelectDropdown
+                  value={subForm.frequency || 'monthly'}
+                  onChange={(val) => setSubForm({ ...subForm, frequency: val || 'monthly' })}
+                  options={[
+                    { value: 'monthly', label: 'Monthly' },
+                    { value: 'annual', label: 'Annual' },
+                  ]}
+                  placeholder="Frequency"
+                  allowCustom={false}
+                  allowDeselect={false}
+                  className="w-full"
+                  buttonClassName="h-11 w-full rounded-xl bg-background px-4 text-sm font-medium text-foreground border border-border/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Next Renewal Date</label>
+                <input
+                  type="date"
+                  value={subForm.nextRenewalDate}
+                  onChange={(e) => setSubForm({ ...subForm, nextRenewalDate: e.target.value })}
+                  onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
+                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                />
+              </div>
+            </form>
+          )}
+        </div>
+
+        {/* ── MODAL FOOTER ─────────────────────────────────────────────── */}
+        <div className="shrink-0 bg-card px-4 py-3 sm:px-6 sm:py-4 flex flex-wrap items-center justify-between gap-3 select-none">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary text-foreground text-xs font-semibold">
+            <span className="flex h-2 w-2 rounded-full bg-foreground shrink-0" />
+            <span className="truncate">Double-Entry Verified · Asia/Kolkata</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 ml-auto w-full sm:w-auto justify-end">
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+              className="flex-1 sm:flex-initial h-11 px-5 rounded-xl bg-background hover:bg-secondary text-foreground font-semibold text-sm transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="finance-modal-form"
+              disabled={isSubmitting}
+              className="flex-1 sm:flex-initial h-11 px-6 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  <span>
+                    {activeAction === 'invoice' && 'Issue Invoice & Post Receivable'}
+                    {activeAction === 'receipt' && 'Record Payment Receipt'}
+                    {activeAction === 'expense' && 'Record Expense Entry'}
+                    {activeAction === 'client' && 'Create Client & Retainer'}
+                    {activeAction === 'payroll' && 'Post Payroll Entry'}
+                    {activeAction === 'founder' && 'Record Capital Entry'}
+                    {activeAction === 'transfer' && 'Execute Internal Transfer'}
+                    {activeAction === 'subscription' && 'Save Subscription'}
+                  </span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+      <DuplicateConfirmDialog
+        open={duplicateDialog.open}
+        onOpenChange={(isOpen) => setDuplicateDialog((prev) => ({ ...prev, open: isOpen }))}
+        title={duplicateDialog.title}
+        message={duplicateDialog.message}
+        existingRecord={duplicateDialog.existingRecord}
+        onConfirm={duplicateDialog.onConfirm}
+      />
+    </>
+  );
+}

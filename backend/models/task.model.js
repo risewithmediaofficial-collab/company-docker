@@ -35,6 +35,26 @@ const progressUpdateSchema = new mongoose.Schema({
   attachments: [fileAttachmentSchema],
 });
 
+const checklistItemSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    isCompleted: { type: Boolean, default: false },
+    completedAt: { type: Date, default: null },
+    completedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  },
+  { _id: true, timestamps: true }
+);
+
+const taskNoteSchema = new mongoose.Schema(
+  {
+    content: { type: String, required: true },
+    author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    authorName: { type: String, default: '' },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: true }
+);
+
 const taskSchema = new mongoose.Schema(
   {
     organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization' },
@@ -96,7 +116,7 @@ const taskSchema = new mongoose.Schema(
     clientName: { type: String, default: '' },
     assignedPersonName: { type: String, default: '' },
     assignedManager: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-    project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
+    project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', default: null },
     client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', default: null },
     parent: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
     assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
@@ -112,15 +132,25 @@ const taskSchema = new mongoose.Schema(
 
     videographerAssigned: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     videographerName: { type: String, default: '' },
+    extraShootPersons: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    extraShootPersonNames: [{ type: String }],
     videographerContentNeeded: { type: String, default: '' },
 
     editorAssigned: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     editorName: { type: String, default: '' },
+    editDueDate: { type: Date },
+    editDate: { type: Date },
+    editReminder: { type: String, default: '' },
+
+    designerAssigned: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    designerName: { type: String, default: '' },
+    designDueDate: { type: Date },
 
     publisherAssigned: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     publisherName: { type: String, default: '' },
 
     shootDate: { type: Date },
+    shootEndDate: { type: Date },
     shootLocation: { type: String, default: '' },
     rawFootageLink: { type: String, default: '' },
 
@@ -128,6 +158,7 @@ const taskSchema = new mongoose.Schema(
     postingScheduleDate: { type: Date },
     publishingDate: { type: Date },
     publishingTime: { type: String, default: '' },
+    nfId: { type: String, default: '' },
 
     // Role Workflow Sub-statuses
     voiceStatus: {
@@ -158,6 +189,9 @@ const taskSchema = new mongoose.Schema(
         'todo',
         'in_progress',
         'review',
+        'client_approval',
+        'smm_team',
+        'drive_uploaded',
         'approved',
         'rejected',
         'done',
@@ -182,8 +216,64 @@ const taskSchema = new mongoose.Schema(
     deadline: { type: Date },
     estimatedHours: { type: Number, default: 0 },
     loggedHours: { type: Number, default: 0 },
+
+    // ── Task Completion Timer & Acceptance Tracking ──
+    allocatedHours: { type: Number, default: 0 },
+    allocatedMinutes: { type: Number, default: 0 },
+    dueTime: { type: String, default: '' },
+    isAccepted: { type: Boolean, default: false },
+    acceptedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    acceptedAt: { type: Date, default: null },
+    timerStartedAt: { type: Date, default: null },
+    timerExpiresAt: { type: Date, default: null },
+    isOverdue: { type: Boolean, default: false },
+    overdueNotified: { type: Boolean, default: false },
+    overdueAt: { type: Date, default: null },
+    submittedAt: { type: Date, default: null },
+    submissionStatus: {
+      type: String,
+      enum: ['pending', 'on_time', 'overdue', 'incomplete_with_reason', 'completed_with_delay', ''],
+      default: '',
+    },
+    completionReason: { type: String, default: '' },
+    submissionNotes: { type: String, default: '' },
+    actualTimeSpentMinutes: { type: Number, default: 0 },
     // Content-specific fields
     contentTitle: { type: String, default: '' }, // For reels/videos - different from task title
+    videoType: { type: String, default: '' },
+    videoFormat: { type: String, default: '9:16' },
+    videoDuration: { type: String, default: '30 sec' },
+    editingReferenceVideo: { type: String, default: '' },
+    voiceOverAudioLink: { type: String, default: '' },
+    musicReferenceLink: { type: String, default: '' },
+    brandAssetsDriveLink: { type: String, default: '' },
+    finalVideoDriveLink: { type: String, default: '' },
+    captionOnScreenText: { type: String, default: '' },
+    shootTime: { type: String, default: '' },
+    shootLocationLink: { type: String, default: '' },
+    referenceVideoLink: { type: String, default: '' },
+    requiredShots: { type: String, default: '' },
+    presenterPerson: { type: String, default: '' },
+    equipmentRequired: [{ type: String }],
+    equipmentChecklist: [
+      {
+        name: { type: String },
+        checked: { type: Boolean, default: false },
+        checkedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        checkedAt: { type: Date },
+      },
+    ],
+    pendingReason: { type: String, default: '' },
+    isDevTask: { type: Boolean, default: false },
+    specialInstructions: { type: String, default: '' },
+    cta: { type: String, default: 'None' },
+    coverImageDriveLink: { type: String, default: '' },
+    publishedPostUrl: { type: String, default: '' },
+    language: { type: String, default: 'English' },
+    hookOpeningLine: { type: String, default: '' },
+    fullScript: { type: String, default: '' },
+    sceneBySceneInstructions: { type: String, default: '' },
+    onScreenText: { type: String, default: '' },
     scriptText: { type: String, default: '' },
     scriptLink: { type: String, default: '' },
     caption: { type: String, default: '' },
@@ -220,6 +310,8 @@ const taskSchema = new mongoose.Schema(
     internalNotes: { type: String, default: '' },
     clientVisibleNotes: { type: String, default: '' },
     tags: [{ type: String }],
+    checklist: [checklistItemSchema],
+    taskNotes: [taskNoteSchema],
     comments: [commentSchema],
     attachments: [fileAttachmentSchema],
     orderIndex: { type: Number, default: 0 },
@@ -320,6 +412,8 @@ const taskSchema = new mongoose.Schema(
       actualResult: { type: String, default: '' },
       environment: { type: String, default: '' },
     },
+    checklist: [checklistItemSchema],
+    taskNotes: [taskNoteSchema],
   },
   { timestamps: true }
 );
@@ -329,13 +423,14 @@ taskSchema.index({ 'development.isDevTask': 1, 'development.stage': 1 });
 taskSchema.index({ 'development.sprint': 1 });
 taskSchema.index({ 'development.release': 1 });
 
-taskSchema.index({ project: 1, status: 1 });
-taskSchema.index({ assignedTo: 1 });
-taskSchema.index({ dueDate: 1 });
+taskSchema.index({ project: 1, status: 1, dueDate: 1 });
+taskSchema.index({ assignedTo: 1, status: 1, dueDate: 1 });
+taskSchema.index({ client: 1, status: 1, dueDate: 1 });
+taskSchema.index({ organizationId: 1, status: 1, dueDate: 1 });
+taskSchema.index({ brandId: 1, status: 1, dueDate: 1 });
+taskSchema.index({ dueDate: 1, orderIndex: 1, createdAt: -1 });
 taskSchema.index({ parent: 1 });
 taskSchema.index({ assignedManager: 1 });
-taskSchema.index({ organizationId: 1 });
-taskSchema.index({ brandId: 1 });
 
 const Task = mongoose.model('Task', taskSchema);
 export default Task;

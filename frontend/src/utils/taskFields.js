@@ -23,12 +23,12 @@ export const VIDEO_TYPE_OPTIONS = [
 ];
 
 export const POSTING_PLATFORM_OPTIONS = [
-  { value: 'Instagram', label: '📸 Instagram Reels / Post' },
-  { value: 'YouTube Shorts', label: '▶️ YouTube Shorts / Video' },
-  { value: 'Facebook', label: '📘 Facebook Watch / Post' },
-  { value: 'LinkedIn', label: '💼 LinkedIn' },
-  { value: 'X', label: '🐦 X (Twitter)' },
-  { value: 'Moj/Josh/TikTok', label: '🎵 Moj / Josh / TikTok' },
+  { value: 'Instagram', label: 'Instagram Reels / Post' },
+  { value: 'YouTube Shorts', label: 'YouTube Shorts / Video' },
+  { value: 'Facebook', label: 'Facebook Watch / Post' },
+  { value: 'LinkedIn', label: 'LinkedIn' },
+  { value: 'X', label: 'X (Twitter)' },
+  { value: 'Moj/Josh/TikTok', label: 'Moj / Josh / TikTok' },
 ];
 
 export const CONTENT_TASK_TYPE_OPTIONS = [
@@ -203,9 +203,12 @@ export const getClientTaskStatusMeta = (status) => {
 
 export const canClientRespondToTask = (task) => {
   const status = normalizeTaskStatusLabel(task?.status);
+  const normalizedLower = String(task?.status || '').toLowerCase().replace(/\s+/g, '_');
+  const isEligibleStatus = CLIENT_RESPONSE_ELIGIBLE_STATUSES.includes(status)
+    || ['completed', 'waiting_for_client', 'rework_completed', 'review_required'].includes(normalizedLower);
+
   return Boolean(
-    task?.approvalRequired
-    && CLIENT_RESPONSE_ELIGIBLE_STATUSES.includes(status)
+    isEligibleStatus
     && (task?.clientResponse || 'pending') === 'pending',
   );
 };

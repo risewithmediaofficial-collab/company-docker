@@ -17,6 +17,11 @@ import {
   submitClientTaskResponse,
   updateTask,
   updateTaskStatus,
+  updateTaskChecklist,
+  addTaskNote,
+  acceptTask,
+  submitTaskWithReason,
+  checkTaskOverdue,
 } from '../controllers/task.controller.js';
 import { authorize, protect } from '../middleware/auth.middleware.js';
 
@@ -28,9 +33,14 @@ router.get('/calendar', authorize('superAdmin', 'admin', 'manager', 'employee', 
 router.get('/weekly-report', authorize('superAdmin', 'admin', 'manager', 'employee'), getWeeklyTaskReport);
 router.post('/daily', authorize('superAdmin', 'admin', 'manager', 'employee'), createDailyTask);
 router.get('/:id', authorize('superAdmin', 'admin', 'manager', 'employee', 'client'), getTask);
-router.post('/', authorize('superAdmin', 'admin', 'manager', 'employee'), createTask);
-router.put('/:id', authorize('superAdmin', 'admin', 'manager', 'employee'), updateTask);
-router.patch('/:id/status', authorize('superAdmin', 'admin', 'manager', 'employee'), updateTaskStatus);
+router.post('/', authorize('superAdmin', 'admin', 'manager', 'organizationOwner'), createTask);
+router.put('/:id', authorize('superAdmin', 'admin', 'manager', 'organizationOwner'), updateTask);
+router.patch('/:id/status', authorize('superAdmin', 'admin', 'manager', 'employee', 'organizationOwner'), updateTaskStatus);
+router.patch('/:id/checklist', authorize('superAdmin', 'admin', 'manager', 'employee', 'client'), updateTaskChecklist);
+router.post('/:id/notes', authorize('superAdmin', 'admin', 'manager', 'employee', 'client'), addTaskNote);
+router.post('/:id/accept', authorize('superAdmin', 'admin', 'manager', 'employee', 'organizationOwner'), acceptTask);
+router.post('/:id/submit', authorize('superAdmin', 'admin', 'manager', 'employee', 'organizationOwner'), submitTaskWithReason);
+router.post('/:id/check-overdue', authorize('superAdmin', 'admin', 'manager', 'employee', 'organizationOwner'), checkTaskOverdue);
 router.post('/:id/comment', authorize('superAdmin', 'admin', 'manager', 'employee', 'client'), addComment);
 router.post('/:id/progress', authorize('superAdmin', 'admin', 'manager', 'employee'), addProgressUpdate);
 router.post('/:id/attachments', authorize('superAdmin', 'admin', 'manager', 'employee'), addTaskAttachments);
@@ -39,6 +49,6 @@ router.post('/:id/approve', authorize('superAdmin', 'admin', 'manager', 'client'
 router.get('/:id/response', authorize('superAdmin', 'admin', 'manager', 'employee', 'client'), getTaskResponseDetails);
 router.post('/:id/client-response', authorize('client'), submitClientTaskResponse);
 router.post('/:id/log-time', authorize('superAdmin', 'admin', 'manager', 'employee'), logTime);
-router.delete('/:id', authorize('superAdmin', 'admin', 'manager'), deleteTask);
+router.delete('/:id', authorize('superAdmin', 'admin', 'manager', 'organizationOwner'), deleteTask);
 
 export default router;

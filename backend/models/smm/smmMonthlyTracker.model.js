@@ -4,26 +4,54 @@
 // =============================================
 import mongoose from 'mongoose';
 
+// Deliverable item within a day (supports multiple Reels, Posts, Stories on same date)
+const dayItemSchema = new mongoose.Schema(
+  {
+    id: { type: String },
+    type: {
+      type: String,
+      enum: ['reel', 'post', 'story', 'video', 'carousel', 'other'],
+      default: 'reel',
+    },
+    label: { type: String, default: '' },      // e.g. "R1 7:30P", "P2 12:30P", "S1 9A"
+    time: { type: String, default: '' },       // e.g. "07:30 PM"
+    status: {
+      type: String,
+      enum: ['todo', 'pending', 'done', 'skip', ''],
+      default: 'todo',
+    },
+    title: { type: String, default: '' },      // Optional topic or hook
+    note: { type: String, default: '' },       // Details / caption
+    driveLink: { type: String, default: '' },  // Google Drive asset link
+  },
+  { _id: false }
+);
+
 // Each day cell entry for a client
 const dayCellSchema = new mongoose.Schema(
   {
     day: { type: Number, required: true, min: 1, max: 31 }, // 1-31
-    // Post/Reel section
+    // Primary Post/Reel section (kept in sync for backward compatibility & grid display)
     postLabel: { type: String, default: '' },     // e.g. "R1 6:30P", "P2 1P"
     postStatus: {
       type: String,
-      enum: ['pending', 'done', 'skip', ''],
-      default: 'pending',
+      enum: ['todo', 'pending', 'done', 'skip', ''],
+      default: 'todo',
     },
-    // Story section
+    // Primary Story section
     storyLabel: { type: String, default: '' },    // e.g. "S1 9A/7P"
     storyStatus: {
       type: String,
-      enum: ['pending', 'done', 'skip', ''],
-      default: 'pending',
+      enum: ['todo', 'pending', 'done', 'skip', ''],
+      default: 'todo',
     },
     // Optional notes per day
     note: { type: String, default: '' },
+    // Multiple deliverables on this date (Reels, Posts, Stories)
+    items: {
+      type: [dayItemSchema],
+      default: [],
+    },
   },
   { _id: false }
 );
@@ -52,6 +80,9 @@ const smmMonthlyTrackerSchema = new mongoose.Schema(
 
     // Array of day-by-day cells (up to 31 entries)
     days: [dayCellSchema],
+
+    // If true, this client is excluded/removed from this month's tracker
+    isExcluded: { type: Boolean, default: false },
 
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

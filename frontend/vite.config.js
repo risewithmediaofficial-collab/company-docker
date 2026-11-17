@@ -11,18 +11,22 @@ export default defineConfig({
     },
   },
   server: {
+    host: true,
+    port: parseInt(process.env.PORT, 10) || 5175,
+    strictPort: false,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5001',
+        target: 'http://127.0.0.1:5005',
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://127.0.0.1:5001',
+        target: 'http://127.0.0.1:5005',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://127.0.0.1:5001',
+        target: 'http://127.0.0.1:5005',
         ws: true,
+        changeOrigin: true,
       },
     },
   },
@@ -38,9 +42,8 @@ export default defineConfig({
           appState: ['@reduxjs/toolkit', '@tanstack/react-query'],
           dataViz: ['recharts'],
           formUi: ['react-hook-form', '@hookform/resolvers', 'zod'],
-          motion: ['framer-motion'],
           pdf: ['jspdf', 'html2canvas'],
-          ui: ['lucide-react', 'sonner', 'react-hot-toast'],
+          ui: ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled', 'sonner'],
         },
       },
     },

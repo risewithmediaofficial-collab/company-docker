@@ -10,19 +10,20 @@ import Client from '../models/client.model.js';
 import Organization from '../models/organization.model.js';
 import { sendEmail } from '../utils/email.js';
 import { createNotification } from '../utils/notification.js';
+import { createActivityLog } from '../utils/activity.js';
 
-// Generate access token (set to long lifetime: 365 days so users stay logged in)
+// Generate access token with explicit tokenType
 const generateAccessToken = (id, role) => {
   const secret = process.env.JWT_SECRET || 'dev-super-secret-jwt-key';
-  const expire = process.env.JWT_EXPIRE || '365d';
-  return jwt.sign({ id, role }, secret, { expiresIn: expire });
+  const expire = process.env.JWT_EXPIRE || '15m';
+  return jwt.sign({ id, role, tokenType: 'access' }, secret, { expiresIn: expire });
 };
 
-// Generate refresh token (set to long lifetime: 3650 days)
+// Generate refresh token with explicit tokenType
 const generateRefreshToken = (id) => {
   const secret = process.env.JWT_REFRESH_SECRET || 'dev-super-secret-refresh-key';
-  const expire = process.env.JWT_REFRESH_EXPIRE || '3650d';
-  return jwt.sign({ id }, secret, { expiresIn: expire });
+  const expire = process.env.JWT_REFRESH_EXPIRE || '7d';
+  return jwt.sign({ id, tokenType: 'refresh' }, secret, { expiresIn: expire });
 };
 
 // @desc    Register user
@@ -95,8 +96,52 @@ export const login = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please provide email and password' });
     }
 
-    const user = await User.findOne({ email }).select('+password +refreshToken');
-    if (!user || !(await user.matchPassword(password))) {
+    const cleanIdentifier = String(email).trim().toLowerCase();
+    const rawIdentifier = String(email).trim();
+    const cleanPassword = String(password).trim();
+
+    // Find user by email or phone
+    const user = await User.findOne({
+      $or: [
+        { email: cleanIdentifier },
+        { phone: rawIdentifier },
+        { phone: cleanIdentifier },
+      ],
+    }).select('+password +refreshToken');
+
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    // Try standard bcrypt match first
+    let isMatch = await user.matchPassword(cleanPassword);
+
+    // Fallback for client accounts: verify against phone number
+    if (!isMatch && (user.role === 'client' || user.clientId)) {
+      const enteredDigits = cleanPassword.replace(/\D/g, '');
+      const userPhoneDigits = (user.phone || '').replace(/\D/g, '');
+      let clientPhoneDigits = '';
+
+      if (user.clientId) {
+        const clientObj = await Client.findById(user.clientId).select('phone');
+        if (clientObj?.phone) {
+          clientPhoneDigits = clientObj.phone.replace(/\D/g, '');
+        }
+      }
+
+      if (
+        (cleanPassword === user.phone) ||
+        (enteredDigits.length >= 6 && enteredDigits === userPhoneDigits) ||
+        (enteredDigits.length >= 6 && enteredDigits === clientPhoneDigits)
+      ) {
+        isMatch = true;
+        // Re-hash and persist clean password
+        user.password = cleanPassword;
+        await user.save();
+      }
+    }
+
+    if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
@@ -167,9 +212,26 @@ export const login = async (req, res) => {
     const accessToken = generateAccessToken(user._id, user.role);
     const refreshToken = generateRefreshToken(user._id);
 
+    const isFirstLogin = !user.lastLogin && !user.hasSeenOnboarding;
     user.refreshToken = refreshToken;
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
+
+    // Record login in Audit Logs
+    await createActivityLog({
+      actor: user,
+      action: 'auth.login',
+      entityType: 'auth',
+      entityId: user._id,
+      title: 'User logged in',
+      description: `${user.name} (${user.role}) signed in successfully.`,
+      metadata: {
+        ip: req.ip || req.headers['x-forwarded-for'],
+        userAgent: req.headers['user-agent'] || '',
+        email: user.email,
+        role: user.role,
+      },
+    });
 
     res.json({
       success: true,
@@ -189,6 +251,9 @@ export const login = async (req, res) => {
         permissions: user.permissions,
         clientId: user.clientId,
         organizationId: user.organizationId,
+        hasSeenOnboarding: Boolean(user.hasSeenOnboarding),
+        isFirstLogin: Boolean(isFirstLogin),
+        createdAt: user.createdAt,
       },
       organization,
     });
@@ -205,7 +270,11 @@ export const refreshToken = async (req, res) => {
     const { refreshToken: token } = req.body;
     if (!token) return res.status(401).json({ success: false, message: 'Refresh token required' });
 
-    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+    if (decoded.tokenType && decoded.tokenType !== 'refresh') {
+      return res.status(401).json({ success: false, message: 'Invalid token type for refresh' });
+    }
+
     const user = await User.findById(decoded.id).select('+refreshToken');
 
     if (!user || user.refreshToken !== token) {
@@ -334,14 +403,36 @@ export const resetPassword = async (req, res) => {
 // @access  Private
 export const updateProfile = async (req, res) => {
   try {
-    const { name, phone, department, position, avatar } = req.body;
+    const { name, phone, department, position, avatar, hasSeenOnboarding } = req.body;
+    const updateData = { name, phone, department, position, avatar };
+    if (hasSeenOnboarding !== undefined) {
+      updateData.hasSeenOnboarding = Boolean(hasSeenOnboarding);
+    }
+
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { name, phone, department, position, avatar },
+      updateData,
       { new: true, runValidators: true }
     ).select('-password -refreshToken -resetPasswordToken -resetPasswordExpire');
 
     res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Mark user onboarding modal as viewed / completed
+// @route   POST /api/auth/complete-onboarding
+// @access  Private
+export const completeOnboarding = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { hasSeenOnboarding: true },
+      { new: true }
+    ).select('-password -refreshToken -resetPasswordToken -resetPasswordExpire');
+
+    res.json({ success: true, message: 'Onboarding completed', user });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

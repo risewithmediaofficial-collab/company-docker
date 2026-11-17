@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useEffect, useState, useMemo, memo } from 'react';
+import { Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   LayoutDashboard,
@@ -24,27 +24,24 @@ import {
   KeyRound,
   PhoneCall,
   Globe2,
-  ClipboardList,
   Sparkles,
-  StickyNote,
   Share2,
   Star,
   Search,
   UserCheck,
-  Video,
   X,
-  Kanban,
-  GitPullRequest,
-  Bug,
-  Rocket,
-  Zap,
+  FolderKanban,
+  Megaphone,
+  ShieldCheck,
+  Trash2,
+  ArrowUpRight,
   Shield,
   Building2,
-} from 'lucide-react';
-import { toggleSidebar } from '../../store/slices/uiSlice';
-import { motion } from 'framer-motion';
+} from '@/components/ui/muiIcons';
+import { setSidebarOpen } from '../../store/slices/uiSlice';
 import { useSidebarBadges } from '../../hooks/useSidebarBadges';
 import { AppTooltip } from '../ui/tooltip';
+import { preloadRoute } from '../../utils/routePreload';
 
 const badgePaths = {
   'Portal Manager': 'accessRequests',
@@ -57,13 +54,15 @@ const badgePaths = {
 const SECTIONS_STORAGE_KEY = 'rwm_sidebar_open_sections_v4';
 const PINNED_STORAGE_KEY = 'rwm_sidebar_pinned_v2';
 
-export default function Sidebar({ onOpenSearch }) {
-  const location = useLocation();
+function SidebarComponent({ onOpenSearch, currentPath }) {
+  const pathname = currentPath || (typeof window !== 'undefined' ? window.location.pathname : '/');
   const dispatch = useDispatch();
-  const { sidebarOpen } = useSelector((state) => state.ui);
+  const sidebarOpen = useSelector((state) => state.ui?.sidebarOpen ?? true);
   const { user, organization } = useSelector((state) => state.auth);
+  const userRole = user?.role;
+  const userPermissions = user?.permissions;
+  const myClientId = user?.clientId?._id || user?.clientId || user?.client?._id || user?.client;
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [pinnedPaths, setPinnedPaths] = useState(() => {
     try {
       const saved = localStorage.getItem(PINNED_STORAGE_KEY);
@@ -73,27 +72,19 @@ export default function Sidebar({ onOpenSearch }) {
     }
   });
 
-  // Track open sections: closed by default initially
+  // Track open sections: COMMAND CENTER open by default initially
   const [openSections, setOpenSections] = useState(() => {
     try {
       const saved = localStorage.getItem(SECTIONS_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : {};
+      return saved ? JSON.parse(saved) : { 'COMMAND CENTER': true };
     } catch {
-      return {};
+      return { 'COMMAND CENTER': true };
     }
   });
 
-  const isSuperAdmin = user?.role === 'superAdmin';
-  const canViewBadges = ['superAdmin', 'admin', 'manager'].includes(user?.role);
+  const isSuperAdmin = userRole === 'superAdmin';
+  const canViewBadges = ['superAdmin', 'admin', 'manager'].includes(userRole);
   const { data: badgeCounts } = useSidebarBadges(canViewBadges, isSuperAdmin);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const toggleSection = (sectionTitle) => {
     setOpenSections((prev) => {
@@ -116,8 +107,8 @@ export default function Sidebar({ onOpenSearch }) {
     });
   };
 
-  const role = user?.role || 'employee';
-  const p = user?.permissions || {};
+  const role = userRole || 'employee';
+  const p = userPermissions || {};
 
   // Build hierarchical workspace navigation per role
   const getNavSections = () => {
@@ -127,15 +118,13 @@ export default function Sidebar({ onOpenSearch }) {
           title: 'CLIENT PORTAL',
           items: [
             { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+            { name: 'My Projects', icon: FolderKanban, path: '/projects' },
+            { name: 'Tasks & Deliverables', icon: CheckSquare, path: '/tasks' },
             { name: 'Proposals', icon: FileText, path: '/client/proposals' },
-            { name: 'Tasks', icon: CheckSquare, path: '/tasks' },
-            { name: 'Content Calendar', icon: Calendar, path: '/calendar' },
-            { name: 'Reports', icon: BarChart3, path: '/portal/reports' },
-            { name: 'Downloads', icon: Download, path: '/portal/downloads' },
-            { name: 'Brand Assets', icon: Palette, path: '/portal/assets' },
-            { name: 'Invoices', icon: Receipt, path: '/finance' },
-            { name: 'Support', icon: HeadphonesIcon, path: '/portal/support' },
-            { name: 'Guidelines', icon: BookOpen, path: '/portal/guidelines' },
+            { name: 'SMM Tracker', icon: Calendar, path: '/portal/tracker' },
+            { name: 'Ad Budget & Campaigns', icon: Megaphone, path: '/portal/ad-budget' },
+            { name: 'Invoices & Billing', icon: Receipt, path: '/portal/invoices' },
+            { name: 'Client Vault', icon: KeyRound, path: myClientId ? `/clients/${myClientId}?tab=vault` : '/client-vault' },
           ],
         },
       ];
@@ -155,15 +144,15 @@ export default function Sidebar({ onOpenSearch }) {
       ];
     }
 
-    if (role === 'employee') {
+    const isStaff = ['employee', 'intern', 'editor', 'designer', 'adsManager'].includes(role);
+    if (isStaff) {
       const employeeDelivery = [
         { name: 'My Tasks', icon: CheckSquare, path: '/tasks' },
         { name: 'Daily Calendar', icon: Calendar, path: '/daily-tasks' },
-        { name: 'Task Notes & Logs', icon: StickyNote, path: '/pending-notes' },
         { name: 'Client Vault', icon: KeyRound, path: '/client-vault' },
       ];
       if (p.canAccessSmm) {
-        employeeDelivery.unshift({ name: 'Content OS', icon: Share2, path: '/smm' });
+        employeeDelivery.unshift({ name: 'Social Tracker', icon: Share2, path: '/smm' });
       }
 
       return [
@@ -171,6 +160,7 @@ export default function Sidebar({ onOpenSearch }) {
           title: 'COMMAND CENTER',
           items: [
             { name: 'Overview', icon: LayoutDashboard, path: '/' },
+            { name: 'Call History', icon: PhoneCall, path: '/call-history' },
           ],
         },
         {
@@ -181,18 +171,13 @@ export default function Sidebar({ onOpenSearch }) {
           title: 'DEVELOPMENT',
           items: [
             { name: 'Dev Dashboard', icon: LayoutDashboard, path: '/development' },
-            { name: 'Dev Board', icon: Kanban, path: '/development/board' },
-            { name: 'My Dev Tasks', icon: CheckSquare, path: '/development/my-tasks' },
-            { name: 'Sprints', icon: Zap, path: '/development/sprints' },
-            { name: 'Code Reviews', icon: GitPullRequest, path: '/development/reviews' },
-            { name: 'QA & Testing', icon: Bug, path: '/development/qa' },
-            { name: 'Releases', icon: Rocket, path: '/development/releases' },
           ],
         },
         {
           title: 'TEAM & WORKLOAD',
           items: [
             { name: 'Attendance & EOD', icon: Clock, path: '/attendance' },
+            { name: 'My EOD Reports', icon: FileText, path: '/my-eod-reports' },
           ],
         },
         {
@@ -201,6 +186,14 @@ export default function Sidebar({ onOpenSearch }) {
             { name: 'SOP Dashboard', icon: BookOpen, path: '/sop' },
           ],
         },
+        ...(p.canManageFinance || p.canViewFinanceOverview ? [
+          {
+            title: 'BUSINESS & FINANCE',
+            items: [
+              { name: 'Finance Hub', icon: IndianRupee, path: '/finance' },
+            ],
+          },
+        ] : []),
       ];
     }
 
@@ -210,6 +203,7 @@ export default function Sidebar({ onOpenSearch }) {
         title: 'COMMAND CENTER',
         items: [
           { name: 'Overview', icon: LayoutDashboard, path: '/' },
+          { name: 'Call History', icon: PhoneCall, path: '/call-history' },
         ],
       },
       {
@@ -217,7 +211,7 @@ export default function Sidebar({ onOpenSearch }) {
         items: [
           { name: 'CRM & Leads', icon: TrendingUp, path: '/crm/leads' },
           { name: 'Proposals', icon: FileText, path: '/proposals' },
-          { name: 'Social & Ads OS', icon: Share2, path: '/smm' },
+          { name: 'Social Media & Ads', icon: Share2, path: '/smm' },
           { name: 'Referral Hub', icon: Award, path: '/referral' },
         ],
       },
@@ -226,7 +220,7 @@ export default function Sidebar({ onOpenSearch }) {
         items: [
           { name: 'Clients 360', icon: Users, path: '/clients' },
           { name: 'Client Follow-ups', icon: PhoneCall, path: '/client-followups' },
-          ...(role !== 'employee' ? [{ name: 'Client Vault', icon: KeyRound, path: '/client-vault' }] : []),
+          { name: 'Client Vault', icon: KeyRound, path: '/client-vault' },
         ],
       },
       {
@@ -234,33 +228,20 @@ export default function Sidebar({ onOpenSearch }) {
         items: [
           { name: 'Projects', icon: Briefcase, path: '/projects' },
           { name: role === 'manager' ? 'Manager Tasks' : 'Tasks Database', icon: CheckSquare, path: role === 'manager' ? '/manager-tasks' : '/tasks' },
-          ...(role === 'superAdmin' || role === 'admin' ? [
-            { name: 'Manager Assignments', icon: CheckSquare, path: '/admin/manager-assignments' },
-          ] : []),
           { name: 'Content Calendar', icon: Calendar, path: '/calendar' },
-          { name: 'Shoots & DM Calendar', icon: Video, path: '/dm-calendar' },
           { name: 'Influencer Hub', icon: Sparkles, path: '/influencers' },
-          { name: 'Manager Board', icon: ClipboardList, path: '/manager-board' },
-          { name: 'Task Notes & Logs', icon: StickyNote, path: '/pending-notes' },
         ],
       },
       {
         title: 'DEVELOPMENT',
         items: [
           { name: 'Dev Dashboard', icon: LayoutDashboard, path: '/development' },
-          { name: 'Dev Board', icon: Kanban, path: '/development/board' },
-          { name: 'My Dev Tasks', icon: CheckSquare, path: '/development/my-tasks' },
-          { name: 'Sprints', icon: Zap, path: '/development/sprints' },
-          { name: 'Code Reviews', icon: GitPullRequest, path: '/development/reviews' },
-          { name: 'QA & Testing', icon: Bug, path: '/development/qa' },
-          { name: 'Releases', icon: Rocket, path: '/development/releases' },
         ],
       },
       {
         title: 'BUSINESS & FINANCE',
         items: [
-          { name: 'Finance Status', icon: IndianRupee, path: '/finance' },
-          { name: 'Call History', icon: PhoneCall, path: '/call-history' },
+          { name: 'Finance Hub', icon: IndianRupee, path: '/finance' },
           { name: 'Domain Renewals', icon: Globe2, path: '/domain-renewals' },
         ],
       },
@@ -268,6 +249,9 @@ export default function Sidebar({ onOpenSearch }) {
         title: 'TEAM & WORKLOAD',
         items: [
           { name: 'Attendance & EOD', icon: Clock, path: '/attendance' },
+          ...(!['superAdmin', 'organizationOwner', 'admin'].includes(role) ? [
+            { name: 'My EOD Reports', icon: FileText, path: '/my-eod-reports' },
+          ] : []),
           { name: 'HR & Hiring', icon: Users2, path: '/hr' },
           ...(role === 'superAdmin' || role === 'organizationOwner' || role === 'admin' || role === 'manager' ? [
             { name: 'User Directory', icon: UserCheck, path: '/admin/users' },
@@ -288,6 +272,10 @@ export default function Sidebar({ onOpenSearch }) {
         title: 'SYSTEM & SETTINGS',
         items: [
           { name: 'Reports & Analytics', icon: BarChart3, path: '/reports' },
+          ...(role === 'superAdmin' || role === 'admin' || role === 'manager' ? [
+            { name: 'Audit Logs', icon: ShieldCheck, path: '/audit-logs' },
+            { name: 'Recycle Bin', icon: Trash2, path: '/recycle-bin' },
+          ] : []),
           { name: 'Settings', icon: Settings, path: '/settings' },
           ...(role === 'superAdmin' ? [
             { name: 'Platform Admin', icon: Shield, path: '/platform' },
@@ -299,42 +287,76 @@ export default function Sidebar({ onOpenSearch }) {
     return sections;
   };
 
-  const navSections = getNavSections();
+  const navSections = useMemo(() => getNavSections(), [userRole, userPermissions]);
 
-  // Extract all available items for pinned lookup
-  const allItems = navSections.flatMap((s) => s.items);
-  const pinnedItems = allItems.filter((item) => pinnedPaths.includes(item.path));
-
-  const sidebarVariants = {
-    mobile: {
-      width: 270,
-      x: sidebarOpen ? 0 : -270,
-    },
-    desktop: {
-      width: 260,
-      x: 0,
-    },
+  const isItemActive = (itemPath) => {
+    if (pathname === itemPath) return true;
+    if (itemPath !== '/' && pathname.startsWith(itemPath + '/')) return true;
+    return false;
   };
+  // Close mobile drawer on route change
+  useEffect(() => {
+    dispatch(setSidebarOpen(false));
+  }, [pathname, dispatch]);
+
+  // Lock body scroll on mobile when sidebar drawer is open
+  useEffect(() => {
+    if (sidebarOpen) {
+      const isMobileView = typeof window !== 'undefined' && window.innerWidth < 768;
+      if (isMobileView) {
+        document.body.style.overflow = 'hidden';
+      }
+    } else {
+      document.body.style.removeProperty('overflow');
+    }
+    return () => {
+      document.body.style.removeProperty('overflow');
+    };
+  }, [sidebarOpen]);
+
+  // Auto-expand section containing the currently active route
+  useEffect(() => {
+    const activeSection = navSections.find((s) =>
+      s.items.some((item) => isItemActive(item.path))
+    );
+    if (activeSection) {
+      setOpenSections((prev) => {
+        if (prev[activeSection.title]) return prev;
+        const updated = { ...prev, [activeSection.title]: true, 'COMMAND CENTER': true };
+        try {
+          localStorage.setItem(SECTIONS_STORAGE_KEY, JSON.stringify(updated));
+        } catch {
+          // ignore storage error
+        }
+        return updated;
+      });
+    }
+  }, [pathname, navSections]);
+
+  // Extract all available items for pinned lookup with memoization
+  const pinnedItems = useMemo(() => {
+    const all = navSections.flatMap((s) => s.items);
+    return all.filter((item) => pinnedPaths.includes(item.path));
+  }, [navSections, pinnedPaths]);
   return (
     <>
       {/* Mobile Backdrop */}
-      {isMobile && sidebarOpen && (
+      {sidebarOpen && (
         <div
-          onClick={() => dispatch(toggleSidebar())}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300"
+          onClick={() => dispatch(setSidebarOpen(false))}
+          className="fixed inset-0 bg-black/60 z-40 transition-opacity duration-200 md:hidden"
         />
       )}
 
-      <motion.aside
-        initial={false}
-        animate={isMobile ? sidebarVariants.mobile : sidebarVariants.desktop}
-        transition={{ duration: 0.25, ease: 'easeInOut' }}
-        className="fixed left-0 top-0 h-screen w-[260px] bg-card border-r border-border z-50 flex flex-col shadow-lg select-none"
+      <aside
+        className={`fixed left-0 top-0 h-screen w-[min(270px,calc(100vw-32px))] md:w-[260px] bg-card z-50 flex flex-col select-none transition-transform duration-200 ease-out md:translate-x-0 md:pointer-events-auto ${
+          sidebarOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'
+        }`}
       >
         {/* Workspace Brand / Header */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-border bg-card shrink-0">
+        <div className="h-16 flex items-center justify-between px-4 pt-1 bg-card shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-background border border-border/80 p-1 shadow-xs overflow-hidden">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand/10 ring-1 ring-brand/25 p-1 shadow-xs overflow-hidden">
               <img
                 src={organization?.logo || "/branding/rise-with-media-logo.png"}
                 alt={organization?.name || "RWM logo"}
@@ -349,20 +371,19 @@ export default function Sidebar({ onOpenSearch }) {
               >
                 {organization?.name ? `${organization.name} + RWM` : 'RiseWithMedia'}
               </span>
-              <span className="truncate text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              <span className="truncate text-[10px] font-bold text-primary uppercase tracking-widest">
                 Agency OS
               </span>
             </div>
           </div>
-          {isMobile && (
-            <button
-              onClick={() => dispatch(toggleSidebar())}
-              className="p-1.5 rounded-xl hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              title="Close Navigation"
-            >
-              <X size={18} />
-            </button>
-          )}
+          <button
+            onClick={() => dispatch(setSidebarOpen(false))}
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-xl hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors md:hidden"
+            title="Close Navigation"
+            aria-label="Close Navigation"
+          >
+            <X size={20} />
+          </button>
         </div>
 
 
@@ -372,13 +393,13 @@ export default function Sidebar({ onOpenSearch }) {
           {/* Quick Search Shortcut */}
           <button
             onClick={() => onOpenSearch && onOpenSearch()}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl border border-border/70 bg-secondary/30 text-muted-foreground hover:text-foreground hover:bg-secondary/70 hover:border-border transition-all text-xs font-semibold"
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-background/80 text-muted-foreground hover:text-foreground hover:bg-background transition-colors text-xs font-semibold cursor-pointer"
           >
             <span className="flex items-center gap-2">
               <Search size={14} className="text-muted-foreground" />
               <span>Search Workspace...</span>
             </span>
-            <kbd className="px-1.5 py-0.5 rounded-md bg-background border border-border text-[10px] font-mono text-muted-foreground">
+            <kbd className="px-1.5 py-0.5 rounded-md bg-secondary text-[10px] font-mono text-muted-foreground">
               ⌘K
             </kbd>
           </button>
@@ -386,34 +407,49 @@ export default function Sidebar({ onOpenSearch }) {
           {/* Pinned / Favorites Section */}
           {pinnedItems.length > 0 && (
             <div className="space-y-0.5">
-              <div className="px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase text-muted-foreground/70 flex items-center gap-1.5 font-sans">
-                <Star size={11} className="fill-amber-400 text-amber-400" />
+              <div className="px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase text-muted-foreground/80 flex items-center gap-1.5 font-sans">
+                <Star size={11} className="fill-current text-brand" />
                 <span>Favorites</span>
               </div>
               {pinnedItems.map((item) => {
-                const isActive = location.pathname === item.path;
+                const isActive = isItemActive(item.path);
                 return (
-                  <Link
+                  <div
                     key={`pinned-${item.path}`}
-                    to={item.path}
-                    onClick={() => isMobile && dispatch(toggleSidebar())}
-                    className={`group relative flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    className={`group relative flex items-center rounded-xl text-xs font-semibold transition-all ${
                       isActive
-                        ? 'bg-primary text-primary-foreground font-bold shadow-xs'
+                        ? 'bg-primary text-primary-foreground font-bold shadow-[0_6px_16px_-6px_hsl(var(--brand)/0.55)]'
                         : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
                     }`}
                   >
-                    <item.icon size={16} className={`shrink-0 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground'}`} />
-                    <span className="ml-2.5 truncate flex-1 font-sans">{item.name}</span>
+                    <Link
+                      to={item.path}
+                      target={item.openInNewTab ? '_blank' : undefined}
+                      rel={item.openInNewTab ? 'noopener noreferrer' : undefined}
+                      onMouseEnter={() => preloadRoute(item.path)}
+                      onFocus={() => preloadRoute(item.path)}
+                      onTouchStart={() => preloadRoute(item.path)}
+                      onClick={() => dispatch(setSidebarOpen(false))}
+                      className="flex-1 min-w-0 flex items-center px-3 py-2"
+                    >
+                      <item.icon size={16} className={`shrink-0 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground'}`} />
+                      <span className="ml-2.5 truncate font-sans">{item.name}</span>
+                      {item.openInNewTab && (
+                        <ArrowUpRight size={11} className="ml-1 text-muted-foreground/60" />
+                      )}
+                    </Link>
                     <button
                       type="button"
                       onClick={(e) => togglePin(e, item.path)}
-                      className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-destructive transition-opacity"
+                      className={`mr-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity ${
+                        isActive ? 'text-primary-foreground hover:opacity-75' : 'text-zinc-700 dark:text-zinc-300 hover:text-destructive'
+                      }`}
                       title="Unpin from favorites"
+                      aria-label="Unpin from favorites"
                     >
-                      <Star size={12} className="fill-amber-400 text-amber-400" />
+                      <Star size={12} className="fill-current" />
                     </button>
-                  </Link>
+                  </div>
                 );
               })}
             </div>
@@ -440,54 +476,73 @@ export default function Sidebar({ onOpenSearch }) {
                 {/* Section Items */}
                 <div className={`${!isOpen ? 'hidden' : 'space-y-0.5'}`}>
                   {section.items.map((item) => {
-                    const isActive = location.pathname === item.path;
+                    const isActive = isItemActive(item.path);
                     const badgeKey = badgePaths[item.name];
                     const count = badgeKey ? badgeCounts?.[badgeKey] || 0 : 0;
                     const isPinned = pinnedPaths.includes(item.path);
 
                     return (
-                      <Link
+                      <div
                         key={item.path}
-                        to={item.path}
-                        onClick={() => isMobile && dispatch(toggleSidebar())}
-                        className={`group relative flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                        className={`group relative flex items-center rounded-xl text-xs font-semibold transition-all ${
                           isActive
-                            ? 'bg-primary text-primary-foreground font-bold shadow-xs'
+                            ? 'bg-primary text-primary-foreground font-bold shadow-[0_6px_16px_-6px_hsl(var(--brand)/0.55)]'
                             : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
                         }`}
                       >
-                        <div className="relative shrink-0 flex items-center justify-center">
-                          <item.icon
-                            size={16}
-                            className={`${
-                              isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground'
-                            } transition-transform group-hover:scale-105`}
-                          />
-                        </div>
+                        <Link
+                          to={item.path}
+                          target={item.openInNewTab ? '_blank' : undefined}
+                          rel={item.openInNewTab ? 'noopener noreferrer' : undefined}
+                          onMouseEnter={() => preloadRoute(item.path)}
+                          onFocus={() => preloadRoute(item.path)}
+                          onTouchStart={() => preloadRoute(item.path)}
+                          onClick={() => dispatch(setSidebarOpen(false))}
+                          className="flex-1 min-w-0 flex items-center px-3 py-2 min-h-[44px]"
+                        >
+                          <div className="relative shrink-0 flex items-center justify-center">
+                            <item.icon
+                              size={16}
+                              className={`${
+                                isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground'
+                              } transition-transform group-hover:scale-105`}
+                            />
+                          </div>
 
-                        <span className="ml-2.5 truncate flex-1 font-sans">{item.name}</span>
+                          <span className="ml-2.5 truncate font-sans">{item.name}</span>
+                          {item.openInNewTab && (
+                            <ArrowUpRight size={11} className="ml-1 text-muted-foreground/60" />
+                          )}
 
-                        {/* Badge count if pending */}
-                        {count > 0 && (
-                          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                            isActive ? 'bg-white/20 text-white' : 'bg-red-500 text-white'
-                          }`}>
-                            {count}
-                          </span>
-                        )}
+                          {/* Badge count if pending */}
+                          {count > 0 && (
+                            <span className={`ml-2 px-1.5 py-0.2 rounded-full text-[10px] font-bold tabular-nums ${
+                              isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-brand/15 text-primary'
+                            }`}>
+                              {count}
+                            </span>
+                          )}
+                        </Link>
 
                         {/* Pin / Star Toggle Icon */}
                         <button
                           type="button"
                           onClick={(e) => togglePin(e, item.path)}
-                          className={`p-0.5 transition-opacity ${
-                            isPinned ? 'opacity-100 text-amber-400' : 'opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-amber-400'
+                          className={`mr-2 p-1 transition-opacity ${
+                            isPinned
+                              ? isActive
+                                ? 'opacity-100 text-primary-foreground'
+                                : 'opacity-100 text-brand'
+                              : isActive
+                                ? 'opacity-0 group-hover:opacity-100 text-primary-foreground/80 hover:text-primary-foreground'
+                                : 'opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground'
                           }`}
                           title={isPinned ? 'Unpin from favorites' : 'Pin to favorites'}
+                          aria-label={isPinned ? 'Unpin from favorites' : 'Pin to favorites'}
                         >
-                          <Star size={12} className={isPinned ? 'fill-amber-400' : ''} />
+                          <Star size={12} className={isPinned ? 'fill-current' : ''} />
                         </button>
-                      </Link>
+                      </div>
                     );
                   })}
                 </div>
@@ -497,13 +552,16 @@ export default function Sidebar({ onOpenSearch }) {
         </div>
 
         {/* Footer / Settings Link */}
-        <div className="p-3 border-t border-border bg-card shrink-0">
+        <div className="p-3 bg-card shrink-0">
           <Link
             to="/settings"
-            onClick={() => isMobile && dispatch(toggleSidebar())}
-            className={`flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-              location.pathname === '/settings'
-                ? 'bg-primary/10 text-primary font-bold'
+            onMouseEnter={() => preloadRoute('/settings')}
+            onFocus={() => preloadRoute('/settings')}
+            onTouchStart={() => preloadRoute('/settings')}
+            onClick={() => dispatch(setSidebarOpen(false))}
+            className={`flex items-center px-3 py-2 min-h-[44px] rounded-xl text-xs font-semibold transition-colors ${
+              pathname === '/settings'
+                ? 'bg-primary text-primary-foreground font-bold'
                 : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
             }`}
           >
@@ -511,7 +569,10 @@ export default function Sidebar({ onOpenSearch }) {
             <span className="ml-2.5 font-sans">Settings</span>
           </Link>
         </div>
-      </motion.aside>
+      </aside>
     </>
   );
 }
+
+const Sidebar = memo(SidebarComponent);
+export default Sidebar;

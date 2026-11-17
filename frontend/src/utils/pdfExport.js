@@ -1,6 +1,19 @@
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import api from '../api';
+
+// Dynamic lazy-loading for heavy PDF dependencies (saves ~580KB from initial bundle)
+let pdfModulesPromise = null;
+const loadPdfModules = async () => {
+  if (!pdfModulesPromise) {
+    pdfModulesPromise = Promise.all([
+      import('jspdf'),
+      import('html2canvas'),
+    ]).then(([jspdfMod, html2canvasMod]) => ({
+      jsPDF: jspdfMod.default || jspdfMod.jsPDF || jspdfMod,
+      html2canvas: html2canvasMod.default || html2canvasMod,
+    }));
+  }
+  return pdfModulesPromise;
+};
 
 /**
  * Export element to PDF
@@ -15,6 +28,8 @@ export const exportElementToPDF = async (element, filename = 'document.pdf', opt
       format = 'a4',
       quality = 0.95,
     } = options;
+
+    const { jsPDF, html2canvas } = await loadPdfModules();
 
     const canvas = await html2canvas(element, {
       scale: 2,
@@ -69,8 +84,9 @@ export const exportElementToPDF = async (element, filename = 'document.pdf', opt
  * @param {array} columns - Column definitions
  * @param {string} filename - Name of the PDF file
  */
-export const exportDataToPDF = (data, columns, filename = 'report.pdf') => {
+export const exportDataToPDF = async (data, columns, filename = 'report.pdf') => {
   try {
+    const { jsPDF } = await loadPdfModules();
     const pdf = new jsPDF();
     const pageHeight = pdf.internal.pageSize.getHeight();
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -88,7 +104,7 @@ export const exportDataToPDF = (data, columns, filename = 'report.pdf') => {
     const columnWidth = (pageWidth - 2 * marginLeft) / columns.length;
 
     // Header
-    pdf.setFillColor(41, 128, 185);
+    pdf.setFillColor(24, 24, 27);
     pdf.setTextColor(255, 255, 255);
     columns.forEach((col, index) => {
       pdf.rect(marginLeft + index * columnWidth, currentY, columnWidth, 7, 'F');
@@ -130,12 +146,13 @@ const safeFilePart = (value) => String(value || 'proposal')
   .replace(/\s+/g, '-')
   .toLowerCase();
 
-export const exportProposalToPDF = ({ project = {}, client = {} }) => {
+export const exportProposalToPDF = async ({ project = {}, client = {} }) => {
   const proposalText = String(project.proposalText || '').trim();
   if (!proposalText) {
     throw new Error('No proposal text found');
   }
 
+  const { jsPDF } = await loadPdfModules();
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -294,7 +311,7 @@ const getCompanyProfileForInvoice = async () => {
 };
 
 const loadLogoImage = async (logoUrl) => {
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5175';
   const defaultAssetLogo = `${origin}/branding/rise-with-media-logo.png`;
   const targetUrl = logoUrl
     ? (logoUrl.startsWith('http') ? logoUrl : `${origin}${logoUrl.startsWith('/') ? '' : '/'}${logoUrl}`)
@@ -326,6 +343,7 @@ export const exportInvoiceToPDF = async (invoice, options = {}) => {
   const { save = true } = options;
   const companyProfile = await getCompanyProfileForInvoice();
   const logoDataUrl = await loadLogoImage(companyProfile.logoUrl);
+  const { jsPDF } = await loadPdfModules();
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -341,7 +359,7 @@ export const exportInvoiceToPDF = async (invoice, options = {}) => {
   };
 
   // Header Banner / Logo
-  pdf.setFillColor(15, 23, 42); // slate-900 header
+  pdf.setFillColor(24, 24, 27); // neutral zinc-900 header
   pdf.rect(0, 0, pageWidth, 28, 'F');
 
   if (logoDataUrl) {
@@ -360,7 +378,7 @@ export const exportInvoiceToPDF = async (invoice, options = {}) => {
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
-  pdf.setTextColor(203, 213, 225);
+  pdf.setTextColor(212, 212, 216);
   const companyTagline = companyProfile.services || 'Media & Marketing Operations Platform';
   pdf.text(companyTagline, companyTitleX, 20);
 
@@ -434,9 +452,9 @@ export const exportInvoiceToPDF = async (invoice, options = {}) => {
   pdf.setTextColor(71, 85, 105);
   pdf.text('Status:', rightX, y + 22);
   pdf.setFont('helvetica', 'bold');
-  if (statusStr === 'PAID') pdf.setTextColor(22, 163, 74);
-  else if (statusStr === 'OVERDUE') pdf.setTextColor(220, 38, 38);
-  else pdf.setTextColor(37, 99, 235);
+  if (statusStr === 'PAID') pdf.setTextColor(24, 24, 27);
+  else if (statusStr === 'OVERDUE') pdf.setTextColor(63, 63, 70);
+  else pdf.setTextColor(82, 82, 91);
   pdf.text(statusStr, rightX + 28, y + 22);
 
   y += 44;
@@ -570,13 +588,13 @@ export const exportInvoiceToPDF = async (invoice, options = {}) => {
   sumY += 6;
 
   pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(22, 163, 74);
+  pdf.setTextColor(63, 63, 70);
   pdf.text('Paid Amount:', summaryX + 4, sumY);
   pdf.text(formatCurrencyINR(paidAmount), summaryX + summaryWidth - 4, sumY, { align: 'right' });
   sumY += 6;
 
   pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(220, 38, 38);
+  pdf.setTextColor(9, 9, 11);
   pdf.text('Balance Due:', summaryX + 4, sumY);
   pdf.text(formatCurrencyINR(balanceAmount), summaryX + summaryWidth - 4, sumY, { align: 'right' });
 
@@ -587,7 +605,7 @@ export const exportInvoiceToPDF = async (invoice, options = {}) => {
   if (invoice.paymentLink) {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(9);
-    pdf.setTextColor(37, 99, 235);
+    pdf.setTextColor(24, 24, 27);
     pdf.text('Payment Link:', margin, notesY);
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(8.5);

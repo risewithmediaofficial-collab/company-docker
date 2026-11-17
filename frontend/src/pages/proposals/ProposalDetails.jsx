@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { CheckCircle2, CircleDollarSign, Clock3, FileText, Layers3, XCircle, Building2, UserCheck } from 'lucide-react';
+import { CheckCircle2, CircleDollarSign, Clock3, FileText, Layers3, XCircle, Building2, UserCheck, Trash2 } from '@/components/ui/muiIcons';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
@@ -13,10 +13,21 @@ import {
   useUpdateProposal,
   useAcceptProposal,
   useRejectProposal,
+  useDeleteProposal,
 } from '../../hooks/useProposals';
 import { formatINR } from '../../utils/currency';
 import LinksEditor, { LinksList } from '../../components/ui/LinksEditor';
 import { NotionDetailPage } from '../../components/ui/NotionDetailTemplate';
+import { SelectDropdown } from '../../components/ui/SelectDropdown';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const SERVICE_CATEGORIES = [
   { value: 'social_media', label: 'Social Media' },
@@ -44,8 +55,10 @@ const ProposalDetails = () => {
   const updateProposal = useUpdateProposal();
   const acceptProposal = useAcceptProposal();
   const rejectProposal = useRejectProposal();
+  const deleteProposal = useDeleteProposal();
 
   const [editing, setEditing] = useState(isNew);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [form, setForm] = useState({
     title: '',
     recipientType: 'client', // 'client' | 'lead'
@@ -115,19 +128,19 @@ const ProposalDetails = () => {
   };
 
   if (!isNew && isLoading) {
-    return <div className="h-64 animate-pulse rounded-3xl border border-border bg-card" />;
+    return <div className="h-64 rounded-3xl bg-card" />;
   }
 
   const paperField = (label, value) => (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">{value || '—'}</p>
+    <div className="rounded-2xl bg-neutral-50 px-4 py-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">{label}</p>
+      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-neutral-800 tabular-nums">{value || '—'}</p>
     </div>
   );
 
   const recipientLabel = proposal?.recipientType === 'lead' || proposal?.lead
-    ? `🎯 Lead: ${proposal?.lead?.name || 'Lead'}${proposal?.lead?.company ? ` (${proposal.lead.company})` : ''}`
-    : `🏢 Client: ${proposal?.client?.company || proposal?.client?.name || 'Client'}`;
+    ? `Lead: ${proposal?.lead?.name || 'Lead'}${proposal?.lead?.company ? ` (${proposal.lead.company})` : ''}`
+    : `Client: ${proposal?.client?.company || proposal?.client?.name || 'Client'}`;
 
   const proposalPages = proposal ? [
     {
@@ -144,27 +157,27 @@ const ProposalDetails = () => {
             {paperField('Start Date', proposal.startDate ? new Date(proposal.startDate).toLocaleDateString() : '—')}
             {paperField('End Date', proposal.endDate ? new Date(proposal.endDate).toLocaleDateString() : '—')}
           </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
-              <div className="flex items-center gap-2 text-emerald-700">
-                <CircleDollarSign size={18} />
+          <div className="mt-6 grid gap-4 md:grid-cols-3 tabular-nums">
+            <div className="rounded-3xl bg-neutral-100 p-5">
+              <div className="flex items-center gap-2 text-neutral-700">
+                <CircleDollarSign size={18} className="shrink-0" />
                 <span className="text-xs font-bold uppercase tracking-[0.18em]">Amount</span>
               </div>
-              <p className="mt-4 text-3xl font-black tracking-tight text-emerald-900">{formatINR(proposal.amount)}</p>
+              <p className="mt-4 text-3xl font-black tracking-tight text-neutral-900">{formatINR(proposal.amount)}</p>
             </div>
-            <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5">
-              <div className="flex items-center gap-2 text-amber-700">
-                <Clock3 size={18} />
+            <div className="rounded-3xl bg-neutral-100 p-5">
+              <div className="flex items-center gap-2 text-neutral-700">
+                <Clock3 size={18} className="shrink-0" />
                 <span className="text-xs font-bold uppercase tracking-[0.18em]">Status</span>
               </div>
-              <p className="mt-4 text-xl font-black capitalize tracking-tight text-amber-900">{proposal.status || 'draft'}</p>
+              <p className="mt-4 text-xl font-black capitalize tracking-tight text-neutral-900">{proposal.status || 'draft'}</p>
             </div>
-            <div className="rounded-3xl border border-sky-200 bg-sky-50 p-5">
-              <div className="flex items-center gap-2 text-sky-700">
-                <Layers3 size={18} />
+            <div className="rounded-3xl bg-neutral-100 p-5">
+              <div className="flex items-center gap-2 text-neutral-700">
+                <Layers3 size={18} className="shrink-0" />
                 <span className="text-xs font-bold uppercase tracking-[0.18em]">Revisions</span>
               </div>
-              <p className="mt-4 text-xl font-black tracking-tight text-sky-900">{proposal.revisionLimit || 3} rounds</p>
+              <p className="mt-4 text-xl font-black tracking-tight text-neutral-900">{proposal.revisionLimit || 3} rounds</p>
             </div>
           </div>
           <div className="mt-6">
@@ -193,9 +206,9 @@ const ProposalDetails = () => {
         <div className="space-y-5">
           {paperField('Terms and Conditions', proposal.termsAndConditions)}
           {paperField('Notes', proposal.notes)}
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Attachments & Links</p>
-            <div className="mt-3 text-sm text-slate-700">
+          <div className="rounded-2xl bg-neutral-50 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">Attachments & Links</p>
+            <div className="mt-3 text-sm text-neutral-700">
               <LinksList links={proposal.links} />
             </div>
           </div>
@@ -206,7 +219,7 @@ const ProposalDetails = () => {
   ] : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <NotionDetailPage
         backTo={isClient ? '/client/proposals' : '/proposals'}
         backLabel="Proposals"
@@ -214,7 +227,7 @@ const ProposalDetails = () => {
         subtitle={proposal?.proposalNumber || form.proposalType || 'Service proposal'}
         icon={FileText}
         status={proposal?.status}
-        statusClassName={proposal?.status === 'accepted' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-blue-500/10 text-blue-600'}
+        statusClassName={proposal?.status === 'accepted' ? 'bg-primary text-primary-foreground ' : 'bg-secondary text-foreground '}
         actions={(
           <>
             {isClient && proposal?.status === 'sent' ? (
@@ -227,7 +240,19 @@ const ProposalDetails = () => {
                 </Button>
               </>
             ) : null}
-            {canManage && !editing && !isNew ? <Button onClick={() => setEditing(true)}>Edit</Button> : null}
+            {canManage && !editing && !isNew ? (
+              <>
+                <Button onClick={() => setEditing(true)}>Edit</Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="text-foreground hover:bg-secondary"
+                >
+                  <Trash2 size={15} className="mr-1.5" />
+                  <span>Delete</span>
+                </Button>
+              </>
+            ) : null}
             {canManage && editing ? (
               <>
                 <Button
@@ -254,13 +279,13 @@ const ProposalDetails = () => {
           <Input placeholder="Proposal Title *" value={form.title} onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))} />
           
           {/* Choose Type: Clients or Leads */}
-          <div className="flex items-center gap-2 p-1 bg-secondary/50 rounded-xl border border-border">
+          <div className="flex items-center gap-2 p-1 bg-secondary/50 rounded-xl ">
             <button
               type="button"
               onClick={() => setForm((current) => ({ ...current, recipientType: 'client' }))}
               className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
                 form.recipientType === 'client'
-                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  ? 'bg-primary text-primary-foreground '
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
               }`}
             >
@@ -272,7 +297,7 @@ const ProposalDetails = () => {
               onClick={() => setForm((current) => ({ ...current, recipientType: 'lead' }))}
               className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
                 form.recipientType === 'lead'
-                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  ? 'bg-primary text-primary-foreground '
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
               }`}
             >
@@ -283,42 +308,61 @@ const ProposalDetails = () => {
 
           {/* Dynamic Dropdown: Clients or Leads */}
           {form.recipientType === 'client' ? (
-            <select
-              className="app-input"
+            <SelectDropdown
               value={form.client}
-              onChange={(e) => setForm((current) => ({ ...current, client: e.target.value }))}
-            >
-              <option value="">Select client *</option>
-              {clients.map((client) => (
-                <option key={client._id} value={client._id}>{client.company || client.name}</option>
-              ))}
-            </select>
+              onChange={(val) => setForm((current) => ({ ...current, client: val || '' }))}
+              options={clients.map((client) => ({
+                value: client._id,
+                label: client.company || client.name,
+              }))}
+              placeholder="Select client *"
+              allowCustom={false}
+              className="w-full"
+              buttonClassName="h-10 bg-background text-sm rounded-xl border border-border/50"
+            />
           ) : (
-            <select
-              className="app-input"
+            <SelectDropdown
               value={form.lead}
-              onChange={(e) => setForm((current) => ({ ...current, lead: e.target.value }))}
-            >
-              <option value="">Select lead *</option>
-              {leads.map((lead) => (
-                <option key={lead._id} value={lead._id}>
-                  {lead.name} {lead.company ? `(${lead.company})` : ''} {lead.email ? `- ${lead.email}` : ''}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setForm((current) => ({ ...current, lead: val || '' }))}
+              options={leads.map((lead) => ({
+                value: lead._id,
+                label: `${lead.name} ${lead.company ? `(${lead.company})` : ''}`,
+                subLabel: lead.email || undefined,
+              }))}
+              placeholder="Select lead *"
+              allowCustom={false}
+              className="w-full"
+              buttonClassName="h-10 bg-background text-sm rounded-xl border border-border/50"
+            />
           )}
-          <select className="app-input" value={form.serviceCategory} onChange={(e) => setForm((current) => ({ ...current, serviceCategory: e.target.value }))}>
-            {SERVICE_CATEGORIES.map((service) => (
-              <option key={service.value} value={service.value}>{service.label}</option>
-            ))}
-          </select>
+          <SelectDropdown
+            value={form.serviceCategory}
+            onChange={(val) => setForm((current) => ({ ...current, serviceCategory: val || 'social_media' }))}
+            options={SERVICE_CATEGORIES.map((service) => ({
+              value: service.value,
+              label: service.label,
+            }))}
+            placeholder="Service Category"
+            allowCustom={false}
+            allowDeselect={false}
+            className="w-full"
+            buttonClassName="h-10 bg-background text-sm rounded-xl border border-border/50"
+          />
           <Input placeholder="Proposal Type" value={form.proposalType} onChange={(e) => setForm((current) => ({ ...current, proposalType: e.target.value }))} />
           <Input type="number" placeholder="Total Amount (INR)" value={form.amount} onChange={(e) => setForm((current) => ({ ...current, amount: e.target.value }))} />
-          <select className="app-input" value={form.status} onChange={(e) => setForm((current) => ({ ...current, status: e.target.value }))}>
-            {['draft', 'sent', 'viewed', 'accepted', 'rejected', 'expired'].map((status) => (
-              <option key={status} value={status}>{status}</option>
-            ))}
-          </select>
+          <SelectDropdown
+            value={form.status || 'draft'}
+            onChange={(val) => setForm((current) => ({ ...current, status: val || 'draft' }))}
+            options={['draft', 'sent', 'viewed', 'accepted', 'rejected', 'expired'].map((status) => ({
+              value: status,
+              label: status.charAt(0).toUpperCase() + status.slice(1),
+            }))}
+            placeholder="Proposal Status"
+            allowCustom={false}
+            allowDeselect={false}
+            className="w-full"
+            buttonClassName="h-10 bg-background text-sm rounded-xl border border-border/50"
+          />
           <Input type="date" value={form.startDate} onChange={(e) => setForm((current) => ({ ...current, startDate: e.target.value }))} />
           <Input type="date" value={form.endDate} onChange={(e) => setForm((current) => ({ ...current, endDate: e.target.value }))} />
           <Textarea className="md:col-span-2" rows={3} placeholder="Description" value={form.description} onChange={(e) => setForm((current) => ({ ...current, description: e.target.value }))} />
@@ -333,13 +377,12 @@ const ProposalDetails = () => {
           </div>
         </div>
       ) : (
-        <div className="rounded-[2rem] border border-border bg-secondary/40 p-4 md:p-6">
-          <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-dashed border-border bg-background/80 px-4 py-3">
+        <div className="rounded-[2rem] bg-secondary/40 p-2.5 sm:p-4 md:p-6">
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-background/80 px-4 py-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-muted-foreground">Print Layout Preview</p>
-              <p className="mt-1 text-sm text-muted-foreground">Proposal pages are shown in A4 order for both team and client viewing.</p>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary self-start sm:self-auto">
               <FileText size={14} />
               {proposalPages.length} pages
             </div>
@@ -349,17 +392,17 @@ const ProposalDetails = () => {
             {proposalPages.map((page) => (
               <section
                 key={page.page}
-                className="mx-auto flex w-full max-w-[210mm] flex-col rounded-[28px] border border-slate-200 bg-white p-8 text-slate-900 shadow-[0_18px_60px_rgba(15,23,42,0.10)] md:min-h-[297mm] md:p-12"
+                className="mx-auto flex w-full max-w-[210mm] flex-col rounded-[24px] sm:rounded-[28px] bg-white p-4 sm:p-6 md:p-12 text-neutral-900 shadow-[0_18px_60px_rgba(0,0,0,0.08)] md:min-h-[297mm]"
               >
-                <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-6">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.28em] text-slate-400">Rise With Media Proposal</p>
-                    <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900">{page.title}</h2>
-                    <p className="mt-2 text-sm text-slate-500">{page.subtitle}</p>
+                <div className="flex items-start justify-between gap-3 sm:gap-4 pb-5 sm:pb-6">
+                  <div className="min-w-0">
+                    <p className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.28em] text-neutral-400">Rise With Media Proposal</p>
+                    <h2 className="mt-2 sm:mt-3 text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-neutral-900 break-words">{page.title}</h2>
+                    <p className="mt-1.5 text-xs sm:text-sm text-neutral-500 break-words">{page.subtitle}</p>
                   </div>
-                  <div className="shrink-0 rounded-2xl border border-slate-200 px-4 py-3 text-right">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Page</p>
-                    <p className="mt-1 text-2xl font-black tracking-tight text-slate-900">{page.page}</p>
+                  <div className="shrink-0 rounded-2xl px-3 py-2 sm:px-4 sm:py-3 text-right tabular-nums">
+                    <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Page</p>
+                    <p className="mt-0.5 sm:mt-1 text-xl sm:text-2xl font-black tracking-tight text-neutral-900">{page.page}</p>
                   </div>
                 </div>
 
@@ -367,7 +410,7 @@ const ProposalDetails = () => {
                   {page.content}
                 </div>
 
-                <div className="mt-auto flex items-center justify-between border-t border-slate-200 pt-5 text-xs text-slate-400">
+                <div className="mt-auto flex items-center justify-between pt-5 text-xs text-neutral-400">
                   <span>{proposal?.proposalNumber || 'Proposal Draft'}</span>
                   <span>{proposal?.client?.company || proposal?.client?.name || 'Client Proposal'}</span>
                 </div>
@@ -376,6 +419,46 @@ const ProposalDetails = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Alert Dialog */}
+      <AlertDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+      >
+        <AlertDialogContent className="rounded-2xl bg-card">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold text-foreground">
+              Delete Proposal "{proposal?.title}"?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="sr-only">
+              Are you sure you want to delete proposal "{proposal?.title}" ({proposal?.proposalNumber || 'Proposal'})? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <AlertDialogCancel
+              onClick={() => setShowDeleteConfirm(false)}
+              disabled={deleteProposal.isPending}
+              className="rounded-xl text-xs font-semibold"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                try {
+                  await deleteProposal.mutateAsync(id);
+                  navigate('/proposals');
+                } catch {
+                  // handled by mutation
+                }
+              }}
+              disabled={deleteProposal.isPending}
+              className="rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {deleteProposal.isPending ? 'Deleting...' : 'Delete Proposal'}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

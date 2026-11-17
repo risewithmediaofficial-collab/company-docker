@@ -69,7 +69,6 @@ const clientCredentialSchema = new mongoose.Schema(
     organizationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Organization',
-      required: true,
     },
     credentialName: {
       type: String,
@@ -146,6 +145,11 @@ const clientCredentialSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    // Permission toggle: Allow client to access & view this credential in client portal
+    visibleToClient: {
+      type: Boolean,
+      default: false,
     },
     // Tags for organization
     tags: [String],

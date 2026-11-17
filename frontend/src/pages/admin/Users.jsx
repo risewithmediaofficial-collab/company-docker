@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { logout } from '../../store/slices/authSlice';
 import {
-  ArrowRight,
   CheckCircle2,
   Clock,
   Eye,
@@ -23,12 +22,11 @@ import {
   Check,
   X,
   Plus,
-  Crown,
   UserPlus,
   Briefcase,
   Phone,
   Lock,
-} from 'lucide-react';
+} from '@/components/ui/muiIcons';
 import {
   useAdminChangeUserPassword,
   useCreateUser,
@@ -39,7 +37,7 @@ import {
 } from '../../hooks/useUsers';
 import { Button } from '../../components/ui/button';
 import UserPermissionsModal from './UserPermissionsModal';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose } from '../../components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,12 +48,20 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import WorkspacePage from '../../components/ui/WorkspacePage';
 import DatabaseView from '../../components/ui/DatabaseView';
 
 const platformRoles = [
   { value: 'superAdmin', label: 'Super Admin' },
   { value: 'admin', label: 'Admin' },
+  { value: 'organizationOwner', label: 'Organization Owner' },
   { value: 'manager', label: 'Manager' },
   { value: 'employee', label: 'Employee' },
   { value: 'client', label: 'Client' },
@@ -68,10 +74,12 @@ const companyRoles = [
   { value: 'employee', label: 'Team Member (Employee / Specialist)' },
 ];
 
+const roles = platformRoles;
+
 const statusStyles = {
-  pending: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-  approved: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-  rejected: 'bg-rose-500/10 text-rose-600 border-rose-500/20',
+  pending: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30',
+  approved: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold',
+  rejected: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30',
 };
 
 const Users = () => {
@@ -79,13 +87,19 @@ const Users = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { data: users = [], isLoading, isFetching, refetch } = useUsers();
+  const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const updateApproval = useUpdateUserApproval();
   const deleteUser = useDeleteUser();
   const adminChangeUserPassword = useAdminChangeUserPassword();
-  const createUser = useCreateUser();
+
+  const isSuperAdmin = currentUser?.role === 'superAdmin' && !currentUser?.isGhostMode;
+  const isTenant = Boolean(currentUser?.organizationId || organization);
+  const canManageUsers = isSuperAdmin || ['organizationOwner', 'admin'].includes(currentUser?.role);
+  const maxSeats = organization?.maxUsers || 3;
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('team'); // 'team' | 'clients'
   const [roleFilter, setRoleFilter] = useState('all');
   const [permissionsUser, setPermissionsUser] = useState(null);
   const [passwordUser, setPasswordUser] = useState(null);
@@ -107,40 +121,109 @@ const Users = () => {
     phone: '',
   });
 
-  const isSuperAdmin = currentUser?.role === 'superAdmin' && !currentUser?.isGhostMode;
-  const isTenant = Boolean(currentUser?.organizationId || organization);
-  const canManageUsers = isSuperAdmin || ['organizationOwner', 'admin'].includes(currentUser?.role);
-  const maxSeats = organization?.maxUsers || 3;
-
-  // In tenant workspace, include company owner; for platform superadmin in global view, omit external organizationOwners (handled in Company Requests)
-  const teamUsers = useMemo(() => {
-    if (currentUser?.role === 'superAdmin' && !currentUser?.organizationId) {
-      return users.filter((u) => u.role !== 'organizationOwner');
+  const handleAddUserSubmit = async (e) => {
+    e.preventDefault();
+    if (!addForm.name || !addForm.email || !addForm.password) {
+      toast.error('Please fill in name, email, and a password');
+      return;
     }
-    return users;
-  }, [users, currentUser]);
+    if (addForm.password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
+    try {
+      setIsSubmittingUser(true);
+      await createUser.mutateAsync(addForm);
+      toast.success(`Team member ${addForm.name} added successfully!`);
+      setShowAddModal(false);
+      setAddForm({
+        name: '',
+        email: '',
+        password: '',
+        role: 'employee',
+        department: '',
+        position: '',
+        phone: '',
+      });
+      refetch();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to create team member');
+    } finally {
+      setIsSubmittingUser(false);
+    }
+  };
+
+  // Separate internal staff/team from client portal users
+  const staffUsers = useMemo(() => users.filter((u) => u.role !== 'client'), [users]);
+  const clientUsers = useMemo(() => users.filter((u) => u.role === 'client'), [users]);
+  const employeeUsers = useMemo(() => staffUsers.filter((u) => u.role === 'employee'), [staffUsers]);
 
   const filteredUsers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    return teamUsers.filter((u) => {
-      const name = (u.name || '').toLowerCase();
-      const email = (u.email || '').toLowerCase();
-      const role = (u.role || '').toLowerCase();
-      const dept = (u.department || '').toLowerCase();
 
-      const matchesSearch = !term || name.includes(term) || email.includes(term) || role.includes(term) || dept.includes(term);
-      const matchesRole = roleFilter === 'all' || u.role === roleFilter;
+    // Default & team view strictly excludes client accounts!
+    // Client accounts are only shown when explicitly on the 'clients' tab.
+    let pool = activeTab === 'clients' ? clientUsers : staffUsers;
 
-      return matchesSearch && matchesRole;
+    // Filter by specific team role if not 'all'
+    if (activeTab === 'team' && roleFilter !== 'all') {
+      pool = pool.filter((u) => u.role === roleFilter);
+    }
+
+    // Search filter
+    if (term) {
+      pool = pool.filter((u) => {
+        const name = (u.name || '').toLowerCase();
+        const email = (u.email || '').toLowerCase();
+        const role = (u.role || '').toLowerCase();
+        const dept = (u.department || u.position || '').toLowerCase();
+        const phone = (u.phone || '').toLowerCase();
+        const company = (u.clientId?.company || u.clientId?.name || '').toLowerCase();
+        return (
+          name.includes(term) ||
+          email.includes(term) ||
+          phone.includes(term) ||
+          company.includes(term) ||
+          role.includes(term) ||
+          dept.includes(term)
+        );
+      });
+    }
+
+    // Sorting:
+    // On team view: show employees 1st, then managers, admins, super admins, etc.
+    if (activeTab === 'team') {
+      const rolePriority = {
+        employee: 1,
+        manager: 2,
+        admin: 3,
+        superAdmin: 4,
+        organizationOwner: 5,
+        referral: 6,
+      };
+      return [...pool].sort((a, b) => {
+        const pA = rolePriority[a.role] || 99;
+        const pB = rolePriority[b.role] || 99;
+        if (pA !== pB) return pA - pB;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+    }
+
+    // On client view: sort by business company or contact name
+    return [...pool].sort((a, b) => {
+      const compA = a.clientId?.company || a.clientId?.name || a.name || '';
+      const compB = b.clientId?.company || b.clientId?.name || b.name || '';
+      return compA.localeCompare(compB);
     });
-  }, [teamUsers, searchTerm, roleFilter]);
+  }, [activeTab, clientUsers, staffUsers, roleFilter, searchTerm]);
 
   const handleRoleChange = async (userId, newRole) => {
     try {
       await updateUser.mutateAsync({ id: userId, data: { role: newRole } });
       toast.success('User role updated successfully');
-    } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to update role');
+    } catch {
+      toast.error('Failed to update role');
     }
   };
 
@@ -181,183 +264,90 @@ const Users = () => {
       } else {
         toast.success(`Password updated for ${updatedUserName}. That user alone has been logged out.`);
       }
-    } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to update password');
-    }
-  };
-
-  const handleAddUserSubmit = async (e) => {
-    e.preventDefault();
-    if (!addForm.name || !addForm.email || !addForm.password) {
-      toast.error('Please fill in name, email, and a password');
-      return;
-    }
-    if (addForm.password.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
-    }
-
-    try {
-      setIsSubmittingUser(true);
-      await createUser.mutateAsync(addForm);
-      toast.success(`Team member ${addForm.name} added successfully!`);
-      setShowAddModal(false);
-      setAddForm({
-        name: '',
-        email: '',
-        password: '',
-        role: 'employee',
-        department: '',
-        position: '',
-        phone: '',
-      });
-      refetch();
-    } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to create team member');
-    } finally {
-      setIsSubmittingUser(false);
+    } catch {
+      toast.error('Failed to update password');
     }
   };
 
   // Statistics
-  const total = teamUsers.length;
-  const approvedCount = teamUsers.filter((u) => u.approvalStatus === 'approved' || !u.approvalStatus).length;
-  const pendingCount = teamUsers.filter((u) => u.approvalStatus === 'pending').length;
-  const activeCount = teamUsers.filter((u) => u.isActive).length;
-  const adminsAndManagersCount = teamUsers.filter((u) => ['admin', 'manager'].includes(u.role)).length;
+  const totalUsers = users.length;
+  const approvedStaffCount = staffUsers.filter((u) => u.approvalStatus === 'approved' || !u.approvalStatus).length;
+  const pendingCount = users.filter((u) => u.approvalStatus === 'pending').length;
+  const activeCount = users.filter((u) => u.isActive).length;
 
-  const renderRoleBadge = (u) => {
-    if (u.role === 'organizationOwner') {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-600 border border-amber-500/20 text-xs font-black shadow-xs">
-          <Crown size={12} className="text-amber-500" />
-          <span>Company Owner</span>
-        </span>
-      );
-    }
-    if (u.role === 'admin') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-xs font-bold shadow-xs">
-          <Shield size={12} className="text-indigo-500" />
-          <span>{isTenant ? 'Company Admin' : 'Admin'}</span>
-        </span>
-      );
-    }
-    if (u.role === 'manager') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold shadow-xs">
-          <Briefcase size={12} className="text-emerald-500" />
-          <span>{isTenant ? 'Company Manager' : 'Manager'}</span>
-        </span>
-      );
-    }
-    if (u.role === 'superAdmin') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-500/10 text-purple-600 border border-purple-500/20 text-xs font-black shadow-xs">
-          <ShieldCheck size={12} />
-          <span>Super Admin</span>
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-500/10 text-slate-600 dark:text-slate-300 border border-slate-500/20 text-xs font-semibold">
-        <span>{u.role === 'employee' ? 'Team Member' : u.role}</span>
-      </span>
-    );
-  };
-
-  // Table Columns
-  const tableColumns = [
+  // Table Columns - Team Members
+  const teamTableColumns = [
     {
       key: 'name',
       label: 'Team Member',
       render: (u) => (
         <div className="flex items-center gap-2.5">
-          <div className={`h-8 w-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-            u.role === 'organizationOwner' ? 'bg-amber-500/15 text-amber-600' :
-            u.role === 'admin' ? 'bg-indigo-500/15 text-indigo-600' :
-            u.role === 'manager' ? 'bg-emerald-500/15 text-emerald-600' :
-            'bg-primary/10 text-primary'
-          }`}>
+          <div className="h-8 w-8 rounded-xl bg-secondary text-foreground flex items-center justify-center font-bold text-xs shrink-0">
             {u.name?.charAt(0) || 'U'}
           </div>
-          <div className="min-w-0">
-            <p className="font-bold text-foreground truncate">{u.name}</p>
-            <p className="text-[11px] text-muted-foreground truncate">{u.email}</p>
+          <div>
+            <p className="font-bold text-foreground">{u.name}</p>
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 tabular-nums">
+              <span>{u.email}</span>
+              {u.phone && <span className="text-[10px] opacity-80">· {u.phone}</span>}
+            </p>
           </div>
         </div>
+      ),
+    },
+    {
+      key: 'department',
+      label: 'Department / Position',
+      render: (u) => (
+        <span className="text-xs font-semibold text-foreground">
+          {u.department || u.position || 'General'}
+        </span>
       ),
     },
     {
       key: 'role',
-      label: 'Role & Responsibility',
-      render: (u) => {
-        // If owner or non-admin viewer, render static badge
-        if (u.role === 'organizationOwner' || !canManageUsers) {
-          return renderRoleBadge(u);
-        }
-
-        // If target is superAdmin and viewer is not platform superAdmin, disable
-        const isSuperAdminTarget = u.role === 'superAdmin';
-        if (isSuperAdminTarget && !isSuperAdmin) {
-          return renderRoleBadge(u);
-        }
-
-        return (
-          <select
-            value={u.role}
-            onChange={(e) => handleRoleChange(u._id, e.target.value)}
-            className="h-8 px-2.5 rounded-lg border border-border bg-background text-xs font-semibold cursor-pointer focus:ring-1 focus:ring-primary"
-          >
-            {isTenant ? (
-              <>
-                <option value="admin">Company Admin</option>
-                <option value="manager">Company Manager</option>
-                <option value="employee">Team Member / Staff</option>
-              </>
-            ) : (
-              platformRoles.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))
-            )}
-          </select>
-        );
-      },
-    },
-    {
-      key: 'department',
-      label: 'Dept & Position',
+      label: 'System Role',
       render: (u) => (
-        <div className="text-xs">
-          <p className="font-medium text-foreground">{u.department || 'General'}</p>
-          <p className="text-[11px] text-muted-foreground">{u.position || 'Specialist'}</p>
-        </div>
+        <Select
+          value={u.role}
+          onValueChange={(val) => handleRoleChange(u._id, val || u.role)}
+          disabled={!['superAdmin', 'admin'].includes(currentUser?.role) && u.role === 'superAdmin'}
+        >
+          <SelectTrigger className="h-8 w-36 px-2.5 rounded-lg bg-background text-xs font-semibold border border-border/50">
+            <SelectValue placeholder="Role" />
+          </SelectTrigger>
+          <SelectContent position="popper" searchable={false}>
+            {roles.map((r) => (
+              <SelectItem key={r.value} value={r.value} className="text-xs font-semibold cursor-pointer">
+                {r.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       ),
     },
     {
       key: 'approvalStatus',
-      label: 'Status',
+      label: 'Approval Status',
       render: (u) => {
         const st = u.approvalStatus || 'approved';
         return (
           <div className="flex items-center gap-1.5">
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border capitalize ${statusStyles[st] || statusStyles.approved}`}>
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold capitalize ${statusStyles[st] || statusStyles.approved}`}>
               {st}
             </span>
-            {st === 'pending' && canManageUsers && (
+            {st === 'pending' && (
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => handleApprovalChange(u._id, 'approved')}
-                  className="p-1 rounded-md bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
+                  className="p-1 rounded-md bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground cursor-pointer"
                   title="Approve User"
                 >
                   <Check size={13} />
                 </button>
                 <button
                   onClick={() => handleApprovalChange(u._id, 'rejected')}
-                  className="p-1 rounded-md bg-rose-500/10 text-rose-600 hover:bg-rose-500/20"
+                  className="p-1 rounded-md bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
                   title="Reject User"
                 >
                   <X size={13} />
@@ -371,71 +361,187 @@ const Users = () => {
     {
       key: 'actions',
       label: '',
+      render: (u) => (
+        <div className="flex items-center justify-end gap-1">
+          <button
+            onClick={() => setPermissionsUser(u)}
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+            title="Custom Permissions"
+          >
+            <ShieldCheck size={15} />
+          </button>
+          <button
+            onClick={() => {
+              setPasswordUser(u);
+              setPasswordForm({ newPassword: '', confirmPassword: '' });
+            }}
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+            title="Reset Password"
+          >
+            <KeyRound size={15} />
+          </button>
+          <button
+            onClick={() => setDeleteUserTarget(u)}
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+            title="Delete User"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  // Table Columns - Client Accounts
+  const clientTableColumns = [
+    {
+      key: 'name',
+      label: 'Client Contact',
+      render: (u) => (
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-xl bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold text-xs shrink-0">
+            {u.name?.charAt(0) || 'C'}
+          </div>
+          <div>
+            <p className="font-bold text-foreground">{u.name}</p>
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 tabular-nums">
+              <span>{u.email}</span>
+              {u.phone && <span className="text-[10px] opacity-80">· {u.phone}</span>}
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'company',
+      label: 'Associated Business / Company',
+      render: (u) => (
+        <div className="flex items-center gap-1.5">
+          <Building2 size={13} className="text-muted-foreground shrink-0" />
+          <span className="font-semibold text-foreground text-xs">
+            {u.clientId?.company || u.clientId?.name || 'Independent Client'}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'role',
+      label: 'System Role',
+      render: (u) => (
+        <Select
+          value={u.role}
+          onValueChange={(val) => handleRoleChange(u._id, val || u.role)}
+          disabled={!['superAdmin', 'admin'].includes(currentUser?.role) && u.role === 'superAdmin'}
+        >
+          <SelectTrigger className="h-8 w-36 px-2.5 rounded-lg bg-background text-xs font-semibold border border-border/50">
+            <SelectValue placeholder="Role" />
+          </SelectTrigger>
+          <SelectContent position="popper" searchable={false}>
+            {roles.map((r) => (
+              <SelectItem key={r.value} value={r.value} className="text-xs font-semibold cursor-pointer">
+                {r.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ),
+    },
+    {
+      key: 'approvalStatus',
+      label: 'Portal Access Status',
       render: (u) => {
-        const isTargetOwner = u.role === 'organizationOwner';
-        const isSelf = String(u._id) === String(currentUser?._id);
-        const canEditThisUser = canManageUsers && (!isTargetOwner || isSelf);
-
-        if (!canEditThisUser) return null;
-
+        const st = u.approvalStatus || 'approved';
         return (
-          <div className="flex items-center justify-end gap-1">
-            <button
-              onClick={() => setPermissionsUser(u)}
-              className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              title="Custom Permissions"
-            >
-              <ShieldCheck size={15} />
-            </button>
-            <button
-              onClick={() => {
-                setPasswordUser(u);
-                setPasswordForm({ newPassword: '', confirmPassword: '' });
-              }}
-              className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              title="Reset Password"
-            >
-              <KeyRound size={15} />
-            </button>
-            {!isTargetOwner && !isSelf && (
-              <button
-                onClick={() => setDeleteUserTarget(u)}
-                className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 transition-colors"
-                title="Delete User"
-              >
-                <Trash2 size={15} />
-              </button>
+          <div className="flex items-center gap-1.5">
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold capitalize ${statusStyles[st] || statusStyles.approved}`}>
+              {st}
+            </span>
+            {st === 'pending' && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleApprovalChange(u._id, 'approved')}
+                  className="p-1 rounded-md bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground cursor-pointer"
+                  title="Approve Client Access"
+                >
+                  <Check size={13} />
+                </button>
+                <button
+                  onClick={() => handleApprovalChange(u._id, 'rejected')}
+                  className="p-1 rounded-md bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                  title="Reject Client Access"
+                >
+                  <X size={13} />
+                </button>
+              </div>
             )}
           </div>
         );
       },
+    },
+    {
+      key: 'actions',
+      label: '',
+      render: (u) => (
+        <div className="flex items-center justify-end gap-1">
+          <button
+            onClick={() => setPermissionsUser(u)}
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+            title="Portal Permissions"
+          >
+            <ShieldCheck size={15} />
+          </button>
+          <button
+            onClick={() => {
+              setPasswordUser(u);
+              setPasswordForm({ newPassword: '', confirmPassword: '' });
+            }}
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+            title="Reset Password"
+          >
+            <KeyRound size={15} />
+          </button>
+          <button
+            onClick={() => setDeleteUserTarget(u)}
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+            title="Delete Account"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
+      ),
     },
   ];
 
   // Cards Render
   const renderCard = (u) => {
     const st = u.approvalStatus || 'approved';
-    const isTargetOwner = u.role === 'organizationOwner';
-    const isSelf = String(u._id) === String(currentUser?._id);
-    const canEditThisUser = canManageUsers && (!isTargetOwner || isSelf);
-
+    const isClient = u.role === 'client';
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          {renderRoleBadge(u)}
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize ${statusStyles[st] || statusStyles.approved}`}>
+          <span
+            className={`text-[10px] font-bold px-2 py-0.5 rounded tracking-wider ${
+              isClient
+                ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30'
+                : 'bg-secondary text-foreground uppercase'
+            }`}
+          >
+            {isClient ? 'Client Account' : u.role}
+          </span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${statusStyles[st] || statusStyles.approved}`}>
             {st}
           </span>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className={`h-10 w-10 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 ${
-            u.role === 'organizationOwner' ? 'bg-amber-500/15 text-amber-600' :
-            u.role === 'admin' ? 'bg-indigo-500/15 text-indigo-600' :
-            u.role === 'manager' ? 'bg-emerald-500/15 text-emerald-600' :
-            'bg-secondary text-foreground'
-          }`}>
-            {u.name?.charAt(0) || 'U'}
+          <div
+            className={`h-10 w-10 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 ${
+              isClient
+                ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400 font-bold'
+                : 'bg-secondary text-foreground'
+            }`}
+          >
+            {u.name?.charAt(0) || (isClient ? 'C' : 'U')}
           </div>
           <div className="min-w-0">
             <h4 className="font-bold text-sm text-foreground truncate">{u.name}</h4>
@@ -443,119 +549,86 @@ const Users = () => {
           </div>
         </div>
 
-        <div className="p-2.5 rounded-xl bg-secondary/40 border border-border/60 space-y-1 text-xs">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Department:</span>
-            <span className="font-semibold text-foreground">{u.department || 'General'}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Position:</span>
-            <span className="font-medium text-foreground">{u.position || 'Specialist'}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Joined:</span>
-            <span className="font-medium text-foreground">{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}</span>
-          </div>
+        <div className="p-2.5 rounded-xl bg-secondary/40 space-y-1 text-xs">
+          {isClient ? (
+            <>
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-muted-foreground shrink-0">Company:</span>
+                <span className="font-semibold text-foreground truncate">
+                  {u.clientId?.company || u.clientId?.name || 'Independent Client'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-muted-foreground shrink-0">Phone:</span>
+                <span className="font-medium text-foreground tabular-nums truncate">{u.phone || '—'}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Department:</span>
+                <span className="font-semibold text-foreground">{u.department || u.position || 'General'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Joined:</span>
+                <span className="font-medium text-foreground tabular-nums">
+                  {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Approval action controls for pending card */}
-        {st === 'pending' && canManageUsers && (
-          <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-400">
-              <Clock size={13} />
-              <span>Pending Action</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => handleApprovalChange(u._id, 'approved')}
-                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm transition-all"
-                title="Approve User"
-              >
-                <Check size={13} />
-                <span>Approve</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleApprovalChange(u._id, 'rejected')}
-                className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 text-xs font-bold flex items-center gap-1 border border-rose-500/20 transition-all"
-                title="Reject User"
-              >
-                <X size={13} />
-                <span>Reject</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {canEditThisUser && (
-          <div className="flex items-center justify-end gap-1 pt-1 border-t border-border/40">
-            <button
-              onClick={() => setPermissionsUser(u)}
-              className="px-2.5 py-1 rounded-lg hover:bg-secondary text-xs font-semibold text-foreground flex items-center gap-1"
-            >
-              <ShieldCheck size={13} />
-              <span>Permissions</span>
-            </button>
-            <button
-              onClick={() => {
-                setPasswordUser(u);
-                setPasswordForm({ newPassword: '', confirmPassword: '' });
-              }}
-              className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground"
-              title="Reset Password"
-            >
-              <KeyRound size={13} />
-            </button>
-            {!isTargetOwner && !isSelf && (
-              <button
-                onClick={() => setDeleteUserTarget(u)}
-                className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600"
-                title="Delete"
-              >
-                <Trash2 size={13} />
-              </button>
-            )}
-          </div>
-        )}
+        <div className="flex items-center justify-end gap-1 pt-1">
+          <button
+            onClick={() => setPermissionsUser(u)}
+            className="px-2.5 py-1 rounded-lg hover:bg-secondary text-xs font-semibold text-foreground flex items-center gap-1 cursor-pointer"
+          >
+            <ShieldCheck size={13} className="shrink-0" />
+            <span>Permissions</span>
+          </button>
+          <button
+            onClick={() => {
+              setPasswordUser(u);
+              setPasswordForm({ newPassword: '', confirmPassword: '' });
+            }}
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+            title="Reset Password"
+          >
+            <KeyRound size={13} />
+          </button>
+          <button
+            onClick={() => setDeleteUserTarget(u)}
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+            title="Delete"
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
       </div>
     );
   };
 
-  const companyDisplayName = organization?.name ? `${organization.name} + RWM` : 'RiseWithMedia';
-
   return (
     <WorkspacePage
-      breadcrumbs={[companyDisplayName, 'Team & People', 'User Directory']}
-      title={isTenant ? `${organization?.name || 'Company'} Team & Roles` : 'Team Directory & User Access'}
-      subtitle={
-        isTenant
-          ? `Manage company admins, managers, specialists, and team member accounts for ${organization?.name || 'your company'}.`
-          : 'Manage team accounts, permission policies, system role assignments, and registration approval workflows.'
-      }
-      icon="👥"
+      breadcrumbs={isTenant ? [organization?.name || 'Company', 'Team & Workload', 'User Directory'] : ['RiseWithMedia', 'Team & Workload', 'User Directory']}
+      title={isTenant ? `${organization?.name || 'Company'} Team Directory` : 'Team Directory & User Access'}
+      icon={UsersIcon}
       properties={[
-        { label: 'Total Members', value: total, icon: UsersIcon },
-        ...(isTenant && organization
-          ? [
-              {
-                label: 'Team Seats',
-                value: `${total} / ${maxSeats}`,
-                tone: total >= maxSeats ? 'warning' : 'success',
-                icon: UsersIcon,
-              },
-            ]
-          : []),
-        { label: 'Admins & Managers', value: adminsAndManagersCount, tone: 'info', icon: Shield },
-        { label: 'Active Status', value: activeCount, tone: 'success', icon: CheckCircle2 },
+        { label: 'Total Staff', value: staffUsers.length, icon: UsersIcon, tone: 'primary' },
+        { label: 'Employees', value: employeeUsers.length, tone: 'neutral' },
+        { label: 'Client Accounts', value: clientUsers.length, icon: Building2, tone: 'info' },
+        { label: 'Approved Staff', value: approvedStaffCount, tone: 'success', icon: CheckCircle2 },
+        { label: 'Pending Approval', value: pendingCount, tone: pendingCount > 0 ? 'warning' : 'neutral', icon: Clock },
+        ...(isTenant ? [{ label: 'Seat Usage', value: `${staffUsers.length} / ${maxSeats}`, tone: staffUsers.length >= maxSeats ? 'warning' : 'neutral' }] : []),
       ]}
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             size="sm"
             onClick={() => refetch()}
             variant="outline"
-            className="rounded-xl text-xs font-bold gap-1.5 shadow-sm"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold min-h-[38px] cursor-pointer"
           >
             <RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />
             <span>Refresh</span>
@@ -564,83 +637,282 @@ const Users = () => {
             <Button
               size="sm"
               onClick={() => setShowAddModal(true)}
-              className="rounded-xl text-xs font-bold gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90"
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold min-h-[38px] shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
             >
-              <Plus size={14} />
+              <UserPlus size={14} />
               <span>Add Team Member</span>
             </Button>
           )}
         </div>
       }
     >
-      {/* Super Admin Notice for Company Registration Requests */}
-      {currentUser?.role === 'superAdmin' && !currentUser?.organizationId && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 px-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/50 mb-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shrink-0 shadow-sm shadow-indigo-600/20">
-              <Building2 size={18} />
-            </div>
-            <div>
-              <p className="font-bold text-sm text-foreground">Looking for Company Registration Requests?</p>
-              <p className="text-xs text-muted-foreground">
-                External company registrations and SaaS tenant onboarding requests are managed in the separate Company Requests Dashboard.
-              </p>
-            </div>
-          </div>
-          <Link
-            to="/admin/company-requests"
-            className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition-all shrink-0"
+      {/* Category Tabs: Team & Staff vs Client Accounts */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="inline-flex p-1 rounded-2xl bg-secondary/70 border border-border/40">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('team');
+              setRoleFilter('all');
+            }}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'team'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+            }`}
           >
-            <span>Open Company Requests</span>
-            <ArrowRight size={13} />
-          </Link>
+            <UsersIcon size={14} />
+            <span>Team & Staff</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                activeTab === 'team'
+                  ? 'bg-primary-foreground/20 text-primary-foreground'
+                  : 'bg-secondary text-muted-foreground'
+              }`}
+            >
+              {staffUsers.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('clients');
+              setRoleFilter('all');
+            }}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'clients'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+            }`}
+          >
+            <Building2 size={14} />
+            <span>Client Accounts</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                activeTab === 'clients'
+                  ? 'bg-primary-foreground/20 text-primary-foreground'
+                  : 'bg-secondary text-muted-foreground'
+              }`}
+            >
+              {clientUsers.length}
+            </span>
+          </button>
+        </div>
+
+        {activeTab === 'team' && (
+          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <span className="font-semibold text-foreground">{employeeUsers.length}</span> employees &middot;{' '}
+            <span className="font-semibold text-foreground">{staffUsers.length - employeeUsers.length}</span> management / staff
+          </div>
+        )}
+        {activeTab === 'clients' && (
+          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <span className="font-semibold text-foreground">{clientUsers.length}</span> client portal logins
+          </div>
+        )}
+      </div>
+
+      {/* Role Filter Tabs (Shown for Team tab: Employees 1st, then Management roles) */}
+      {activeTab === 'team' && (
+        <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1 custom-scrollbar">
+          {[
+            { key: 'all', label: 'All Team Staff' },
+            { key: 'employee', label: 'Employees' },
+            { key: 'admin', label: 'Admins' },
+            { key: 'manager', label: 'Managers' },
+            { key: 'superAdmin', label: 'Super Admins' },
+            { key: 'organizationOwner', label: 'Org Owners' },
+            { key: 'referral', label: 'Referrals' },
+          ].map((r) => {
+            const count =
+              r.key === 'all'
+                ? staffUsers.length
+                : staffUsers.filter((u) => u.role === r.key).length;
+            if (count === 0 && r.key !== 'all' && r.key !== 'employee' && r.key !== 'admin') {
+              return null;
+            }
+            return (
+              <button
+                key={r.key}
+                onClick={() => setRoleFilter(r.key)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                  roleFilter === r.key
+                    ? 'bg-primary text-primary-foreground font-bold shadow-sm'
+                    : 'bg-card text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/40'
+                }`}
+              >
+                <span>{r.label}</span>
+                <span className={`text-[10px] font-mono ${roleFilter === r.key ? 'opacity-90' : 'opacity-60'}`}>
+                  ({count})
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {/* Role Filter Tabs */}
-      <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-1">
-        {(isTenant
-          ? ['all', 'organizationOwner', 'admin', 'manager', 'employee']
-          : ['all', 'superAdmin', 'admin', 'manager', 'employee', 'client', 'referral']
-        ).map((r) => (
-          <button
-            key={r}
-            onClick={() => setRoleFilter(r)}
-            className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
-              roleFilter === r
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary'
-            }`}
-          >
-            {r === 'all'
-              ? 'All Roles'
-              : r === 'organizationOwner'
-              ? 'Owner'
-              : r === 'admin'
-              ? (isTenant ? 'Company Admin' : 'Admin')
-              : r === 'manager'
-              ? (isTenant ? 'Company Manager' : 'Manager')
-              : r === 'employee'
-              ? 'Team Members'
-              : r.replace(/([A-Z])/g, ' $1')}
-          </button>
-        ))}
-      </div>
-
       <DatabaseView
         viewKey="rwm_users_view_v1"
-        views={['table', 'cards']}
+        views={['cards', 'table']}
         items={filteredUsers}
         totalCount={filteredUsers.length}
         searchPlaceholder={
-          isTenant
-            ? `Search ${organization?.name || 'company'} members by name, email, role, or department...`
-            : 'Search team members by name, email, role, or department...'
+          activeTab === 'clients'
+            ? 'Search client accounts by name, company, email, or phone...'
+            : 'Search team members by name, email, department, or role...'
         }
-        columns={tableColumns}
+        columns={activeTab === 'clients' ? clientTableColumns : teamTableColumns}
         renderCard={renderCard}
         onSearchChange={setSearchTerm}
       />
+
+      {/* Permissions Modal */}
+      {permissionsUser && (
+        <UserPermissionsModal
+          isOpen={Boolean(permissionsUser)}
+          onClose={() => setPermissionsUser(null)}
+          user={permissionsUser}
+          onSave={async (userId, data) => {
+            await updateUser.mutateAsync({ id: userId, data });
+          }}
+        />
+      )}
+
+      {/* Reset Password Modal */}
+      <Dialog open={Boolean(passwordUser)} onOpenChange={(open) => !open && setPasswordUser(null)}>
+        <DialogContent size="lg" noPadding hideCloseButton className="flex flex-col min-h-0 p-0 overflow-hidden bg-card w-[calc(100vw-24px)] max-w-xl max-h-[90dvh]">
+          <DialogHeader className="px-6 py-4 sm:py-5 bg-card shrink-0 select-none flex flex-row items-center justify-between gap-4 m-0 space-y-0">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-foreground shrink-0 ">
+                <KeyRound size={20} />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="text-lg sm:text-xl font-bold text-foreground leading-tight truncate">
+                  Reset Password — {passwordUser?.name}
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                  Reset password
+                </DialogDescription>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <kbd className="hidden sm:inline-flex items-center justify-center h-6 px-2 rounded-md bg-secondary text-[10px] font-mono font-medium text-muted-foreground select-none">
+                ESC
+              </kbd>
+              <DialogClose className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-all active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <X size={16} className="stroke-[2.5]" />
+                <span className="sr-only">Close</span>
+              </DialogClose>
+            </div>
+          </DialogHeader>
+
+          <form onSubmit={handlePasswordSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            {/* Scrollable Form Body - Google Form Linear Stack */}
+            <div className="space-y-6 p-6 sm:p-7 overflow-y-auto flex-1 min-h-0 custom-scrollbar overscroll-contain">
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">New Password *</label>
+                <div className="relative">
+                  <input
+                    type={showPasswordFields.newPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    placeholder="At least 6 characters"
+                    className="w-full h-11 rounded-xl bg-background px-4 pr-11 text-sm text-foreground focus:ring-2 focus:ring-primary/20 outline-none "
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordFields((prev) => ({ ...prev, newPassword: !prev.newPassword }))}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground cursor-pointer"
+                    aria-label={showPasswordFields.newPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPasswordFields.newPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">Confirm Password *</label>
+                <div className="relative">
+                  <input
+                    type={showPasswordFields.confirmPassword ? 'text' : 'password'}
+                    required
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    placeholder="Re-enter password"
+                    className="w-full h-11 rounded-xl bg-background px-4 pr-11 text-sm text-foreground focus:ring-2 focus:ring-primary/20 outline-none "
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordFields((prev) => ({ ...prev, confirmPassword: !prev.confirmPassword }))}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground cursor-pointer"
+                    aria-label={showPasswordFields.confirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPasswordFields.confirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Pinned Sticky Bottom Action Footer */}
+            <div className="shrink-0 bg-card px-6 py-4 flex items-center justify-between gap-3 z-10 select-none">
+              <span className="text-xs text-muted-foreground hidden sm:inline-flex items-center gap-1.5">
+                <span>Press</span>
+                <kbd className="px-1.5 py-0.5 rounded-md bg-secondary text-[10px] font-mono font-medium text-foreground">
+                  ESC
+                </kbd>
+                <span>to close</span>
+              </span>
+
+              <div className="flex items-center gap-3 ml-auto">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setPasswordUser(null)}
+                  className="h-11 px-5 rounded-xl text-sm font-semibold cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="h-11 px-6 rounded-xl bg-primary hover:opacity-90 text-sm font-bold text-primary-foreground cursor-pointer transition-all"
+                >
+                  Update Password
+                </Button>
+              </div>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Modal */}
+      <AlertDialog open={Boolean(deleteUserTarget)} onOpenChange={(open) => !open && setDeleteUserTarget(null)}>
+        <AlertDialogContent className="bg-card ">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold">Delete {deleteUserTarget?.name}?</AlertDialogTitle>
+            <AlertDialogDescription className="sr-only">
+              Are you sure you want to permanently delete {deleteUserTarget?.name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <AlertDialogCancel className="rounded-xl text-xs">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (deleteUserTarget) {
+                  await deleteUser.mutateAsync(deleteUserTarget._id);
+                  setDeleteUserTarget(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl text-xs font-bold"
+            >
+              Delete User
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Add Team Member Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
@@ -658,7 +930,7 @@ const Users = () => {
               Create a dedicated login for a Company Admin, Manager, or Employee.
               {isTenant && (
                 <span className="block mt-1 font-semibold text-foreground/80">
-                  Plan Usage: {total} of {maxSeats} seats assigned.
+                  Plan Usage: {staffUsers.length} of {maxSeats} seats assigned.
                 </span>
               )}
             </DialogDescription>
@@ -706,8 +978,8 @@ const Users = () => {
                   />
                   <button
                     type="button"
-                    onClick={() => setShowAddPassword((prev) => !prev)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowAddPassword(!showAddPassword)}
+                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-muted-foreground hover:text-foreground cursor-pointer"
                   >
                     {showAddPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
@@ -715,25 +987,17 @@ const Users = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-foreground mb-1">Assigned Role *</label>
+                <label className="block text-xs font-bold text-foreground mb-1">Assign Role *</label>
                 <select
                   value={addForm.role}
                   onChange={(e) => setAddForm({ ...addForm, role: e.target.value })}
-                  className="w-full h-9 rounded-xl border border-border bg-background px-3 text-xs font-semibold focus:ring-1 focus:ring-primary cursor-pointer"
+                  className="w-full h-9 rounded-xl border border-border bg-background px-3 text-xs focus:ring-1 focus:ring-primary cursor-pointer"
                 >
-                  {isTenant ? (
-                    companyRoles.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
-                    ))
-                  ) : (
-                    platformRoles.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
-                    ))
-                  )}
+                  {(isTenant ? companyRoles : platformRoles).map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -745,39 +1009,33 @@ const Users = () => {
                   type="text"
                   value={addForm.department}
                   onChange={(e) => setAddForm({ ...addForm, department: e.target.value })}
-                  placeholder="e.g. Engineering, Sales"
+                  placeholder="e.g. Design, SMM, Dev"
                   className="w-full h-9 rounded-xl border border-border bg-background px-3 text-xs focus:ring-1 focus:ring-primary"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-foreground mb-1">Position / Job Title</label>
+                <label className="block text-xs font-bold text-foreground mb-1">Position / Title</label>
                 <input
                   type="text"
                   value={addForm.position}
                   onChange={(e) => setAddForm({ ...addForm, position: e.target.value })}
-                  placeholder="e.g. Lead Project Manager"
+                  placeholder="e.g. Senior Video Editor"
                   className="w-full h-9 rounded-xl border border-border bg-background px-3 text-xs focus:ring-1 focus:ring-primary"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-foreground mb-1">Phone (Optional)</label>
+              <label className="block text-xs font-bold text-foreground mb-1">Phone Number</label>
               <input
                 type="tel"
                 value={addForm.phone}
                 onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
-                placeholder="+1 234 567 8900"
+                placeholder="e.g. +91 9876543210"
                 className="w-full h-9 rounded-xl border border-border bg-background px-3 text-xs focus:ring-1 focus:ring-primary"
               />
             </div>
-
-            {isTenant && total >= maxSeats && (
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
-                Warning: You have reached the maximum seat limit ({maxSeats}) for this plan. You may need to upgrade to create more users.
-              </div>
-            )}
 
             <div className="flex justify-end gap-2 pt-3 border-t border-border/60">
               <Button
@@ -785,7 +1043,7 @@ const Users = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowAddModal(false)}
-                className="rounded-xl text-xs"
+                className="rounded-xl text-xs cursor-pointer"
               >
                 Cancel
               </Button>
@@ -793,117 +1051,14 @@ const Users = () => {
                 type="submit"
                 size="sm"
                 disabled={isSubmittingUser}
-                className="rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+                className="rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
               >
-                {isSubmittingUser ? 'Creating...' : 'Create Account'}
+                {isSubmittingUser ? 'Adding...' : 'Add Member'}
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Permissions Modal */}
-      {permissionsUser && (
-        <UserPermissionsModal
-          isOpen={Boolean(permissionsUser)}
-          onClose={() => setPermissionsUser(null)}
-          user={permissionsUser}
-          onSave={async (userId, data) => {
-            await updateUser.mutateAsync({ id: userId, data });
-          }}
-        />
-      )}
-
-      {/* Reset Password Modal */}
-      <Dialog open={Boolean(passwordUser)} onOpenChange={(open) => !open && setPasswordUser(null)}>
-        <DialogContent className="max-w-md bg-card border border-border">
-          <DialogHeader>
-            <DialogTitle className="text-base font-black text-foreground">Reset Password for {passwordUser?.name}</DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Set a new secure password for this user account.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handlePasswordSubmit} className="space-y-3 pt-2">
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">New Password</label>
-              <div className="relative">
-                <input
-                  type={showPasswordFields.newPassword ? 'text' : 'password'}
-                  required
-                  minLength={6}
-                  value={passwordForm.newPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                  placeholder="At least 6 characters"
-                  className="w-full h-9 rounded-xl border border-border bg-background px-3 pr-9 text-xs"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPasswordFields((prev) => ({ ...prev, newPassword: !prev.newPassword }))}
-                  className="absolute inset-y-0 right-0 flex items-center pr-2 text-muted-foreground hover:text-foreground"
-                  aria-label={showPasswordFields.newPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPasswordFields.newPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Confirm Password</label>
-              <div className="relative">
-                <input
-                  type={showPasswordFields.confirmPassword ? 'text' : 'password'}
-                  required
-                  value={passwordForm.confirmPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                  placeholder="Re-enter password"
-                  className="w-full h-9 rounded-xl border border-border bg-background px-3 pr-9 text-xs"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPasswordFields((prev) => ({ ...prev, confirmPassword: !prev.confirmPassword }))}
-                  className="absolute inset-y-0 right-0 flex items-center pr-2 text-muted-foreground hover:text-foreground"
-                  aria-label={showPasswordFields.confirmPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPasswordFields.confirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setPasswordUser(null)} className="rounded-xl text-xs">
-                Cancel
-              </Button>
-              <Button type="submit" size="sm" className="rounded-xl text-xs font-bold">
-                Update Password
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete User Modal */}
-      <AlertDialog open={Boolean(deleteUserTarget)} onOpenChange={(open) => !open && setDeleteUserTarget(null)}>
-        <AlertDialogContent className="bg-card border border-border">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-base font-bold">Delete User Account?</AlertDialogTitle>
-            <AlertDialogDescription className="text-xs">
-              Are you sure you want to permanently delete {deleteUserTarget?.name}? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex justify-end gap-2 pt-2">
-            <AlertDialogCancel className="rounded-xl text-xs">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                if (deleteUserTarget) {
-                  await deleteUser.mutateAsync(deleteUserTarget._id);
-                  setDeleteUserTarget(null);
-                }
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl text-xs font-bold"
-            >
-              Delete User
-            </AlertDialogAction>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
     </WorkspacePage>
   );
 };

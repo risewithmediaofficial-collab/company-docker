@@ -1,7 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { devApi } from '../../api/development';
 import { DevelopmentSubNav } from '../../components/development/DevelopmentSubNav';
 import { PageHeader } from '../../components/ui/page';
+import { SelectDropdown } from '../../components/ui/SelectDropdown';
+import { useDateFilter } from '../../context/DateFilterContext';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from '../../components/ui/dialog';
 import {
   Rocket,
   PlusCircle,
@@ -13,12 +23,14 @@ import {
   Trash2,
   Edit3,
   Calendar,
-} from 'lucide-react';
-import { toast } from 'react-hot-toast';
+  X,
+} from '@/components/ui/muiIcons';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 export default function DevelopmentReleases() {
-  const [releases, setReleases] = useState([]);
+  const { isDateInRange } = useDateFilter();
+  const [rawReleases, setReleases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -51,6 +63,11 @@ export default function DevelopmentReleases() {
   useEffect(() => {
     fetchReleases();
   }, [fetchReleases]);
+
+  const releases = useMemo(
+    () => rawReleases.filter((r) => isDateInRange(r.releaseDate || r.createdAt)),
+    [rawReleases, isDateInRange]
+  );
 
   const handleOpenCreate = () => {
     setEditingId(null);
@@ -131,20 +148,19 @@ export default function DevelopmentReleases() {
     <div className="space-y-6">
       <PageHeader
         title="Releases & Deployments"
-        subtitle="Manage versions, track deployments across environments, and review bundled features"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={fetchReleases}
               disabled={loading}
-              className="flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-foreground font-semibold rounded-xl text-xs hover:bg-secondary/80 transition-all shadow-xs"
+              className="flex items-center gap-2 h-10 px-3.5 bg-secondary text-foreground font-semibold rounded-xl text-xs hover:bg-secondary/80 transition-all cursor-pointer"
             >
               <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} />
               Refresh
             </button>
             <button
               onClick={handleOpenCreate}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-bold rounded-xl text-xs shadow-md shadow-primary/25 hover:opacity-95 transition-all"
+              className="flex items-center gap-2 h-10 px-4 bg-primary text-primary-foreground font-bold rounded-xl text-xs hover:opacity-90 transition-colors cursor-pointer"
             >
               <PlusCircle size={14} />
               New Release
@@ -157,17 +173,16 @@ export default function DevelopmentReleases() {
 
       {/* ── Releases List ────────────────────────────────────────────── */}
       {loading ? (
-        <div className="p-12 text-center text-muted-foreground text-xs flex items-center justify-center gap-2 bg-card border border-border rounded-2xl">
+        <div className="p-12 text-center text-muted-foreground text-xs flex items-center justify-center gap-2 bg-card rounded-2xl">
           <RefreshCcw size={16} className="animate-spin text-primary" /> Loading releases...
         </div>
       ) : releases.length === 0 ? (
-        <div className="p-12 text-center text-muted-foreground text-xs space-y-3 bg-card border border-border rounded-2xl">
+        <div className="p-12 text-center text-muted-foreground text-xs space-y-3 bg-card rounded-2xl">
           <Rocket size={32} className="mx-auto opacity-30 text-primary" />
           <p className="font-semibold text-foreground text-sm">No releases configured yet</p>
-          <p className="text-muted-foreground">Create a release version to associate completed CRM tasks with deployment environments.</p>
           <button
             onClick={handleOpenCreate}
-            className="px-4 py-2 bg-primary text-primary-foreground font-bold rounded-xl text-xs inline-flex items-center gap-1.5 shadow-md"
+            className="px-4 py-2 bg-primary text-primary-foreground font-bold rounded-xl text-xs inline-flex items-center gap-1.5 "
           >
             <PlusCircle size={14} /> Create First Release
           </button>
@@ -180,20 +195,20 @@ export default function DevelopmentReleases() {
             return (
               <div
                 key={release._id}
-                className="bg-card border border-border rounded-2xl p-5 shadow-xs space-y-3 hover:shadow-md transition-all"
+                className="bg-card rounded-2xl p-5 space-y-3 transition-all"
               >
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono font-black text-sm text-foreground bg-primary/10 text-primary px-2.5 py-0.5 rounded-lg border border-primary/20">
+                      <span className="font-mono font-black text-sm text-foreground bg-secondary px-2.5 py-0.5 rounded-lg ">
                         {release.version}
                       </span>
                       <h3 className="font-bold text-foreground text-base">{release.name}</h3>
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                           release.environment === 'production'
-                            ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
-                            : 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30'
+                            ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30'
+                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
                         }`}
                       >
                         {release.environment}
@@ -202,7 +217,7 @@ export default function DevelopmentReleases() {
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                           isDeployed
                             ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                            : 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30'
                         }`}
                       >
                         {release.status}
@@ -218,21 +233,21 @@ export default function DevelopmentReleases() {
                     {!isDeployed && (
                       <button
                         onClick={() => handleMarkDeployed(release._id)}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs mr-2"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-xs font-bold transition-all mr-2 cursor-pointer"
                       >
                         <Rocket size={12} /> Mark Deployed
                       </button>
                     )}
                     <button
                       onClick={() => handleOpenEdit(release)}
-                      className="p-1.5 text-muted-foreground hover:text-primary rounded-lg transition-colors"
+                      className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors cursor-pointer"
                       title="Edit release"
                     >
                       <Edit3 size={14} />
                     </button>
                     <button
                       onClick={() => handleDeleteRelease(release._id)}
-                      className="p-1.5 text-muted-foreground hover:text-rose-500 rounded-lg transition-colors"
+                      className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors cursor-pointer"
                       title="Delete release"
                     >
                       <Trash2 size={14} />
@@ -241,7 +256,7 @@ export default function DevelopmentReleases() {
                 </div>
 
                 {/* Release details */}
-                <div className="flex items-center gap-4 text-xs text-muted-foreground border-t border-border pt-2 flex-wrap">
+                <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 flex-wrap tabular-nums">
                   {release.commit && (
                     <span className="flex items-center gap-1 font-mono text-[11px]">
                       <GitCommit size={12} /> {release.commit}
@@ -262,53 +277,72 @@ export default function DevelopmentReleases() {
         </div>
       )}
 
-      {/* ── Create / Edit Release Modal ──────────────────────────────── */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <h3 className="font-bold text-foreground text-sm flex items-center gap-2">
-                <Rocket size={16} className="text-primary" />
-                {editingId ? 'Edit Release' : 'Create New Release'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="text-muted-foreground hover:text-foreground text-xs"
-              >
-                ✕
-              </button>
+      {/* ── Create / Edit Release Side Drawer ────────────────────────── */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent
+          variant="side"
+          size="md"
+          noPadding
+          hideCloseButton
+          className="flex flex-col min-h-0 p-0 overflow-hidden bg-card "
+        >
+          <DialogHeader className="px-5 py-4 bg-card shrink-0 select-none flex flex-row items-center justify-between gap-3 m-0 space-y-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-foreground">
+                <Rocket size={18} />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="text-lg sm:text-xl font-bold text-foreground truncate">
+                  {editingId ? 'Edit Release' : 'Create New Release'}
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                  Configure version, target environment and release notes
+                </DialogDescription>
+              </div>
             </div>
+            <DialogClose
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all cursor-pointer shrink-0"
+            >
+              <X size={16} />
+              <span className="sr-only">Close</span>
+            </DialogClose>
+          </DialogHeader>
 
-            <form onSubmit={handleSaveRelease} className="space-y-3.5 text-xs">
-              <div className="grid grid-cols-2 gap-2">
+          <form onSubmit={handleSaveRelease} className="flex flex-col flex-1 min-h-0 overflow-hidden text-left">
+            <div className="flex-1 min-h-0 overflow-y-auto p-6 sm:p-7 space-y-5 custom-scrollbar">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="font-semibold text-foreground block mb-1">Version *</label>
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Version *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. v2.4.1"
                     value={form.version}
                     onChange={(e) => setForm({ ...form, version: e.target.value })}
-                    className="app-input w-full font-mono font-bold"
+                    className="app-input w-full"
                   />
                 </div>
                 <div>
-                  <label className="font-semibold text-foreground block mb-1">Environment</label>
-                  <select
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Environment</label>
+                  <SelectDropdown
                     value={form.environment}
-                    onChange={(e) => setForm({ ...form, environment: e.target.value })}
-                    className="app-select w-full"
-                  >
-                    <option value="development">Development</option>
-                    <option value="staging">Staging</option>
-                    <option value="production">Production</option>
-                  </select>
+                    onChange={(val) => setForm({ ...form, environment: val || 'development' })}
+                    options={[
+                      { value: 'development', label: 'Development' },
+                      { value: 'staging', label: 'Staging' },
+                      { value: 'production', label: 'Production' },
+                    ]}
+                    allowCustom={false}
+                    allowDeselect={false}
+                    className="w-full"
+                    buttonClassName="h-10 text-xs sm:text-sm"
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="font-semibold text-foreground block mb-1">Release Name *</label>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Release Name *</label>
                 <input
                   type="text"
                   required
@@ -320,48 +354,48 @@ export default function DevelopmentReleases() {
               </div>
 
               <div>
-                <label className="font-semibold text-foreground block mb-1">Git Commit / Tag (optional)</label>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Git Commit / Tag (optional)</label>
                 <input
                   type="text"
                   placeholder="e.g. 7f8a91c or release-2.4.1"
                   value={form.commit}
                   onChange={(e) => setForm({ ...form, commit: e.target.value })}
-                  className="app-input w-full font-mono"
+                  className="app-input w-full"
                 />
               </div>
 
               <div>
-                <label className="font-semibold text-foreground block mb-1">Description / Release Notes</label>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Description / Release Notes</label>
                 <textarea
-                  rows={3}
+                  rows={4}
                   placeholder="Summary of changes in this release..."
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full p-2.5 bg-background border border-border rounded-xl text-xs outline-none focus:border-primary"
+                  className="w-full min-h-[96px] px-4 py-3 bg-secondary/75 rounded-xl text-sm font-normal text-foreground outline-none focus:bg-background focus:ring-2 focus:ring-brand/40"
                 />
               </div>
+            </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="app-button-secondary text-xs"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="app-button-primary text-xs flex items-center gap-1"
-                >
-                  <CheckCircle2 size={13} />
-                  {saving ? 'Saving...' : editingId ? 'Update Release' : 'Create Release'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div className="shrink-0 flex flex-wrap items-center justify-end gap-2.5 px-6 py-4 bg-card">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="h-11 px-5 rounded-xl bg-secondary text-foreground text-sm font-semibold hover:bg-secondary/80 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="h-11 px-6 rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground text-sm font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <CheckCircle2 size={15} />
+                {saving ? 'Saving...' : editingId ? 'Update Release' : 'Create Release'}
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

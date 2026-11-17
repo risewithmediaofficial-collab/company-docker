@@ -20,12 +20,13 @@ import {
   AlertTriangle,
   RotateCcw,
   SlidersHorizontal,
-  DollarSign,
   Layers,
+  ListChecks,
   Sparkles,
   Search,
   Check,
   X,
+  ChevronDown,
   User,
   Users,
   PieChart,
@@ -41,7 +42,9 @@ import {
   Wrench,
   FileText,
   Edit2,
-} from 'lucide-react';
+  Maximize2,
+  Minimize2,
+} from '@/components/ui/muiIcons';
 import { useProjects, useDeleteProject, useUpdateProject } from '../../hooks/useProjects';
 import { useClients } from '../../hooks/useClients';
 import { useAutoScrollOnDrag } from '../../hooks/useAutoScrollOnDrag';
@@ -62,10 +65,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { formatINR } from '../../utils/currency';
 import { SelectDropdown } from '../../components/ui/SelectDropdown';
-import { useDateFilter } from '../../context/DateFilterContext';
-import { DateRangePicker } from '../../components/ui/DateRangePicker';
+import { useDateFilter, toLocalYMD } from '../../context/DateFilterContext';
 import {
   PROJECT_CATEGORIES,
   getProjectCategoryMeta,
@@ -91,18 +92,18 @@ const projectPriorityTone = {
 const STATUS_COLUMNS = ['Planning', 'In Progress', 'On Hold', 'Completed', 'Cancelled'];
 
 export const PROJECT_SORT_OPTIONS = [
-  { value: 'dueDate_asc', label: '📅 Due Date: Earliest First' },
-  { value: 'dueDate_desc', label: '📅 Due Date: Latest First' },
-  { value: 'priority_desc', label: '⚡ Priority: High to Low' },
-  { value: 'priority_asc', label: '⚡ Priority: Low to High' },
-  { value: 'name_asc', label: '📁 Project: A to Z' },
-  { value: 'name_desc', label: '📁 Project: Z to A' },
-  { value: 'budget_desc', label: '💰 Budget: High to Low' },
-  { value: 'budget_asc', label: '💰 Budget: Low to High' },
-  { value: 'progress_desc', label: '📊 Progress: High to Low' },
-  { value: 'progress_asc', label: '📊 Progress: Low to High' },
-  { value: 'newest', label: '🕒 Recently Created' },
-  { value: 'oldest', label: '🕒 Oldest Created' },
+  { value: 'dueDate_asc', label: 'Due Date: Earliest First' },
+  { value: 'dueDate_desc', label: 'Due Date: Latest First' },
+  { value: 'priority_desc', label: 'Priority: High to Low' },
+  { value: 'priority_asc', label: 'Priority: Low to High' },
+  { value: 'name_asc', label: 'Project: A to Z' },
+  { value: 'name_desc', label: 'Project: Z to A' },
+  { value: 'tasks_desc', label: 'Tasks Available: High to Low' },
+  { value: 'tasks_asc', label: 'Tasks Available: Low to High' },
+  { value: 'progress_desc', label: 'Progress: High to Low' },
+  { value: 'progress_asc', label: 'Progress: Low to High' },
+  { value: 'newest', label: 'Recently Created' },
+  { value: 'oldest', label: 'Oldest Created' },
 ];
 
 const Projects = () => {
@@ -120,43 +121,87 @@ const Projects = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [clientFilter, setClientFilter] = useState('');
-  const [monthFilter, setMonthFilter] = useState('');
   const [sortBy, setSortBy] = useState('dueDate_asc');
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [currentView, setCurrentView] = useState('board'); // 'board' | 'table'
   const [boardGroupBy, setBoardGroupBy] = useState('status'); // 'status' | 'category'
+
+  const secondaryFiltersCount = useMemo(() => {
+    let count = 0;
+    if (priorityFilter) count++;
+    if (clientFilter) count++;
+    if (sortBy && sortBy !== 'dueDate_asc') count++;
+    return count;
+  }, [priorityFilter, clientFilter, sortBy]);
 
   // Drag and Drop States for Kanban
   const [draggingProjectId, setDraggingProjectId] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
   const [dragOverProjectIndex, setDragOverProjectIndex] = useState(null);
+  const [expandedProjectIds, setExpandedProjectIds] = useState({});
   const projectsBoardRef = useRef(null);
+
+  const toggleProjectExpand = (e, projectId) => {
+    e.stopPropagation();
+    setExpandedProjectIds((prev) => ({ ...prev, [projectId]: !prev[projectId] }));
+  };
 
   // Auto scroll while dragging
   useAutoScrollOnDrag(projectsBoardRef, Boolean(draggingProjectId));
 
+  const {
+    startDate: globalStartDate,
+    endDate: globalEndDate,
+    isDateInRange,
+    isFiltered: isGlobalDateFiltered,
+    resetDateFilter,
+  } = useDateFilter();
+
+  const projectFilters = useMemo(
+    () => ({
+      startDate: globalStartDate || undefined,
+      endDate: globalEndDate || undefined,
+    }),
+    [globalStartDate, globalEndDate]
+  );
+
   // Queries
-  const { data: rawProjects = [], isLoading } = useProjects();
+  const { data: rawProjects = [], isLoading } = useProjects(projectFilters);
   const { data: clients = [] } = useClients();
-  // Note: we intentionally do NOT apply global date filter to the Projects board
-  // The global date filter is for Dashboard analytics. Projects workspace shows all projects.
 
   const deleteProjectMutation = useDeleteProject();
   const updateProjectMutation = useUpdateProject();
 
-  // 1. Base projects — show all by default; only apply local monthFilter if set
+  // 1. Base projects filtered by global date sort
   const baseDateFilteredProjects = useMemo(() => {
+    if (!globalStartDate && !globalEndDate) return rawProjects;
+
+    const rangeStart = globalStartDate || '0000-00-00';
+    const rangeEnd = globalEndDate || '9999-99-99';
+
     return rawProjects.filter((project) => {
-      if (monthFilter !== '') {
-        const projectDate = project.createdAt
-          ? new Date(project.createdAt)
-          : project.startDate
-          ? new Date(project.startDate)
-          : null;
-        if (!projectDate || projectDate.getMonth() !== Number(monthFilter)) return false;
+      const pStart = project.startDate ? toLocalYMD(project.startDate) : '';
+      const pEnd = (project.endDate || project.dueDate) ? toLocalYMD(project.endDate || project.dueDate) : '';
+
+      // If both start and end exist, project is active if its duration overlaps [rangeStart, rangeEnd]
+      if (pStart && pEnd) {
+        return pStart <= rangeEnd && pEnd >= rangeStart;
       }
-      return true;
+
+      // If only start date exists
+      if (pStart) {
+        return pStart <= rangeEnd;
+      }
+
+      // If only end/due date exists
+      if (pEnd) {
+        return isDateInRange(pEnd);
+      }
+
+      // Fallback to createdAt if no operational timeline exists
+      return isDateInRange(project.createdAt);
     });
-  }, [rawProjects, monthFilter]);
+  }, [rawProjects, globalStartDate, globalEndDate, isDateInRange]);
 
 
   // 2. Compute dynamic project counts per category
@@ -189,7 +234,7 @@ const Projects = () => {
 
   // 4. Fully filtered projects dataset
   const filteredProjects = useMemo(() => {
-    return baseDateFilteredProjects.filter((project) => {
+    let result = baseDateFilteredProjects.filter((project) => {
       // Category filter
       if (categoryFilter && categoryFilter !== 'all') {
         if (!isCategoryMatch(project.category, categoryFilter, project.name)) {
@@ -242,13 +287,13 @@ const Projects = () => {
     const priorityWeights = { Critical: 4, Urgent: 4, High: 3, Medium: 2, Low: 1 };
     result.sort((a, b) => {
       if (sortBy === 'dueDate_asc') {
-        const dateA = a.endDate ? new Date(a.endDate).getTime() : Infinity;
-        const dateB = b.endDate ? new Date(b.endDate).getTime() : Infinity;
+        const dateA = (a.dueDate || a.endDate) ? new Date(a.dueDate || a.endDate).getTime() : Infinity;
+        const dateB = (b.dueDate || b.endDate) ? new Date(b.dueDate || b.endDate).getTime() : Infinity;
         return dateA - dateB;
       }
       if (sortBy === 'dueDate_desc') {
-        const dateA = a.endDate ? new Date(a.endDate).getTime() : -Infinity;
-        const dateB = b.endDate ? new Date(b.endDate).getTime() : -Infinity;
+        const dateA = (a.dueDate || a.endDate) ? new Date(a.dueDate || a.endDate).getTime() : -Infinity;
+        const dateB = (b.dueDate || b.endDate) ? new Date(b.dueDate || b.endDate).getTime() : -Infinity;
         return dateB - dateA;
       }
       if (sortBy === 'priority_desc') {
@@ -263,15 +308,11 @@ const Projects = () => {
       if (sortBy === 'name_desc') {
         return (b.name || '').localeCompare(a.name || '');
       }
-      if (sortBy === 'budget_desc') {
-        const valA = a.budget || a.budgetDetails?.totalBudget || a.budgetDetails?.quotedAmount || 0;
-        const valB = b.budget || b.budgetDetails?.totalBudget || b.budgetDetails?.quotedAmount || 0;
-        return valB - valA;
+      if (sortBy === 'tasks_desc') {
+        return (b.totalTasks || 0) - (a.totalTasks || 0);
       }
-      if (sortBy === 'budget_asc') {
-        const valA = a.budget || a.budgetDetails?.totalBudget || a.budgetDetails?.quotedAmount || 0;
-        const valB = b.budget || b.budgetDetails?.totalBudget || b.budgetDetails?.quotedAmount || 0;
-        return valA - valB;
+      if (sortBy === 'tasks_asc') {
+        return (a.totalTasks || 0) - (b.totalTasks || 0);
       }
       if (sortBy === 'progress_desc') {
         return (b.progress || 0) - (a.progress || 0);
@@ -308,10 +349,10 @@ const Projects = () => {
     if (statusFilter) count++;
     if (priorityFilter) count++;
     if (clientFilter) count++;
-    if (monthFilter !== '') count++;
+    if (isGlobalDateFiltered || globalStartDate || globalEndDate) count++;
     if (searchTerm.trim()) count++;
     return count;
-  }, [categoryFilter, statusFilter, priorityFilter, clientFilter, monthFilter, searchTerm]);
+  }, [categoryFilter, statusFilter, priorityFilter, clientFilter, isGlobalDateFiltered, globalStartDate, globalEndDate, searchTerm]);
 
   const clearAllFilters = () => {
     setSearchTerm('');
@@ -319,8 +360,8 @@ const Projects = () => {
     setStatusFilter('');
     setPriorityFilter('');
     setClientFilter('');
-    setMonthFilter('');
     setSortBy('dueDate_asc');
+    resetDateFilter();
   };
 
   // Metric counts and calculations
@@ -329,10 +370,9 @@ const Projects = () => {
   const planningCount = filteredProjects.filter((p) => p.status === 'Planning').length;
   const onHoldCount = filteredProjects.filter((p) => p.status === 'On Hold').length;
   const completedCount = filteredProjects.filter((p) => p.status === 'Completed').length;
-  const totalBudget = filteredProjects.reduce(
-    (sum, p) => sum + (p.budget || p.budgetDetails?.totalBudget || p.budgetDetails?.quotedAmount || 0),
-    0
-  );
+  const totalTasksAvailable = filteredProjects.reduce((sum, p) => sum + (p.totalTasks || 0), 0);
+  const totalOngoingTasks = filteredProjects.reduce((sum, p) => sum + (p.ongoingTasks || 0), 0);
+  const totalCompletedTasks = filteredProjects.reduce((sum, p) => sum + (p.completedTasks ?? p.doneTasks ?? 0), 0);
   const avgProgress = totalProjectsCount > 0
     ? Math.round(filteredProjects.reduce((acc, p) => acc + (p.progress || 0), 0) / totalProjectsCount)
     : 0;
@@ -387,14 +427,14 @@ const Projects = () => {
 
         return (
           <div className="min-w-0 flex items-start gap-2.5">
-            <div className={`p-2 rounded-xl border shrink-0 mt-0.5 ${catMeta.badgeClass}`}>
+            <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${catMeta.badgeClass}`}>
               <CatIcon size={14} />
             </div>
             <div className="min-w-0">
               <div className="font-bold text-foreground text-xs hover:text-primary transition-colors cursor-pointer flex items-center gap-1.5">
                 <span className="truncate">{row.name}</span>
                 {row.priority === 'Critical' && (
-                  <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-rose-500/15 text-rose-600 border border-rose-500/30 shrink-0 uppercase tracking-wider animate-pulse">
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-foreground text-background shrink-0 uppercase tracking-wider">
                     Urgent
                   </span>
                 )}
@@ -402,13 +442,19 @@ const Projects = () => {
               <div className="mt-0.5 text-[11px] text-muted-foreground flex items-center gap-1.5 truncate">
                 {row.client?.name ? (
                   <span className="flex items-center gap-1">
-                    <Building2 size={11} className="text-muted-foreground/70" />
+                    <Building2 size={11} className="text-muted-foreground/70 shrink-0" />
                     <span>{row.client.name}</span>
                   </span>
                 ) : row.category === 'saas_product' || row.isInternal ? (
-                  <span className="font-semibold text-indigo-500">🚀 SaaS / Internal Product</span>
+                  <span className="flex items-center gap-1 font-semibold text-foreground">
+                    <Rocket size={11} className="text-muted-foreground shrink-0" />
+                    <span>SaaS / Internal Product</span>
+                  </span>
                 ) : (
-                  <span>🏢 Internal Workspace</span>
+                  <span className="flex items-center gap-1">
+                    <Building2 size={11} className="text-muted-foreground/70 shrink-0" />
+                    <span>Internal Workspace</span>
+                  </span>
                 )}
               </div>
             </div>
@@ -418,7 +464,7 @@ const Projects = () => {
     },
     {
       key: 'category',
-      label: 'Category / Type',
+      label: 'Project Type',
       render: (row) => {
         const catMeta = getProjectCategoryMeta(row.category);
         const Icon = catMeta.icon;
@@ -426,7 +472,7 @@ const Projects = () => {
         return (
           <div className="flex items-center">
             <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold border ${catMeta.badgeClass}`}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold ${catMeta.badgeClass}`}
             >
               <Icon size={12} className="shrink-0" />
               <span>{catMeta.shortLabel || catMeta.label}</span>
@@ -445,43 +491,26 @@ const Projects = () => {
       ),
     },
     {
-      key: 'priority',
-      label: 'Priority',
-      render: (row) => (
-        <StatusBadge tone={projectPriorityTone[row.priority] || 'neutral'}>
-          {row.priority || 'Medium'}
-        </StatusBadge>
-      ),
-    },
-    {
       key: 'progress',
-      label: 'Progress & Tasks',
+      label: 'Tasks Available',
       render: (row) => (
-        <div className="w-32 space-y-1.5">
+        <div className="w-36 space-y-1.5 tabular-nums">
           <div className="flex items-center justify-between text-[10px] font-bold">
-            <span className="text-muted-foreground">
-              {row.totalTasks ? `${row.doneTasks || 0}/${row.totalTasks} tasks` : `${row.progress || 0}%`}
+            <span className="text-foreground">
+              {row.totalTasks || 0} {row.totalTasks === 1 ? 'task' : 'tasks'}
             </span>
-            <span
-              className={
-                (row.progress || 0) >= 100
-                  ? 'text-emerald-600 dark:text-emerald-400'
-                  : (row.progress || 0) >= 50
-                  ? 'text-primary'
-                  : 'text-foreground'
-              }
-            >
-              {row.progress || 0}%
+            <span className="text-muted-foreground">
+              {row.doneTasks || 0} done ({row.progress || 0}%)
             </span>
           </div>
           <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-300 ${
                 (row.progress || 0) >= 100
-                  ? 'bg-emerald-500'
+                  ? 'bg-foreground'
                   : (row.progress || 0) >= 50
-                  ? 'bg-primary'
-                  : 'bg-amber-500'
+                  ? 'bg-foreground/80'
+                  : 'bg-muted-foreground/60'
               }`}
               style={{ width: `${Math.min(row.progress || 0, 100)}%` }}
             />
@@ -490,40 +519,30 @@ const Projects = () => {
       ),
     },
     {
-      key: 'budget',
-      label: 'Budget / Value',
-      render: (row) => {
-        const val = row.budget || row.budgetDetails?.totalBudget || row.budgetDetails?.quotedAmount || 0;
-        return (
-          <div className="text-xs font-bold text-foreground">
-            {val > 0 ? formatINR(val) : <span className="text-muted-foreground font-normal">—</span>}
-          </div>
-        );
-      },
-    },
-    {
       key: 'timeline',
-      label: 'Timeline & Due',
+      label: 'Start & End Date',
       render: (row) => {
-        const isOverdue = row.endDate && new Date(row.endDate) < new Date() && row.status !== 'Completed';
+        const endDateVal = row.endDate || row.dueDate;
+        const startDateVal = row.startDate;
+        const isOverdue = endDateVal && new Date(endDateVal) < new Date() && row.status !== 'Completed';
 
         return (
-          <div className="text-[11px] space-y-0.5">
-            {row.endDate ? (
-              <div
-                className={`flex items-center gap-1 font-semibold ${
-                  isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-foreground/90'
-                }`}
-              >
-                <Calendar size={11} className="shrink-0" />
-                <span>Due {new Date(row.endDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
-                {isOverdue && <span className="text-[9px] px-1 py-0.2 rounded bg-rose-500/15 font-black">LATE</span>}
-              </div>
-            ) : (
-              <span className="text-muted-foreground">Ongoing</span>
-            )}
-            <div className="text-[10px] text-muted-foreground">
-              {row.createdAt ? `Created ${new Date(row.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}` : ''}
+          <div className="text-[11px] space-y-0.5 tabular-nums">
+            <div className="flex items-center gap-1 text-muted-foreground font-medium">
+              <Calendar size={11} className="shrink-0" />
+              <span>
+                Start: {startDateVal ? new Date(startDateVal).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+              </span>
+            </div>
+            <div
+              className={`flex items-center gap-1 font-semibold ${
+                isOverdue ? 'text-foreground font-bold' : 'text-foreground/90'
+              }`}
+            >
+              <span>
+                End: {endDateVal ? new Date(endDateVal).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'Ongoing'}
+              </span>
+              {isOverdue && <span className="text-[9px] px-1 py-0.2 rounded bg-foreground text-background font-black">LATE</span>}
             </div>
           </div>
         );
@@ -537,7 +556,7 @@ const Projects = () => {
           {row.manager && (
             <div
               title={`Manager: ${row.manager.name}`}
-              className="h-6 w-6 rounded-full bg-primary/20 text-primary border border-background flex items-center justify-center text-[10px] font-bold shadow-xs"
+              className="h-6 w-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold "
             >
               {row.manager.name?.charAt(0) || 'M'}
             </div>
@@ -547,7 +566,7 @@ const Projects = () => {
               <div
                 key={m._id || idx}
                 title={m.name}
-                className="h-6 w-6 rounded-full bg-secondary text-foreground border border-background flex items-center justify-center text-[10px] font-bold shadow-xs"
+                className="h-6 w-6 rounded-full bg-secondary text-foreground flex items-center justify-center text-[10px] font-bold "
               >
                 {m.name?.charAt(0) || 'U'}
               </div>
@@ -556,7 +575,7 @@ const Projects = () => {
             <span className="text-[11px] text-muted-foreground">—</span>
           ) : null}
           {row.team && row.team.length > 3 && (
-            <div className="h-6 w-6 rounded-full bg-muted text-muted-foreground border border-background flex items-center justify-center text-[9px] font-bold">
+            <div className="h-6 w-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[9px] font-bold">
               +{row.team.length - 3}
             </div>
           )}
@@ -576,7 +595,7 @@ const Projects = () => {
 
   // Client dropdown options
   const clientOptions = useMemo(() => {
-    const list = [{ value: '', label: 'All Clients' }, { value: 'internal', label: '🚀 SaaS & Internal (No Client)' }];
+    const list = [{ value: '', label: 'All Clients' }, { value: 'internal', label: 'SaaS & Internal (No Client)' }];
     clients.forEach((c) => {
       list.push({
         value: c._id,
@@ -588,10 +607,9 @@ const Projects = () => {
 
   return (
     <WorkspacePage
-      title="Projects Workspace"
-      subtitle="Connected project delivery pipeline, milestone tracking, service categories, and client accounts."
+      title={user?.role === 'client' ? 'My Projects' : 'Projects Workspace'}
       icon={FolderKanban}
-      breadcrumbs={[{ name: 'Delivery', path: '/tasks' }, { name: 'Projects' }]}
+      breadcrumbs={user?.role === 'client' ? [{ name: 'Portal', path: '/' }, { name: 'My Projects' }] : [{ name: 'Delivery', path: '/tasks' }, { name: 'Projects' }]}
       actions={
         canCreate && (
           <Button
@@ -600,9 +618,9 @@ const Projects = () => {
               setSelectedProject(null);
               setShowAddModal(true);
             }}
-            className="bg-primary text-primary-foreground font-bold shadow-md hover:shadow-lg transition-all"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground font-semibold text-xs rounded-xl transition-all hover:bg-primary/90 min-h-[38px] cursor-pointer"
           >
-            <Plus size={15} className="mr-1.5 stroke-[2.5]" />
+            <Plus size={15} className="mr-1 stroke-[2.5]" />
             New Project
           </Button>
         )
@@ -610,12 +628,12 @@ const Projects = () => {
     >
       <div className="space-y-5">
         {/* TOP EXECUTIVE METRICS CARDS WITH ACCURATE NUMBERS */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 tabular-nums">
           {/* Total Projects Card */}
-          <div className="p-3.5 bg-card rounded-2xl border border-border shadow-xs flex flex-col justify-between space-y-2 relative overflow-hidden group hover:border-primary/40 transition-all">
+          <div className="p-3.5 bg-card rounded-2xl flex flex-col justify-between space-y-2 relative overflow-hidden group transition-all">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Total Projects</span>
-              <div className="h-7 w-7 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center">
+              <div className="h-7 w-7 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
                 <FolderKanban size={14} />
               </div>
             </div>
@@ -623,21 +641,21 @@ const Projects = () => {
               <div className="text-2xl font-black text-foreground tracking-tight">{totalProjectsCount}</div>
               <div className="text-[11px] text-muted-foreground mt-0.5 font-medium flex items-center justify-between">
                 <span>Avg Progress</span>
-                <span className="font-bold text-primary">{avgProgress}%</span>
+                <span className="font-bold text-foreground">{avgProgress}%</span>
               </div>
             </div>
           </div>
 
           {/* In Delivery Card */}
-          <div className="p-3.5 bg-card rounded-2xl border border-border shadow-xs flex flex-col justify-between space-y-2 relative overflow-hidden group hover:border-blue-500/40 transition-all">
+          <div className="p-3.5 bg-card rounded-2xl flex flex-col justify-between space-y-2 relative overflow-hidden group transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">In Delivery</span>
-              <div className="h-7 w-7 rounded-xl bg-blue-500/10 text-blue-600 border border-blue-500/20 flex items-center justify-center">
+              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">In Delivery</span>
+              <div className="h-7 w-7 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
                 <Clock size={14} />
               </div>
             </div>
             <div>
-              <div className="text-2xl font-black text-blue-600 dark:text-blue-400 tracking-tight">{inProgressCount}</div>
+              <div className="text-2xl font-black text-foreground tracking-tight">{inProgressCount}</div>
               <div className="text-[11px] text-muted-foreground mt-0.5 font-medium">
                 {totalProjectsCount > 0 ? `${Math.round((inProgressCount / totalProjectsCount) * 100)}% of pipeline` : '0%'}
               </div>
@@ -645,15 +663,15 @@ const Projects = () => {
           </div>
 
           {/* Planning Card */}
-          <div className="p-3.5 bg-card rounded-2xl border border-border shadow-xs flex flex-col justify-between space-y-2 relative overflow-hidden group hover:border-indigo-500/40 transition-all">
+          <div className="p-3.5 bg-card rounded-2xl flex flex-col justify-between space-y-2 relative overflow-hidden group transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Planning</span>
-              <div className="h-7 w-7 rounded-xl bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 flex items-center justify-center">
+              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Planning</span>
+              <div className="h-7 w-7 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
                 <Target size={14} />
               </div>
             </div>
             <div>
-              <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400 tracking-tight">{planningCount}</div>
+              <div className="text-2xl font-black text-foreground tracking-tight">{planningCount}</div>
               <div className="text-[11px] text-muted-foreground mt-0.5 font-medium">
                 In kick-off / scoping
               </div>
@@ -661,15 +679,15 @@ const Projects = () => {
           </div>
 
           {/* On Hold Card */}
-          <div className="p-3.5 bg-card rounded-2xl border border-border shadow-xs flex flex-col justify-between space-y-2 relative overflow-hidden group hover:border-amber-500/40 transition-all">
+          <div className="p-3.5 bg-card rounded-2xl flex flex-col justify-between space-y-2 relative overflow-hidden group transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">On Hold</span>
-              <div className="h-7 w-7 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center justify-center">
+              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">On Hold</span>
+              <div className="h-7 w-7 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
                 <AlertTriangle size={14} />
               </div>
             </div>
             <div>
-              <div className="text-2xl font-black text-amber-600 dark:text-amber-400 tracking-tight">{onHoldCount}</div>
+              <div className="text-2xl font-black text-foreground tracking-tight">{onHoldCount}</div>
               <div className="text-[11px] text-muted-foreground mt-0.5 font-medium">
                 Needs attention
               </div>
@@ -677,35 +695,33 @@ const Projects = () => {
           </div>
 
           {/* Completed Card */}
-          <div className="p-3.5 bg-card rounded-2xl border border-border shadow-xs flex flex-col justify-between space-y-2 relative overflow-hidden group hover:border-emerald-500/40 transition-all">
+          <div className="p-3.5 bg-card rounded-2xl flex flex-col justify-between space-y-2 relative overflow-hidden group transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Completed</span>
-              <div className="h-7 w-7 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center justify-center">
+              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Completed</span>
+              <div className="h-7 w-7 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
                 <CheckCircle2 size={14} />
               </div>
             </div>
             <div>
-              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">{completedCount}</div>
+              <div className="text-2xl font-black text-foreground tracking-tight">{completedCount}</div>
               <div className="text-[11px] text-muted-foreground mt-0.5 font-medium">
                 {totalProjectsCount > 0 ? `${Math.round((completedCount / totalProjectsCount) * 100)}% completion rate` : '0%'}
               </div>
             </div>
           </div>
 
-          {/* Total Budget / Pipeline Value Card */}
-          <div className="p-3.5 bg-card rounded-2xl border border-border shadow-xs flex flex-col justify-between space-y-2 relative overflow-hidden group hover:border-purple-500/40 transition-all">
+          {/* Tasks Available Summary Card */}
+          <div className="p-3.5 bg-card rounded-2xl flex flex-col justify-between space-y-2 relative overflow-hidden group transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Pipeline Value</span>
-              <div className="h-7 w-7 rounded-xl bg-purple-500/10 text-purple-600 border border-purple-500/20 flex items-center justify-center">
-                <DollarSign size={14} />
+              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Tasks Available</span>
+              <div className="h-7 w-7 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
+                <ListChecks size={14} />
               </div>
             </div>
             <div>
-              <div className="text-xl font-black text-purple-600 dark:text-purple-400 tracking-tight truncate">
-                {formatINR(totalBudget)}
-              </div>
+              <div className="text-2xl font-black text-foreground tracking-tight">{totalTasksAvailable}</div>
               <div className="text-[11px] text-muted-foreground mt-0.5 font-medium">
-                Active project budget
+                {totalOngoingTasks} ongoing · {totalCompletedTasks} done
               </div>
             </div>
           </div>
@@ -720,65 +736,78 @@ const Projects = () => {
           searchPlaceholder="Search projects, client, category..."
           totalCount={filteredProjects.length}
           filters={
-            <div className="flex items-center justify-between gap-3 w-full flex-wrap">
-              {/* Dropdown Filters Group */}
-              <div className="flex items-center gap-2 flex-wrap min-w-0">
-                {/* Category Dropdown Filter */}
-                <SelectDropdown
-                  className="w-48 text-xs"
-                  value={categoryFilter}
-                  onChange={(val) => setCategoryFilter(val || 'all')}
-                  options={[{ value: 'all', label: 'All Categories' }, ...CATEGORY_OPTIONS]}
-                  allOptionLabel="All Categories"
-                />
+            <div className="flex flex-col gap-3 w-full">
+              <div className="flex items-center justify-between gap-3 w-full flex-wrap">
+                {/* Primary Filters Group */}
+                <div className="flex items-center gap-2 flex-wrap min-w-0 w-full sm:w-auto">
+                  {/* Category Dropdown Filter */}
+                  <SelectDropdown
+                    className="w-full sm:w-48 text-xs"
+                    buttonClassName="h-9"
+                    value={categoryFilter}
+                    onChange={(val) => setCategoryFilter(val || 'all')}
+                    options={[{ value: 'all', label: 'All Categories' }, ...CATEGORY_OPTIONS]}
+                    allOptionLabel="All Categories"
+                  />
 
-                {/* Status Dropdown Filter */}
-                <SelectDropdown
-                  className="w-40 text-xs"
-                  value={statusFilter}
-                  onChange={(val) => setStatusFilter(val)}
-                  options={['Planning', 'In Progress', 'On Hold', 'Completed', 'Cancelled']}
-                  allOptionLabel="All Statuses"
-                />
+                  {/* Status Dropdown Filter */}
+                  <SelectDropdown
+                    className="w-full sm:w-40 text-xs"
+                    buttonClassName="h-9"
+                    value={statusFilter}
+                    onChange={(val) => setStatusFilter(val)}
+                    options={['Planning', 'In Progress', 'On Hold', 'Completed', 'Cancelled']}
+                    allOptionLabel="All Statuses"
+                  />
 
-                {/* Priority Dropdown Filter */}
-                <SelectDropdown
-                  className="w-36 text-xs"
-                  value={priorityFilter}
-                  onChange={(val) => setPriorityFilter(val)}
-                  options={['Critical', 'High', 'Medium', 'Low']}
-                  allOptionLabel="All Priorities"
-                />
+                  {/* More Filters Collapse Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowMoreFilters((prev) => !prev)}
+                    className={`h-9 px-3 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+                      showMoreFilters || secondaryFiltersCount > 0
+                        ? 'bg-primary/10 text-primary border border-primary/30'
+                        : 'bg-card border border-border/50 text-foreground hover:bg-secondary/60'
+                    }`}
+                    title="Toggle additional dropdown filters"
+                  >
+                    <SlidersHorizontal size={13} className="shrink-0" />
+                    <span>More Filters</span>
+                    {secondaryFiltersCount > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-primary text-primary-foreground tabular-nums">
+                        {secondaryFiltersCount}
+                      </span>
+                    )}
+                    <ChevronDown
+                      size={13}
+                      className={`text-muted-foreground transition-transform duration-200 ${showMoreFilters ? 'rotate-180' : ''}`}
+                    />
+                  </button>
 
-                {/* Client Dropdown Filter */}
-                <SelectDropdown
-                  className="w-44 text-xs"
-                  value={clientFilter}
-                  onChange={(val) => setClientFilter(val)}
-                  options={clientOptions}
-                  placeholder="Filter by Client"
-                />
+                  {/* Reset All Filters Button */}
+                  {activeFiltersCount > 0 && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={clearAllFilters}
+                      className="h-9 px-2.5 text-xs text-foreground hover:text-foreground bg-secondary hover:bg-muted flex items-center gap-1 rounded-xl transition-all font-bold cursor-pointer"
+                      title="Clear all active filters"
+                    >
+                      <RotateCcw size={12} className="shrink-0" />
+                      <span className="tabular-nums">Reset ({activeFiltersCount})</span>
+                    </Button>
+                  )}
+                </div>
 
-                {/* Sorting Filter Dropdown */}
-                <SelectDropdown
-                  className="w-52 text-xs font-semibold"
-                  value={sortBy}
-                  onChange={(val) => setSortBy(val || 'dueDate_asc')}
-                  options={PROJECT_SORT_OPTIONS}
-                />
-              </div>
-
-              {/* View/Group Controls & Reset Button */}
-              <div className="flex items-center gap-2 shrink-0">
-                {/* Group By Selector for Kanban */}
+                {/* View/Group Controls for Kanban */}
                 {currentView === 'board' && (
-                  <div className="flex items-center bg-secondary/70 p-0.5 rounded-xl border border-border shrink-0">
+                  <div className="flex items-center bg-secondary/70 p-0.5 rounded-xl shrink-0">
                     <button
                       type="button"
                       onClick={() => setBoardGroupBy('status')}
                       className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         boardGroupBy === 'status'
-                          ? 'bg-card text-foreground shadow-xs'
+                          ? 'bg-card text-foreground '
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -789,7 +818,7 @@ const Projects = () => {
                       onClick={() => setBoardGroupBy('category')}
                       className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         boardGroupBy === 'category'
-                          ? 'bg-card text-foreground shadow-xs'
+                          ? 'bg-card text-foreground '
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -797,21 +826,48 @@ const Projects = () => {
                     </button>
                   </div>
                 )}
-
-                {/* Reset All Filters Button */}
-                {activeFiltersCount > 0 && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={clearAllFilters}
-                    className="h-8 px-2.5 text-xs text-rose-600 hover:text-rose-700 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 flex items-center gap-1 rounded-xl transition-all font-bold cursor-pointer"
-                    title="Clear all active filters"
-                  >
-                    <RotateCcw size={12} />
-                    <span>Reset ({activeFiltersCount})</span>
-                  </Button>
-                )}
               </div>
+
+              {/* Collapsible Secondary Filters Row */}
+              {showMoreFilters && (
+                <div className="flex flex-wrap items-center gap-2.5 p-3 rounded-2xl bg-secondary/30 border border-border/40 animate-in fade-in slide-in-from-top-1 duration-150 w-full">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground shrink-0 mr-1">
+                    <Filter size={13} />
+                    <span className="text-[11px] uppercase tracking-wider font-bold">Filters</span>
+                  </div>
+
+                  {/* Priority Dropdown Filter */}
+                  <SelectDropdown
+                    className="w-full sm:w-36 text-xs"
+                    buttonClassName="h-8.5 bg-background text-xs"
+                    value={priorityFilter}
+                    onChange={(val) => setPriorityFilter(val)}
+                    options={['Critical', 'High', 'Medium', 'Low']}
+                    allOptionLabel="All Priorities"
+                  />
+
+                  {/* Client Dropdown Filter (Hide for clients) */}
+                  {user?.role !== 'client' && (
+                    <SelectDropdown
+                      className="w-full sm:w-44 text-xs"
+                      buttonClassName="h-8.5 bg-background text-xs"
+                      value={clientFilter}
+                      onChange={(val) => setClientFilter(val)}
+                      options={clientOptions}
+                      placeholder="Filter by Client"
+                    />
+                  )}
+
+                  {/* Sorting Filter Dropdown */}
+                  <SelectDropdown
+                    className="w-full sm:w-52 text-xs font-semibold"
+                    buttonClassName="h-8.5 bg-background text-xs"
+                    value={sortBy}
+                    onChange={(val) => setSortBy(val || 'dueDate_asc')}
+                    options={PROJECT_SORT_OPTIONS}
+                  />
+                </div>
+              )}
             </div>
           }
         >
@@ -831,8 +887,8 @@ const Projects = () => {
                   : undefined
               }
               onDelete={canCreate ? (id) => setDeleteProjectId(id) : undefined}
-              emptyTitle="No projects match the selected filters"
-              emptyDescription="Try clearing your category or status filters to view more projects."
+              emptyTitle="No projects found"
+              emptyDescription=""
             />
           )}
 
@@ -843,15 +899,14 @@ const Projects = () => {
               <CategoryColorLegend
                 selectedCategory={categoryFilter}
                 onSelectCategory={setCategoryFilter}
-                title="Project Category Color Index"
-                description="Card left-border accent indicates project discipline (click any color pill to filter)"
+                title="Project Category Index"
               />
 
-              <div ref={projectsBoardRef} className="w-full overflow-x-auto pb-4 custom-scrollbar">
+              <div ref={projectsBoardRef} className="w-full overflow-x-auto pb-4 custom-scrollbar responsive-table-container">
                 <div
                   className={
                     boardGroupBy === 'status' && boardColumns.length <= 4
-                      ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'
+                      ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 w-full'
                       : 'flex gap-4 w-max min-w-full'
                   }
                 >
@@ -896,14 +951,14 @@ const Projects = () => {
                         setDragOverColumn(null);
                         setDragOverProjectIndex(null);
                       }}
-                      className={`flex flex-col min-h-[520px] max-h-[calc(100vh-320px)] rounded-2xl border transition-all p-3 space-y-3 ${
+                      className={`flex flex-col min-h-[520px] max-h-[calc(100vh-320px)] rounded-2xl transition-all p-3 space-y-3 ${
                         boardGroupBy === 'status' && boardColumns.length <= 4
                           ? 'w-full'
                           : 'w-[300px] shrink-0'
                       } ${
                         isColActive
-                          ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20'
-                          : 'border-border/80 bg-secondary/15'
+                          ? ' bg-primary/5 ring-2 ring-primary/20'
+                          : ' bg-secondary/15'
                       }`}
                     >
                       {/* Column Header */}
@@ -914,7 +969,7 @@ const Projects = () => {
                             {col.label}
                           </span>
                         </div>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-card border border-border text-foreground shadow-xs">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-card text-foreground tabular-nums">
                           {colProjects.length}
                         </span>
                       </div>
@@ -927,11 +982,12 @@ const Projects = () => {
                           const catMeta = getProjectCategoryMeta(project.category);
                           const CatIcon = catMeta.icon;
                           const isOverdue = project.endDate && new Date(project.endDate) < new Date() && project.status !== 'Completed';
+                          const isExpanded = Boolean(expandedProjectIds[project._id]);
 
                           return (
                             <React.Fragment key={project._id}>
                               {showDropIndicatorBefore && (
-                                <div className="h-1.5 rounded-full bg-primary/70 animate-pulse my-1 shadow-xs" />
+                                <div className="h-1.5 rounded-full bg-primary/70 my-1 " />
                               )}
                               <div
                                 draggable
@@ -970,32 +1026,20 @@ const Projects = () => {
                                   setDragOverProjectIndex(null);
                                 }}
                                 onClick={() => navigate(`/projects/${project._id}`)}
-                                className={`p-3.5 bg-card rounded-2xl border border-border border-l-[4px] ${catMeta.accentBorder} hover:border-primary/50 transition-all cursor-grab active:cursor-grabbing space-y-3 group shadow-xs ${
+                                className={`p-3.5 bg-card rounded-2xl ${catMeta.accentBorder} transition-all cursor-grab active:cursor-grabbing space-y-2.5 group ${
                                   isBeingDragged
-                                    ? 'opacity-30 scale-95 border-dashed border-primary ring-1 ring-primary/40'
-                                    : 'hover:shadow-md hover:-translate-y-0.5'
+                                    ? 'opacity-30 scale-95 ring-1 ring-primary/40'
+                                    : ' hover:-translate-y-0.5'
                                 }`}
                               >
-                                {/* Card Header: Category & Priority Badges */}
-                                <div className="flex items-center justify-between gap-1.5">
-                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${catMeta.badgeClass}`}>
-                                    <CatIcon size={11} className="shrink-0" />
-                                    <span className="truncate max-w-[120px]">{catMeta.shortLabel}</span>
-                                  </span>
+                                {/* Compact Row 1: Name + Enlarge Button */}
+                                <div className="flex items-start justify-between gap-2">
+                                  <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1 flex-1 min-w-0">
+                                    {project.name}
+                                  </h4>
 
                                   <div className="flex items-center gap-1 shrink-0">
-                                    <span
-                                      className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider ${
-                                        project.priority === 'Critical'
-                                          ? 'bg-rose-500/15 text-rose-600 border border-rose-500/30'
-                                          : project.priority === 'High'
-                                          ? 'bg-amber-500/15 text-amber-600 border border-amber-500/30'
-                                          : 'bg-secondary text-muted-foreground'
-                                      }`}
-                                    >
-                                      {project.priority || 'Med'}
-                                    </span>
-                                    {canCreate && (
+                                    {isExpanded && canCreate && (
                                       <button
                                         type="button"
                                         onClick={(e) => {
@@ -1003,93 +1047,101 @@ const Projects = () => {
                                           setSelectedProject(project);
                                           setShowAddModal(true);
                                         }}
-                                        className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-primary transition-colors"
+                                        className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-primary transition-colors cursor-pointer"
                                         title="Edit Project"
                                       >
                                         <Edit2 size={12} />
                                       </button>
                                     )}
-                                  </div>
-                                </div>
-
-                                {/* Project Name & Client */}
-                                <div className="space-y-1">
-                                  <h4 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                                    {project.name}
-                                  </h4>
-                                  <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
-                                    {project.client?.name ? (
-                                      <>
-                                        <Building2 size={11} className="text-muted-foreground/70 shrink-0" />
-                                        <span className="truncate">{project.client.name}</span>
-                                      </>
-                                    ) : project.category === 'saas_product' || project.isInternal ? (
-                                      <span className="font-semibold text-indigo-500 truncate">🚀 SaaS / Platform</span>
-                                    ) : (
-                                      <span className="truncate">🏢 Internal Project</span>
-                                    )}
-                                  </p>
-                                </div>
-
-                                {/* Progress Bar & Task Completion */}
-                                <div className="space-y-1.5 pt-0.5">
-                                  <div className="flex justify-between text-[10px] text-muted-foreground font-semibold">
-                                    <span>
-                                      {project.totalTasks ? `${project.doneTasks || 0}/${project.totalTasks} tasks` : 'Progress'}
-                                    </span>
-                                    <span
-                                      className={`font-bold ${
-                                        (project.progress || 0) >= 100
-                                          ? 'text-emerald-600 dark:text-emerald-400'
-                                          : (project.progress || 0) >= 50
-                                          ? 'text-primary'
-                                          : 'text-foreground'
-                                      }`}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => toggleProjectExpand(e, project._id)}
+                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/80 hover:bg-secondary text-foreground text-[10px] font-semibold transition-colors cursor-pointer"
+                                      title={isExpanded ? 'Collapse card' : 'Enlarge card'}
+                                      aria-label={isExpanded ? 'Collapse card' : 'Enlarge card'}
                                     >
-                                      {project.progress || 0}%
-                                    </span>
-                                  </div>
-                                  <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-                                    <div
-                                      className={`h-full rounded-full transition-all duration-300 ${
-                                        (project.progress || 0) >= 100
-                                          ? 'bg-emerald-500'
-                                          : (project.progress || 0) >= 50
-                                          ? 'bg-primary'
-                                          : (project.progress || 0) > 0
-                                          ? 'bg-amber-500'
-                                          : 'bg-muted-foreground/30'
-                                      }`}
-                                      style={{ width: `${Math.max(0, Math.min(project.progress || 0, 100))}%` }}
-                                    />
+                                      {isExpanded ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
+                                      <span>{isExpanded ? 'Less' : 'Enlarge'}</span>
+                                    </button>
                                   </div>
                                 </div>
 
-                                {/* Footer: Timeline & Open Link */}
-                                <div className="flex items-center justify-between pt-2 border-t border-border/50 text-[10px] text-muted-foreground">
-                                  <div className="flex items-center gap-1.5 truncate">
-                                    {project.endDate ? (
-                                      <span
-                                        className={`flex items-center gap-1 font-semibold ${
-                                          isOverdue ? 'text-rose-600 font-bold' : ''
-                                        }`}
-                                      >
-                                        <Calendar size={11} className="shrink-0 text-muted-foreground/70" />
-                                        <span>Due {new Date(project.endDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
-                                        {isOverdue && <span className="text-[8px] px-1 py-0.2 rounded bg-rose-500/15 text-rose-600 font-black">LATE</span>}
-                                      </span>
-                                    ) : (
-                                      <span className="flex items-center gap-1 text-muted-foreground">
-                                        <Calendar size={11} />
-                                        <span>Ongoing</span>
-                                      </span>
-                                    )}
-                                  </div>
+                                {/* Compact Row 2: Category & Tasks */}
+                                <div className="flex items-center justify-between gap-2 flex-wrap tabular-nums">
+                                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold ${catMeta.badgeClass}`}>
+                                    <CatIcon size={11} className="shrink-0" />
+                                    <span className="truncate max-w-[145px]">{catMeta.shortLabel || catMeta.label}</span>
+                                  </span>
 
-                                  <span className="group-hover:text-primary font-bold flex items-center gap-0.5 shrink-0 transition-colors">
-                                    Open <ArrowRight size={10} />
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-secondary text-foreground">
+                                    <ListChecks size={12} className="text-muted-foreground shrink-0" />
+                                    <span>{project.totalTasks || 0} {(project.totalTasks || 0) === 1 ? 'task' : 'tasks'}</span>
                                   </span>
                                 </div>
+
+                                {/* Remaining Details Revealed When Enlarged */}
+                                {isExpanded && (
+                                  <div className="space-y-2.5 pt-1.5">
+                                    {/* Start Date & End Date */}
+                                    <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-background text-[10px] tabular-nums">
+                                      <div>
+                                        <span className="text-muted-foreground block font-medium">Start Date</span>
+                                        <span className="font-bold text-foreground">
+                                          {project.startDate
+                                            ? new Date(project.startDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+                                            : '—'}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-muted-foreground block font-medium">End Date</span>
+                                        <span className="font-bold flex items-center gap-1 text-foreground">
+                                          <span>
+                                            {(project.endDate || project.dueDate)
+                                              ? new Date(project.endDate || project.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+                                              : 'Ongoing'}
+                                          </span>
+                                          {isOverdue && (
+                                            <span className="text-[8px] px-1 py-0.2 rounded bg-foreground text-background font-black">LATE</span>
+                                          )}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Completion Progress */}
+                                    <div className="space-y-1.5 tabular-nums">
+                                      <div className="flex items-center justify-between text-[11px] font-semibold">
+                                        <span className="text-muted-foreground">Completion</span>
+                                        <span className="text-muted-foreground font-bold text-[10px]">
+                                          {project.doneTasks || 0}/{project.totalTasks || 0} ({project.progress || 0}%)
+                                        </span>
+                                      </div>
+                                      <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+                                        <div
+                                          className={`h-full rounded-full transition-all duration-300 ${
+                                            (project.progress || 0) >= 100
+                                              ? 'bg-foreground'
+                                              : (project.progress || 0) >= 50
+                                              ? 'bg-foreground/80'
+                                              : (project.progress || 0) > 0
+                                              ? 'bg-muted-foreground/60'
+                                              : 'bg-muted-foreground/30'
+                                          }`}
+                                          style={{ width: `${Math.max(0, Math.min(project.progress || 0, 100))}%` }}
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {/* Footer */}
+                                    <div className="flex items-center justify-between pt-1 text-[10px] text-muted-foreground">
+                                      <span className="truncate font-medium">
+                                        {catMeta.label}
+                                      </span>
+                                      <span className="group-hover:text-foreground font-bold flex items-center gap-0.5 shrink-0 transition-colors">
+                                        Open <ArrowRight size={10} />
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </React.Fragment>
                           );
@@ -1097,15 +1149,15 @@ const Projects = () => {
 
                         {/* Drop indicator at bottom */}
                         {isColActive && dragOverProjectIndex >= colProjects.length && (
-                          <div className="h-1.5 rounded-full bg-primary/70 animate-pulse my-1 shadow-xs" />
+                          <div className="h-1.5 rounded-full bg-primary/70 my-1 " />
                         )}
 
                         {colProjects.length === 0 && (
                           <div
-                            className={`p-8 text-center text-xs border border-dashed rounded-xl transition-all ${
+                            className={`p-8 text-center text-xs rounded-xl transition-all ${
                               isColActive
-                                ? 'border-primary bg-primary/10 text-primary font-semibold'
-                                : 'border-border/60 text-muted-foreground'
+                                ? ' bg-primary/10 text-primary font-semibold'
+                                : ' text-muted-foreground'
                             }`}
                           >
                             {isColActive ? `Drop here to set ${boardGroupBy} to ${col.label}` : `No ${col.label} projects`}
@@ -1136,8 +1188,8 @@ const Projects = () => {
       <AlertDialog open={!!deleteProjectId} onOpenChange={(open) => !open && setDeleteProjectId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Project</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle>Delete Project?</AlertDialogTitle>
+            <AlertDialogDescription className="sr-only">
               Are you sure you want to delete this project? All associated tasks, milestones, and notes will be permanently removed.
             </AlertDialogDescription>
           </AlertDialogHeader>

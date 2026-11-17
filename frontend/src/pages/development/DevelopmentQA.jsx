@@ -1,8 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { devApi } from '../../api/development';
 import { DevelopmentSubNav } from '../../components/development/DevelopmentSubNav';
 import { PageHeader } from '../../components/ui/page';
 import { TaskDetailModal } from '../../components/ui/TaskDetailModal';
+import { useDateFilter } from '../../context/DateFilterContext';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from '../../components/ui/dialog';
 import {
   Bug,
   CheckCircle2,
@@ -12,12 +21,14 @@ import {
   Clock,
   ExternalLink,
   ShieldAlert,
-} from 'lucide-react';
-import { toast } from 'react-hot-toast';
+  X,
+} from '@/components/ui/muiIcons';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 export default function DevelopmentQA() {
-  const [tasks, setTasks] = useState([]);
+  const { isDateInRange } = useDateFilter();
+  const [rawTasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
   const [qaStatus, setQaStatus] = useState('passed'); // passed | failed | blocked
@@ -51,6 +62,11 @@ export default function DevelopmentQA() {
   useEffect(() => {
     fetchQATasks();
   }, [fetchQATasks]);
+
+  const tasks = useMemo(
+    () => rawTasks.filter((t) => isDateInRange(t.dueDate || t.createdAt)),
+    [rawTasks, isDateInRange]
+  );
 
   const handleOpenTestModal = (task) => {
     setSelectedTask(task);
@@ -95,12 +111,11 @@ export default function DevelopmentQA() {
     <div className="space-y-6">
       <PageHeader
         title="QA & Testing"
-        subtitle="Validate quality, execute test verification runs, and record test statuses on existing tasks"
         actions={
           <button
             onClick={fetchQATasks}
             disabled={loading}
-            className="flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-foreground font-semibold rounded-xl text-xs hover:bg-secondary/80 transition-all shadow-xs"
+            className="flex items-center gap-2 h-10 px-3.5 bg-secondary text-foreground font-semibold rounded-xl text-xs hover:bg-secondary/80 transition-all cursor-pointer"
           >
             <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} />
             Refresh
@@ -113,21 +128,20 @@ export default function DevelopmentQA() {
       {/* ── Pending QA Runs ──────────────────────────────────────────── */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <Clock size={16} className="text-cyan-500" />
-          <h3 className="font-bold text-foreground text-sm uppercase tracking-wider">
+          <Clock size={16} className="text-foreground" />
+          <h3 className="font-bold text-foreground text-sm uppercase tracking-wider tabular-nums">
             Ready for Testing ({pendingQA.length})
           </h3>
         </div>
 
         {loading ? (
-          <div className="p-12 text-center text-muted-foreground text-xs flex items-center justify-center gap-2 bg-card border border-border rounded-2xl">
-            <RefreshCcw size={16} className="animate-spin text-primary" /> Loading QA queue...
+          <div className="p-12 text-center text-muted-foreground text-xs flex items-center justify-center gap-2 bg-card rounded-2xl">
+            <RefreshCcw size={16} className="animate-spin text-foreground" /> Loading QA queue...
           </div>
         ) : pendingQA.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground text-xs bg-card border border-border rounded-2xl space-y-1">
-            <CheckCircle2 size={24} className="mx-auto text-emerald-500/50" />
+          <div className="p-8 text-center text-muted-foreground text-xs bg-card rounded-2xl space-y-1.5">
+            <CheckCircle2 size={24} className="mx-auto text-muted-foreground/50" />
             <p className="font-semibold text-foreground">No tasks waiting for QA</p>
-            <p className="text-[11px]">Tasks approved from Code Review will appear here automatically.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -138,7 +152,7 @@ export default function DevelopmentQA() {
               return (
                 <div
                   key={task._id}
-                  className="bg-card border border-border rounded-2xl p-4 shadow-xs space-y-3 hover:shadow-md transition-all"
+                  className="bg-card rounded-2xl p-4 space-y-3 transition-all"
                 >
                   <div>
                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-secondary px-2 py-0.5 rounded">
@@ -149,13 +163,13 @@ export default function DevelopmentQA() {
                         setDetailTaskId(task._id);
                         setShowDetailModal(true);
                       }}
-                      className="font-bold text-foreground text-sm mt-1.5 hover:text-primary transition-colors cursor-pointer"
+                      className="font-bold text-foreground text-sm mt-1.5 hover:underline cursor-pointer"
                     >
                       {task.title}
                     </h4>
                   </div>
 
-                  <div className="p-2.5 bg-secondary/30 rounded-xl border border-border space-y-1 text-xs">
+                  <div className="p-2.5 bg-secondary/30 rounded-xl space-y-1 text-xs">
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-muted-foreground">Branch:</span>
                       <span className="font-mono text-foreground font-semibold">{dev.branch || 'N/A'}</span>
@@ -169,7 +183,7 @@ export default function DevelopmentQA() {
                   <div className="flex justify-end pt-1">
                     <button
                       onClick={() => handleOpenTestModal(task)}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-600 text-white hover:bg-cyan-700 text-xs font-bold transition-all shadow-sm shadow-cyan-600/20"
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold transition-all min-h-[38px] cursor-pointer"
                     >
                       <Bug size={13} /> Log Test Result
                     </button>
@@ -181,73 +195,89 @@ export default function DevelopmentQA() {
         )}
       </div>
 
-      {/* ── QA Test Modal ────────────────────────────────────────────── */}
-      {selectedTask && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <h3 className="font-bold text-foreground text-sm flex items-center gap-2">
-                <Bug size={16} className="text-cyan-500" /> Record QA Test Result
-              </h3>
-              <button
-                type="button"
-                onClick={() => setSelectedTask(null)}
-                className="text-muted-foreground hover:text-foreground text-xs"
-              >
-                ✕
-              </button>
+      {/* ── QA Test Side Drawer ──────────────────────────────────────── */}
+      <Dialog open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)}>
+        <DialogContent
+          variant="side"
+          size="md"
+          noPadding
+          hideCloseButton
+          className="flex flex-col min-h-0 p-0 overflow-hidden bg-card "
+        >
+          <DialogHeader className="px-5 py-4 bg-card shrink-0 select-none flex flex-row items-center justify-between gap-3 m-0 space-y-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-foreground">
+                <Bug size={18} />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="text-lg sm:text-xl font-bold text-foreground truncate">
+                  Record QA Test Result
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                  Log test verification outcome and notes
+                </DialogDescription>
+              </div>
             </div>
+            <DialogClose
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all cursor-pointer shrink-0"
+            >
+              <X size={16} />
+              <span className="sr-only">Close</span>
+            </DialogClose>
+          </DialogHeader>
 
-            <form onSubmit={handleSubmitQA} className="space-y-3.5 text-xs">
-              <p className="text-muted-foreground">
-                Task: <strong className="text-foreground">{selectedTask.title}</strong>
+          <form onSubmit={handleSubmitQA} className="flex flex-col flex-1 min-h-0 overflow-hidden text-left">
+            <div className="flex-1 min-h-0 overflow-y-auto p-6 sm:p-7 space-y-5 custom-scrollbar">
+              <p className="text-sm text-muted-foreground">
+                Task: <strong className="text-foreground">{selectedTask?.title}</strong>
               </p>
 
               <div>
-                <label className="font-semibold text-foreground block mb-1">Test Result *</label>
-                <div className="grid grid-cols-3 gap-2">
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Test Result *</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => setQaStatus('passed')}
-                    className={`py-2 px-3 rounded-xl border font-bold flex items-center justify-center gap-1 transition-all ${
+                    className={`h-11 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       qaStatus === 'passed'
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                        : 'bg-secondary text-muted-foreground border-border'
+                        ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/25'
+                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
                     }`}
                   >
-                    <CheckCircle2 size={13} /> Passed
+                    <CheckCircle2 size={15} /> Passed
                   </button>
                   <button
                     type="button"
                     onClick={() => setQaStatus('failed')}
-                    className={`py-2 px-3 rounded-xl border font-bold flex items-center justify-center gap-1 transition-all ${
+                    className={`h-11 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       qaStatus === 'failed'
-                        ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
-                        : 'bg-secondary text-muted-foreground border-border'
+                        ? 'bg-rose-600 text-white shadow-sm shadow-rose-600/25'
+                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 hover:bg-rose-500/20'
                     }`}
                   >
-                    <XCircle size={13} /> Failed
+                    <XCircle size={15} /> Failed
                   </button>
                   <button
                     type="button"
                     onClick={() => setQaStatus('blocked')}
-                    className={`py-2 px-3 rounded-xl border font-bold flex items-center justify-center gap-1 transition-all ${
+                    className={`h-11 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       qaStatus === 'blocked'
-                        ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                        : 'bg-secondary text-muted-foreground border-border'
+                        ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/25'
+                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
                     }`}
                   >
-                    <ShieldAlert size={13} /> Blocked
+                    <ShieldAlert size={15} /> Blocked
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="font-semibold text-foreground block mb-1">
+                <label className="block text-sm font-semibold text-foreground mb-1.5">
                   {qaStatus === 'failed' ? 'Failure Description / Bug Steps *' : 'Test Notes (optional)'}
                 </label>
                 <textarea
-                  rows={4}
+                  rows={5}
                   required={qaStatus === 'failed'}
                   placeholder={
                     qaStatus === 'passed'
@@ -256,30 +286,30 @@ export default function DevelopmentQA() {
                   }
                   value={testNotes}
                   onChange={(e) => setTestNotes(e.target.value)}
-                  className="w-full p-2.5 bg-background border border-border rounded-xl text-xs outline-none focus:border-cyan-500"
+                  className="w-full min-h-[112px] px-4 py-3 bg-secondary/75 rounded-xl text-sm font-normal text-foreground outline-none focus:bg-background focus:ring-2 focus:ring-brand/40"
                 />
               </div>
+            </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setSelectedTask(null)}
-                  className="app-button-secondary text-xs"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-cyan-600/20"
-                >
-                  {submitting ? 'Submitting...' : 'Save Result'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div className="shrink-0 flex flex-wrap items-center justify-end gap-2.5 px-6 py-4 bg-card">
+              <button
+                type="button"
+                onClick={() => setSelectedTask(null)}
+                className="h-11 px-5 rounded-xl bg-secondary text-foreground text-sm font-semibold hover:bg-secondary/80 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="h-11 px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl text-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                {submitting ? 'Submitting...' : 'Save Result'}
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Reusable Task Detail Modal ───────────────────────────────── */}
       {detailTaskId && (

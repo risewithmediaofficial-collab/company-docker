@@ -1,0 +1,194 @@
+import React, { useState, useEffect } from 'react';
+import {
+  BellRing,
+  Sparkles,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Smartphone,
+  Info,
+} from '@/components/ui/muiIcons';
+import {
+  isBrowserNotificationSupported,
+  getBrowserNotificationPermission,
+  requestBrowserNotificationPermission,
+  sendBrowserNotification,
+  triggerBannerNotification,
+} from '../../utils/browserNotification';
+import {
+  getExistingPushSubscription,
+  reconcilePushSubscription,
+  isIOSRequiresHomeInstall,
+  isWebPushSupported,
+} from '../../utils/webPush';
+
+/**
+ * EnableBannerNotificationBar
+ * Prominent, high-converting banner bar shown at top of the app when banner notifications
+ * are not yet enabled or subscribed on the current device.
+ */
+export const EnableBannerNotificationBar = () => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [permission, setPermission] = useState('default');
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  const checkStatus = async () => {
+    if (!isBrowserNotificationSupported()) {
+      setIsVisible(false);
+      return;
+    }
+
+    const currentPerm = getBrowserNotificationPermission();
+    setPermission(currentPerm);
+
+    // If permanently blocked in browser settings, don't show prompt banner
+    if (currentPerm === 'denied') {
+      setIsVisible(false);
+      return;
+    }
+
+    // Check if dismissed recently (within 48 hours)
+    const dismissedUntil = localStorage.getItem('rwm_banner_prompt_dismissed_until');
+    if (dismissedUntil && Number(dismissedUntil) > Date.now()) {
+      setIsVisible(false);
+      return;
+    }
+
+    const existingSub = await getExistingPushSubscription();
+    const hasActiveSub = Boolean(existingSub);
+    setIsSubscribed(hasActiveSub);
+
+    // If permission is already granted, attempt silent auto-reconcile in background
+    if (currentPerm === 'granted') {
+      if (!hasActiveSub) {
+        const reconcileRes = await reconcilePushSubscription();
+        if (reconcileRes?.success) {
+          setIsSubscribed(true);
+          setIsVisible(false);
+          return;
+        }
+      } else {
+        // Already granted and subscribed - no need to prompt
+        setIsVisible(false);
+        return;
+      }
+    }
+
+    // Show if not granted, or granted without push subscription
+    setIsVisible(true);
+  };
+
+  useEffect(() => {
+    checkStatus();
+
+    // Re-check when window regains focus or custom event triggers
+    const handleRecheck = () => checkStatus();
+    window.addEventListener('focus', handleRecheck);
+    window.addEventListener('rwm-push-state-changed', handleRecheck);
+
+    return () => {
+      window.removeEventListener('focus', handleRecheck);
+      window.removeEventListener('rwm-push-state-changed', handleRecheck);
+    };
+  }, []);
+
+  const handleEnable = async () => {
+    setLoading(true);
+    try {
+      const res = await requestBrowserNotificationPermission();
+
+      if (res?.permission === 'granted') {
+        setIsVisible(false);
+        setIsSubscribed(true);
+        setPermission('granted');
+
+        // Notify Navbar and other listeners
+        window.dispatchEvent(new CustomEvent('rwm-push-state-changed', { detail: { active: true } }));
+      } else if (res?.permission === 'denied') {
+        setPermission('denied');
+        setIsVisible(false);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDismiss = () => {
+    setIsVisible(false);
+    // Dismiss for 48 hours
+    localStorage.setItem(
+      'rwm_banner_prompt_dismissed_until',
+      String(Date.now() + 48 * 60 * 60 * 1000)
+    );
+  };
+
+  if (!isVisible) return null;
+
+  return (
+    <div className="w-full overflow-hidden bg-zinc-950 text-zinc-100 animate-in fade-in duration-150">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+          {/* Left Info Column */}
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="relative shrink-0 flex items-center justify-center p-2 rounded-xl bg-brand/15 text-brand ring-1 ring-brand/25">
+              <BellRing size={16} />
+              <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-brand" />
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs sm:text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
+                  Enable Banner Notifications
+                  <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-brand/20 text-brand">
+                    Recommended
+                  </span>
+                </span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-zinc-400 leading-tight truncate sm:whitespace-normal">
+                {isIOSRequiresHomeInstall()
+                  ? 'Add RiseWithMedia to your Home Screen on iPhone/iPad to enable background push alerts.'
+                  : 'Receive real-time popup banner alerts for tasks, leads, and messages even when the app is closed.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Right Action Column */}
+          <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+            <button
+              id="enable-banner-notifications-bar-btn"
+              type="button"
+              onClick={handleEnable}
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-bold transition-all cursor-pointer active:scale-95 disabled:opacity-50 flex-1 sm:flex-initial"
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Enabling...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={13} className="text-zinc-800 shrink-0" />
+                  <span className="sm:hidden">Enable Alerts</span>
+                  <span className="hidden sm:inline">Enable Banner Notifications</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDismiss}
+              className="min-h-[36px] min-w-[36px] flex items-center justify-center p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+              title="Dismiss for 2 days"
+              aria-label="Dismiss banner"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+  );
+};
+
+export default EnableBannerNotificationBar;

@@ -38,7 +38,12 @@ const clientSchema = new mongoose.Schema(
     assignedTeam: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     // Source lead
     convertedFromLead: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' },
-    // Billing
+    // Billing & Finance Master
+    contactName: { type: String, trim: true, default: '' },
+    monthlyPlanFee: { type: Number, default: 0, min: 0 },
+    servicePlan: { type: String, trim: true, default: '' },
+    deliverables: { type: String, trim: true, default: '' },
+    billingDate: { type: Number, default: 1, min: 1, max: 31 },
     contractValue: { type: Number, default: 0 },
     budgetType: {
       type: String,
@@ -79,14 +84,53 @@ const clientSchema = new mongoose.Schema(
 
     // Google Drive folder link for this client's assets/files
     driveLink: { type: String, default: '' },
+
+    // Detailed Business & Services Intake Form submitted during onboarding
+    onboardingDetails: {
+      companyLegalName: { type: String, default: '' },
+      brandName: { type: String, default: '' },
+      tagline: { type: String, default: '' },
+      industryNiche: { type: String, default: '' },
+      businessDescription: { type: String, default: '' },
+      targetAudience: { type: String, default: '' },
+      targetLocations: { type: String, default: '' },
+      servicesRequested: [{ type: String }],
+      primaryBusinessGoal: { type: String, default: '' },
+      monthlyMarketingBudget: { type: String, default: '' },
+      keyCompetitors: { type: String, default: '' },
+      brandTone: { type: String, default: '' },
+      brandColors: { type: String, default: '' },
+      driveAssetsLink: { type: String, default: '' },
+      websiteUrl: { type: String, default: '' },
+      socialHandles: {
+        instagram: { type: String, default: '' },
+        facebook: { type: String, default: '' },
+        youtube: { type: String, default: '' },
+        linkedin: { type: String, default: '' },
+      },
+      primaryContact: {
+        name: { type: String, default: '' },
+        role: { type: String, default: '' },
+        phone: { type: String, default: '' },
+        email: { type: String, default: '' },
+        preferredChannel: { type: String, default: 'WhatsApp' },
+      },
+      additionalNotes: { type: String, default: '' },
+      submittedAt: { type: Date },
+      status: {
+        type: String,
+        enum: ['pending', 'submitted', 'reviewed', 'approved'],
+        default: 'pending',
+      },
+    },
   },
   { timestamps: true }
 );
 
 clientSchema.index({ email: 1 });
-clientSchema.index({ status: 1 });
-clientSchema.index({ organizationId: 1 });
-clientSchema.index({ assignedManager: 1 });
+clientSchema.index({ organizationId: 1, status: 1, createdAt: -1 });
+clientSchema.index({ assignedManager: 1, createdAt: -1 });
+clientSchema.index({ userId: 1 });
 
 const Client = mongoose.model('Client', clientSchema);
 export default Client;

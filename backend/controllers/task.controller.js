@@ -4,6 +4,7 @@
 
 import mongoose from 'mongoose';
 import Task from '../models/task.model.js';
+import DevTask from '../models/development/devTask.model.js';
 import Client from '../models/client.model.js';
 import Project from '../models/project.model.js';
 import ProjectMonthlyDeliverable from '../models/projectMonthlyDeliverable.model.js';
@@ -12,40 +13,67 @@ import User from '../models/user.model.js';
 import { createNotification } from '../utils/notification.js';
 import { runAutomation } from '../services/automation.service.js';
 import { createActivityLog } from '../utils/activity.js';
-import { withWorkspaceScope } from '../middleware/auth.middleware.js';
+import { moveToRecycleBin } from '../utils/recycleBin.js';
 import { matchesContentType, getMonthDateRange } from './projectMonthlyDeliverable.controller.js';
+import { emitLiveEvent } from '../utils/socketEmitter.js';
+import { withWorkspaceScope } from '../middleware/auth.middleware.js';
+import { parsePagination } from '../utils/pagination.js';
 
 const taskStatusMap = {
   'To Do': 'todo',
   'In Progress': 'in_progress',
   'In Review': 'review',
+  'Internal Approval': 'review',
+  'Client Approval': 'client_approval',
+  'SMM Team': 'smm_team',
+  'Drive Uploaded': 'drive_uploaded',
   Approved: 'approved',
   Done: 'done',
   Blocked: 'rejected',
   Rejected: 'rejected',
-  'On Process': 'on_process',
-  'Waiting for Client': 'waiting_for_client',
+  'On Process': 'in_progress',
+  'Waiting for Client': 'client_approval',
   Completed: 'completed',
   Rework: 'rework',
   'Rework Completed': 'rework_completed',
-  'Review Required': 'review_required',
-  'Work in Progress': 'on_process',
+  'Review Required': 'review',
+  'Work in Progress': 'in_progress',
   'Task Received': 'todo',
+  'Code Review': 'review',
+  'QA / Testing': 'review',
+  qa_testing: 'review',
+  'Client / UAT': 'client_approval',
+  client_uat: 'client_approval',
+  'In Development': 'in_progress',
+  'Deployment / Staging': 'in_progress',
+  deployment: 'in_progress',
+  'Live in Production': 'completed',
+  live: 'completed',
+  todo: 'todo',
+  in_progress: 'in_progress',
+  review: 'review',
+  client_approval: 'client_approval',
+  smm_team: 'smm_team',
+  drive_uploaded: 'drive_uploaded',
+  completed: 'completed',
 };
 
 const statusLabels = {
   todo: 'To Do',
   in_progress: 'In Progress',
-  review: 'In Review',
+  review: 'Internal Approval',
+  client_approval: 'Client Approval',
+  smm_team: 'SMM Team',
+  drive_uploaded: 'Drive Uploaded',
   approved: 'Approved',
   rejected: 'Blocked',
-  done: 'Done',
-  on_process: 'On Process',
-  waiting_for_client: 'Waiting for Client',
+  done: 'Completed',
+  on_process: 'In Progress',
+  waiting_for_client: 'Client Approval',
   completed: 'Completed',
   rework: 'Rework',
   rework_completed: 'Rework Completed',
-  review_required: 'Review Required',
+  review_required: 'Internal Approval',
 };
 
 const priorityMap = {
@@ -144,8 +172,10 @@ const buildUserTaskAssignmentOr = (userId) => [
   { scriptWriterAssigned: userId },
   { voiceArtistAssigned: userId },
   { videographerAssigned: userId },
+  { extraShootPersons: userId },
   { editorAssigned: userId },
   { publisherAssigned: userId },
+  { designerAssigned: userId },
 ];
 
 const isTaskAssignedToUser = (task, userId) => {
@@ -155,14 +185,20 @@ const isTaskAssignedToUser = (task, userId) => {
     || toIdString(task.scriptWriterAssigned) === id
     || toIdString(task.voiceArtistAssigned) === id
     || toIdString(task.videographerAssigned) === id
+    || toArray(task.extraShootPersons).map(toIdString).includes(id)
     || toIdString(task.editorAssigned) === id
-    || toIdString(task.publisherAssigned) === id;
+    || toIdString(task.publisherAssigned) === id
+    || toIdString(task.designerAssigned) === id;
 };
 
 const isTaskOverdue = (item) => {
-  if (!item?.dueDate) return false;
   const completedStatuses = ['approved', 'done', 'completed'];
-  if (completedStatuses.includes(item.status)) return false;
+  if (completedStatuses.includes(item?.status)) return false;
+  if (item?.isOverdue) return true;
+  if (item?.timerExpiresAt && new Date(item.timerExpiresAt).getTime() < Date.now()) {
+    return true;
+  }
+  if (!item?.dueDate) return false;
   return new Date(item.dueDate).getTime() < Date.now();
 };
 
@@ -185,6 +221,22 @@ const serializeTask = (task) => {
     isOverdue: isTaskOverdue(item),
     isOverTarget: Boolean(item.isOverTarget),
     targetExceededBy: Number(item.targetExceededBy) || 0,
+    // Completion Timer & Acceptance
+    allocatedHours: Number(item.allocatedHours) || 0,
+    allocatedMinutes: Number(item.allocatedMinutes) || 0,
+    dueTime: item.dueTime || '',
+    isAccepted: Boolean(item.isAccepted),
+    acceptedBy: item.acceptedBy || null,
+    acceptedAt: item.acceptedAt || null,
+    timerStartedAt: item.timerStartedAt || null,
+    timerExpiresAt: item.timerExpiresAt || null,
+    overdueNotified: Boolean(item.overdueNotified),
+    overdueAt: item.overdueAt || null,
+    submittedAt: item.submittedAt || null,
+    submissionStatus: item.submissionStatus || '',
+    completionReason: item.completionReason || '',
+    submissionNotes: item.submissionNotes || '',
+    actualTimeSpentMinutes: Number(item.actualTimeSpentMinutes) || 0,
   };
 };
 
@@ -203,8 +255,13 @@ const normalizeTaskPayload = (body = {}) => {
   if (payload.scriptWriterAssigned !== undefined) payload.scriptWriterAssigned = toObjectIdOrNull(payload.scriptWriterAssigned);
   if (payload.voiceArtistAssigned !== undefined) payload.voiceArtistAssigned = toObjectIdOrNull(payload.voiceArtistAssigned);
   if (payload.videographerAssigned !== undefined) payload.videographerAssigned = toObjectIdOrNull(payload.videographerAssigned);
+  if (payload.extraShootPersons !== undefined) {
+    const list = toArray(payload.extraShootPersons).map(toObjectIdOrNull).filter(Boolean);
+    payload.extraShootPersons = [...new Set(list.map((id) => id.toString()))].map((id) => new mongoose.Types.ObjectId(id));
+  }
   if (payload.editorAssigned !== undefined) payload.editorAssigned = toObjectIdOrNull(payload.editorAssigned);
   if (payload.publisherAssigned !== undefined) payload.publisherAssigned = toObjectIdOrNull(payload.publisherAssigned);
+  if (payload.designerAssigned !== undefined) payload.designerAssigned = toObjectIdOrNull(payload.designerAssigned);
   if (payload.client !== undefined) payload.client = toObjectIdOrNull(payload.client);
   if (payload.project !== undefined) payload.project = toObjectIdOrNull(payload.project);
   if (payload.parent !== undefined) payload.parent = toObjectIdOrNull(payload.parent);
@@ -233,8 +290,16 @@ const normalizeTaskPayload = (body = {}) => {
   if (payload.pagesNeeded !== undefined) payload.pagesNeeded = normalizeStringArray(payload.pagesNeeded);
   if (payload.attachments !== undefined) payload.attachments = normalizeFiles(payload.attachments);
   if (payload.shootDate !== undefined) payload.shootDate = payload.shootDate ? new Date(payload.shootDate) : undefined;
+  if (payload.shootEndDate !== undefined) payload.shootEndDate = payload.shootEndDate ? new Date(payload.shootEndDate) : undefined;
   if (payload.shootLocation !== undefined) payload.shootLocation = payload.shootLocation ? payload.shootLocation.trim() : '';
   if (payload.rawFootageLink !== undefined) payload.rawFootageLink = normalizeLink(payload.rawFootageLink);
+  if (payload.editDueDate !== undefined) payload.editDueDate = payload.editDueDate ? new Date(payload.editDueDate) : undefined;
+  if (payload.editDate !== undefined) payload.editDate = payload.editDate ? new Date(payload.editDate) : undefined;
+  if (payload.editReminder !== undefined) payload.editReminder = payload.editReminder ? payload.editReminder.toString().trim() : '';
+  if (payload.designDueDate !== undefined) payload.designDueDate = payload.designDueDate ? new Date(payload.designDueDate) : undefined;
+  if (payload.nfId !== undefined) payload.nfId = payload.nfId ? payload.nfId.toString().trim() : '';
+  if (payload.driveLink !== undefined) payload.driveLink = normalizeLink(payload.driveLink);
+  if (payload.driveUploadLink !== undefined) payload.driveUploadLink = normalizeLink(payload.driveUploadLink);
   if (payload.postingScheduleDate !== undefined) payload.postingScheduleDate = payload.postingScheduleDate ? new Date(payload.postingScheduleDate) : undefined;
   if (payload.publishingDate !== undefined) payload.publishingDate = payload.publishingDate ? new Date(payload.publishingDate) : undefined;
   if (payload.publishingTime !== undefined) payload.publishingTime = payload.publishingTime ? payload.publishingTime.toString().trim() : '';
@@ -242,10 +307,38 @@ const normalizeTaskPayload = (body = {}) => {
   if (payload.postingPlatforms !== undefined) payload.postingPlatforms = normalizeStringArray(payload.postingPlatforms);
   if (payload.clientFeedback !== undefined) payload.clientFeedback = payload.clientFeedback?.toString?.().trim?.() || '';
 
+  // Task Completion Timer & Acceptance payload normalization
+  if (payload.allocatedHours !== undefined) payload.allocatedHours = Math.max(0, Number(payload.allocatedHours) || 0);
+  if (payload.allocatedMinutes !== undefined) payload.allocatedMinutes = Math.max(0, Math.min(59, Number(payload.allocatedMinutes) || 0));
+  if (payload.dueTime !== undefined) payload.dueTime = payload.dueTime ? payload.dueTime.toString().trim() : '';
+  if (payload.isAccepted !== undefined) payload.isAccepted = Boolean(payload.isAccepted);
+  if (payload.acceptedBy !== undefined) payload.acceptedBy = toObjectIdOrNull(payload.acceptedBy);
+  if (payload.acceptedAt !== undefined) payload.acceptedAt = payload.acceptedAt ? new Date(payload.acceptedAt) : undefined;
+  if (payload.timerStartedAt !== undefined) payload.timerStartedAt = payload.timerStartedAt ? new Date(payload.timerStartedAt) : undefined;
+  if (payload.timerExpiresAt !== undefined) payload.timerExpiresAt = payload.timerExpiresAt ? new Date(payload.timerExpiresAt) : undefined;
+  if (payload.isOverdue !== undefined) payload.isOverdue = Boolean(payload.isOverdue);
+  if (payload.overdueNotified !== undefined) payload.overdueNotified = Boolean(payload.overdueNotified);
+  if (payload.overdueAt !== undefined) payload.overdueAt = payload.overdueAt ? new Date(payload.overdueAt) : undefined;
+  if (payload.submittedAt !== undefined) payload.submittedAt = payload.submittedAt ? new Date(payload.submittedAt) : undefined;
+  if (payload.submissionStatus !== undefined) payload.submissionStatus = payload.submissionStatus ? payload.submissionStatus.toString().trim() : '';
+  if (payload.completionReason !== undefined) payload.completionReason = payload.completionReason ? payload.completionReason.toString().trim() : '';
+  if (payload.submissionNotes !== undefined) payload.submissionNotes = payload.submissionNotes ? payload.submissionNotes.toString().trim() : '';
+  if (payload.actualTimeSpentMinutes !== undefined) payload.actualTimeSpentMinutes = Number(payload.actualTimeSpentMinutes) || 0;
+
   return payload;
 };
 
-const getClientRecordForUser = async (userId) => Client.findOne({ userId }).select('_id assignedManager assignedTeam');
+const getClientRecordForUser = async (userOrId) => {
+  const userId = userOrId?._id || userOrId;
+  let client = await Client.findOne({ userId }).select('_id assignedManager assignedTeam');
+  if (!client && userOrId?.clientId) {
+    client = await Client.findById(userOrId.clientId).select('_id assignedManager assignedTeam');
+  }
+  if (!client && userOrId?.email) {
+    client = await Client.findOne({ email: userOrId.email }).select('_id assignedManager assignedTeam');
+  }
+  return client;
+};
 
 const getManagedScope = async (userId) => {
   const [projects, clients] = await Promise.all([
@@ -271,7 +364,7 @@ const buildScopedTaskFilter = async (req, baseFilter = {}) => {
   const baseOr = filter.$or;
   if (baseOr) delete filter.$or;
 
-  if (req.user.role === 'superAdmin' || req.user.role === 'admin') return baseOr ? { ...filter, $or: baseOr } : filter;
+  if (['superAdmin', 'admin', 'organizationOwner'].includes(req.user.role)) return baseOr ? { ...filter, $or: baseOr } : filter;
 
   if (req.user.role === 'manager') {
     const { projectIds, clientIds } = await getManagedScope(req.user._id);
@@ -291,15 +384,20 @@ const buildScopedTaskFilter = async (req, baseFilter = {}) => {
   }
 
   if (req.user.role === 'client') {
-    const client = await getClientRecordForUser(req.user._id);
+    const client = await getClientRecordForUser(req.user);
     if (!client) {
       filter._id = null;
       return filter;
     }
 
-    filter.client = client._id;
-    filter.isClientVisible = true;
-    return baseOr ? { ...filter, $or: baseOr } : filter;
+    const clientProjects = await Project.find({ client: client._id }).select('_id');
+    const projectIds = clientProjects.map((p) => p._id);
+    const clientTaskFilter = [
+      { client: client._id },
+      { project: { $in: projectIds } },
+    ];
+
+    return baseOr ? { ...filter, $and: [{ $or: baseOr }, { $or: clientTaskFilter }] } : { ...filter, $or: clientTaskFilter };
   }
 
   filter._id = null;
@@ -308,7 +406,7 @@ const buildScopedTaskFilter = async (req, baseFilter = {}) => {
 
 const assertTaskAccess = async (req, task) => {
   if (!task) return { allowed: false, status: 404, message: 'Task not found' };
-  if (req.user.role === 'superAdmin' || req.user.role === 'admin') return { allowed: true };
+  if (['superAdmin', 'admin', 'organizationOwner'].includes(req.user.role)) return { allowed: true };
 
   const userId = req.user._id.toString();
   const isAssigned = isTaskAssignedToUser(task, userId);
@@ -323,9 +421,13 @@ const assertTaskAccess = async (req, task) => {
   }
 
   if (req.user.role === 'client') {
-    const client = await getClientRecordForUser(req.user._id);
-    if (client && toIdString(task.client) === client._id.toString() && task.isClientVisible) {
-      return { allowed: true };
+    const client = await getClientRecordForUser(req.user);
+    if (client) {
+      if (toIdString(task.client) === client._id.toString()) return { allowed: true };
+      if (task.project) {
+        const proj = await Project.findById(toIdString(task.project)).select('client');
+        if (proj && toIdString(proj.client) === client._id.toString()) return { allowed: true };
+      }
     }
 
     return { allowed: false, status: 403, message: 'Access denied' };
@@ -359,8 +461,10 @@ const hydrateTask = async (taskId) => Task.findById(taskId)
   .populate('scriptWriterAssigned', 'name email avatar role')
   .populate('voiceArtistAssigned', 'name email avatar role')
   .populate('videographerAssigned', 'name email avatar role')
+  .populate('extraShootPersons', 'name email avatar role position')
   .populate('editorAssigned', 'name email avatar role')
   .populate('publisherAssigned', 'name email avatar role')
+  .populate('designerAssigned', 'name email avatar role')
   .populate('project', 'name client manager')
   .populate('client', 'name company email')
   .populate('clientResponseBy', 'name email avatar role')
@@ -407,14 +511,22 @@ const syncTaskDerivedFields = async (task) => {
   } else {
     task.publisherName = '';
   }
+  if (task.designerAssigned) {
+    const dUser = await User.findById(task.designerAssigned).select('name');
+    task.designerName = dUser ? dUser.name : '';
+  } else {
+    task.designerName = '';
+  }
 
   const allSubAssignees = [
     ...toArray(task.assignedTo),
     task.scriptWriterAssigned,
     task.voiceArtistAssigned,
     task.videographerAssigned,
+    ...toArray(task.extraShootPersons),
     task.editorAssigned,
     task.publisherAssigned,
+    task.designerAssigned,
   ].filter(Boolean);
 
   const assigneeIds = uniqueIds(allSubAssignees);
@@ -488,11 +600,16 @@ const isWebsiteTaskType = (taskType) => ['website_development', 'website_update'
 const isTaskResponseOpen = (status) => ['completed', 'waiting_for_client', 'rework_completed', 'review_required'].includes(status);
 
 const notifyTaskStakeholders = async ({ task, sender, type, title, message, io, extraRecipients = [] }) => {
-  const recipients = uniqueIds([
-    task.createdBy,
-    ...(task.assignedTo || []),
-    ...extraRecipients,
-  ]).filter((userId) => userId && userId !== sender.toString());
+  const getRawId = (item) => (item?._id ? item._id.toString() : item ? item.toString() : null);
+
+  const rawRecipients = [
+    getRawId(task.createdBy),
+    getRawId(task.assignedManager),
+    ...(Array.isArray(task.assignedTo) ? task.assignedTo.map(getRawId) : []),
+    ...extraRecipients.map(getRawId),
+  ].filter(Boolean);
+
+  const recipients = uniqueIds(rawRecipients).filter((userId) => userId && userId !== sender.toString());
 
   await Promise.all(recipients.map((recipient) => createNotification({
     recipient,
@@ -579,28 +696,43 @@ export const getTasks = async (req, res) => {
       dueDate,
       search,
       parent,
-      page = 1,
-      limit = 50,
+      scope,
+      period,
+      startDate,
+      endDate,
+      sortBy,
+      sortOrder,
     } = req.query;
 
-    const filter = {};
+    const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 100, maxLimit: 1000 });
+
+    const filter = {
+      department: { $ne: 'Development' },
+      'development.isDevTask': { $ne: true },
+      isDevTask: { $ne: true },
+    };
+
+    // The delivery board is the SMM/content workspace. Development work has
+    // its own DevTask collection and /development/board lifecycle.
+    if (scope === 'smm') {
+      filter.taskCategory = 'content';
+    }
 
     if (project) filter.project = project;
     if (client) filter.client = client;
     if (taskCategory) filter.taskCategory = taskCategoryMap[taskCategory] || taskCategory;
     if (taskType) filter.taskType = taskType;
-    if (parent === 'all') {
-      // leave unfiltered
-    } else if (parent) {
+    if (parent && parent !== 'all') {
       filter.parent = parent;
-    } else {
-      filter.parent = null;
     }
 
     if (status) filter.status = taskStatusMap[status] || status;
     if (priority) filter.priority = priorityMap[priority] || priority;
     if (assignedTo) filter.assignedTo = assignedTo;
     if (assignedManager) filter.assignedManager = assignedManager;
+
+    const andConditions = [];
+
     if (dueDate) {
       const date = new Date(dueDate);
       if (!Number.isNaN(date.getTime())) {
@@ -611,53 +743,160 @@ export const getTasks = async (req, res) => {
         filter.dueDate = { $gte: start, $lte: end };
       }
     }
+
+    // Date range & period handling (This Month, Previous Month, Yearly, Custom)
+    let dateRangeStart = null;
+    let dateRangeEnd = null;
+
+    if (startDate || endDate) {
+      if (startDate) {
+        const [y, m, d] = String(startDate).split('-').map(Number);
+        dateRangeStart = !Number.isNaN(y) && !Number.isNaN(m) && !Number.isNaN(d)
+          ? new Date(y, m - 1, d, 0, 0, 0, 0)
+          : new Date(startDate);
+      }
+      if (endDate) {
+        const [y, m, d] = String(endDate).split('-').map(Number);
+        dateRangeEnd = !Number.isNaN(y) && !Number.isNaN(m) && !Number.isNaN(d)
+          ? new Date(y, m - 1, d, 23, 59, 59, 999)
+          : new Date(endDate);
+      }
+    } else if (period) {
+      const now = new Date();
+      if (period === 'today') {
+        dateRangeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        dateRangeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      } else if (period === 'weekly' || period === 'this_week') {
+        const day = now.getDay();
+        const diffToMonday = day === 0 ? -6 : 1 - day;
+        dateRangeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday, 0, 0, 0, 0);
+        dateRangeEnd = new Date(dateRangeStart.getFullYear(), dateRangeStart.getMonth(), dateRangeStart.getDate() + 6, 23, 59, 59, 999);
+      } else if (period === 'this_month' || period === 'monthly') {
+        dateRangeStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        dateRangeEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      } else if (period === 'previous_month' || period === 'lastMonth') {
+        dateRangeStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+        dateRangeEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      } else if (period === 'yearly' || period === 'this_year') {
+        dateRangeStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+        dateRangeEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+      } else if (period === 'overdue') {
+        filter.dueDate = { $lt: now };
+        filter.status = { $nin: ['approved', 'done', 'completed', 'Completed', 'Done', 'Approved'] };
+      }
+    }
+
+    if (dateRangeStart || dateRangeEnd) {
+      const start = dateRangeStart || new Date(0);
+      const end = dateRangeEnd || new Date(8640000000000000);
+      andConditions.push({
+        $or: [
+          { dueDate: { $gte: start, $lte: end } },
+          { postingScheduleDate: { $gte: start, $lte: end } },
+          { shootDate: { $gte: start, $lte: end } },
+          { editDueDate: { $gte: start, $lte: end } },
+          { startDate: { $gte: start, $lte: end } },
+          {
+            $and: [
+              { $or: [{ dueDate: null }, { dueDate: { $exists: false } }] },
+              { $or: [{ postingScheduleDate: null }, { postingScheduleDate: { $exists: false } }] },
+              { $or: [{ shootDate: null }, { shootDate: { $exists: false } }] },
+              { $or: [{ editDueDate: null }, { editDueDate: { $exists: false } }] },
+              { $or: [{ startDate: null }, { startDate: { $exists: false } }] },
+              { createdAt: { $gte: start, $lte: end } },
+            ],
+          },
+        ],
+      });
+    }
+
     if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { tags: { $regex: search, $options: 'i' } },
-        { taskType: { $regex: search, $options: 'i' } },
-        { clientName: { $regex: search, $options: 'i' } },
-        { assignedPersonName: { $regex: search, $options: 'i' } },
-        { scriptText: { $regex: search, $options: 'i' } },
-        { websiteRequirements: { $regex: search, $options: 'i' } },
-      ];
+      andConditions.push({
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+          { tags: { $regex: search, $options: 'i' } },
+          { taskType: { $regex: search, $options: 'i' } },
+          { clientName: { $regex: search, $options: 'i' } },
+          { assignedPersonName: { $regex: search, $options: 'i' } },
+          { scriptText: { $regex: search, $options: 'i' } },
+          { websiteRequirements: { $regex: search, $options: 'i' } },
+        ],
+      });
+    }
+
+    if (andConditions.length > 0) {
+      filter.$and = andConditions;
+    }
+
+    let sortOptions = { dueDate: 1, orderIndex: 1, createdAt: -1 };
+    if (sortBy) {
+      const dir = sortOrder === 'desc' || sortOrder === '-1' ? -1 : 1;
+      if (sortBy === 'dueDate_asc' || sortBy === 'dueDate') sortOptions = { dueDate: 1, orderIndex: 1 };
+      else if (sortBy === 'dueDate_desc') sortOptions = { dueDate: -1, orderIndex: 1 };
+      else if (sortBy === 'priority_desc' || sortBy === 'priority') sortOptions = { priority: -1, dueDate: 1 };
+      else if (sortBy === 'priority_asc') sortOptions = { priority: 1, dueDate: 1 };
+      else if (sortBy === 'newest' || sortBy === 'createdAt') sortOptions = { createdAt: -1 };
+      else if (sortBy === 'oldest') sortOptions = { createdAt: 1 };
+      else if (sortBy === 'title') sortOptions = { title: dir };
+      else if (sortBy === 'client_asc' || sortBy === 'clientName') sortOptions = { clientName: 1 };
+      else if (sortBy === 'client_desc') sortOptions = { clientName: -1 };
     }
 
     const scopedFilter = withWorkspaceScope(req, await buildScopedTaskFilter(req, filter));
 
-    const total = await Task.countDocuments(scopedFilter);
-    const tasks = await Task.find(scopedFilter)
-      .populate('assignedTo', 'name avatar')
-      .populate('assignedManager', 'name avatar')
-      .populate('createdBy', 'name avatar')
-      .populate('scriptWriterAssigned', 'name avatar')
-      .populate('voiceArtistAssigned', 'name avatar')
-      .populate('videographerAssigned', 'name avatar')
-      .populate('editorAssigned', 'name avatar')
-      .populate('publisherAssigned', 'name avatar')
-      .populate('project', 'name')
-      .populate('client', 'name company')
-      .sort({ dueDate: 1, orderIndex: 1, createdAt: -1 })
-      .skip((Number(page) - 1) * Number(limit))
-      .limit(Number(limit));
+    const [total, tasks] = await Promise.all([
+      Task.countDocuments(scopedFilter),
+      Task.find(scopedFilter)
+        .populate('assignedTo', 'name avatar')
+        .populate('assignedManager', 'name avatar')
+        .populate('createdBy', 'name avatar')
+        .populate('scriptWriterAssigned', 'name avatar')
+        .populate('voiceArtistAssigned', 'name avatar')
+        .populate('videographerAssigned', 'name avatar')
+        .populate('editorAssigned', 'name avatar')
+        .populate('publisherAssigned', 'name avatar')
+        .populate('designerAssigned', 'name avatar')
+        .populate('project', 'name')
+        .populate('client', 'name company')
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
 
     res.json({
       success: true,
       total,
-      page: Number(page),
-      pages: Math.ceil(total / Number(limit || 1)),
+      page,
+      pages: Math.ceil(total / limit),
       tasks: tasks.map(serializeTask),
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(error.statusCode || 500).json({ success: false, message: error.message });
   }
 };
 
 export const getTask = async (req, res) => {
   try {
-    const task = await hydrateTask(req.params.id);
+    let task = await hydrateTask(req.params.id);
     if (!task) {
+      const devTask = await DevTask.findById(req.params.id)
+        .populate('assignedTo', 'name email avatar role')
+        .populate('developer', 'name email avatar role')
+        .populate('reviewer', 'name email avatar role')
+        .populate('tester', 'name email avatar role')
+        .populate('project', 'name client')
+        .populate('client', 'name company email')
+        .populate('comments.author', 'name avatar');
+      if (devTask) {
+        return res.json({
+          success: true,
+          task: serializeTask(devTask),
+          subtasks: [],
+          recentActivity: [],
+        });
+      }
       return res.status(404).json({ success: false, message: 'Task not found' });
     }
 
@@ -714,10 +953,7 @@ export const createTask = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Task title is required' });
       }
 
-      if (!payload.project && !payload.client) {
-        return res.status(400).json({ success: false, message: 'Project or client is required to create a task' });
-      }
-
+      // Project and client are optional (supports general tasks and ad-hoc kanban tasks)
       const project = payload.project
         ? await Project.findById(payload.project).select('name client manager team')
         : null;
@@ -793,13 +1029,33 @@ export const createTask = async (req, res) => {
 
         if (
           currentPayload.department === 'Development' ||
+          currentPayload.isDevTask === true ||
+          currentPayload.development?.isDevTask === true ||
           isWebsiteTaskType(currentPayload.taskType) ||
           ['development_task', 'bug_fix'].includes(currentPayload.nonContentCategory)
         ) {
-          if (!currentPayload.development) currentPayload.development = {};
-          currentPayload.development.isDevTask = true;
-          if (!currentPayload.development.stage) currentPayload.development.stage = 'backlog';
-          currentPayload.department = 'Development';
+          const devStage = currentPayload.stage || currentPayload.development?.stage || 'backlog';
+          const devTask = await DevTask.create({
+            ...currentPayload,
+            title: taskTitle,
+            taskTitle: taskTitle,
+            department: 'Development',
+            taskCategory: 'development',
+            isDevTask: true,
+            stage: devStage,
+            status: taskStatusMap[currentPayload.status] || mapDevStageToGlobalStatus(devStage),
+            dueDate: currentPayload.dueDate || currentPayload.deadline || new Date(),
+            organizationId: req.user.organizationId,
+            brandId: req.user.brandId,
+            createdBy: req.user._id,
+            development: {
+              ...(currentPayload.development || {}),
+              isDevTask: true,
+              stage: devStage,
+            },
+          });
+          createdTasks.push(devTask);
+          continue;
         }
 
         const task = await Task.create({
@@ -851,7 +1107,9 @@ export const createTask = async (req, res) => {
     }
 
     const populated = await hydrateTask(createdTasks[0]._id);
-    res.status(201).json({ success: true, task: serializeTask(populated) });
+    const serialized = serializeTask(populated);
+    emitLiveEvent('taskCreated', { task: serialized, tasks: createdTasks.map((t) => t._id) });
+    res.status(201).json({ success: true, task: serialized });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -859,7 +1117,14 @@ export const createTask = async (req, res) => {
 
 export const updateTask = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    let task = await Task.findById(req.params.id);
+    if (!task) {
+      const devTask = await DevTask.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      if (devTask) {
+        return res.json({ success: true, task: serializeTask(devTask) });
+      }
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
     const access = await assertTaskAccess(req, task);
     if (!access.allowed) {
       return res.status(access.status).json({ success: false, message: access.message });
@@ -867,6 +1132,7 @@ export const updateTask = async (req, res) => {
 
     const previousAssignedTo = [...(task.assignedTo || [])];
     const previousAssignedManager = task.assignedManager;
+    const previousStatus = task.status;
     const payload = normalizeTaskPayload(req.body);
 
     if (payload.project || payload.client) {
@@ -973,6 +1239,23 @@ export const updateTask = async (req, res) => {
     });
 
     const updated = await hydrateTask(task._id);
+
+    // Notify manager, creator, and teammates if status changed
+    if (payload.status && previousStatus !== task.status) {
+      const statusLabel = statusLabels[task.status] || task.status;
+      const prevLabel = statusLabels[previousStatus] || previousStatus;
+      const project = updated.project ? await Project.findById(updated.project).select('manager') : null;
+      await notifyTaskStakeholders({
+        task: updated,
+        sender: req.user._id,
+        type: 'task_status_updated',
+        title: `Task Status: ${statusLabel}`,
+        message: `${req.user.name} updated "${task.title}" from ${prevLabel} to ${statusLabel}`,
+        io,
+        extraRecipients: [updated.assignedManager, project?.manager].filter(Boolean),
+      }).catch((err) => console.warn('Failed to notify task update stakeholders:', err.message));
+    }
+
     if (task.project) {
       io?.broadcastToProject?.(task.project.toString(), 'taskUpdated', serializeTask(updated));
     }
@@ -990,7 +1273,9 @@ export const updateTask = async (req, res) => {
       metadata: { fields: Object.keys(req.body || {}) },
     });
 
-    res.json({ success: true, task: serializeTask(updated) });
+    const serialized = serializeTask(updated);
+    emitLiveEvent('taskUpdated', { task: serialized, taskId: task._id });
+    res.json({ success: true, task: serialized });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -999,12 +1284,23 @@ export const updateTask = async (req, res) => {
 export const updateTaskStatus = async (req, res) => {
   try {
     const { status, orderIndex } = req.body;
-    const task = await Task.findById(req.params.id);
+    let task = await Task.findById(req.params.id);
+    if (!task) {
+      const devTask = await DevTask.findById(req.params.id);
+      if (devTask) {
+        devTask.status = taskStatusMap[status] || status;
+        if (orderIndex !== undefined) devTask.orderIndex = Number(orderIndex) || 0;
+        await devTask.save();
+        return res.json({ success: true, task: serializeTask(devTask) });
+      }
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
     const access = await assertTaskAccess(req, task);
     if (!access.allowed) {
       return res.status(access.status).json({ success: false, message: access.message });
     }
 
+    const previousStatus = task.status;
     task.status = taskStatusMap[status] || status;
     if (orderIndex !== undefined) task.orderIndex = Number(orderIndex) || 0;
     if (req.user.role !== 'client' && ['todo', 'on_process', 'waiting_for_client', 'completed', 'review_required', 'rework_completed'].includes(task.status)) {
@@ -1040,7 +1336,31 @@ export const updateTaskStatus = async (req, res) => {
       metadata: { status: task.status, orderIndex: task.orderIndex },
     });
 
-    res.json({ success: true, task: serializeTask(updated) });
+    // Notify manager, creator, and teammates when status changes (e.g. from to do to completed)
+    if (previousStatus !== task.status) {
+      const statusLabel = statusLabels[task.status] || task.status;
+      const prevLabel = statusLabels[previousStatus] || previousStatus;
+      const project = updated.project ? await Project.findById(updated.project).select('manager') : null;
+      await notifyTaskStakeholders({
+        task: updated,
+        sender: req.user._id,
+        type: 'task_status_updated',
+        title: `Task Moved: ${statusLabel}`,
+        message: `${req.user.name} moved "${task.title}" from ${prevLabel} to ${statusLabel}`,
+        io,
+        extraRecipients: [updated.assignedManager, project?.manager].filter(Boolean),
+      }).catch((err) => console.warn('Failed to notify task status stakeholders:', err.message));
+
+      if (['done', 'approved', 'completed'].includes(task.status)) {
+        await runAutomation('task_completed', { task: updated, project, user: req.user, io }).catch(() => {});
+      }
+    }
+
+    const serialized = serializeTask(updated);
+    emitLiveEvent('taskStatusUpdated', { taskId: task._id, status: task.status, orderIndex: task.orderIndex });
+    emitLiveEvent('taskMoved', { taskId: task._id, status: task.status, orderIndex: task.orderIndex });
+    emitLiveEvent('taskUpdated', { task: serialized, taskId: task._id });
+    res.json({ success: true, task: serialized });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -1473,7 +1793,11 @@ export const getCalendarTasks = async (req, res) => {
       limit = 500,
     } = req.query;
 
-    const filter = {};
+    const filter = {
+      department: { $ne: 'Development' },
+      'development.isDevTask': { $ne: true },
+      isDevTask: { $ne: true },
+    };
 
     if (project) filter.project = project;
     if (client) filter.client = client;
@@ -1620,6 +1944,17 @@ export const addCompletedFiles = async (req, res) => {
     await task.save();
 
     const updated = await hydrateTask(task._id);
+    const io = req.app.get('io');
+    await notifyTaskStakeholders({
+      task: updated,
+      sender: req.user._id,
+      type: 'task_files_completed',
+      title: 'Completed Files Uploaded',
+      message: `${req.user.name} uploaded completed work for "${task.title}". Please review.`,
+      io,
+      extraRecipients: [updated.assignedManager].filter(Boolean),
+    }).catch((err) => console.warn('Failed to notify completed file stakeholders:', err.message));
+
     res.json({ success: true, task: serializeTask(updated) });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -1740,11 +2075,30 @@ export const submitClientTaskResponse = async (req, res) => {
 
 export const deleteTask = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    let task = await Task.findById(req.params.id);
+    if (!task) {
+      const devTask = await DevTask.findByIdAndDelete(req.params.id);
+      if (devTask) {
+        return res.json({ success: true, message: 'Task deleted' });
+      }
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
     const access = await assertTaskAccess(req, task);
     if (!access.allowed) {
       return res.status(access.status).json({ success: false, message: access.message });
     }
+
+    // Move to Recycle Bin before removing
+    await moveToRecycleBin({
+      entityType: 'task',
+      originalId: task._id,
+      title: task.title,
+      subtitle: task.priority ? `Priority: ${task.priority}` : '',
+      originalLocation: task.project ? 'Project Task' : 'Tasks Database',
+      modelName: 'Task',
+      documentData: task,
+      user: req.user,
+    });
 
     await Task.deleteMany({ $or: [{ parent: task._id }, { _id: task._id }] });
 
@@ -1765,8 +2119,399 @@ export const deleteTask = async (req, res) => {
       relatedTask: task._id,
     });
 
+    emitLiveEvent('taskDeleted', { taskId: task._id });
     res.json({ success: true, message: 'Task deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updateTaskChecklist = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    const access = await assertTaskAccess(req, task);
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const { checklist, itemIndex, isCompleted, title } = req.body;
+
+    task.checklist = task.checklist || [];
+
+    if (Array.isArray(checklist)) {
+      task.checklist = checklist;
+    } else if (itemIndex !== undefined && task.checklist[itemIndex]) {
+      task.checklist[itemIndex].isCompleted = Boolean(isCompleted);
+      task.checklist[itemIndex].completedAt = isCompleted ? new Date() : null;
+      task.checklist[itemIndex].completedBy = isCompleted ? req.user._id : null;
+    } else if (title?.trim()) {
+      task.checklist.push({
+        title: title.trim(),
+        isCompleted: false,
+      });
+    }
+
+    await task.save();
+    const updated = await hydrateTask(task._id);
+    const serialized = serializeTask(updated);
+
+    emitLiveEvent('taskUpdated', { task: serialized });
+    res.json({ success: true, task: serialized, checklist: updated.checklist });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const addTaskNote = async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (!content?.trim()) {
+      return res.status(400).json({ success: false, message: 'Note content is required' });
+    }
+
+    const task = await Task.findById(req.params.id);
+    const access = await assertTaskAccess(req, task);
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    task.taskNotes = task.taskNotes || [];
+    const note = {
+      content: content.trim(),
+      author: req.user._id,
+      authorName: req.user.name || 'Team Member',
+      createdAt: new Date(),
+    };
+    task.taskNotes.push(note);
+    await task.save();
+
+    await createActivityLog({
+      actor: req.user,
+      action: 'task.note.added',
+      entityType: 'task',
+      entityId: task._id,
+      title: 'Task note added',
+      description: `Note added to ${task.title}: "${content.trim()}"`,
+      relatedClient: task.client,
+      relatedProject: task.project,
+      relatedTask: task._id,
+    });
+
+    const updated = await hydrateTask(task._id);
+    const serialized = serializeTask(updated);
+
+    emitLiveEvent('taskUpdated', { task: serialized });
+    res.json({ success: true, task: serialized, note });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const acceptTask = async (req, res) => {
+  try {
+    let task = await Task.findById(req.params.id);
+    if (!task) {
+      task = await DevTask.findById(req.params.id);
+    }
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    const access = await assertTaskAccess(req, task);
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const now = new Date();
+    task.isAccepted = true;
+    task.acceptedBy = req.user._id;
+    task.acceptedAt = now;
+    task.timerStartedAt = now;
+
+    // Calculate timer target if allocated hours or minutes are set
+    const totalAllocatedMinutes = (Number(task.allocatedHours) || 0) * 60 + (Number(task.allocatedMinutes) || 0);
+    if (totalAllocatedMinutes > 0) {
+      task.timerExpiresAt = new Date(now.getTime() + totalAllocatedMinutes * 60 * 1000);
+      task.isOverdue = false;
+      task.overdueNotified = false;
+    } else {
+      task.timerExpiresAt = null;
+    }
+
+    // Set status to in_progress / on_process if currently todo
+    if (['todo', 'on_process'].includes(task.status) || !task.status) {
+      task.status = 'in_progress';
+      task.actualStartDate = task.actualStartDate || now;
+    }
+
+    const timerDesc = totalAllocatedMinutes > 0
+      ? `${task.allocatedHours || 0}h ${task.allocatedMinutes || 0}m (Deadline: ${task.timerExpiresAt ? new Date(task.timerExpiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'})`
+      : 'No timer duration configured';
+
+    task.taskNotes = task.taskNotes || [];
+    task.taskNotes.push({
+      content: `⏱️ Task Accepted & Timer Started by ${req.user.name}. Allocated time: ${timerDesc}.`,
+      author: req.user._id,
+      authorName: req.user.name || 'Team Member',
+      createdAt: now,
+    });
+
+    await task.save();
+
+    await createActivityLog({
+      actor: req.user,
+      action: 'task.accepted',
+      entityType: 'task',
+      entityId: task._id,
+      title: 'Task Accepted & Timer Started',
+      description: `${req.user.name} accepted "${task.title}". Allocated timer: ${timerDesc}.`,
+      relatedClient: task.client,
+      relatedProject: task.project,
+      relatedTask: task._id,
+      metadata: {
+        allocatedHours: task.allocatedHours,
+        allocatedMinutes: task.allocatedMinutes,
+        timerExpiresAt: task.timerExpiresAt,
+      },
+    });
+
+    const updated = await hydrateTask(task._id);
+    const serialized = serializeTask(updated);
+
+    const io = req.app.get('io');
+    const recipients = uniqueIds([
+      task.assignedManager,
+      task.createdBy,
+    ]).filter((id) => id && id.toString() !== req.user._id.toString());
+
+    await Promise.all(recipients.map((recipient) => createNotification({
+      recipient,
+      sender: req.user._id,
+      type: 'task_accepted',
+      title: 'Task Accepted & Timer Started',
+      message: `${req.user.name} accepted "${task.title}". Timer running (${timerDesc}).`,
+      link: `/tasks?open=${task._id}`,
+      metadata: { taskId: task._id },
+    }, io)));
+
+    emitLiveEvent('taskUpdated', { task: serialized, taskId: task._id });
+    emitLiveEvent('taskStatusUpdated', { taskId: task._id, status: task.status });
+
+    res.json({ success: true, task: serialized, message: 'Task accepted and timer started' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const submitTaskWithReason = async (req, res) => {
+  try {
+    const {
+      reason,
+      notes,
+      submissionStatus, // 'completed' | 'incomplete_with_reason' | 'completed_with_delay'
+      status = 'review_required',
+      completedFiles = [],
+    } = req.body;
+
+    let task = await Task.findById(req.params.id);
+    if (!task) {
+      task = await DevTask.findById(req.params.id);
+    }
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    const access = await assertTaskAccess(req, task);
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const now = new Date();
+    task.submittedAt = now;
+
+    // Calculate time spent
+    const startTime = task.timerStartedAt || task.acceptedAt || task.createdAt || now;
+    const spentMinutes = Math.max(1, Math.round((now.getTime() - new Date(startTime).getTime()) / 60000));
+    task.actualTimeSpentMinutes = spentMinutes;
+
+    // Check if overdue
+    const isLate = Boolean(task.timerExpiresAt && now.getTime() > new Date(task.timerExpiresAt).getTime());
+    if (isLate) {
+      task.isOverdue = true;
+      task.overdueAt = task.overdueAt || now;
+    }
+
+    // Determine final submission status
+    if (submissionStatus === 'incomplete_with_reason') {
+      task.submissionStatus = 'incomplete_with_reason';
+      task.status = status || 'review_required';
+    } else if (isLate) {
+      task.submissionStatus = 'completed_with_delay';
+      task.status = status || 'review_required';
+    } else {
+      task.submissionStatus = 'on_time';
+      task.status = status || 'completed';
+    }
+
+    task.completionReason = reason?.trim?.() || task.completionReason || '';
+    task.submissionNotes = notes?.trim?.() || task.submissionNotes || '';
+
+    // Add completed files if uploaded
+    if (completedFiles && completedFiles.length > 0) {
+      const normalized = normalizeFiles(completedFiles).map((file) => ({
+        ...file,
+        uploadedBy: req.user._id,
+        uploadedAt: now,
+      }));
+      task.completedFiles = task.completedFiles || [];
+      task.completedFiles.push(...normalized);
+    }
+
+    updateCompletionState(task);
+
+    const spentHrs = Math.floor(spentMinutes / 60);
+    const spentMins = spentMinutes % 60;
+    const spentStr = `${spentHrs > 0 ? `${spentHrs}h ` : ''}${spentMins}m`;
+    const allocatedStr = `${task.allocatedHours || 0}h ${task.allocatedMinutes || 0}m`;
+
+    // Note all details in taskNotes
+    task.taskNotes = task.taskNotes || [];
+    let noteContent = `📝 Task Submitted by ${req.user.name} (${task.submissionStatus === 'on_time' ? '✅ On Time' : isLate ? '⚠️ Overdue / Delayed' : '⚠️ Incomplete with Reason'}).`;
+    noteContent += `\n• Time Spent: ${spentStr} (Allocated: ${allocatedStr})`;
+    if (task.completionReason) {
+      noteContent += `\n• Reason: "${task.completionReason}"`;
+    }
+    if (task.submissionNotes) {
+      noteContent += `\n• Notes: "${task.submissionNotes}"`;
+    }
+
+    task.taskNotes.push({
+      content: noteContent,
+      author: req.user._id,
+      authorName: req.user.name || 'Team Member',
+      createdAt: now,
+    });
+
+    await task.save();
+
+    await createActivityLog({
+      actor: req.user,
+      action: 'task.submitted',
+      entityType: 'task',
+      entityId: task._id,
+      title: `Task Submitted (${task.submissionStatus})`,
+      description: `${req.user.name} submitted "${task.title}". Spent: ${spentStr}.${task.completionReason ? ` Reason: ${task.completionReason}` : ''}`,
+      relatedClient: task.client,
+      relatedProject: task.project,
+      relatedTask: task._id,
+      metadata: {
+        submissionStatus: task.submissionStatus,
+        actualTimeSpentMinutes: spentMinutes,
+        reason: task.completionReason,
+        notes: task.submissionNotes,
+      },
+    });
+
+    const updated = await hydrateTask(task._id);
+    const serialized = serializeTask(updated);
+
+    const io = req.app.get('io');
+    const recipients = uniqueIds([
+      task.assignedManager,
+      task.createdBy,
+    ]).filter((id) => id && id.toString() !== req.user._id.toString());
+
+    const notifTitle = task.submissionStatus === 'incomplete_with_reason'
+      ? `Task Incomplete: "${task.title}"`
+      : isLate
+        ? `Task Submitted Overdue: "${task.title}"`
+        : `Task Submitted: "${task.title}"`;
+
+    const notifMsg = `${req.user.name} submitted task. Spent ${spentStr}.${task.completionReason ? ` Reason: ${task.completionReason}` : ''}`;
+
+    await Promise.all(recipients.map((recipient) => createNotification({
+      recipient,
+      sender: req.user._id,
+      type: 'task_submitted_with_reason',
+      title: notifTitle,
+      message: notifMsg,
+      link: `/tasks?open=${task._id}`,
+      metadata: { taskId: task._id },
+    }, io)));
+
+    emitLiveEvent('taskUpdated', { task: serialized, taskId: task._id });
+    emitLiveEvent('taskStatusUpdated', { taskId: task._id, status: task.status });
+
+    res.json({ success: true, task: serialized, message: 'Task submitted successfully' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const checkTaskOverdue = async (req, res) => {
+  try {
+    let task = await Task.findById(req.params.id);
+    if (!task) {
+      task = await DevTask.findById(req.params.id);
+    }
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    const access = await assertTaskAccess(req, task);
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const now = new Date();
+    const completedStatuses = ['done', 'approved', 'completed'];
+
+    if (
+      task.timerExpiresAt &&
+      now.getTime() > new Date(task.timerExpiresAt).getTime() &&
+      !completedStatuses.includes(task.status) &&
+      !task.isOverdue
+    ) {
+      task.isOverdue = true;
+      task.overdueAt = now;
+      task.overdueNotified = true;
+
+      task.taskNotes = task.taskNotes || [];
+      task.taskNotes.push({
+        content: `🚨 [OVERDUE ALERT] Task timer expired at ${new Date(task.timerExpiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Task marked as OVERDUE. Please submit with reason immediately.`,
+        author: req.user._id,
+        authorName: 'System / Timer',
+        createdAt: now,
+      });
+
+      await task.save();
+
+      const io = req.app.get('io');
+      const notifyUsers = uniqueIds([
+        ...(task.assignedTo || []),
+        task.assignedManager,
+        task.createdBy,
+      ]);
+
+      await Promise.all(notifyUsers.map((recipient) => createNotification({
+        recipient,
+        type: 'task_overdue',
+        title: '🚨 Task Overdue Alert!',
+        message: `Timer expired for task "${task.title}". Expected completion within ${task.allocatedHours || 0}h ${task.allocatedMinutes || 0}m.`,
+        link: `/tasks?open=${task._id}`,
+        metadata: { taskId: task._id },
+      }, io)));
+
+      const updated = await hydrateTask(task._id);
+      const serialized = serializeTask(updated);
+      emitLiveEvent('taskUpdated', { task: serialized, taskId: task._id });
+
+      return res.json({ success: true, isOverdue: true, task: serialized });
+    }
+
+    const updated = await hydrateTask(task._id);
+    res.json({ success: true, isOverdue: isTaskOverdue(task), task: serializeTask(updated) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
   }
 };

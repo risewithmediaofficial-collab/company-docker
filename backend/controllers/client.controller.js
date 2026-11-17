@@ -2,12 +2,18 @@
 // CLIENT CONTROLLER
 // =============================================
 
+import mongoose from 'mongoose';
 import Client from '../models/client.model.js';
 import User from '../models/user.model.js';
 import Project from '../models/project.model.js';
+import Task from '../models/task.model.js';
 import ActivityLog from '../models/activityLog.model.js';
+import SmmClient from '../models/smm/smmClient.model.js';
 import { sendEmail } from '../utils/email.js';
 import { createActivityLog } from '../utils/activity.js';
+import { moveToRecycleBin } from '../utils/recycleBin.js';
+import { emitLiveEvent } from '../utils/socketEmitter.js';
+import { parsePagination } from '../utils/pagination.js';
 
 const statusMap = {
   Active: 'active',
@@ -67,14 +73,23 @@ const clientPopulate = [
 
 const assertClientAccess = (req, client) => {
   if (!client) return { allowed: false, status: 404, message: 'Client not found' };
-  if (['superAdmin', 'organizationOwner', 'manager', 'accountManager', 'editor', 'designer', 'adsManager', 'financeManager', 'employee'].includes(req.user.role)) return { allowed: true };
-  if (req.user.role === 'client' && client.userId?.toString() === req.user._id.toString()) return { allowed: true };
-  return { allowed: true }; // Fallback allow for company staff
+  if (['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager', 'editor', 'designer', 'adsManager', 'financeManager', 'employee', 'intern'].includes(req.user.role)) return { allowed: true };
+  if (['client', 'clientAdmin', 'clientMember'].includes(req.user.role)) {
+    const userClientId = req.user.clientId?._id || req.user.clientId;
+    const isOwner =
+      (client.userId && client.userId.toString() === req.user._id.toString()) ||
+      (userClientId && client._id.toString() === userClientId.toString()) ||
+      (client.email && req.user.email && client.email.toLowerCase() === req.user.email.toLowerCase());
+    if (isOwner) return { allowed: true };
+    return { allowed: false, status: 403, message: 'Access denied. You can only view your own details.' };
+  }
+  return { allowed: false, status: 403, message: 'Access denied.' };
 };
 
 export const getClients = async (req, res) => {
   try {
-    const { status, search, service, createdFrom, createdTo, page = 1, limit = 500 } = req.query;
+    const { status, search, service, createdFrom, createdTo } = req.query;
+    const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 500, maxLimit: 1000 });
     const filter = {};
 
     if (status) {
@@ -98,10 +113,14 @@ export const getClients = async (req, res) => {
       ];
     }
 
-    if (req.user.role === 'client') {
-      filter.userId = req.user._id;
-    } else if (req.user.role === 'employee') {
-      // Employees see assigned clients or unassigned organization clients
+    if (['client', 'clientAdmin', 'clientMember'].includes(req.user.role)) {
+      const userClientId = req.user.clientId?._id || req.user.clientId;
+      const clientConditions = [{ userId: req.user._id }];
+      if (userClientId) clientConditions.push({ _id: userClientId });
+      if (req.user.email) clientConditions.push({ email: req.user.email.toLowerCase().trim() });
+      filter.$and = [{ $or: clientConditions }];
+    } else if (['employee', 'intern'].includes(req.user.role)) {
+      // Employees/interns see assigned clients or unassigned organization clients
       filter.$or = [
         ...(filter.$or || []),
         { assignedTeam: req.user._id },
@@ -125,24 +144,228 @@ export const getClients = async (req, res) => {
       }
     }
 
-    const total = await Client.countDocuments(filter);
-    const clients = await Client.find(filter)
-      .populate(clientPopulate)
-      .sort({ createdAt: -1 })
-      .skip((Number(page) - 1) * Number(limit))
-      .limit(Number(limit));
+    const [total, clients] = await Promise.all([
+      Client.countDocuments(filter),
+      Client.find(filter)
+        .populate(clientPopulate)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
 
-    res.json({ success: true, total, clients: clients.map(serializeClient) });
+    const clientIds = clients.map((c) => c._id);
+    const projectSummaryMap = {};
+    const taskSummaryMap = {};
+
+    if (clientIds.length > 0) {
+      const clientProjects = await Project.find({ client: { $in: clientIds } })
+        .select('client name category startDate dueDate status createdAt')
+        .lean();
+
+      const projectToClientMap = {};
+      const projectIds = [];
+
+      clientProjects.forEach((proj) => {
+        const cid = String(proj.client);
+        projectToClientMap[String(proj._id)] = cid;
+        projectIds.push(proj._id);
+
+        if (!projectSummaryMap[cid]) {
+          projectSummaryMap[cid] = {
+            projectCount: 0,
+            startDate: null,
+            endDate: null,
+            categories: new Set(),
+          };
+        }
+
+        const bucket = projectSummaryMap[cid];
+        bucket.projectCount += 1;
+        if (proj.category && proj.category !== 'other') {
+          bucket.categories.add(proj.category);
+        } else if (proj.category) {
+          bucket.categories.add(proj.category);
+        }
+
+        if (proj.startDate) {
+          const sTime = new Date(proj.startDate).getTime();
+          if (!Number.isNaN(sTime) && (!bucket.startDate || sTime < new Date(bucket.startDate).getTime())) {
+            bucket.startDate = proj.startDate;
+          }
+        }
+        if (proj.dueDate) {
+          const eTime = new Date(proj.dueDate).getTime();
+          if (!Number.isNaN(eTime) && (!bucket.endDate || eTime > new Date(bucket.endDate).getTime())) {
+            bucket.endDate = proj.dueDate;
+          }
+        }
+      });
+
+      const taskQueryOr = [{ client: { $in: clientIds } }];
+      if (projectIds.length > 0) {
+        taskQueryOr.push({ project: { $in: projectIds } });
+      }
+
+      const clientTasks = await Task.find({ $or: taskQueryOr })
+        .select('client project status')
+        .lean();
+
+      const completedSet = new Set(['done', 'approved', 'completed', 'Completed', 'Done', 'Approved']);
+      const ongoingSet = new Set([
+        'in_progress',
+        'on_process',
+        'review',
+        'client_approval',
+        'smm_team',
+        'drive_uploaded',
+        'rework',
+        'rework_completed',
+        'review_required',
+        'waiting_for_client',
+        'In Progress',
+        'On Process',
+        'In Review',
+        'Rework',
+        'Rework Completed',
+        'Review Required',
+        'Waiting for Client',
+      ]);
+
+      clientTasks.forEach((t) => {
+        const cid = String(t.client || (t.project ? projectToClientMap[String(t.project)] : '') || '');
+        if (!cid) return;
+        if (!taskSummaryMap[cid]) {
+          taskSummaryMap[cid] = { totalTasks: 0, ongoingTasks: 0, pendingTasks: 0, completedTasks: 0 };
+        }
+        const stats = taskSummaryMap[cid];
+        stats.totalTasks += 1;
+        if (completedSet.has(t.status)) {
+          stats.completedTasks += 1;
+        } else if (ongoingSet.has(t.status)) {
+          stats.ongoingTasks += 1;
+        } else {
+          stats.pendingTasks += 1;
+        }
+      });
+    }
+
+    const enrichedClients = clients.map((client) => {
+      const cid = String(client._id);
+      const pSum = projectSummaryMap[cid];
+      const tSum = taskSummaryMap[cid] || { totalTasks: 0, ongoingTasks: 0, pendingTasks: 0, completedTasks: 0 };
+
+      return {
+        ...serializeClient(client),
+        projectCount: pSum?.projectCount || 0,
+        projectStartDate: pSum?.startDate || client.contractStartDate || null,
+        projectEndDate: pSum?.endDate || client.contractEndDate || null,
+        projectTypes: pSum ? Array.from(pSum.categories) : [],
+        totalTasks: tSum.totalTasks,
+        ongoingTasks: tSum.ongoingTasks,
+        pendingTasks: tSum.pendingTasks,
+        completedTasks: tSum.completedTasks,
+      };
+    });
+
+    res.json({
+      success: true,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      clients: enrichedClients,
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(error.statusCode || 500).json({ success: false, message: error.message });
   }
 };
 
 export const getClient = async (req, res) => {
   try {
-    const client = await Client.findById(req.params.id)
-      .populate(clientPopulate)
-      .populate('convertedFromLead', 'name source value');
+    const rawId = req.params.id;
+    if (!rawId || rawId === 'undefined' || rawId === 'null') {
+      return res.status(400).json({ success: false, message: 'Invalid client ID' });
+    }
+
+    let client = null;
+    const isValidId = mongoose.Types.ObjectId.isValid(rawId);
+
+    if (isValidId) {
+      client = await Client.findById(rawId)
+        .populate(clientPopulate)
+        .populate('convertedFromLead', 'name source value');
+    }
+
+    // Fallback 1: Check SmmClient if not found in Client collection
+    if (!client && isValidId) {
+      const smmClient = await SmmClient.findById(rawId).lean();
+      if (smmClient) {
+        const matchingClient = smmClient.email
+          ? await Client.findOne({ email: smmClient.email.toLowerCase().trim() }).populate(clientPopulate)
+          : (smmClient.companyName ? await Client.findOne({ company: { $regex: new RegExp(`^${smmClient.companyName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } }).populate(clientPopulate) : null);
+
+        if (matchingClient) {
+          client = matchingClient;
+        } else {
+          try {
+            client = await Client.create({
+              _id: smmClient._id,
+              name: smmClient.primaryContact || smmClient.companyName,
+              company: smmClient.companyName,
+              email: smmClient.email || `${smmClient._id}@client.internal`,
+              phone: smmClient.phone || '',
+              status: smmClient.status === 'active' ? 'Active' : 'Inactive',
+              services: ['Social Media Marketing'],
+              website: smmClient.website || '',
+            });
+            client = await Client.findById(client._id).populate(clientPopulate);
+          } catch (_) {
+            client = await Client.findById(smmClient._id).populate(clientPopulate);
+          }
+        }
+      }
+    }
+
+    // Fallback 2: Check by exact company name, email, or contact name if identifier is not an ObjectId (or wasn't found by ID)
+    if (!client) {
+      const decodedId = decodeURIComponent(rawId).trim();
+      const escaped = decodedId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      client = await Client.findOne({
+        $or: [
+          { company: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+          { email: decodedId.toLowerCase() },
+          { name: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+        ],
+      }).populate(clientPopulate);
+
+      // Fallback 2b: Also check SmmClient by name
+      if (!client) {
+        const smmClient = await SmmClient.findOne({
+          $or: [
+            { companyName: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+            { email: decodedId.toLowerCase() },
+            { primaryContact: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+          ],
+        }).lean();
+        if (smmClient) {
+          try {
+            client = await Client.create({
+              _id: smmClient._id,
+              name: smmClient.primaryContact || smmClient.companyName,
+              company: smmClient.companyName,
+              email: smmClient.email || `${smmClient._id}@client.internal`,
+              phone: smmClient.phone || '',
+              status: smmClient.status === 'active' ? 'Active' : 'Inactive',
+              services: ['Social Media Marketing'],
+              website: smmClient.website || '',
+            });
+            client = await Client.findById(client._id).populate(clientPopulate);
+          } catch (_) {
+            client = await Client.findById(smmClient._id).populate(clientPopulate);
+          }
+        }
+      }
+    }
 
     const access = assertClientAccess(req, client);
     if (!access.allowed) {
@@ -150,7 +373,7 @@ export const getClient = async (req, res) => {
     }
 
     const [projects, recentActivity] = await Promise.all([
-      Project.find({ client: client._id }).select('name status progress dueDate budget').sort({ createdAt: -1 }),
+      Project.find({ client: client._id }).select('name status progress startDate dueDate category priority budget').sort({ createdAt: -1 }),
       ActivityLog.find({ relatedClient: client._id })
         .populate('actor', 'name avatar role')
         .sort({ createdAt: -1 })
@@ -168,6 +391,87 @@ export const getClient = async (req, res) => {
   }
 };
 
+// Ensure or synchronize user credentials for client portal
+export const ensureClientUserAccount = async (client, reqUserOrOrg) => {
+  if (!client || !client.email) return null;
+  const cleanEmail = client.email.toLowerCase().trim();
+  const rawPhone = (client.phone || '').toString().trim();
+  const rawPassword = rawPhone.length >= 6 ? rawPhone : (rawPhone ? rawPhone.padEnd(6, '0') : 'Client@123');
+  const orgId = client.organizationId || reqUserOrOrg?.organizationId || (typeof reqUserOrOrg === 'string' ? reqUserOrOrg : undefined);
+
+  let user = await User.findOne({ email: cleanEmail }).select('+password');
+  if (!user) {
+    user = await User.create({
+      name: client.name || client.company || 'Client',
+      email: cleanEmail,
+      password: rawPassword,
+      role: 'client',
+      phone: rawPhone,
+      clientId: client._id,
+      organizationId: orgId,
+      isActive: true,
+      approvalStatus: 'approved',
+    });
+  } else {
+    let shouldSave = false;
+    if (user.role !== 'client') {
+      user.role = 'client';
+      shouldSave = true;
+    }
+    if (String(user.clientId || '') !== String(client._id)) {
+      user.clientId = client._id;
+      shouldSave = true;
+    }
+    if (rawPhone && user.phone !== rawPhone) {
+      user.phone = rawPhone;
+      shouldSave = true;
+    }
+    if (!user.isActive) {
+      user.isActive = true;
+      shouldSave = true;
+    }
+    if (user.approvalStatus !== 'approved') {
+      user.approvalStatus = 'approved';
+      shouldSave = true;
+    }
+    if (rawPassword) {
+      user.password = rawPassword;
+      shouldSave = true;
+    }
+    if (shouldSave) {
+      await user.save();
+    }
+  }
+
+  // Ensure client links back to user and portal is enabled
+  if (String(client.userId || '') !== String(user._id) || !client.portalEnabled) {
+    client.userId = user._id;
+    client.portalEnabled = true;
+    await Client.findByIdAndUpdate(client._id, { userId: user._id, portalEnabled: true });
+  }
+
+  return user;
+};
+
+// Global synchronization for all existing clients to have valid user portal accounts
+export const syncAllClientUsers = async () => {
+  try {
+    const clients = await Client.find({});
+    let count = 0;
+    for (const client of clients) {
+      if (client.email) {
+        await ensureClientUserAccount(client);
+        count++;
+      }
+    }
+    console.log(`[Sync] Successfully synchronized ${count} client portal user accounts.`);
+    return count;
+  } catch (err) {
+    console.error('[Sync] Error synchronizing client portal accounts:', err.message);
+    return 0;
+  }
+};
+
 export const createClient = async (req, res) => {
   try {
     const payload = normalizeClientPayload(req.body);
@@ -177,36 +481,13 @@ export const createClient = async (req, res) => {
 
     const client = await Client.create(payload);
 
-    // Safe auto-create of client portal user account
+    // Auto-create & link client portal user account with email as username and phone as password
     let portalUser = null;
     if (client.email) {
       try {
-        const cleanEmail = client.email.toLowerCase().trim();
-        const existingUser = await User.findOne({ email: cleanEmail });
-        if (!existingUser) {
-          const rawPhone = (client.phone || '').toString().trim();
-          const rawPassword = rawPhone.length >= 6 ? rawPhone : 'Client@123';
-          portalUser = await User.create({
-            name: client.name,
-            email: cleanEmail,
-            password: rawPassword,
-            role: 'client',
-            clientId: client._id,
-            organizationId: req.user?.organizationId,
-            isActive: true,
-            approvalStatus: 'approved',
-          });
-
-          client.userId = portalUser._id;
-          client.portalEnabled = true;
-          await client.save();
-        } else if (existingUser.role === 'client') {
-          client.userId = existingUser._id;
-          client.portalEnabled = true;
-          await client.save();
-        }
+        portalUser = await ensureClientUserAccount(client, req.user);
       } catch (userErr) {
-        console.error('⚠️ Portal user auto-creation skipped:', userErr.message);
+        console.error('⚠️ Portal user auto-creation error:', userErr.message);
       }
     }
 
@@ -220,18 +501,17 @@ export const createClient = async (req, res) => {
       relatedClient: client._id,
     });
 
-    const io = req.app.get('io');
-    if (io) {
-      io.emit('clientCreated', client);
-    }
+    emitLiveEvent('clientCreated', client);
 
     const populatedClient = await Client.findById(client._id).populate(clientPopulate);
+    const rawPhone = (client.phone || '').toString().trim();
+    const portalPassword = rawPhone.length >= 6 ? rawPhone : (rawPhone ? rawPhone.padEnd(6, '0') : 'Client@123');
 
     res.status(201).json({
       success: true,
       client: serializeClient(populatedClient),
       portalCredentials: portalUser
-        ? { email: portalUser.email, password: (client.phone || '').trim().length >= 6 ? client.phone.trim() : 'Client@123' }
+        ? { email: portalUser.email, password: portalPassword }
         : null,
     });
   } catch (error) {
@@ -246,6 +526,15 @@ export const updateClient = async (req, res) => {
 
     if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
 
+    // Sync portal user account if email or phone exists
+    if (client.email) {
+      try {
+        await ensureClientUserAccount(client, req.user);
+      } catch (err) {
+        console.error('⚠️ Portal user sync during update skipped:', err.message);
+      }
+    }
+
     await createActivityLog({
       actor: req.user,
       action: 'client.updated',
@@ -257,7 +546,10 @@ export const updateClient = async (req, res) => {
       metadata: { fields: Object.keys(req.body || {}) },
     });
 
-    res.json({ success: true, client: serializeClient(client) });
+    const serialized = serializeClient(client);
+    emitLiveEvent('clientUpdated', serialized);
+
+    res.json({ success: true, client: serialized });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -265,8 +557,26 @@ export const updateClient = async (req, res) => {
 
 export const deleteClient = async (req, res) => {
   try {
-    const client = await Client.findByIdAndDelete(req.params.id);
+    const client = await Client.findById(req.params.id);
     if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
+
+    await moveToRecycleBin({
+      entityType: 'client',
+      originalId: client._id,
+      title: client.company || client.name,
+      subtitle: client.email || client.phone || '',
+      originalLocation: 'Clients 360',
+      modelName: 'Client',
+      documentData: client,
+      user: req.user,
+    });
+
+    await Client.findByIdAndDelete(req.params.id);
+
+    // Also remove client portal user if linked
+    if (client.userId) {
+      await User.findByIdAndDelete(client.userId).catch(() => {});
+    }
 
     await createActivityLog({
       actor: req.user,
@@ -277,6 +587,8 @@ export const deleteClient = async (req, res) => {
       description: `${client.company || client.name} was deleted.`,
       relatedClient: client._id,
     });
+
+    emitLiveEvent('clientDeleted', req.params.id);
 
     res.json({ success: true, message: 'Client deleted' });
   } catch (error) {
@@ -321,37 +633,27 @@ export const activatePortal = async (req, res) => {
     const client = await Client.findById(req.params.id);
     if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
 
-    let portalUser = await User.findOne({ email: client.email, role: 'client' });
-    const tempPassword = Math.random().toString(36).slice(-10);
-
+    const portalUser = await ensureClientUserAccount(client, req.user);
     if (!portalUser) {
-      portalUser = await User.create({
-        name: client.name,
-        email: client.email,
-        password: tempPassword,
-        role: 'client',
-        clientId: client._id,
-        isActive: true,
-        approvalStatus: 'approved',
-      });
-    } else {
-      portalUser.clientId = client._id;
-      portalUser.isActive = true;
-      portalUser.approvalStatus = 'approved';
-      await portalUser.save();
+      return res.status(400).json({ success: false, message: 'Client must have a valid email to activate portal' });
     }
 
-    client.userId = portalUser._id;
-    client.portalEnabled = true;
     client.onboardingSteps.portalActivated = true;
-    client.onboardingCompleted = Object.values(client.onboardingSteps.toObject()).every(Boolean);
+    client.onboardingCompleted = Object.values(client.onboardingSteps.toObject ? client.onboardingSteps.toObject() : client.onboardingSteps).every(Boolean);
     await client.save();
 
-    await sendEmail({
-      to: client.email,
-      subject: 'Your Client Portal is Ready - RISE WITH MEDIA',
-      html: `<h2>Welcome ${client.name}!</h2><p>Your portal is now active.</p><p>Email: ${client.email}</p><p>${portalUser.createdAt?.getTime() === portalUser.updatedAt?.getTime() ? `Temporary password: ${tempPassword}` : 'Use your existing password or the password reset flow if needed.'}</p><p>Login at: ${process.env.CLIENT_URL}/login</p>`,
-    });
+    const rawPhone = (client.phone || '').toString().trim();
+    const portalPassword = rawPhone.length >= 6 ? rawPhone : (rawPhone ? rawPhone.padEnd(6, '0') : 'Client@123');
+
+    try {
+      await sendEmail({
+        to: client.email,
+        subject: 'Your Client Portal is Ready - RISE WITH MEDIA',
+        html: `<h2>Welcome ${client.name}!</h2><p>Your portal is now active.</p><p>Username / Email: <strong>${client.email}</strong></p><p>Password (Phone number): <strong>${portalPassword}</strong></p><p>Login at: ${process.env.CLIENT_URL || 'http://localhost:5175'}/login</p>`,
+      });
+    } catch (emailErr) {
+      console.warn('⚠️ Could not send portal activation email:', emailErr.message);
+    }
 
     await createActivityLog({
       actor: req.user,
@@ -364,8 +666,23 @@ export const activatePortal = async (req, res) => {
       relatedUser: portalUser._id,
     });
 
-    res.json({ success: true, message: 'Client portal activated and credentials sent', client: serializeClient(client) });
+    res.json({
+      success: true,
+      message: 'Client portal activated and credentials configured',
+      client: serializeClient(client),
+      credentials: { email: portalUser.email, password: portalPassword },
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const syncPortalUsersHandler = async (req, res) => {
+  try {
+    const count = await syncAllClientUsers();
+    res.json({ success: true, message: `Successfully synchronized ${count} client portal accounts.`, count });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

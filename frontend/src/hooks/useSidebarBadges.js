@@ -7,7 +7,7 @@ export const useSidebarBadges = (enabled = true, isSuperAdmin = false) => {
     queryFn: async () => {
       const requests = [
         api.get('/access-requests'),
-        api.get('/users'),
+        api.get('/users', { params: { approvalStatus: 'pending', countOnly: true } }),
       ];
 
       if (isSuperAdmin) {
@@ -44,8 +44,9 @@ export const useSidebarBadges = (enabled = true, isSuperAdmin = false) => {
         pendingCompanies,
       };
     },
-    refetchInterval: 30000,
+    refetchInterval: 120000,
+    refetchOnWindowFocus: false,
     enabled,
-    staleTime: 10000,
+    staleTime: 120000,
   });
 };

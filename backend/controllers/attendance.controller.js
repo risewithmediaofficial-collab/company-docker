@@ -1,18 +1,24 @@
 import Attendance from '../models/attendance.model.js';
+import { emitLiveEvent } from '../utils/socketEmitter.js';
 import { createNotification } from '../utils/notification.js';
 
 export const clockIn = async (req, res) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
 
-    let attendance = await Attendance.findOne({ user: req.user._id, date: today });
+    let attendance = await Attendance.findOne({
+      user: req.user._id,
+      date: { $gte: startOfToday, $lte: endOfToday },
+    });
     const now = new Date();
 
     if (!attendance) {
       attendance = new Attendance({
         user: req.user._id,
-        date: today,
+        date: startOfToday,
         clockIn: now,
         clockOut: null,
         sessions: [{ clockIn: now, clockOut: null, durationHours: 0 }],
@@ -50,6 +56,7 @@ export const clockIn = async (req, res) => {
     }
 
     await attendance.save();
+    emitLiveEvent('attendanceUpdated', { attendance: attendance.toObject(), userId: req.user._id });
     res.json({ success: true, message: 'Clocked in successfully', attendance });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -58,10 +65,15 @@ export const clockIn = async (req, res) => {
 
 export const clockOut = async (req, res) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
 
-    const attendance = await Attendance.findOne({ user: req.user._id, date: today });
+    const attendance = await Attendance.findOne({
+      user: req.user._id,
+      date: { $gte: startOfToday, $lte: endOfToday },
+    });
     if (!attendance) {
       return res.status(400).json({ success: false, message: 'No clock-in found for today' });
     }
@@ -97,6 +109,7 @@ export const clockOut = async (req, res) => {
     attendance.clockOut = now;
     attendance.totalHours = parseFloat((totalMs / 3600000).toFixed(2));
     await attendance.save();
+    emitLiveEvent('attendanceUpdated', { attendance: attendance.toObject(), userId: req.user._id });
 
     res.json({ success: true, message: 'Clocked out successfully', attendance });
   } catch (error) {
@@ -140,18 +153,16 @@ export const submitEOD = async (req, res) => {
       .populate('approvedBy', 'name role');
 
     // Realtime notification broadcast over WebSockets
-    const io = req.app.get('io');
-    if (io) {
-      io.emit('eodSubmitted', {
-        attendance,
-        user: {
-          _id: req.user._id,
-          name: req.user.name,
-          avatar: req.user.avatar,
-          role: req.user.role,
-        },
-      });
-    }
+    emitLiveEvent('eodSubmitted', {
+      attendance,
+      user: {
+        _id: req.user._id,
+        name: req.user.name,
+        avatar: req.user.avatar,
+        role: req.user.role,
+      },
+    });
+    emitLiveEvent('attendanceUpdated', { attendance: attendance.toObject(), userId: req.user._id });
 
     // In-app notifications for managers & admins
     try {
@@ -184,9 +195,186 @@ export const submitEOD = async (req, res) => {
   }
 };
 
+/**
+ * Ensures all Sundays in a given date range exist as default holiday records
+ * for eligible active staff members who have not clocked in.
+ */
+export const ensureSundayHolidaysForPeriod = async (startDate, endDate, specificUserId = null) => {
+  try {
+    const User = (await import('../models/user.model.js')).default;
+    const userQuery = {
+      isActive: true,
+      role: { $nin: ['client', 'clientAdmin', 'clientMember', 'referral', 'superAdmin', 'organizationOwner', 'admin'] },
+    };
+    if (specificUserId && specificUserId !== 'all') {
+      userQuery._id = specificUserId;
+    }
+    const eligibleUsers = await User.find(userQuery).select('_id').lean();
+    if (!eligibleUsers.length) return;
+
+    // Collect all Sundays between startDate and endDate
+    const sundays = [];
+    const cur = new Date(startDate);
+    cur.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    while (cur <= end) {
+      if (cur.getDay() === 0) {
+        sundays.push(new Date(cur));
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    if (!sundays.length) return;
+
+    const sStartOverall = new Date(sundays[0]);
+    sStartOverall.setHours(0, 0, 0, 0);
+    const sEndOverall = new Date(sundays[sundays.length - 1]);
+    sEndOverall.setHours(23, 59, 59, 999);
+
+    const userIds = eligibleUsers.map((u) => u._id);
+    const existingRecords = await Attendance.find({
+      user: { $in: userIds },
+      date: { $gte: sStartOverall, $lte: sEndOverall },
+    }).select('user date status').lean();
+
+    const existingKeySet = new Set(
+      existingRecords.map((r) => {
+        const d = new Date(r.date);
+        return `${r.user.toString()}_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+      })
+    );
+
+    const newHolidaysToInsert = [];
+    for (const sundayDate of sundays) {
+      const sStart = new Date(sundayDate);
+      sStart.setHours(0, 0, 0, 0);
+      const sKey = `${sStart.getFullYear()}-${sStart.getMonth() + 1}-${sStart.getDate()}`;
+
+      for (const u of eligibleUsers) {
+        const key = `${u._id.toString()}_${sKey}`;
+        if (!existingKeySet.has(key)) {
+          newHolidaysToInsert.push({
+            user: u._id,
+            date: sStart,
+            status: 'holiday',
+            requestedStatus: 'none',
+            approvalStatus: 'approved',
+            isApproved: true,
+            notes: 'Sunday Weekly Holiday',
+            totalHours: 0,
+            sessions: [],
+          });
+          existingKeySet.add(key);
+        }
+      }
+    }
+
+    if (newHolidaysToInsert.length > 0) {
+      await Attendance.insertMany(newHolidaysToInsert, { ordered: false }).catch(() => {});
+    }
+  } catch (err) {
+    console.error('Error ensuring Sunday holidays for period:', err);
+  }
+};
+
+let lastAutoAbsentCheck = 0;
+/**
+ * Automatically ensures employees who failed to clock in by 10:30 AM on Monday-Saturday
+ * are marked as absent for today. Throttled to run at most once per 10 minutes.
+ */
+export const ensureAutoAbsentForToday = async (startOfToday, endOfToday) => {
+  try {
+    const now = new Date();
+    if (Date.now() - lastAutoAbsentCheck < 10 * 60 * 1000) {
+      return;
+    }
+
+    // Calculate IST time (UTC+5:30)
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(now.getTime() + (now.getTimezoneOffset() * 60 * 1000) + istOffset);
+    const istDay = istNow.getDay(); // 0 is Sunday
+    const istHours = istNow.getHours();
+    const istMinutes = istNow.getMinutes();
+
+    // Skip Sunday (default weekly holiday)
+    if (istDay === 0) return;
+
+    // Cutoff is 10:30 AM IST
+    const isPast1030 = istHours > 10 || (istHours === 10 && istMinutes >= 30);
+    if (!isPast1030) return;
+
+    lastAutoAbsentCheck = Date.now();
+
+    const User = (await import('../models/user.model.js')).default;
+    const eligibleUsers = await User.find({
+      isActive: true,
+      role: { $nin: ['client', 'clientAdmin', 'clientMember', 'referral', 'superAdmin', 'organizationOwner', 'admin'] },
+    }).select('_id name').lean();
+
+    if (!eligibleUsers.length) return;
+
+    const start = startOfToday || new Date(new Date().setHours(0, 0, 0, 0));
+    const end = endOfToday || new Date(new Date().setHours(23, 59, 59, 999));
+
+    const todayAttendances = await Attendance.find({
+      date: { $gte: start, $lte: end },
+    }).lean();
+
+    const attByUser = new Map();
+    todayAttendances.forEach((a) => {
+      attByUser.set(a.user.toString(), a);
+    });
+
+    const bulkOps = [];
+    for (const u of eligibleUsers) {
+      const att = attByUser.get(u._id.toString());
+      const hasClockIn = Boolean(att && (att.clockIn || (att.sessions && att.sessions.some((s) => s.clockIn))));
+      const isApprovedExcusal = Boolean(att && att.approvalStatus === 'approved' && ['leave', 'holiday', 'work_from_home'].includes(att.status));
+      const isPendingRequest = Boolean(att && att.approvalStatus === 'pending');
+
+      if (hasClockIn || isApprovedExcusal || isPendingRequest) {
+        continue;
+      }
+
+      if (att && att.status === 'absent') {
+        continue;
+      }
+
+      bulkOps.push({
+        updateOne: {
+          filter: { user: u._id, date: start },
+          update: {
+            $set: {
+              status: 'absent',
+              requestedStatus: 'absent',
+              approvalStatus: 'approved',
+              isApproved: true,
+              notes: 'Automatically marked absent: Failed to clock in by 10:30 AM cutoff',
+              clockIn: null,
+              clockOut: null,
+              totalHours: 0,
+              sessions: [],
+            },
+          },
+          upsert: true,
+        },
+      });
+    }
+
+    if (bulkOps.length > 0) {
+      await Attendance.bulkWrite(bulkOps, { ordered: false });
+    }
+  } catch (err) {
+    console.error('Error ensuring auto absent for today:', err);
+  }
+};
+
 export const getAttendance = async (req, res) => {
   try {
     const { userId, status, month, year, page = 1, limit = 1000 } = req.query;
+    await ensureAutoAbsentForToday();
     const filter = {};
 
     const isPrivileged = ['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager'].includes(req.user.role);
@@ -194,28 +382,58 @@ export const getAttendance = async (req, res) => {
     if (!isPrivileged || req.user.role === 'employee') {
       filter.user = req.user._id;
     } else {
+      const User = (await import('../models/user.model.js')).default;
+      const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
+      const orgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
+
+      const ownerQuery = { role: { $in: ['superAdmin', 'organizationOwner'] } };
+      if (orgId) ownerQuery.organizationId = orgId;
+      const ownerUsers = await User.find(ownerQuery).select('_id').lean();
+      if (ownerUsers.length) {
+        await Attendance.deleteMany({
+          user: { $in: ownerUsers.map((o) => o._id) },
+          status: { $in: ['absent', 'holiday'] },
+        }).catch(() => {});
+      }
+
       if (userId && userId !== 'all') {
         filter.user = userId;
       } else {
-        // STRICT TENANT ISOLATION: scope to users in same org
-        const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
-        const orgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
-        if (orgId) {
-          const User = (await import('../models/user.model.js')).default;
-          const orgUserIds = await User.find({ organizationId: orgId }).distinct('_id');
-          filter.user = { $in: orgUserIds };
-        }
+        const userQuery = {};
+        if (orgId) userQuery.organizationId = orgId;
+        if (ownerUsers.length) userQuery._id = { $nin: ownerUsers.map((o) => o._id) };
+        const orgUserIds = await User.find(userQuery).distinct('_id');
+        filter.user = { $in: orgUserIds };
       }
     }
 
     if (status && status !== 'all') {
-      filter.status = status;
+      if (status === 'shifts') {
+        filter.status = { $ne: 'holiday' };
+      } else if (status === 'work_from_home') {
+        filter.$or = [
+          { status: 'work_from_home' },
+          { requestedStatus: 'work_from_home' },
+        ];
+      } else if (status === 'leave') {
+        filter.$or = [
+          { status: 'leave' },
+          { requestedStatus: 'leave' },
+        ];
+      } else if (status === 'pending') {
+        filter.approvalStatus = 'pending';
+      } else {
+        filter.status = status;
+      }
     }
 
     if (month && year) {
       const start = new Date(Number(year), Number(month) - 1, 1);
       const end = new Date(Number(year), Number(month), 0, 23, 59, 59, 999);
       filter.date = { $gte: start, $lte: end };
+
+      // Make all Sundays holiday by default
+      await ensureSundayHolidaysForPeriod(start, end, filter.user);
     }
 
     const records = await Attendance.find(filter)
@@ -223,19 +441,33 @@ export const getAttendance = async (req, res) => {
       .populate('approvedBy', 'name role')
       .sort({ date: -1 })
       .skip((Number(page) - 1) * Number(limit))
-      .limit(Number(limit));
+      .limit(Number(limit))
+      .lean();
+
+    // For managers & admins, also fetch all pending attendance & WFH requests
+    let pendingRequests = [];
+    if (isPrivileged) {
+      pendingRequests = await Attendance.find({
+        approvalStatus: 'pending',
+      })
+        .populate('user', 'name avatar department position role email')
+        .sort({ date: 1 })
+        .limit(50)
+        .lean();
+    }
 
     // Compute summary
     const summary = {
       present: records.filter(r => r.status === 'present').length,
       absent: records.filter(r => r.status === 'absent').length,
-      leave: records.filter(r => r.status === 'leave').length,
-      wfh: records.filter(r => r.status === 'work_from_home').length,
+      leave: records.filter(r => r.status === 'leave' || r.requestedStatus === 'leave').length,
+      wfh: records.filter(r => r.status === 'work_from_home' || r.requestedStatus === 'work_from_home').length,
+      pending: records.filter(r => r.approvalStatus === 'pending').length,
       holiday: records.filter(r => r.status === 'holiday').length,
       totalHours: records.reduce((sum, r) => sum + (r.totalHours || 0), 0).toFixed(2),
     };
 
-    res.json({ success: true, records, summary });
+    res.json({ success: true, records, summary, pendingRequests });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -248,18 +480,31 @@ export const getTeamAttendance = async (req, res) => {
     const endOfToday = new Date();
     endOfToday.setHours(23, 59, 59, 999);
 
-    // STRICT TENANT ISOLATION: only show attendance for users in same org
-    const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
-    const orgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
-    const attendanceFilter = { date: { $gte: startOfToday, $lte: endOfToday } };
-
-    if (orgId) {
-      const User = (await import('../models/user.model.js')).default;
-      const orgUserIds = await User.find({ organizationId: orgId }).distinct('_id');
-      attendanceFilter.user = { $in: orgUserIds };
+    // If today is Sunday, ensure Sunday holiday exists for all team members
+    if (startOfToday.getDay() === 0) {
+      await ensureSundayHolidaysForPeriod(startOfToday, endOfToday);
+    } else {
+      // If Monday - Saturday and past 10:30 AM cutoff, ensure unclocked staff are marked absent
+      await ensureAutoAbsentForToday(startOfToday, endOfToday);
     }
 
-    const records = await Attendance.find(attendanceFilter)
+    const User = (await import('../models/user.model.js')).default;
+    const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
+    const orgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
+
+    const ownerQuery = { role: { $in: ['superAdmin', 'organizationOwner'] } };
+    if (orgId) ownerQuery.organizationId = orgId;
+    const ownerUsers = await User.find(ownerQuery).select('_id').lean();
+
+    const teamFilter = {};
+    if (orgId) teamFilter.organizationId = orgId;
+    if (ownerUsers.length) teamFilter._id = { $nin: ownerUsers.map((o) => o._id) };
+    const orgUserIds = await User.find(teamFilter).distinct('_id');
+
+    const records = await Attendance.find({
+      date: { $gte: startOfToday, $lte: endOfToday },
+      user: { $in: orgUserIds },
+    })
       .populate('user', 'name avatar department position role email')
       .populate('approvedBy', 'name role');
 
@@ -271,15 +516,35 @@ export const getTeamAttendance = async (req, res) => {
 
 export const getEodReports = async (req, res) => {
   try {
-    const { days = 7, userId, mine } = req.query;
-    const since = new Date();
-    since.setDate(since.getDate() - Number(days));
-    since.setHours(0, 0, 0, 0);
-
+    const { days, userId, mine, startDate, endDate } = req.query;
     const query = {
-      date: { $gte: since },
       'eodReport.submittedAt': { $exists: true },
     };
+
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) {
+        const [y, m, d] = String(startDate).slice(0, 10).split('-').map(Number);
+        const s = (!Number.isNaN(y) && !Number.isNaN(m) && !Number.isNaN(d))
+          ? new Date(y, m - 1, d, 0, 0, 0, 0)
+          : new Date(startDate);
+        s.setHours(0, 0, 0, 0);
+        query.date.$gte = s;
+      }
+      if (endDate) {
+        const [y, m, d] = String(endDate).slice(0, 10).split('-').map(Number);
+        const e = (!Number.isNaN(y) && !Number.isNaN(m) && !Number.isNaN(d))
+          ? new Date(y, m - 1, d, 23, 59, 59, 999)
+          : new Date(endDate);
+        e.setHours(23, 59, 59, 999);
+        query.date.$lte = e;
+      }
+    } else if (days && days !== 'all') {
+      const since = new Date();
+      since.setDate(since.getDate() - Number(days));
+      since.setHours(0, 0, 0, 0);
+      query.date = { $gte: since };
+    }
 
     if (req.user.role === 'employee' || mine === 'true') {
       query.user = userId || req.user._id;
@@ -341,44 +606,55 @@ export const assignHoliday = async (req, res) => {
     holidayDate.setHours(0, 0, 0, 0);
 
     const User = (await import('../models/user.model.js')).default;
-    const users = await User.find({
-      organizationId: req.user.organizationId,
+    const userQuery = {
       role: { $nin: ['client', 'referral'] },
       isActive: true,
-    });
+    };
+    if (req.user.organizationId && req.user.role !== 'superAdmin' && req.user.role !== 'admin') {
+      userQuery.organizationId = req.user.organizationId;
+    }
+    const users = await User.find(userQuery).select('_id').lean();
 
-    const assignerRole = req.user.role === 'superAdmin' ? 'Super Admin' : 'Manager';
+    const assignerRole = req.user.role === 'superAdmin' ? 'Super Admin' : (req.user.role === 'admin' ? 'Admin' : 'Manager');
     const reasonText = notes || 'Company Official Holiday';
 
-    const promises = users.map(async (userObj) => {
-      const att = await Attendance.findOneAndUpdate(
-        { user: userObj._id, date: holidayDate },
-        {
-          status: 'holiday',
-          notes: reasonText,
-          isApproved: true,
-          approvedBy: req.user._id,
+    // Bulk upsert all attendance holiday records in a single database roundtrip
+    if (users.length > 0) {
+      const bulkOps = users.map((userObj) => ({
+        updateOne: {
+          filter: { user: userObj._id, date: holidayDate },
+          update: {
+            $set: {
+              status: 'holiday',
+              notes: reasonText,
+              isApproved: true,
+              approvedBy: req.user._id,
+            },
+          },
+          upsert: true,
         },
-        { upsert: true, new: true }
+      }));
+      await Attendance.bulkWrite(bulkOps, { ordered: false });
+
+      // Dispatch notifications in parallel
+      const io = req.app.get('io');
+      await Promise.all(
+        users.map((userObj) =>
+          createNotification(
+            {
+              recipient: userObj._id,
+              sender: req.user._id,
+              type: 'attendance',
+              title: 'Official Holiday Assigned \u{1F4C5}',
+              message: `${req.user.name} (${assignerRole}) assigned an official holiday on ${date}: "${reasonText}"`,
+              link: '/attendance',
+            },
+            io
+          ).catch(() => null)
+        )
       );
-
-      // Send notification to employee
-      await createNotification(
-        {
-          recipient: userObj._id,
-          sender: req.user._id,
-          type: 'attendance',
-          title: 'Official Holiday Assigned 📅',
-          message: `${req.user.name} (${assignerRole}) assigned an official holiday on ${date}: "${reasonText}"`,
-          link: '/attendance',
-        },
-        req.app.get('io')
-      );
-
-      return att;
-    });
-
-    await Promise.all(promises);
+    }
+    emitLiveEvent('attendanceUpdated', { holidayDate });
 
     res.json({ success: true, message: `Holiday successfully assigned for ${users.length} team members.` });
   } catch (error) {
@@ -407,6 +683,7 @@ export const submitAbsent = async (req, res) => {
       approvalStatus: isAdminOrManager ? 'approved' : 'pending',
       isApproved: isAdminOrManager,
       approvedBy: isAdminOrManager ? req.user._id : undefined,
+      appliedAt: new Date(),
     };
 
     if (isAdminOrManager) {
@@ -443,6 +720,8 @@ export const submitAbsent = async (req, res) => {
         console.error('Notification error:', err);
       }
     }
+
+    emitLiveEvent('attendanceUpdated', { attendance, userId: targetUserId });
 
     res.json({
       success: true,
@@ -486,9 +765,11 @@ export const submitLeave = async (req, res) => {
     const updateObj = {
       notes: reasonText.trim(),
       requestedStatus: 'leave',
+      status: 'leave',
       approvalStatus: isAdminOrManager ? 'approved' : 'pending',
       isApproved: isAdminOrManager,
       approvedBy: isAdminOrManager ? req.user._id : undefined,
+      appliedAt: new Date(),
     };
 
     if (isAdminOrManager) {
@@ -531,7 +812,7 @@ export const submitLeave = async (req, res) => {
             recipient: mgr._id,
             sender: req.user._id,
             type: 'attendance',
-            title: 'Leave Request Pending Approval 🏖️',
+            title: 'Leave Request Pending Approval \u{1F3D6}\uFE0F',
             message: `${req.user.name} applied for leave for ${dateStr}: "${reasonText.trim()}"`,
             link: '/attendance',
           });
@@ -540,6 +821,8 @@ export const submitLeave = async (req, res) => {
         console.error('Notification error:', err);
       }
     }
+
+    emitLiveEvent('attendanceUpdated', { attendance, userId: targetUserId });
 
     res.json({
       success: true,
@@ -571,10 +854,36 @@ export const submitWFH = async (req, res) => {
     const updateObj = {
       notes: reasonText.trim(),
       requestedStatus: 'work_from_home',
+      status: 'work_from_home',
       approvalStatus: isAdminOrManager ? 'approved' : 'pending',
       isApproved: isAdminOrManager,
       approvedBy: isAdminOrManager ? req.user._id : undefined,
+      appliedAt: new Date(),
+      wfhApprovedForDate: isAdminOrManager,
     };
+
+    // Keep WFHRequest model in sync if present
+    try {
+      const WFHRequest = (await import('../models/wfhRequest.model.js')).default;
+      const wfhReq = await WFHRequest.findOneAndUpdate(
+        { user: req.user._id, date: wfhDate },
+        {
+          user: req.user._id,
+          date: wfhDate,
+          reason: reasonText.trim(),
+          status: isAdminOrManager ? 'approved' : 'pending',
+          department: req.user.department,
+          reviewedBy: isAdminOrManager ? req.user._id : undefined,
+          reviewedAt: isAdminOrManager ? new Date() : undefined,
+        },
+        { upsert: true, new: true }
+      );
+      if (wfhReq) {
+        updateObj.wfhRequestId = wfhReq._id;
+      }
+    } catch (wfhErr) {
+      // Non-blocking sync
+    }
 
     if (isAdminOrManager) {
       updateObj.status = 'work_from_home';
@@ -597,7 +906,7 @@ export const submitWFH = async (req, res) => {
             recipient: mgr._id,
             sender: req.user._id,
             type: 'attendance',
-            title: 'Work From Home Request Pending 🏠',
+            title: 'Work From Home Request Pending \u{1F3E0}',
             message: `${req.user.name} requested WFH for ${formattedDate}: "${reasonText.trim()}"`,
             link: '/attendance',
           });
@@ -606,6 +915,8 @@ export const submitWFH = async (req, res) => {
         console.error('Notification error:', err);
       }
     }
+
+    emitLiveEvent('attendanceUpdated', { attendance, userId: req.user._id });
 
     res.json({
       success: true,
@@ -639,6 +950,9 @@ export const approveOrRejectAttendanceRequest = async (req, res) => {
       if (attendance.requestedStatus && attendance.requestedStatus !== 'none') {
         attendance.status = attendance.requestedStatus;
       }
+      if (attendance.status === 'work_from_home' || attendance.requestedStatus === 'work_from_home') {
+        attendance.wfhApprovedForDate = true;
+      }
       if (attendance.status === 'absent') {
         attendance.clockIn = null;
         attendance.clockOut = null;
@@ -650,6 +964,23 @@ export const approveOrRejectAttendanceRequest = async (req, res) => {
       attendance.isApproved = false;
       attendance.approvedBy = req.user._id;
       attendance.rejectionReason = rejectionReason || 'Request rejected by manager.';
+      if (attendance.status === 'work_from_home' && !attendance.clockIn) {
+        attendance.status = 'absent';
+      }
+      attendance.wfhApprovedForDate = false;
+    }
+
+    if (attendance.wfhRequestId) {
+      try {
+        const WFHRequest = (await import('../models/wfhRequest.model.js')).default;
+        await WFHRequest.findByIdAndUpdate(attendance.wfhRequestId, {
+          status: action === 'approve' ? 'approved' : 'rejected',
+          reviewedBy: req.user._id,
+          reviewedAt: new Date(),
+        });
+      } catch (err) {
+        console.error('Error updating linked WFHRequest:', err);
+      }
     }
 
     await attendance.save();
@@ -666,7 +997,7 @@ export const approveOrRejectAttendanceRequest = async (req, res) => {
           recipient: attendance.user._id,
           sender: req.user._id,
           type: 'attendance',
-          title: action === 'approve' ? `Attendance Request Approved ✅` : `Attendance Request Rejected ❌`,
+          title: action === 'approve' ? 'Attendance Request Approved ✅' : 'Attendance Request Rejected ❌',
           message: action === 'approve'
             ? `Your request for ${statusLabel} on ${formattedDate} was approved by ${req.user.name}.`
             : `Your request for ${statusLabel} on ${formattedDate} was rejected: "${rejectionReason || 'No reason provided'}"`,
@@ -677,6 +1008,8 @@ export const approveOrRejectAttendanceRequest = async (req, res) => {
     } catch (notifErr) {
       console.error('Notification error:', notifErr);
     }
+
+    emitLiveEvent('attendanceUpdated', { attendance, userId: attendance.user?._id || attendance.user });
 
     res.json({
       success: true,

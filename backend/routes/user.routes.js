@@ -3,6 +3,7 @@ import User from '../models/user.model.js';
 import Organization from '../models/organization.model.js';
 import { authorize, protect } from '../middleware/auth.middleware.js';
 import { createActivityLog } from '../utils/activity.js';
+import { emitLiveEvent } from '../utils/socketEmitter.js';
 
 const router = express.Router();
 router.use(protect);
@@ -19,7 +20,7 @@ const mapEmploymentStatus = (status) => {
   }[normalized] || undefined;
 };
 
-router.get('/', authorize('superAdmin', 'organizationOwner', 'admin', 'manager'), async (req, res) => {
+router.get('/', authorize('superAdmin', 'organizationOwner', 'admin', 'manager', 'employee'), async (req, res) => {
   try {
     const filter = {};
     const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
@@ -32,12 +33,20 @@ router.get('/', authorize('superAdmin', 'organizationOwner', 'admin', 'manager')
     if (req.query.role) {
       filter.role = req.query.role;
     }
+    if (req.query.approvalStatus) {
+      filter.approvalStatus = req.query.approvalStatus;
+    }
+    const selectProjection = req.query.countOnly ? '_id approvalStatus' : safeUserProjection;
 
     const users = await User.find(filter)
-      .select(safeUserProjection)
+      .select(selectProjection)
+      .populate('clientId', 'name company email phone')
       .sort({ createdAt: -1 });
 
-    res.json({ success: true, users });
+    res.json({ success: true, users, count: users.length });
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, users, count: users.length });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -47,6 +56,7 @@ router.get('/:id', authorize('superAdmin', 'admin', 'manager'), async (req, res)
   try {
     const user = await User.findById(req.params.id).select(safeUserProjection);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    emitLiveEvent('userUpdated', user);
     res.json({ success: true, user });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -109,6 +119,7 @@ router.post('/', authorize('superAdmin', 'organizationOwner', 'admin'), async (r
     });
 
     const sanitized = await User.findById(user._id).select(safeUserProjection);
+    emitLiveEvent('userCreated', sanitized);
     res.status(201).json({ success: true, user: sanitized });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -233,6 +244,7 @@ router.put('/:id', authorize('superAdmin', 'organizationOwner', 'admin'), async 
       metadata: { fields: Object.keys(updates) },
     });
 
+    emitLiveEvent('userUpdated', user);
     res.json({ success: true, user });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -369,6 +381,7 @@ router.patch('/:id/approval', authorize('superAdmin', 'organizationOwner', 'admi
       metadata: { approvalStatus },
     });
 
+    emitLiveEvent('userUpdated', user);
     res.json({ success: true, user });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -406,6 +419,7 @@ router.delete('/:id', authorize('superAdmin', 'organizationOwner', 'admin'), asy
       relatedUser: targetUser._id,
     });
 
+    emitLiveEvent('userUpdated', { id: req.params.id, deleted: true });
     res.json({ success: true, message: 'User deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
