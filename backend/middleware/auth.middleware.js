@@ -250,10 +250,6 @@ export const withWorkspaceScope = (req, baseQuery = {}) => {
 
   return query;
 };
-  }
-
-  return query;
-};
 /**
  * Optional auth - attaches user if token present, doesn't block if not
  */

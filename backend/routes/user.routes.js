@@ -44,9 +44,6 @@ router.get('/', authorize('superAdmin', 'organizationOwner', 'admin', 'manager',
       .sort({ createdAt: -1 });
 
     res.json({ success: true, users, count: users.length });
-      .sort({ createdAt: -1 });
-
-    res.json({ success: true, users, count: users.length });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
