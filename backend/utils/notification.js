@@ -28,7 +28,6 @@ export const createNotification = async ({ recipient, sender, type, title, messa
         return null;
       }
     }
-    }
 
     const notification = await Notification.create({ recipient, sender, type, title, message, link, metadata });
 
