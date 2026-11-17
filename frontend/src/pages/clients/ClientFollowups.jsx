@@ -21,9 +21,9 @@ import {
   Eye,
   X,
   ClipboardList,
-} from 'lucide-react';
+} from '@/components/ui/muiIcons';
 import { Button } from '../../components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../utils/cn';
@@ -37,6 +37,7 @@ import {
 } from '../../hooks/useClientFollowups';
 import WorkspacePage from '../../components/ui/WorkspacePage';
 import DatabaseView from '../../components/ui/DatabaseView';
+import { SelectDropdown } from '../../components/ui/SelectDropdown';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,7 +47,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useDateFilter } from '../../context/DateFilterContext';
 
 const emptyForm = {
   client: '',
@@ -65,17 +65,17 @@ const emptyForm = {
 };
 
 const statusTone = {
-  open: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-  completed: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-  waiting: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-  cancelled: 'bg-rose-500/10 text-rose-600 border-rose-500/20',
+  open: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30',
+  completed: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold',
+  waiting: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30',
+  cancelled: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30',
 };
 
 const priorityTone = {
-  low: 'bg-slate-500/10 text-slate-600',
-  medium: 'bg-blue-500/10 text-blue-600',
-  high: 'bg-amber-500/10 text-amber-600',
-  urgent: 'bg-rose-500/10 text-rose-600',
+  low: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30',
+  medium: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30',
+  high: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold',
+  urgent: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-bold',
 };
 
 const typeIcons = {
@@ -86,10 +86,10 @@ const typeIcons = {
 };
 
 const channelColors = {
-  call: 'bg-blue-500/10 text-blue-600',
-  meeting: 'bg-violet-500/10 text-violet-600',
-  whatsapp: 'bg-emerald-500/10 text-emerald-600',
-  email: 'bg-amber-500/10 text-amber-600',
+  call: 'bg-secondary text-foreground ',
+  meeting: 'bg-secondary text-foreground ',
+  whatsapp: 'bg-secondary text-foreground ',
+  email: 'bg-secondary text-foreground ',
 };
 
 const formatDate = (value) => {
@@ -105,7 +105,7 @@ const Field = ({ label, required, helper, children, className }) => (
       <label className="text-[13px] font-medium text-foreground/90 flex items-center justify-between select-none">
         <span>
           {label.replace(/\s*\*/, '')}
-          {(required || label.includes('*')) && <span className="text-primary ml-1 font-bold">*</span>}
+          {(required || label.includes('*')) && <span className="text-foreground ml-1 font-bold">*</span>}
         </span>
         {helper && <span className="text-[11px] text-muted-foreground font-normal">{helper}</span>}
       </label>
@@ -121,24 +121,27 @@ const FollowupViewModal = ({ open, onOpenChange, followup, onEdit, onDelete }) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg" className="bg-card border border-border p-0 overflow-hidden">
-        {/* Colored header stripe */}
-        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border px-6 py-4">
+      <DialogContent variant="side" size="md" noPadding className="flex flex-col min-h-0 bg-card p-0 overflow-hidden">
+        {/* Monochrome Header */}
+        <div className="bg-secondary/40 px-4 sm:px-6 py-4 pr-20 sm:pr-28 shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="h-10 w-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+              <div className="h-10 w-10 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
                 <Icon size={20} />
               </div>
               <div className="min-w-0">
                 <h2 className="text-base font-bold text-foreground leading-snug truncate">{followup.subject || 'Untitled Follow-up'}</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  🏢 {followup.client?.company || followup.client?.name || 'Unknown Client'}
-                  {followup.contactPerson && ` · ${followup.contactPerson}`}
+                <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 truncate">
+                  <Building2 size={11} className="shrink-0" />
+                  <span className="truncate">
+                    {followup.client?.company || followup.client?.name || 'Unknown Client'}
+                    {followup.contactPerson && ` · ${followup.contactPerson}`}
+                  </span>
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${statusTone[followup.status] || statusTone.open}`}>
+              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${statusTone[followup.status] || statusTone.open}`}>
                 {labelize(followup.status)}
               </span>
               <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${priorityTone[followup.priority] || priorityTone.medium}`}>
@@ -148,23 +151,23 @@ const FollowupViewModal = ({ open, onOpenChange, followup, onEdit, onDelete }) =
           </div>
         </div>
 
-        <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto custom-scrollbar">
+        <div className="flex-1 min-h-0 p-6 space-y-5 overflow-y-auto custom-scrollbar">
           {/* Channel + Dates */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div className="rounded-xl border border-border bg-secondary/30 p-3 space-y-1">
+            <div className="rounded-xl bg-secondary/30 p-3 space-y-1">
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Channel</p>
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${channelColors[followup.type] || 'bg-secondary text-foreground'}`}>
-                <Icon size={13} />
+                <Icon size={13} className="shrink-0" />
                 {labelize(followup.type)}
               </span>
             </div>
-            <div className="rounded-xl border border-border bg-secondary/30 p-3 space-y-1">
+            <div className="rounded-xl bg-secondary/30 p-3 space-y-1">
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Meeting Date</p>
-              <p className="text-sm font-semibold text-foreground">{formatDate(followup.meetingDate)}</p>
+              <p className="text-sm font-semibold text-foreground tabular-nums">{formatDate(followup.meetingDate)}</p>
             </div>
-            <div className="rounded-xl border border-border bg-secondary/30 p-3 space-y-1">
+            <div className="rounded-xl bg-secondary/30 p-3 space-y-1">
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Next Follow-up</p>
-              <p className={`text-sm font-semibold ${followup.nextFollowUpDate ? 'text-primary' : 'text-muted-foreground'}`}>
+              <p className={`text-sm font-semibold tabular-nums ${followup.nextFollowUpDate ? 'text-foreground' : 'text-muted-foreground'}`}>
                 {formatDate(followup.nextFollowUpDate)}
               </p>
             </div>
@@ -172,8 +175,8 @@ const FollowupViewModal = ({ open, onOpenChange, followup, onEdit, onDelete }) =
 
           {/* Project */}
           {followup.project && (
-            <div className="rounded-xl border border-border bg-secondary/20 px-4 py-2.5 flex items-center gap-2.5">
-              <ClipboardList size={14} className="text-primary shrink-0" />
+            <div className="rounded-xl bg-secondary/20 px-4 py-2.5 flex items-center gap-2.5">
+              <ClipboardList size={14} className="text-foreground shrink-0" />
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Related Project</p>
                 <p className="text-xs font-semibold text-foreground">{followup.project?.name || followup.project}</p>
@@ -185,7 +188,7 @@ const FollowupViewModal = ({ open, onOpenChange, followup, onEdit, onDelete }) =
           {followup.summary && (
             <div className="space-y-1.5">
               <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Meeting Summary</p>
-              <p className="text-sm text-foreground leading-relaxed bg-secondary/20 rounded-xl px-4 py-3 border border-border/60">
+              <p className="text-sm text-foreground leading-relaxed bg-secondary/20 rounded-xl px-4 py-3 ">
                 {followup.summary}
               </p>
             </div>
@@ -195,7 +198,7 @@ const FollowupViewModal = ({ open, onOpenChange, followup, onEdit, onDelete }) =
           {followup.discussionNotes && (
             <div className="space-y-1.5">
               <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Detailed Notes & Feedback</p>
-              <p className="text-sm text-foreground leading-relaxed bg-secondary/20 rounded-xl px-4 py-3 border border-border/60 whitespace-pre-wrap">
+              <p className="text-sm text-foreground leading-relaxed bg-secondary/20 rounded-xl px-4 py-3 whitespace-pre-wrap">
                 {followup.discussionNotes}
               </p>
             </div>
@@ -205,7 +208,7 @@ const FollowupViewModal = ({ open, onOpenChange, followup, onEdit, onDelete }) =
           {followup.outcome && (
             <div className="space-y-1.5">
               <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Outcome</p>
-              <p className="text-sm text-foreground leading-relaxed bg-emerald-500/5 border border-emerald-500/20 rounded-xl px-4 py-3">
+              <p className="text-sm text-foreground leading-relaxed bg-secondary/40 rounded-xl px-4 py-3">
                 {followup.outcome}
               </p>
             </div>
@@ -213,10 +216,10 @@ const FollowupViewModal = ({ open, onOpenChange, followup, onEdit, onDelete }) =
 
           {/* Next Action */}
           {followup.nextAction && (
-            <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-center gap-2.5">
-              <ArrowRight size={14} className="text-primary shrink-0" />
+            <div className="rounded-xl bg-secondary/40 px-4 py-3 flex items-center gap-2.5">
+              <ArrowRight size={14} className="text-foreground shrink-0" />
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-primary/70">Next Action Item</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Next Action Item</p>
                 <p className="text-sm font-semibold text-foreground">{followup.nextAction}</p>
               </div>
             </div>
@@ -224,10 +227,10 @@ const FollowupViewModal = ({ open, onOpenChange, followup, onEdit, onDelete }) =
         </div>
 
         {/* Footer Actions */}
-        <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-secondary/10">
+        <div className="px-6 py-4 flex items-center justify-between bg-secondary/10">
           <button
             onClick={() => { onDelete && onDelete(followup._id); onOpenChange(false); }}
-            className="flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 px-3 py-2 rounded-xl hover:bg-rose-500/10 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground px-3 py-2 rounded-xl hover:bg-secondary transition-colors cursor-pointer"
           >
             <Trash2 size={14} /> Delete
           </button>
@@ -289,177 +292,239 @@ const FollowupDialog = ({ open, onOpenChange, followup, clients, projects, onSav
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg" className="bg-card border border-border">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <PhoneCall size={20} className="text-primary" />
-            {followup ? 'Edit Client Follow-up' : 'Log New Client Touchpoint'}
-          </DialogTitle>
-          <DialogDescription>
-            Record communication logs, meetings, notes, and action items for this client account.
-          </DialogDescription>
+      <DialogContent size="lg" noPadding hideCloseButton className="flex flex-col min-h-0 p-0 overflow-hidden bg-card w-[calc(100vw-24px)] max-w-2xl max-h-[90dvh]">
+        <DialogHeader className="px-4 sm:px-6 py-4 sm:py-5 bg-card shrink-0 select-none flex flex-row items-center justify-between gap-3 sm:gap-4 m-0 space-y-0">
+          <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
+            <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-secondary text-foreground shrink-0 ">
+              <PhoneCall size={20} />
+            </div>
+            <div className="min-w-0">
+              <DialogTitle className="text-lg sm:text-xl font-bold text-foreground leading-tight truncate">
+                {followup ? 'Edit Client Follow-up' : 'Log New Client Touchpoint'}
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                Record communication logs, meetings, notes, and action items for this client account
+              </DialogDescription>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <kbd className="hidden sm:inline-flex items-center justify-center h-6 px-2 rounded-md bg-secondary/80 text-[10px] font-mono font-medium text-muted-foreground select-none">
+              ESC
+            </kbd>
+            <DialogClose className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all hover:scale-105 active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20">
+              <X size={16} className="stroke-[2.5]" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
+          </div>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5 pt-1 max-h-[70vh] overflow-y-auto custom-scrollbar pr-1">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Client *">
-              <select
+
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {/* Scrollable Form Body - Google Form Linear Stack */}
+          <div className="space-y-5 p-4 sm:p-6 md:p-7 overflow-y-auto flex-1 min-h-0 custom-scrollbar overscroll-contain">
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Client *</label>
+              <SelectDropdown
                 value={form.client}
-                onChange={(e) => updateField('client', e.target.value)}
-                required
-                className="w-full h-10 px-3.5 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all cursor-pointer"
-              >
-                <option value="">Select client</option>
-                {clients.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.company || c.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
+                onChange={(val) => updateField('client', val || '')}
+                options={clients.map((c) => ({
+                  value: c._id,
+                  label: c.company || c.name,
+                }))}
+                placeholder="Select client"
+                allowCustom={false}
+                className="w-full"
+                buttonClassName="h-11 bg-background text-sm rounded-xl border border-border/50"
+              />
+            </div>
 
-            <Field label="Related Project (Optional)">
-              <select
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Related Project (Optional)</label>
+              <SelectDropdown
                 value={form.project}
-                onChange={(e) => updateField('project', e.target.value)}
-                className="w-full h-10 px-3.5 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all cursor-pointer"
-              >
-                <option value="">None / General</option>
-                {clientProjects.map((p) => (
-                  <option key={p._id} value={p._id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
+                onChange={(val) => updateField('project', val || '')}
+                options={[
+                  { value: '', label: 'None / General' },
+                  ...clientProjects.map((p) => ({
+                    value: p._id,
+                    label: p.name,
+                  })),
+                ]}
+                placeholder="None / General"
+                allowCustom={false}
+                className="w-full"
+                buttonClassName="h-11 bg-background text-sm rounded-xl border border-border/50"
+              />
+            </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="Touchpoint Channel">
-              <select
-                value={form.type}
-                onChange={(e) => updateField('type', e.target.value)}
-                className="w-full h-10 px-3.5 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all cursor-pointer"
-              >
-                <option value="call">Phone Call</option>
-                <option value="meeting">Video / In-Person Meeting</option>
-                <option value="whatsapp">WhatsApp</option>
-                <option value="email">Email</option>
-              </select>
-            </Field>
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Touchpoint Channel</label>
+              <SelectDropdown
+                value={form.type || 'call'}
+                onChange={(val) => updateField('type', val || 'call')}
+                options={[
+                  { value: 'call', label: 'Phone Call' },
+                  { value: 'meeting', label: 'Video / In-Person Meeting' },
+                  { value: 'whatsapp', label: 'WhatsApp' },
+                  { value: 'email', label: 'Email' },
+                ]}
+                placeholder="Channel"
+                allowCustom={false}
+                allowDeselect={false}
+                className="w-full"
+                buttonClassName="h-11 bg-background text-sm rounded-xl border border-border/50"
+              />
+            </div>
 
-            <Field label="Status">
-              <select
-                value={form.status}
-                onChange={(e) => updateField('status', e.target.value)}
-                className="w-full h-10 px-3.5 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all cursor-pointer"
-              >
-                <option value="open">Open</option>
-                <option value="waiting">Waiting for Client</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </Field>
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Status</label>
+              <SelectDropdown
+                value={form.status || 'open'}
+                onChange={(val) => updateField('status', val || 'open')}
+                options={[
+                  { value: 'open', label: 'Open' },
+                  { value: 'waiting', label: 'Waiting for Client' },
+                  { value: 'completed', label: 'Completed' },
+                  { value: 'cancelled', label: 'Cancelled' },
+                ]}
+                placeholder="Status"
+                allowCustom={false}
+                allowDeselect={false}
+                className="w-full"
+                buttonClassName="h-11 bg-background text-sm rounded-xl border border-border/50"
+              />
+            </div>
 
-            <Field label="Priority">
-              <select
-                value={form.priority}
-                onChange={(e) => updateField('priority', e.target.value)}
-                className="w-full h-10 px-3.5 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all cursor-pointer"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
-            </Field>
-          </div>
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Priority</label>
+              <SelectDropdown
+                value={form.priority || 'medium'}
+                onChange={(val) => updateField('priority', val || 'medium')}
+                options={[
+                  { value: 'low', label: 'Low' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High' },
+                  { value: 'urgent', label: 'Urgent' },
+                ]}
+                placeholder="Priority"
+                allowCustom={false}
+                allowDeselect={false}
+                className="w-full"
+                buttonClassName="h-11 bg-background text-sm rounded-xl border border-border/50"
+              />
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Contact Person / Stakeholder">
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Contact Person / Stakeholder</label>
               <Input
                 value={form.contactPerson}
                 onChange={(e) => updateField('contactPerson', e.target.value)}
                 placeholder="e.g. Rahul Sharma (Marketing Head)"
-                className="h-10 text-sm rounded-xl px-3.5"
+                className="h-11 text-sm rounded-xl px-4"
               />
-            </Field>
+            </div>
 
-            <Field label="Discussion Subject *">
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Discussion Subject *</label>
               <Input
                 value={form.subject}
                 onChange={(e) => updateField('subject', e.target.value)}
                 placeholder="e.g. August Reel Plan & Retainer Review"
                 required
-                className="h-10 text-sm rounded-xl px-3.5"
+                className="h-11 text-sm rounded-xl px-4"
               />
-            </Field>
-          </div>
+            </div>
 
-          <Field label="Meeting Summary / Core Takeaway">
-            <Textarea
-              value={form.summary}
-              onChange={(e) => updateField('summary', e.target.value)}
-              placeholder="Brief summary of what was discussed..."
-              rows={2}
-              className="text-sm leading-relaxed rounded-xl p-3"
-            />
-          </Field>
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Meeting Summary / Core Takeaway</label>
+              <Textarea
+                value={form.summary}
+                onChange={(e) => updateField('summary', e.target.value)}
+                placeholder="Brief summary of what was discussed..."
+                rows={2}
+                className="text-sm leading-relaxed rounded-xl p-3.5 min-h-[80px] resize-y"
+              />
+            </div>
 
-          <Field label="Detailed Notes & Feedback">
-            <Textarea
-              value={form.discussionNotes}
-              onChange={(e) => updateField('discussionNotes', e.target.value)}
-              placeholder="Detailed notes, feedback on deliverables, client expectations..."
-              rows={3}
-              className="text-sm leading-relaxed rounded-xl p-3"
-            />
-          </Field>
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Detailed Notes & Feedback</label>
+              <Textarea
+                value={form.discussionNotes}
+                onChange={(e) => updateField('discussionNotes', e.target.value)}
+                placeholder="Detailed notes, feedback on deliverables, client expectations..."
+                rows={3}
+                className="text-sm leading-relaxed rounded-xl p-3.5 min-h-[100px] resize-y"
+              />
+            </div>
 
-          <Field label="Outcome">
-            <Input
-              value={form.outcome}
-              onChange={(e) => updateField('outcome', e.target.value)}
-              placeholder="e.g. Client approved Q3 content plan"
-              className="h-10 text-sm rounded-xl px-3.5"
-            />
-          </Field>
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Outcome</label>
+              <Input
+                value={form.outcome}
+                onChange={(e) => updateField('outcome', e.target.value)}
+                placeholder="e.g. Client approved Q3 content plan"
+                className="h-11 text-sm rounded-xl px-4"
+              />
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Field label="Meeting Date">
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Meeting Date</label>
               <Input
                 type="date"
                 value={form.meetingDate}
                 onChange={(e) => updateField('meetingDate', e.target.value)}
-                className="h-10 text-sm rounded-xl px-3.5"
+                className="h-11 text-sm rounded-xl px-4"
               />
-            </Field>
+            </div>
 
-            <Field label="Next Follow-up Date">
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Next Follow-up Date</label>
               <Input
                 type="date"
                 value={form.nextFollowUpDate}
                 onChange={(e) => updateField('nextFollowUpDate', e.target.value)}
-                className="h-10 text-sm rounded-xl px-3.5"
+                className="h-11 text-sm rounded-xl px-4"
               />
-            </Field>
+            </div>
 
-            <Field label="Next Action Item">
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Next Action Item</label>
               <Input
                 value={form.nextAction}
                 onChange={(e) => updateField('nextAction', e.target.value)}
                 placeholder="e.g. Send revised video draft"
-                className="h-10 text-sm rounded-xl px-3.5"
+                className="h-11 text-sm rounded-xl px-4"
               />
-            </Field>
+            </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-border">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl text-sm h-10 px-4">
-              Cancel
-            </Button>
-            <Button type="submit" disabled={saving} className="rounded-xl text-sm font-semibold h-10 px-6">
-              {saving ? 'Saving...' : followup ? 'Save Changes' : 'Log Touchpoint'}
-            </Button>
+          {/* Pinned Sticky Bottom Action Footer */}
+          <div className="shrink-0 bg-card px-4 sm:px-6 py-3.5 sm:py-4 flex flex-wrap items-center justify-between gap-3 z-10 select-none">
+            <span className="text-xs text-muted-foreground/80 hidden sm:inline-flex items-center gap-1.5">
+              <span>Press</span>
+              <kbd className="px-1.5 py-0.5 rounded-md bg-secondary text-[10px] font-mono font-medium text-foreground">
+                ESC
+              </kbd>
+              <span>to close</span>
+            </span>
+
+            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => onOpenChange(false)}
+                className="h-11 px-5 rounded-xl text-sm font-semibold cursor-pointer flex-1 sm:flex-initial"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={saving}
+                className="h-11 px-6 rounded-xl bg-primary hover:bg-primary/90 text-sm font-bold text-primary-foreground cursor-pointer transition-all flex-1 sm:flex-initial"
+              >
+                {saving ? 'Saving...' : followup ? 'Save Changes' : 'Log Touchpoint'}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>
@@ -475,8 +540,6 @@ export default function ClientFollowups() {
   const [selectedFollowup, setSelectedFollowup] = useState(null);
   const [viewFollowup, setViewFollowup] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-
-  const { isDateInRange, filterByDateRange } = useDateFilter();
 
   const { data: clients = [] } = useClients();
   const { data: projects = [] } = useProjects();
@@ -501,12 +564,9 @@ export default function ClientFollowups() {
       const summary = (item.summary || '').toLowerCase();
       const matchesSearch = !q || clientName.includes(q) || subject.includes(q) || summary.includes(q);
       const matchesChannel = channelFilter === 'all' || item.type === channelFilter;
-      // Date filter: check meetingDate or createdAt
-      const dateToCheck = item.meetingDate || item.nextFollowUpDate || item.createdAt;
-      const matchesDate = isDateInRange(dateToCheck);
-      return matchesSearch && matchesChannel && matchesDate;
+      return matchesSearch && matchesChannel;
     });
-  }, [followups, search, channelFilter, isDateInRange]);
+  }, [followups, search, channelFilter]);
 
   // Statistics
   const total = followups.length;
@@ -542,11 +602,11 @@ export default function ClientFollowups() {
           className="flex items-center gap-2.5 cursor-pointer group"
           onClick={() => openViewModal(item)}
         >
-          <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+          <div className="h-7 w-7 rounded-lg bg-secondary text-foreground flex items-center justify-center font-bold text-xs shrink-0">
             {(item.client?.company || item.client?.name || 'C').charAt(0)}
           </div>
           <div>
-            <p className="font-bold text-foreground group-hover:text-primary transition-colors">{item.client?.company || item.client?.name || 'Unnamed Client'}</p>
+            <p className="font-bold text-foreground group-hover:underline transition-colors">{item.client?.company || item.client?.name || 'Unnamed Client'}</p>
             {item.contactPerson && <p className="text-[11px] text-muted-foreground">{item.contactPerson}</p>}
           </div>
         </div>
@@ -559,7 +619,7 @@ export default function ClientFollowups() {
         const Icon = typeIcons[item.type] || PhoneCall;
         return (
           <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${channelColors[item.type] || 'bg-secondary text-foreground'}`}>
-            <Icon size={12} />
+            <Icon size={12} className="shrink-0" />
             {item.type}
           </span>
         );
@@ -570,7 +630,7 @@ export default function ClientFollowups() {
       label: 'Subject & Notes',
       render: (item) => (
         <div className="max-w-md cursor-pointer" onClick={() => openViewModal(item)}>
-          <p className="font-bold text-foreground hover:text-primary transition-colors">{item.subject}</p>
+          <p className="font-bold text-foreground hover:underline transition-colors">{item.subject}</p>
           {item.summary && <p className="text-xs text-muted-foreground line-clamp-1">{item.summary}</p>}
         </div>
       ),
@@ -580,8 +640,13 @@ export default function ClientFollowups() {
       label: 'Next Touchpoint',
       render: (item) => (
         <div className="text-xs">
-          <p className="font-semibold text-foreground">{formatDate(item.nextFollowUpDate)}</p>
-          {item.nextAction && <p className="text-[11px] text-muted-foreground line-clamp-1">👉 {item.nextAction}</p>}
+          <p className="font-semibold text-foreground tabular-nums">{formatDate(item.nextFollowUpDate)}</p>
+          {item.nextAction && (
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1 line-clamp-1">
+              <ArrowRight size={10} className="shrink-0" />
+              <span className="truncate">{item.nextAction}</span>
+            </p>
+          )}
         </div>
       ),
     },
@@ -598,7 +663,7 @@ export default function ClientFollowups() {
       key: 'status',
       label: 'Status',
       render: (item) => (
-        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusTone[item.status] || statusTone.open}`}>
+        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${statusTone[item.status] || statusTone.open}`}>
           {labelize(item.status)}
         </span>
       ),
@@ -607,7 +672,7 @@ export default function ClientFollowups() {
       key: 'createdAt',
       label: 'Created Date',
       render: (item) => (
-        <span className="text-xs text-muted-foreground whitespace-nowrap">
+        <span className="text-xs text-muted-foreground whitespace-nowrap tabular-nums">
           {item.createdAt ? new Date(item.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
         </span>
       ),
@@ -619,21 +684,21 @@ export default function ClientFollowups() {
         <div className="flex items-center justify-end gap-1">
           <button
             onClick={() => openViewModal(item)}
-            className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             title="View Details"
           >
             <Eye size={14} />
           </button>
           <button
             onClick={() => openEditModal(item)}
-            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             title="Edit"
           >
             <Pencil size={14} />
           </button>
           <button
             onClick={() => setDeleteId(item._id)}
-            className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             title="Delete"
           >
             <Trash2 size={14} />
@@ -662,8 +727,9 @@ export default function ClientFollowups() {
 
         <div>
           <h4 className="font-bold text-xs text-foreground line-clamp-2">{item.subject}</h4>
-          <p className="text-[11px] text-muted-foreground font-medium mt-0.5">
-            🏢 {item.client?.company || item.client?.name || 'Unnamed Client'}
+          <p className="text-[11px] text-muted-foreground font-medium mt-0.5 flex items-center gap-1 truncate">
+            <Building2 size={11} className="shrink-0" />
+            <span className="truncate">{item.client?.company || item.client?.name || 'Unnamed Client'}</span>
           </p>
         </div>
 
@@ -672,18 +738,21 @@ export default function ClientFollowups() {
         )}
 
         {item.nextFollowUpDate && (
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground pt-1.5 border-t border-border/40">
-            <CalendarClock size={12} className="text-primary" />
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground pt-1.5 tabular-nums">
+            <CalendarClock size={12} className="text-foreground shrink-0" />
             <span>Next: {formatDate(item.nextFollowUpDate)}</span>
           </div>
         )}
 
         {item.nextAction && (
-          <p className="text-[11px] text-primary/80 font-medium">👉 {item.nextAction}</p>
+          <p className="text-[11px] text-foreground font-medium flex items-center gap-1">
+            <ArrowRight size={11} className="shrink-0" />
+            <span className="truncate">{item.nextAction}</span>
+          </p>
         )}
 
         {/* Quick edit in card */}
-        <div className="flex items-center justify-end pt-1 border-t border-border/30">
+        <div className="flex items-center justify-end pt-1 ">
           <button
             onClick={(e) => { e.stopPropagation(); openEditModal(item); }}
             className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
@@ -707,23 +776,22 @@ export default function ClientFollowups() {
     <WorkspacePage
       breadcrumbs={['RiseWithMedia', 'Client Lifecycle', 'Client Follow-ups']}
       title="Client Follow-ups & Touchpoints"
-      subtitle="Comprehensive CRM logs of all client calls, meetings, feedback notes, and scheduled upcoming touchpoints."
-      icon="📞"
+      icon={PhoneCall}
       properties={[
         { label: 'Total Logs', value: total, icon: MessageSquareText },
-        { label: 'Open Queue', value: openCount, tone: openCount > 0 ? 'warning' : 'neutral' },
-        { label: 'Upcoming (7d)', value: upcomingCount, tone: upcomingCount > 0 ? 'info' : 'neutral' },
-        { label: 'Completed', value: completedCount, tone: 'success' },
+        { label: 'Open Queue', value: openCount, tone: 'neutral' },
+        { label: 'Upcoming (7d)', value: upcomingCount, tone: 'neutral' },
+        { label: 'Completed', value: completedCount, tone: 'neutral' },
       ]}
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
             onClick={() => {
               setSelectedFollowup(null);
               setOpenDialog(true);
             }}
-            className="rounded-xl text-xs font-bold gap-1.5 shadow-sm"
+            className="inline-flex items-center justify-center gap-1.5 h-10 px-4 bg-primary text-primary-foreground font-semibold text-xs rounded-xl transition-all hover:bg-primary/90 cursor-pointer"
           >
             <Plus size={14} className="stroke-[2.5]" />
             <span>Log Touchpoint</span>
@@ -739,8 +807,8 @@ export default function ClientFollowups() {
             onClick={() => setChannelFilter(ch)}
             className={`px-3 py-1 rounded-xl text-xs font-semibold capitalize transition-all whitespace-nowrap ${
               channelFilter === ch
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary'
+                ? 'bg-primary text-primary-foreground '
+                : 'bg-card text-muted-foreground hover:text-foreground hover:bg-secondary'
             }`}
           >
             {ch === 'all' ? 'All Channels' : ch}
@@ -785,10 +853,10 @@ export default function ClientFollowups() {
       />
 
       <AlertDialog open={Boolean(deleteId)} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent className="bg-card border border-border">
+        <AlertDialogContent className="bg-card ">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-base font-bold">Delete Follow-up Record?</AlertDialogTitle>
-            <AlertDialogDescription className="text-xs">
+            <AlertDialogDescription className="sr-only">
               This action cannot be undone. This log entry will be permanently removed from the client history.
             </AlertDialogDescription>
           </AlertDialogHeader>

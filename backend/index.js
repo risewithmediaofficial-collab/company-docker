@@ -6,6 +6,7 @@
 import express from 'express';
 import http from 'http';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { Server as SocketIO } from 'socket.io';
 import cors from 'cors';
@@ -13,11 +14,16 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
+import compression from 'compression';
 import { connectDB } from './config/db.js';
 import { getEnv, loadEnv } from './config/env.js';
+import { corsOptions, corsOptionsDelegate } from './config/cors.js';
 import { initSocket } from './config/socket.js';
 import { initCronJobs } from './services/cron.service.js';
 import User from './models/user.model.js';
+import mongoose from 'mongoose';
+import { syncAllClientUsers } from './controllers/client.controller.js';
+import { migrateDevTasksFromTasksCollection } from './utils/devTaskMigration.js';
 
 // Route imports
 import authRoutes from './routes/auth.routes.js';
@@ -34,11 +40,9 @@ import referralRoutes from './routes/referral.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import reportRoutes from './routes/report.routes.js';
 import automationRoutes from './routes/automation.routes.js';
-import ticketRoutes from './routes/ticket.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import communicationRoutes from './routes/communication.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
-import aiRoutes from './routes/ai.routes.js';
 import portalRoutes from './routes/portal.routes.js';
 import brandRoutes from './routes/brand.routes.js';
 import accessRequestRoutes from './routes/accessRequest.routes.js';
@@ -48,8 +52,8 @@ import assetRoutes from './routes/asset.routes.js';
 import domainRenewalRoutes from './routes/domainRenewal.routes.js';
 import sopRoutes from './routes/sop.routes.js';
 import proposalRoutes from './routes/proposal.routes.js';
-import taskNoteRoutes from './routes/taskNote.routes.js';
-import dmCalendarRoutes from './routes/dmCalendar.routes.js';
+import weeklyTodoRoutes from './routes/weeklyTodo.routes.js';
+import dailyTaskRoutes from './routes/dailyTask.routes.js';
 import influencerRoutes from './routes/influencer.routes.js';
 import smmClientRoutes from './routes/smm/smmClient.routes.js';
 import smmProjectRoutes from './routes/smm/smmProject.routes.js';
@@ -69,14 +73,19 @@ import smmCallLogRoutes from './routes/smm/smmCallLog.routes.js';
 import smmMonthlyTrackerRoutes from './routes/smm/smmMonthlyTracker.routes.js';
 import developmentRoutes from './routes/development.routes.js';
 import platformRoutes from './routes/platform.routes.js';
+import recycleBinRoutes from './routes/recycleBin.routes.js';
+import duplicateCheckRoutes from './routes/duplicateCheck.routes.js';
+import officeLocationRoutes from './routes/officeLocation.routes.js';
+import wfhRequestRoutes from './routes/wfhRequest.routes.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
 
 loadEnv();
 const env = getEnv();
 
-await connectDB();
-
 const ensureDefaultAdmin = async () => {
+  // Never automatically create default admin with hardcoded password in production
+  if (env.isProduction) return;
+
   const existingUsers = await User.estimatedDocumentCount();
   if (existingUsers > 0) return;
 
@@ -96,20 +105,47 @@ const ensureDefaultAdmin = async () => {
       canViewReports: true,
     },
   });
-  console.log(`Default super admin created: ${email}`);
+  console.log(`[Dev Bootstrap] Default super admin created: ${email}`);
 };
 
-await ensureDefaultAdmin();
+let startupTasksExecuted = false;
+const runDatabaseStartupTasks = async () => {
+  if (startupTasksExecuted || mongoose.connection.readyState !== 1) return;
+  startupTasksExecuted = true;
+
+  try {
+    await ensureDefaultAdmin();
+  } catch (err) {
+    console.error('[Dev Bootstrap Error]', err.message);
+  }
+
+  // Background sync client portal user accounts without delaying HTTP server readiness
+  syncAllClientUsers().catch((err) => console.error('[Sync Error]', err.message));
+
+  // Background migration to strictly separate dev tasks from tasks collection
+  migrateDevTasksFromTasksCollection().catch((err) => console.error('[DevTask Migration Error]', err.message));
+};
+
+mongoose.connection.on('connected', () => {
+  runDatabaseStartupTasks();
+});
+
+const dbConn = await connectDB();
+if (dbConn) {
+  await runDatabaseStartupTasks();
+} else {
+  console.warn('[Startup] Database offline — deferring dev bootstrap & client sync until MongoDB connects.');
+}
 
 const app = express();
 const httpServer = http.createServer(app);
 
-const corsOptions = {
-  origin: (origin, callback) => callback(null, true),
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-};
+// Configure trust proxy
+if (process.env.TRUST_PROXY) {
+  app.set('trust proxy', Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY);
+} else if (env.isProduction) {
+  app.set('trust proxy', 1);
+}
 
 const io = new SocketIO(httpServer, {
   cors: corsOptions,
@@ -122,26 +158,77 @@ app.set('io', io);
 global.io = io;
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(mongoSanitize());
-app.use(cors(corsOptions));
+app.use(cors(corsOptionsDelegate));
 
+// High-performance gzip/deflate response compression for all API payloads and assets above 1KB
+app.use(
+  compression({
+    threshold: 1024,
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) return false;
+      return compression.filter(req, res);
+    },
+  })
+);
+
+// Standard API rate limiter - NO Authorization header bypass
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: env.isProduction ? 50000 : 100000,
-  skip: (req) => {
-    // Skip rate limiting for authenticated CRM users and health checks
-    return req.path === '/health' || Boolean(req.headers.authorization);
-  },
+  max: env.isProduction ? 1500 : 5000,
+  skip: (req) => req.path === '/health',
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many requests, please try again later.' },
 });
 app.use('/api', limiter);
 
+// Strict rate limiters for sensitive endpoints
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: env.isProduction ? 15 : 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many login attempts. Please wait 15 minutes before retrying.' },
+});
+
+export const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many password reset requests. Please try again after 1 hour.' },
+});
+
+export const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: env.isProduction ? 50 : 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many upload requests. Please slow down.' },
+});
+
+// Parse body BEFORE mongoSanitize so req.body is sanitized properly
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use('/uploads', express.static(env.uploadDir));
-app.use('/api/uploads', express.static(env.uploadDir));
+app.use(mongoSanitize());
+
+// Secure static uploads serving with browser & CDN caching policies
+const safeUploadStatic = express.static(env.uploadDir, {
+  maxAge: env.isProduction ? '30d' : '1h',
+  setHeaders: (res, filePath) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    const ext = path.extname(filePath).toLowerCase();
+    if (['.html', '.htm', '.svg', '.xml'].includes(ext)) {
+      res.setHeader('Content-Disposition', 'attachment');
+      res.setHeader('Content-Type', 'text/plain');
+    }
+    if (['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.pdf', '.docx', '.mp4'].includes(ext)) {
+      res.setHeader('Cache-Control', 'public, max-age=2592000, stale-while-revalidate=86400');
+    }
+  },
+});
+app.use('/uploads', safeUploadStatic);
+app.use('/api/uploads', safeUploadStatic);
 
 if (env.nodeEnv === 'development') {
   app.use(morgan('dev'));
@@ -156,6 +243,8 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/forgot-password', passwordResetLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/leads', leadRoutes);
@@ -163,20 +252,16 @@ app.use('/api/clients', clientRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/finance', financeRoutes);
-app.use('/api/call-history', financeRoutes);
 app.use('/api/finance/salaries', salaryRoutes);
-app.use('/api/salaries', salaryRoutes);
 app.use('/api/hr', hrRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/automations', automationRoutes);
-app.use('/api/tickets', ticketRoutes);
 app.use('/api/communications', communicationRoutes);
 app.use('/api/settings', settingsRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/ai', aiRoutes);
+app.use('/api/upload', uploadLimiter, uploadRoutes);
 app.use('/api/portal', portalRoutes);
 app.use('/api/brands', brandRoutes);
 app.use('/api/access-requests', accessRequestRoutes);
@@ -186,8 +271,8 @@ app.use('/api/assets', assetRoutes);
 app.use('/api/domain-renewals', domainRenewalRoutes);
 app.use('/api/sop', sopRoutes);
 app.use('/api/proposals', proposalRoutes);
-app.use('/api/task-notes', taskNoteRoutes);
-app.use('/api/dm-calendar', dmCalendarRoutes);
+app.use('/api/todos', weeklyTodoRoutes);
+app.use('/api/daily-tasks', dailyTaskRoutes);
 app.use('/api/influencers', influencerRoutes);
 
 // SMM Module Routes
@@ -214,50 +299,83 @@ app.use('/api/development', developmentRoutes);
 // Platform Admin Routes (SaaS management)
 app.use('/api/platform', platformRoutes);
 
+// Recycle Bin & Duplicate Check Routes
+app.use('/api/recycle-bin', recycleBinRoutes);
+app.use('/api/check-duplicate', duplicateCheckRoutes);
+app.use('/api/office-locations', officeLocationRoutes);
+app.use('/api/wfh-requests', wfhRequestRoutes);
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/dist')));
-  
-  // Any route that doesn't start with /api or /uploads gets sent to the React app
+  const frontendDistPath = fs.existsSync(path.resolve(__dirname, '../frontend/dist'))
+    ? path.resolve(__dirname, '../frontend/dist')
+    : path.resolve(__dirname, '../client/dist');
+
+  // Serve hashed assets (/assets/*) with 1-year immutable caching
+  app.use(
+    '/assets',
+    express.static(path.join(frontendDistPath, 'assets'), {
+      maxAge: '1y',
+      immutable: true,
+    })
+  );
+
+  // Serve other root static files with standard 1-day cache (excluding HTML)
+  app.use(
+    express.static(frontendDistPath, {
+      maxAge: '1d',
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('index.html')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+      },
+    })
+  );
+
+  // Any route that doesn't start with /api or /uploads gets sent to the React app without caching index.html
   app.get(/^(?!\/(api|uploads)).*/, (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../client', 'dist', 'index.html'));
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
   });
 }
 
 app.use(notFound);
 app.use(errorHandler);
 
-httpServer.on('error', async (error) => {
+httpServer.on('error', (error) => {
   if (error.code === 'EADDRINUSE') {
-    console.warn(`\n⚠️  Port ${env.port} is already in use. Attempting to free it...\n`);
-    try {
-      const { execSync } = await import('child_process');
-      // Works on Windows — find and kill the PID using that port
-      const result = execSync(
-        `for /f "tokens=5" %a in ('netstat -aon ^| findstr :${env.port} ^| findstr LISTENING') do taskkill /PID %a /F`,
-        { shell: 'cmd.exe', stdio: 'pipe' }
-      ).toString();
-      console.log('✅ Freed port:', result.trim());
-    } catch (_) {
-      console.error(`❌ Could not auto-free port ${env.port}. Please run: taskkill /F /IM node.exe`);
-      process.exit(1);
-    }
-    // Retry after a short delay
-    setTimeout(() => {
-      httpServer.listen(env.port, () => {
-        console.log(`\n✅ Agency CRM Server running on port ${env.port} (restarted)`);
-        console.log(`Environment: ${env.nodeEnv}`);
-        console.log(`Client URL: ${env.clientUrl}`);
-        console.log(`API Health: http://localhost:${env.port}/api/health\n`);
-      });
-    }, 1000);
+    console.error(`\n❌ Port ${env.port} is already in use by another running process.`);
+    console.error(`👉 To free port ${env.port} on Windows, run: npx kill-port ${env.port}\n`);
   } else {
     console.error('Server startup failed:', error.message);
-    process.exit(1);
   }
+  process.exit(1);
 });
+
+// Coordinated SIGTERM/SIGINT graceful shutdown
+const handleShutdown = (signal) => {
+  console.log(`\nReceived ${signal}. Starting graceful shutdown...`);
+  httpServer.close(async () => {
+    console.log('HTTP and Socket.IO server closed.');
+    try {
+      await mongoose.connection.close(false);
+      console.log('MongoDB connection cleanly closed.');
+    } catch (err) {
+      console.error('Error closing MongoDB connection:', err.message);
+    }
+    process.exit(0);
+  });
+
+  setTimeout(() => {
+    console.error('Graceful shutdown timeout exceeded. Forcing exit.');
+    process.exit(1);
+  }, 10000).unref();
+};
+
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+process.on('SIGINT', () => handleShutdown('SIGINT'));
 
 httpServer.listen(env.port, () => {
   console.log(`\nAgency CRM Server running on port ${env.port}`);

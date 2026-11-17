@@ -4,6 +4,7 @@
 
 import mongoose from 'mongoose';
 import crypto from 'crypto';
+import { getNextSequence } from './counter.model.js';
 
 const lineItemSchema = new mongoose.Schema({
   serviceName: { type: String, default: '' },
@@ -13,6 +14,11 @@ const lineItemSchema = new mongoose.Schema({
   rate: { type: Number, min: 0 },
   amount: { type: Number, min: 0 },
   total: { type: Number }, // computed: quantity * unitPrice
+  itemType: {
+    type: String,
+    enum: ['service', 'ad_budget_pass_through', 'management_fee'],
+    default: 'service',
+  },
 });
 
 const clientDetailsSchema = new mongoose.Schema({
@@ -34,13 +40,33 @@ const invoiceSchema = new mongoose.Schema(
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
     issuedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    servicePeriod: { type: String, default: '' }, // e.g. "October 2026"
+    servicePeriodStart: { type: Date },
+    servicePeriodEnd: { type: Date },
+    isRetainer: { type: Boolean, default: false },
     serviceDetails: { type: String, default: '' },
     clientDetails: { type: clientDetailsSchema, default: () => ({}) },
-    status: {
+    workflowStatus: {
       type: String,
-      enum: ['draft', 'sent', 'viewed', 'partially_paid', 'paid', 'overdue', 'cancelled'],
+      enum: ['draft', 'under_review', 'issued', 'void'],
       default: 'draft',
     },
+    status: {
+      type: String,
+      enum: ['draft', 'unpaid', 'sent', 'viewed', 'partially_paid', 'paid', 'overdue', 'cancelled', 'void'],
+      default: 'draft',
+    },
+    voidReason: { type: String, default: '' },
+    voidedAt: { type: Date },
+    voidedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    taxType: {
+      type: String,
+      enum: ['exempt', 'exclusive', 'inclusive', 'gst_18', 'custom'],
+      default: 'exclusive',
+    },
+    serviceRevenue: { type: Number, default: 0 },
+    passThroughAdBudget: { type: Number, default: 0 },
+    managementFee: { type: Number, default: 0 },
     lineItems: [lineItemSchema],
     invoiceItems: [lineItemSchema],
     subtotal: { type: Number, default: 0 },
@@ -82,11 +108,11 @@ const invoiceSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Auto generate invoice number
+// Auto generate invoice number using atomic counter
 invoiceSchema.pre('save', async function (next) {
   if (!this.invoiceNumber) {
-    const count = await mongoose.model('Invoice').countDocuments();
-    this.invoiceNumber = `INV-${String(count + 1).padStart(4, '0')}`;
+    const nextSeq = await getNextSequence('invoiceNumber');
+    this.invoiceNumber = `INV-${String(nextSeq).padStart(4, '0')}`;
   }
   if (!this.invoicePublicLink) {
     this.invoicePublicLink = crypto.randomBytes(10).toString('hex');
@@ -110,29 +136,75 @@ invoiceSchema.pre('save', async function (next) {
   });
   this.invoiceItems = this.lineItems;
   this.subtotal = this.lineItems.reduce((sum, item) => sum + item.total, 0);
-  this.taxAmount = (this.subtotal * this.taxRate) / 100;
+
+  // Distinguish service revenue, agency management fee, and pass-through client ad budget
+  let svcRev = 0;
+  let passThrough = 0;
+  let mgmtFee = 0;
+  this.lineItems.forEach((item) => {
+    if (item.itemType === 'ad_budget_pass_through') {
+      passThrough += item.total;
+    } else if (item.itemType === 'management_fee') {
+      mgmtFee += item.total;
+      svcRev += item.total;
+    } else {
+      svcRev += item.total;
+    }
+  });
+  this.serviceRevenue = svcRev;
+  this.passThroughAdBudget = passThrough;
+  this.managementFee = mgmtFee;
+
+  if (this.taxType === 'exempt') {
+    this.taxRate = 0;
+    this.taxAmount = 0;
+    this.total = Math.max(0, this.subtotal - (this.discount || 0));
+  } else if (this.taxType === 'inclusive') {
+    const rate = Number(this.taxRate || 18);
+    this.taxRate = rate;
+    const baseSubtotal = this.subtotal / (1 + rate / 100);
+    this.taxAmount = Math.round((this.subtotal - baseSubtotal) * 100) / 100;
+    this.total = Math.max(0, this.subtotal - (this.discount || 0));
+  } else if (this.taxType === 'gst_18' && !this.taxRate) {
+    this.taxRate = 18;
+    const taxable = Math.max(0, this.subtotal - (this.discount || 0));
+    this.taxAmount = Math.round(((taxable * 18) / 100) * 100) / 100;
+    this.total = taxable + this.taxAmount;
+  } else {
+    const rate = Number(this.taxRate || 0);
+    const taxable = Math.max(0, this.subtotal - (this.discount || 0));
+    this.taxAmount = Math.round(((taxable * rate) / 100) * 100) / 100;
+    this.total = taxable + this.taxAmount;
+  }
   this.tax = this.taxAmount;
-  this.total = this.subtotal + this.taxAmount - this.discount;
   this.totalAmount = this.total;
   this.balanceAmount = Math.max(this.total - Number(this.paidAmount || 0), 0);
   this.invoiceDate = this.invoiceDate || this.issueDate;
   this.clientId = this.clientId || this.client;
   this.projectId = this.projectId || this.project;
 
-  if (this.balanceAmount === 0 && this.total > 0) {
+  // Derive status
+  if (this.workflowStatus === 'void' || this.status === 'void') {
+    this.status = 'void';
+    this.workflowStatus = 'void';
+  } else if (this.workflowStatus === 'draft' || this.status === 'draft') {
+    this.status = 'draft';
+  } else if (this.balanceAmount === 0 && this.total > 0) {
     this.status = 'paid';
   } else if (Number(this.paidAmount || 0) > 0) {
     this.status = 'partially_paid';
+  } else {
+    this.status = 'unpaid';
   }
 
   next();
 });
 
-invoiceSchema.index({ client: 1 });
-invoiceSchema.index({ organizationId: 1 });
-invoiceSchema.index({ brandId: 1 });
-invoiceSchema.index({ status: 1 });
-invoiceSchema.index({ dueDate: 1 });
+invoiceSchema.index({ client: 1, invoiceDate: -1 });
+invoiceSchema.index({ organizationId: 1, invoiceDate: -1 });
+invoiceSchema.index({ brandId: 1, invoiceDate: -1 });
+invoiceSchema.index({ status: 1, invoiceDate: -1 });
+invoiceSchema.index({ status: 1, dueDate: 1 });
 
 const Invoice = mongoose.model('Invoice', invoiceSchema);
 export default Invoice;

@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import { purgeQueryCache } from '../../queryClient';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,7 +49,7 @@ export const fetchMe = createAsyncThunk(
   'auth/fetchMe',
   async (_, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('accessToken');
+      let token = localStorage.getItem('accessToken');
       const refreshToken = localStorage.getItem('refreshToken');
       if (!token || !refreshToken) {
         return rejectWithValue({ isAuthError: true, message: 'No active session' });
@@ -156,6 +157,7 @@ const authSlice = createSlice({
       localStorage.removeItem('rwm_ghost_org_id');
       localStorage.removeItem('rwm_ghost_org_data');
       localStorage.removeItem('rwm_user_org');
+      purgeQueryCache();
     },
     enterGhostMode: (state, action) => {
       const org = action.payload;
@@ -193,6 +195,7 @@ const authSlice = createSlice({
       } else {
         localStorage.removeItem('activeWorkspace');
       }
+      purgeQueryCache();
     },
     clearError: (state) => {
       state.error = null;

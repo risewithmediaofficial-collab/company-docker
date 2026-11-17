@@ -1,40 +1,62 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
 import GhostModeBanner from '../components/layout/GhostModeBanner';
-import { useSelector } from 'react-redux';
-import { motion, AnimatePresence } from 'framer-motion';
 import GlobalSearchModal from '../components/modals/GlobalSearchModal';
 import MobileAppInstallButton from '../components/ui/MobileAppInstallButton';
+import EnableBannerNotificationBar from '../components/notifications/EnableBannerNotificationBar';
+import ErrorBoundary from '../components/ui/ErrorBoundary';
+import GlobalDateSortBar from '../components/layout/GlobalDateSortBar';
+import OnboardingWelcomeModal from '../components/onboarding/OnboardingWelcomeModal';
+
+const PageLoadingFallback = () => (
+  <div className="w-full py-12 flex flex-col items-center justify-center space-y-3">
+    <div className="h-8 w-8 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+    <span className="text-[11px] font-semibold text-muted-foreground/80 tracking-wide animate-pulse">
+      Loading view...
+    </span>
+  </div>
+);
 
 const MainLayout = () => {
-  const { sidebarOpen } = useSelector((state) => state.ui);
   const location = useLocation();
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
 
+  const handleOpenSearch = useCallback(() => {
+    setGlobalSearchOpen(true);
+  }, []);
+
+  // Clear any residual scroll lock on main element and reset scroll to top across route changes
+  useEffect(() => {
+    const mainEl = document.getElementById('main-content-scroll');
+    if (mainEl) {
+      mainEl.scrollTop = 0;
+      mainEl.style.removeProperty('overflow');
+    }
+  }, [location.pathname]);
+
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
-      {/* Sidebar with search callback */}
-      <Sidebar onOpenSearch={() => setGlobalSearchOpen(true)} />
+      {/* Sidebar with stable search callback and path */}
+      <Sidebar onOpenSearch={handleOpenSearch} currentPath={location.pathname} />
 
       {/* Main Content Area */}
-      <div className="flex min-w-0 flex-1 flex-col transition-all duration-250 md:ml-[260px]">
+      <div className="flex min-w-0 flex-1 flex-col h-full min-h-0 max-h-screen overflow-hidden transition-all duration-250 md:ml-[260px] w-full max-w-full">
         <GhostModeBanner />
-        <Navbar onOpenSearch={() => setGlobalSearchOpen(true)} />
-        <main className="min-w-0 flex-1 overflow-y-auto bg-secondary/20 p-3 sm:p-5 md:p-6 custom-scrollbar">
-          <div className="mx-auto min-w-0 max-w-7xl">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.15, ease: 'easeOut' }}
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
+        <Navbar onOpenSearch={handleOpenSearch} currentPath={location.pathname} />
+        <EnableBannerNotificationBar />
+        <main
+          id="main-content-scroll"
+          className="min-w-0 min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-background px-3 py-3 sm:px-6 sm:py-5 lg:px-8 lg:py-6 custom-scrollbar overscroll-contain pb-safe"
+        >
+          <div className="mx-auto min-w-0 max-w-7xl 2xl:max-w-[1600px] pb-16 w-full">
+            <GlobalDateSortBar />
+            <ErrorBoundary key={location.pathname} locationKey={location.pathname}>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <Outlet key={location.pathname} />
+              </Suspense>
+            </ErrorBoundary>
           </div>
         </main>
       </div>
@@ -44,6 +66,9 @@ const MainLayout = () => {
 
       {/* Floating PWA Download / Install App Button (Mobile Only) */}
       <MobileAppInstallButton />
+
+      {/* First-Time Login Interactive Onboarding Sticker Modal */}
+      <OnboardingWelcomeModal />
     </div>
   );
 };

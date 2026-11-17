@@ -42,14 +42,221 @@ import {
   updateCallHistory,
   updateInvoice,
 } from '../controllers/finance.controller.js';
+
+import {
+  getFinanceOverview,
+  getFinanceAccounts,
+  createFinanceAccount,
+  updateFinanceAccount,
+  reconcileAccount,
+  getInternalTransfers,
+  createInternalTransfer,
+  getModuleInvoices,
+  createModuleInvoice,
+  deleteModuleInvoice,
+  updateInvoiceWorkflow,
+  generateMonthlyRetainerInvoices,
+  recordClientPaymentReceipt,
+  getPaymentReceipts,
+  updatePaymentReceipt,
+  deletePaymentReceipt,
+  getModuleExpenses,
+  createModuleExpense,
+  updateModuleExpense,
+  deleteModuleExpense,
+  payVendorBill,
+  payeeOverallPay,
+  addExpensePayment,
+  deleteExpensePayment,
+  getSubscriptions,
+  createSubscription,
+  postSubscriptionRenewal,
+  getPayrollRecords,
+  getPayrollRecord,
+  createPayrollRecord,
+  updatePayrollRecord,
+  deletePayrollRecord,
+  getEmployeesForPayroll,
+  calculateMonthlyPayroll,
+  approvePayrollRecord,
+  payPayrollRecord,
+  getClientProfitability,
+  createCostAllocation,
+  deleteCostAllocation,
+  getFounderTransactions,
+  createFounderTransaction,
+  getReceivablesAgingReport,
+  getCashForecastReport,
+  getDailyCashbookReport,
+  getMonthlyProfitAndLossReport,
+  getPeriodLocks,
+  togglePeriodLock,
+  getFinanceAuditLogs,
+  getFinanceBudgets,
+  setFinanceBudget,
+} from '../controllers/financeModule.controller.js';
+
+import {
+  getPaymentReminders,
+  createPaymentReminder,
+  updatePaymentReminder,
+  recordPaymentOnReminder,
+  deletePaymentReminder,
+} from '../controllers/paymentReminder.controller.js';
+
+import {
+  getLoans,
+  createLoan,
+  updateLoan,
+  recordLoanPayment,
+  deleteLoan,
+  triggerLoanRemindersManually,
+} from '../controllers/loan.controller.js';
+
+import {
+  verifyFinancePassword,
+  getFinanceSecurityStatus,
+  changeFinancePassword,
+} from '../controllers/financeSecurity.controller.js';
+
+import {
+  getCompanyAssets,
+  createCompanyAsset,
+  updateCompanyAsset,
+  deleteCompanyAsset,
+} from '../controllers/companyAsset.controller.js';
+
+import {
+  getOtherExpenses,
+  createOtherExpense,
+  updateOtherExpense,
+  deleteOtherExpense,
+} from '../controllers/otherExpense.controller.js';
+
 import { authorize, protect } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 router.get('/invoices/public/:publicLink', getInvoiceByPublicLink);
 router.use(protect);
 
-router.get('/summary', authorize('superAdmin', 'manager'), getFinanceSummary);
-router.get('/dashboard-summary', authorize('superAdmin', 'manager'), getFinanceDashboardSummary);
+// =============================================
+// FINANCE SECURITY & AUTHENTICATION GATE
+// =============================================
+router.post('/auth/verify', verifyFinancePassword);
+router.get('/auth/status', getFinanceSecurityStatus);
+router.post('/auth/change-password', authorize('superAdmin', 'admin'), changeFinancePassword);
+
+// =============================================
+// ADVANCED FINANCE MODULE ROUTES
+// =============================================
+
+// 1. Overview & Period KPIs
+router.get('/module/overview', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager', 'employee'), getFinanceOverview);
+
+// 2. Bank, Cash & UPI Accounts
+router.get('/accounts', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager', 'employee'), getFinanceAccounts);
+router.post('/accounts', authorize('superAdmin', 'admin', 'organizationOwner', 'financeManager'), createFinanceAccount);
+router.put('/accounts/:id', authorize('superAdmin', 'admin', 'organizationOwner', 'financeManager'), updateFinanceAccount);
+router.post('/accounts/:id/reconcile', authorize('superAdmin', 'admin', 'organizationOwner', 'financeManager'), reconcileAccount);
+
+// 3. Internal Transfers
+router.get('/transfers', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager', 'employee'), getInternalTransfers);
+router.post('/transfers', authorize('superAdmin', 'admin', 'organizationOwner', 'financeManager'), createInternalTransfer);
+
+// 4. Invoices & Revenue Master
+router.get('/module/invoices', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager', 'accountManager', 'employee'), getModuleInvoices);
+router.post('/module/invoices', authorize('superAdmin', 'admin', 'organizationOwner', 'financeManager'), createModuleInvoice);
+router.delete('/module/invoices/:id', authorize('superAdmin', 'admin', 'organizationOwner', 'financeManager'), deleteModuleInvoice);
+router.patch('/module/invoices/:id/workflow', authorize('superAdmin', 'admin', 'organizationOwner', 'financeManager'), updateInvoiceWorkflow);
+router.post('/module/invoices/retainer-generate', authorize('superAdmin', 'admin', 'organizationOwner', 'financeManager'), generateMonthlyRetainerInvoices);
+
+// 5. Client Payment Receipts
+router.get('/receipts', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager', 'accountManager', 'employee'), getPaymentReceipts);
+router.post('/receipts', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager', 'accountManager', 'employee'), recordClientPaymentReceipt);
+router.put('/receipts/:id', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager'), updatePaymentReceipt);
+router.delete('/receipts/:id', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager'), deletePaymentReceipt);
+
+// 6. Expenses & Vendor Bills
+router.get('/module/expenses', authorize('superAdmin', 'admin', 'manager', 'financeManager', 'accountManager', 'editor', 'designer', 'employee'), getModuleExpenses);
+router.post('/module/expenses', authorize('superAdmin', 'admin', 'manager', 'financeManager', 'accountManager', 'editor', 'designer', 'employee'), createModuleExpense);
+router.post('/module/expenses/payee-overall-pay', authorize('superAdmin', 'admin', 'manager', 'financeManager'), payeeOverallPay);
+router.put('/module/expenses/:id', authorize('superAdmin', 'admin', 'manager', 'financeManager', 'accountManager', 'editor', 'designer', 'employee'), updateModuleExpense);
+router.delete('/module/expenses/:id', authorize('superAdmin', 'admin', 'manager', 'financeManager'), deleteModuleExpense);
+router.post('/module/expenses/:id/pay', authorize('superAdmin', 'admin', 'financeManager'), payVendorBill);
+router.post('/module/expenses/:id/payments', authorize('superAdmin', 'admin', 'manager', 'financeManager'), addExpensePayment);
+router.delete('/module/expenses/:id/payments/:paymentId', authorize('superAdmin', 'admin', 'manager', 'financeManager'), deleteExpensePayment);
+
+// 7. Recurring Subscriptions
+router.get('/subscriptions', authorize('superAdmin', 'admin', 'manager', 'financeManager'), getSubscriptions);
+router.post('/subscriptions', authorize('superAdmin', 'admin', 'financeManager'), createSubscription);
+router.post('/subscriptions/:id/post-renewal', authorize('superAdmin', 'admin', 'financeManager'), postSubscriptionRenewal);
+
+// 8. Payroll Integration
+router.get('/payroll/employees', authorize('superAdmin', 'admin', 'manager', 'financeManager'), getEmployeesForPayroll);
+router.get('/payroll/:id', authorize('superAdmin', 'admin', 'manager', 'financeManager'), getPayrollRecord);
+router.get('/payroll', authorize('superAdmin', 'admin', 'manager', 'financeManager'), getPayrollRecords);
+router.post('/payroll', authorize('superAdmin', 'admin', 'financeManager'), createPayrollRecord);
+router.put('/payroll/:id', authorize('superAdmin', 'admin', 'financeManager'), updatePayrollRecord);
+router.delete('/payroll/:id', authorize('superAdmin', 'admin', 'financeManager'), deletePayrollRecord);
+router.post('/payroll/calculate', authorize('superAdmin', 'admin', 'financeManager'), calculateMonthlyPayroll);
+router.patch('/payroll/:id/approve', authorize('superAdmin', 'admin', 'financeManager'), approvePayrollRecord);
+router.post('/payroll/:id/pay', authorize('superAdmin', 'admin', 'financeManager'), payPayrollRecord);
+
+// 9. Client Cost Allocation & Profitability
+router.get('/profitability', authorize('superAdmin', 'admin', 'manager', 'financeManager', 'accountManager'), getClientProfitability);
+router.post('/allocations', authorize('superAdmin', 'admin', 'financeManager'), createCostAllocation);
+router.delete('/allocations/:id', authorize('superAdmin', 'admin', 'financeManager'), deleteCostAllocation);
+
+// 10. Founder Accounts (Restricted to superAdmin / admin)
+router.get('/founders', authorize('superAdmin', 'admin'), getFounderTransactions);
+router.post('/founders', authorize('superAdmin', 'admin'), createFounderTransaction);
+
+// 11. Reports & Cash Forecasts
+router.get('/reports/aging', authorize('superAdmin', 'admin', 'manager', 'financeManager'), getReceivablesAgingReport);
+router.get('/reports/forecast', authorize('superAdmin', 'admin', 'manager', 'financeManager'), getCashForecastReport);
+router.get('/reports/cashbook', authorize('superAdmin', 'admin', 'manager', 'financeManager'), getDailyCashbookReport);
+router.get('/reports/pnl', authorize('superAdmin', 'admin', 'manager', 'financeManager'), getMonthlyProfitAndLossReport);
+
+// 12. Period Locks & Audit Settings
+router.get('/settings/period-locks', authorize('superAdmin', 'admin', 'financeManager'), getPeriodLocks);
+router.post('/settings/period-locks/toggle', authorize('superAdmin', 'admin'), togglePeriodLock);
+router.get('/settings/audit-logs', authorize('superAdmin', 'admin'), getFinanceAuditLogs);
+router.get('/settings/budgets', authorize('superAdmin', 'admin', 'manager', 'financeManager'), getFinanceBudgets);
+router.post('/settings/budgets', authorize('superAdmin', 'admin', 'financeManager'), setFinanceBudget);
+
+// 13. Payment Reminders (Completely isolated from expenses and revenue)
+router.get('/payment-reminders', authorize('superAdmin', 'admin', 'manager', 'financeManager', 'accountManager', 'organizationOwner'), getPaymentReminders);
+router.post('/payment-reminders', authorize('superAdmin', 'admin', 'manager', 'financeManager', 'accountManager', 'organizationOwner'), createPaymentReminder);
+router.put('/payment-reminders/:id', authorize('superAdmin', 'admin', 'manager', 'financeManager', 'accountManager', 'organizationOwner'), updatePaymentReminder);
+router.post('/payment-reminders/:id/payments', authorize('superAdmin', 'admin', 'manager', 'financeManager', 'accountManager', 'organizationOwner'), recordPaymentOnReminder);
+router.delete('/payment-reminders/:id', authorize('superAdmin', 'admin', 'manager', 'financeManager', 'organizationOwner'), deletePaymentReminder);
+
+// 14. Loans Tracker (Company loan & EMI tracking)
+router.get('/loans', authorize('superAdmin', 'admin', 'manager', 'financeManager', 'organizationOwner'), getLoans);
+router.post('/loans', authorize('superAdmin', 'admin', 'manager', 'financeManager', 'organizationOwner'), createLoan);
+router.put('/loans/:id', authorize('superAdmin', 'admin', 'manager', 'financeManager', 'organizationOwner'), updateLoan);
+router.post('/loans/:id/payments', authorize('superAdmin', 'admin', 'manager', 'financeManager', 'organizationOwner'), recordLoanPayment);
+router.delete('/loans/:id', authorize('superAdmin', 'admin', 'financeManager', 'organizationOwner'), deleteLoan);
+router.post('/loans/trigger-reminders', authorize('superAdmin', 'admin', 'financeManager', 'organizationOwner'), triggerLoanRemindersManually);
+
+// 15. Assets & Equipment Tracker (Computers, Cameras, Mics, Studio Gear)
+router.get('/company-assets', authorize('superAdmin', 'admin', 'manager', 'financeManager'), getCompanyAssets);
+router.post('/company-assets', authorize('superAdmin', 'admin', 'financeManager'), createCompanyAsset);
+router.put('/company-assets/:id', authorize('superAdmin', 'admin', 'financeManager'), updateCompanyAsset);
+router.delete('/company-assets/:id', authorize('superAdmin', 'admin'), deleteCompanyAsset);
+
+// 16. Other / Unbound Memo Expenses (Notes Tracker - strictly unbound from official finance calculations)
+router.get('/other-expenses', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager', 'accountManager', 'employee'), getOtherExpenses);
+router.post('/other-expenses', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager', 'accountManager', 'employee'), createOtherExpense);
+router.put('/other-expenses/:id', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager', 'accountManager', 'employee'), updateOtherExpense);
+router.delete('/other-expenses/:id', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager', 'accountManager', 'employee'), deleteOtherExpense);
+
+// =============================================
+// LEGACY CRM COMPATIBILITY ROUTES
+// =============================================
+
+router.get('/summary', authorize('superAdmin', 'manager', 'admin', 'financeManager'), getFinanceSummary);
+router.get('/dashboard-summary', authorize('superAdmin', 'manager', 'admin', 'financeManager'), getFinanceDashboardSummary);
 
 router.get('/records/overdue/list', authorize('superAdmin', 'manager', 'employee', 'client'), getOverdueFinanceRecords);
 router.get('/records/client/:clientId', authorize('superAdmin', 'manager', 'employee', 'client'), getFinanceRecordsByClient);
@@ -68,31 +275,31 @@ router.post('/', authorize('superAdmin', 'employee'), createFinanceEntry);
 
 router.get('/invoices', authorize('superAdmin', 'manager', 'employee', 'client'), getInvoices);
 router.get('/invoices/:id', authorize('superAdmin', 'manager', 'employee', 'client'), getInvoice);
-router.post('/invoices', authorize('superAdmin'), createInvoice);
-router.put('/invoices/:id', authorize('superAdmin'), updateInvoice);
-router.post('/invoices/:id/send', authorize('superAdmin'), sendInvoice);
+router.post('/invoices', authorize('superAdmin', 'admin', 'financeManager'), createInvoice);
+router.put('/invoices/:id', authorize('superAdmin', 'admin', 'financeManager'), updateInvoice);
+router.post('/invoices/:id/send', authorize('superAdmin', 'admin', 'financeManager'), sendInvoice);
 router.post('/invoices/:id/viewed', authorize('client'), markInvoiceViewed);
-router.post('/invoices/:id/partial-payment', authorize('superAdmin'), addPartialPaymentToInvoice);
-router.post('/invoices/:id/mark-paid', authorize('superAdmin'), markInvoicePaid);
-router.delete('/invoices/:id', authorize('superAdmin'), deleteInvoice);
-router.get('/payments', authorize('superAdmin', 'manager', 'employee', 'client'), getPayments);
+router.post('/invoices/:id/partial-payment', authorize('superAdmin', 'admin', 'financeManager'), addPartialPaymentToInvoice);
+router.post('/invoices/:id/mark-paid', authorize('superAdmin', 'admin', 'financeManager'), markInvoicePaid);
+router.delete('/invoices/:id', authorize('superAdmin', 'admin'), deleteInvoice);
+router.get('/payments', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager', 'employee', 'client'), getPayments);
 
-router.get('/call-history/followups/today', authorize('superAdmin', 'manager', 'employee', 'client'), getTodayFollowUpCalls);
-router.get('/call-history/client/:clientId', authorize('superAdmin', 'manager', 'employee', 'client'), getCallHistoryByClient);
-router.get('/call-history/project/:projectId', authorize('superAdmin', 'manager', 'employee', 'client'), getCallHistoryByProject);
-router.get('/call-history', authorize('superAdmin', 'manager', 'employee', 'client'), getCallHistory);
-router.post('/call-history', authorize('superAdmin', 'employee'), addCallHistory);
-router.put('/call-history/:id', authorize('superAdmin', 'employee'), updateCallHistory);
-router.delete('/call-history/:id', authorize('superAdmin'), deleteCallHistory);
+router.get('/call-history/followups/today', authorize('superAdmin', 'admin', 'manager', 'employee', 'intern', 'client'), getTodayFollowUpCalls);
+router.get('/call-history/client/:clientId', authorize('superAdmin', 'admin', 'manager', 'employee', 'intern', 'client'), getCallHistoryByClient);
+router.get('/call-history/project/:projectId', authorize('superAdmin', 'admin', 'manager', 'employee', 'intern', 'client'), getCallHistoryByProject);
+router.get('/call-history', authorize('superAdmin', 'admin', 'manager', 'employee', 'intern', 'client'), getCallHistory);
+router.post('/call-history', authorize('superAdmin', 'admin', 'manager', 'employee', 'intern'), addCallHistory);
+router.put('/call-history/:id', authorize('superAdmin', 'admin', 'manager', 'employee', 'intern'), updateCallHistory);
+router.delete('/call-history/:id', authorize('superAdmin', 'admin', 'manager'), deleteCallHistory);
 
-router.get('/expenses/monthly-report', authorize('superAdmin', 'manager'), getMonthlyExpenseReport);
-router.get('/expenses', authorize('superAdmin', 'manager', 'employee'), getExpenses);
-router.post('/expenses', authorize('superAdmin', 'employee'), createExpense);
-router.put('/expenses/:id', authorize('superAdmin', 'employee'), updateExpense);
-router.delete('/expenses/:id', authorize('superAdmin'), deleteExpense);
-router.patch('/expenses/:id/approve', authorize('superAdmin'), approveExpense);
+router.get('/expenses/monthly-report', authorize('superAdmin', 'manager', 'admin', 'financeManager'), getMonthlyExpenseReport);
+router.get('/expenses', authorize('superAdmin', 'manager', 'employee', 'admin', 'financeManager'), getExpenses);
+router.post('/expenses', authorize('superAdmin', 'employee', 'admin', 'financeManager'), createExpense);
+router.put('/expenses/:id', authorize('superAdmin', 'employee', 'admin', 'financeManager'), updateExpense);
+router.delete('/expenses/:id', authorize('superAdmin', 'admin'), deleteExpense);
+router.patch('/expenses/:id/approve', authorize('superAdmin', 'admin', 'financeManager'), approveExpense);
 
-router.put('/:id', authorize('superAdmin'), updateFinanceEntry);
-router.delete('/:id', authorize('superAdmin'), deleteFinanceEntry);
+router.put('/:id', authorize('superAdmin', 'admin'), updateFinanceEntry);
+router.delete('/:id', authorize('superAdmin', 'admin'), deleteFinanceEntry);
 
 export default router;

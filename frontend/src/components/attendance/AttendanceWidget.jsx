@@ -11,7 +11,8 @@ import {
   ChevronRight,
   UserCheck,
   Send,
-} from 'lucide-react';
+  X,
+} from '@/components/ui/muiIcons';
 import {
   useClockIn,
   useClockOut,
@@ -26,7 +27,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogClose,
 } from '../ui/dialog';
+import { AttendanceVibeCard } from './AttendanceVibeCard';
 
 const formatTime = (isoString) => {
   if (!isoString) return '--:--';
@@ -38,12 +41,16 @@ const formatTime = (isoString) => {
 export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser }) => {
   const { user: authUser } = useSelector((state) => state.auth || {});
   const user = propUser || authUser;
+  const isExcludedRole = ['superAdmin', 'organizationOwner', 'admin'].includes(user?.role);
 
   const [time, setTime] = useState(new Date());
   const [presentSelected, setPresentSelected] = useState(false);
   const [showAbsentModal, setShowAbsentModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [showCelebrationModal, setShowCelebrationModal] = useState(false);
+  const [celebrationClockInTime, setCelebrationClockInTime] = useState(null);
+  const [celebrationType, setCelebrationType] = useState('clockin');
 
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const currentMonth = useMemo(() => new Date().getMonth() + 1, []);
@@ -51,7 +58,7 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
 
   // Fetch monthly records for current user so widget always has reactive live data
   const { data: attendanceData } = useAttendance({
-    userId: user?._id,
+    userId: isExcludedRole ? undefined : user?._id,
     month: currentMonth,
     year: currentYear,
     limit: 31,
@@ -74,15 +81,52 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
     return () => clearInterval(timer);
   }, []);
 
-  // Determine active today record from props or fetched query
-  const todayRecord = useMemo(() => {
-    if (propTodayRecord) return propTodayRecord;
+  // Helper to accurately compare dates ignoring timezone offset differences
+  const isSameCalendarDay = (d1, d2) => {
+    if (!d1 || !d2) return false;
+    const a = new Date(d1);
+    const b = new Date(d2);
+    if (isNaN(a.getTime()) || isNaN(b.getTime())) return false;
+    return a.getFullYear() === b.getFullYear() &&
+           a.getMonth() === b.getMonth() &&
+           a.getDate() === b.getDate();
+  };
+
+  const isTodayRecord = (r) => {
+    if (!r) return false;
+    const now = new Date();
+    if (r.date && isSameCalendarDay(r.date, now)) return true;
+    if (r.clockIn && isSameCalendarDay(r.clockIn, now)) return true;
+    if (r.sessions && r.sessions.some((s) => s.clockIn && isSameCalendarDay(s.clockIn, now))) return true;
+    return false;
+  };
+
+  const currentUserId = (user?._id || user?.id)?.toString();
+  const authUserId = (authUser?._id || authUser?.id)?.toString();
+  const isSelf = !propUser || !authUserId || !currentUserId || (currentUserId === authUserId);
+
+  const foundTodayRecord = useMemo(() => {
     const records = attendanceData?.records || [];
     return records.find((r) => {
-      const rDate = r.date ? r.date.split('T')[0] : '';
-      return rDate === todayStr && ((r.user?._id || r.user) === user?._id);
+      const rUserId = (r.user?._id || r.user)?.toString();
+      const matchesUser = !currentUserId || !rUserId || rUserId === currentUserId;
+      return matchesUser && isTodayRecord(r);
     });
-  }, [propTodayRecord, attendanceData?.records, todayStr, user?._id]);
+  }, [attendanceData?.records, currentUserId]);
+
+  // Determine active today record: prefer active shift from live query or props
+  const todayRecord = useMemo(() => {
+    const isRecordActive = (rec) => Boolean(
+      rec && (
+        (rec.sessions && rec.sessions.length > 0 && rec.sessions.some((s) => !s.clockOut)) ||
+        (rec.clockIn && !rec.clockOut)
+      )
+    );
+
+    if (isRecordActive(foundTodayRecord)) return foundTodayRecord;
+    if (isRecordActive(propTodayRecord)) return propTodayRecord;
+    return foundTodayRecord || propTodayRecord || null;
+  }, [foundTodayRecord, propTodayRecord]);
 
   const isClockedIn = Boolean(
     todayRecord && (
@@ -90,6 +134,10 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
       (todayRecord.clockIn && !todayRecord.clockOut)
     )
   );
+
+  const firstClockIn = useMemo(() => {
+    return todayRecord?.clockIn || (todayRecord?.sessions && todayRecord.sessions[0]?.clockIn) || null;
+  }, [todayRecord]);
 
   // Calculate live duration for active session
   const activeSessionStartTime = useMemo(() => {
@@ -142,9 +190,27 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
     toast.info('Present selected! Click "Clock In" to start your shift.');
   };
 
+  const onClockInSuccess = (res) => {
+    const time = res?.clockIn || (res?.sessions && res.sessions[res.sessions.length - 1]?.clockIn) || new Date().toISOString();
+    setCelebrationClockInTime(time);
+    setCelebrationType('clockin');
+    setShowCelebrationModal(true);
+  };
+
+  useEffect(() => {
+    if (clockIn.isSuccess && clockIn.data) {
+      const time = clockIn.data?.clockIn || new Date().toISOString();
+      setCelebrationClockInTime(time);
+      setCelebrationType('clockin');
+      setShowCelebrationModal(true);
+    }
+  }, [clockIn.isSuccess, clockIn.data]);
+
   const handleClockInClick = () => {
     if (isApprovedWFH) {
-      clockIn.mutate();
+      clockIn.mutate(undefined, {
+        onSuccess: (res) => onClockInSuccess(res),
+      });
       return;
     }
 
@@ -162,6 +228,7 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
         clockIn.mutate(
           { latitude, longitude, accuracy, locationName: 'GPS Location' },
           {
+            onSuccess: (res) => onClockInSuccess(res),
             onSettled: () => setIsGettingLocation(false),
           }
         );
@@ -185,7 +252,13 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
   };
 
   const handleClockOutClick = () => {
-    clockOut.mutate();
+    clockOut.mutate(undefined, {
+      onSuccess: () => {
+        setCelebrationClockInTime(new Date().toISOString());
+        setCelebrationType('clockout');
+        setShowCelebrationModal(true);
+      },
+    });
   };
 
   const handleMarkAbsentSubmit = (e) => {
@@ -228,24 +301,25 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
     );
   };
 
-  return (
-    <div className="bg-card p-6 rounded-3xl border border-border shadow-md relative overflow-hidden space-y-6">
-      {/* Background Accent */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
+  if (isExcludedRole) {
+    return null;
+  }
 
+  return (
+    <div className="bg-card p-4 sm:p-6 rounded-2xl sm:rounded-3xl relative overflow-hidden space-y-4 sm:space-y-6">
       {/* Header Info */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
-        <div>
-          <h3 className="font-extrabold text-lg tracking-tight flex items-center text-foreground">
-            <Clock className="mr-2 h-5 w-5 text-primary animate-pulse" />
-            Daily Shift & Attendance
+      <div className="flex items-center justify-between gap-3 pb-2">
+        <div className="min-w-0">
+          <h3 className="font-bold text-base sm:text-lg tracking-tight flex items-center text-foreground">
+            <Clock className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0" />
+            <span className="truncate">Today&apos;s Shift</span>
           </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Today: {time.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
+          <p className="text-xs text-muted-foreground mt-0.5 truncate tabular-nums">
+            {time.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
-        <div className="text-right">
-          <span className="text-2xl font-black text-foreground tracking-tight block">
+        <div className="text-right shrink-0">
+          <span className="text-lg sm:text-2xl font-bold tabular-nums text-foreground tracking-tight whitespace-nowrap block">
             {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </span>
         </div>
@@ -253,28 +327,28 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
 
       {/* Leave Approval Banner / Current Status Pill */}
       {isLeave ? (
-        <div className={`p-3.5 rounded-2xl border flex items-center justify-between gap-2 transition-all ${
+        <div className={`p-3.5 rounded-2xl flex items-center justify-between gap-2 transition-all ${
           approvalStatus === 'approved'
-            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+            ? 'bg-primary text-primary-foreground '
             : approvalStatus === 'rejected'
-            ? 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400'
-            : 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400'
+            ? 'bg-secondary text-muted-foreground'
+            : 'bg-secondary text-foreground'
         }`}>
           <div className="flex items-center gap-2">
             {approvalStatus === 'approved' ? (
-              <CheckCircle2 size={18} className="text-emerald-600" />
+              <CheckCircle2 size={18} className="shrink-0" />
             ) : approvalStatus === 'rejected' ? (
-              <XCircle size={18} className="text-rose-600" />
+              <XCircle size={18} className="shrink-0" />
             ) : (
-              <AlertCircle size={18} className="text-amber-600 animate-pulse" />
+              <AlertCircle size={18} className="shrink-0" />
             )}
             <div>
               <span className="text-xs font-black uppercase tracking-wider block">
                 {approvalStatus === 'approved'
-                  ? 'Leave Approved ✅'
+                  ? 'Leave Approved'
                   : approvalStatus === 'rejected'
-                  ? 'Leave Rejected ❌'
-                  : 'Leave Pending Approval ⏳'}
+                  ? 'Leave Rejected'
+                  : 'Leave Pending Approval'}
               </span>
               <p className="text-[11px] opacity-90 font-medium">
                 {approvalStatus === 'approved'
@@ -292,25 +366,18 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
           )}
         </div>
       ) : status && status !== 'present' ? (
-        <div className="flex items-center justify-between p-3 rounded-2xl bg-secondary/30 border border-border">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Today&apos;s Status:</span>
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-extrabold uppercase ${
-                status === 'absent'
-                  ? 'bg-destructive/10 text-destructive border border-destructive/20'
-                  : status === 'work_from_home'
-                  ? 'bg-purple-500/10 text-purple-600 border border-purple-500/20'
-                  : 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
-              }`}
-            >
+        <div className="p-3.5 rounded-2xl bg-secondary/30 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Today&apos;s Status</span>
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase bg-secondary text-foreground ">
               {status.replace(/_/g, ' ')}
             </span>
           </div>
           {todayRecord?.notes && (
-            <span className="text-xs text-muted-foreground font-medium truncate max-w-[200px]" title={todayRecord.notes}>
-              Reason: &quot;{todayRecord.notes}&quot;
-            </span>
+            <div className="text-xs text-muted-foreground bg-background/60 p-2.5 rounded-xl leading-relaxed font-normal">
+              <span className="font-semibold text-foreground/90">Note: </span>
+              {todayRecord.notes}
+            </div>
           )}
         </div>
       ) : null}
@@ -319,23 +386,23 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
       <div className="space-y-4">
         {/* Active Session Timer Indicator if Clocked In */}
         {isClockedIn && (
-          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between">
+          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <span className="relative flex h-3 w-3">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
               </span>
               <div>
-                <span className="text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block">
+                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">
                   Active Shift in Progress
                 </span>
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-[11px] text-muted-foreground tabular-nums">
                   Clocked In at {formatTime(todayRecord?.clockIn)}
                 </span>
               </div>
             </div>
             <div className="text-right">
-              <span className="text-lg font-black text-emerald-600 font-mono">
+              <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
                 {liveElapsedStr}
               </span>
             </div>
@@ -345,33 +412,30 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
         {/* Step 1: Selection Buttons if not present/clocked-in yet */}
         {!isPresent && !isClockedIn && !isAbsent && !isLeave && !isHoliday && (
           <div className="space-y-3">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-              Select Attendance Status for Today
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
               <button
                 type="button"
                 onClick={handleSelectPresent}
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 font-extrabold text-sm hover:bg-emerald-500/20 transition-all shadow-sm active:scale-95"
+                className="flex items-center justify-center gap-1.5 sm:gap-2 h-10 sm:h-11 px-2 sm:px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
               >
-                <CheckCircle2 size={18} />
-                Present
+                <CheckCircle2 size={15} className="shrink-0" />
+                <span>Present</span>
               </button>
               <button
                 type="button"
                 onClick={() => setShowAbsentModal(true)}
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-destructive/10 border border-destructive/30 text-destructive font-extrabold text-sm hover:bg-destructive/20 transition-all shadow-sm active:scale-95"
+                className="flex items-center justify-center gap-1.5 sm:gap-2 h-10 sm:h-11 px-2 sm:px-4 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-bold text-xs sm:text-sm transition-all cursor-pointer"
               >
-                <XCircle size={18} />
-                Mark Absent
+                <XCircle size={15} className="shrink-0" />
+                <span>Absent</span>
               </button>
               <button
                 type="button"
                 onClick={() => setShowLeaveModal(true)}
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 font-extrabold text-sm hover:bg-rose-500/20 transition-all shadow-sm active:scale-95"
+                className="flex items-center justify-center gap-1.5 sm:gap-2 h-10 sm:h-11 px-2 sm:px-4 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold text-xs sm:text-sm transition-all cursor-pointer"
               >
-                <Calendar size={18} />
-                Apply for Leave
+                <Calendar size={15} className="shrink-0" />
+                <span>Leave</span>
               </button>
             </div>
           </div>
@@ -385,20 +449,20 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
                 type="button"
                 onClick={handleClockOutClick}
                 disabled={clockOut.isPending}
-                className="w-full py-4 rounded-2xl bg-destructive text-white font-black text-base shadow-lg shadow-destructive/20 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3.5 sm:py-4 px-4 rounded-2xl bg-rose-600 hover:bg-rose-500 active:scale-[0.99] text-white font-black text-sm sm:text-base shadow-lg shadow-rose-600/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Timer size={20} className={clockOut.isPending ? 'animate-spin' : ''} />
-                {clockOut.isPending ? 'Clocking Out...' : 'Clock Out (End Shift / Take Break)'}
+                <Timer size={18} className={`shrink-0 ${clockOut.isPending ? 'animate-spin' : ''}`} />
+                <span>{clockOut.isPending ? 'Clocking Out...' : 'Clock Out (End Shift / Take Break)'}</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={handleClockInClick}
                 disabled={clockIn.isPending || isGettingLocation}
-                className="w-full py-4 rounded-2xl bg-primary text-white font-black text-base shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3.5 sm:py-4 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-black text-sm sm:text-base shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Timer size={20} className={clockIn.isPending || isGettingLocation ? 'animate-spin' : ''} />
-                {isGettingLocation
+                <Timer size={18} className={`shrink-0 ${clockIn.isPending || isGettingLocation ? 'animate-spin' : ''}`} />
+                <span>{isGettingLocation
                   ? 'Checking Location...'
                   : clockIn.isPending
                   ? 'Clocking In...'
@@ -406,18 +470,18 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
                   ? 'Clock In WFH'
                   : todayRecord?.clockIn
                   ? 'Clock In / Resume Shift'
-                  : 'Clock In Now'}
+                  : 'Clock In Now'}</span>
               </button>
             )}
 
             {/* Quick Status Switching Options */}
-            <div className="flex items-center justify-between text-xs pt-1">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs pt-1">
               <span className="text-muted-foreground font-semibold">Need to submit a request?</span>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setShowAbsentModal(true)}
-                  className="text-destructive font-bold hover:underline"
+                  className="text-rose-600 dark:text-rose-400 font-bold hover:underline cursor-pointer"
                 >
                   Mark Absent
                 </button>
@@ -425,7 +489,7 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
                 <button
                   type="button"
                   onClick={() => setShowLeaveModal(true)}
-                  className="text-rose-600 font-bold hover:underline"
+                  className="text-amber-600 dark:text-amber-400 font-bold hover:underline cursor-pointer"
                 >
                   Apply for Leave
                 </button>
@@ -436,95 +500,166 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
 
         {/* If Absent or Leave already set */}
         {(isAbsent || isLeave) && !isClockedIn && (
-          <div className="p-4 rounded-2xl bg-secondary/40 border border-border space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Recorded as {isAbsent ? 'Absent' : 'Leave'}
+          <div className="p-4 rounded-2xl bg-secondary/30 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full shrink-0 bg-foreground" />
+                Recorded as {isAbsent ? 'Absent' : 'On Leave'}
               </span>
               <button
                 type="button"
                 onClick={handleSelectPresent}
-                className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/80 transition-colors self-start sm:self-auto cursor-pointer"
               >
-                Switch to Present & Clock In <ChevronRight size={14} />
+                <span>Switch to Present &amp; Clock In</span>
+                <ChevronRight size={14} className="shrink-0" />
               </button>
             </div>
-            <p className="text-xs text-foreground font-medium italic">
-              Reason: &quot;{todayRecord?.notes || 'No reason specified'}&quot;
-            </p>
+            {todayRecord?.notes && (
+              <p className="text-xs text-muted-foreground bg-background/60 p-2.5 rounded-xl leading-relaxed font-normal">
+                <span className="font-semibold text-foreground/90">Reason: </span>
+                {todayRecord.notes}
+              </p>
+            )}
           </div>
         )}
 
         {/* Timings Summary Row */}
-        <div className="grid grid-cols-3 gap-3 pt-2 text-center border-t border-border">
-          <div className="p-2.5 rounded-2xl bg-secondary/30 border border-border">
-            <span className="text-[10px] font-bold uppercase text-muted-foreground block">First Clock In</span>
-            <span className="text-xs font-extrabold text-emerald-600 mt-0.5 block">
+        <div className="grid grid-cols-3 gap-2 sm:gap-2.5 text-center pt-2 tabular-nums">
+          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-secondary/30 min-w-0">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground block truncate">First In</span>
+            <span className="text-xs font-bold text-foreground mt-1 block tabular-nums truncate">
               {formatTime(todayRecord?.clockIn)}
             </span>
           </div>
-          <div className="p-2.5 rounded-2xl bg-secondary/30 border border-border">
-            <span className="text-[10px] font-bold uppercase text-muted-foreground block">Last Clock Out</span>
-            <span className="text-xs font-extrabold text-amber-600 mt-0.5 block">
+          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-secondary/30 min-w-0">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground block truncate">Last Out</span>
+            <span className="text-xs font-bold text-foreground mt-1 block tabular-nums truncate">
               {formatTime(todayRecord?.clockOut)}
             </span>
           </div>
-          <div className="p-2.5 rounded-2xl bg-secondary/30 border border-border">
-            <span className="text-[10px] font-bold uppercase text-muted-foreground block">Total Logged</span>
-            <span className="text-xs font-extrabold text-primary mt-0.5 block">
+          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-secondary/30 min-w-0">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground block truncate">Total Hours</span>
+            <span className="text-xs font-bold text-foreground mt-1 block tabular-nums truncate">
               {Number(todayRecord?.totalHours || 0).toFixed(2)} hrs
             </span>
           </div>
         </div>
+
+        {/* Today's Login & Logout Sessions Log */}
+        {todayRecord?.sessions && todayRecord.sessions.length > 0 && (
+          <div className="p-3.5 rounded-2xl bg-secondary/25 space-y-2 tabular-nums">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
+                <Clock size={12} className="text-foreground shrink-0" /> Today&apos;s Login &amp; Logout Log ({todayRecord.sessions.length} session{todayRecord.sessions.length > 1 ? 's' : ''})
+              </span>
+              <span className="text-foreground text-[11px] font-extrabold">{Number(todayRecord.totalHours || 0).toFixed(2)} hrs total</span>
+            </div>
+            <div className="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar">
+              {todayRecord.sessions.map((s, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs p-2 rounded-xl bg-card ">
+                  <span className="font-bold text-foreground/80 text-[11px]">Session #{idx + 1}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-foreground font-bold">{formatTime(s.clockIn)}</span>
+                    <span className="text-muted-foreground">→</span>
+                    <span className="text-muted-foreground font-bold">{s.clockOut ? formatTime(s.clockOut) : 'Active'}</span>
+                    <span className="text-foreground font-bold text-[11px] bg-secondary px-1.5 py-0.5 rounded">
+                      {s.durationHours ? `${s.durationHours.toFixed(2)}h` : s.clockOut ? '0.00h' : 'Active'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modal: Mark Absent */}
       <Dialog open={showAbsentModal} onOpenChange={setShowAbsentModal}>
-        <DialogContent size="default">
-          <DialogHeader>
-            <DialogTitle>Mark Absent</DialogTitle>
-            <DialogDescription>
-              Record your absence in the system with a date and reason for HR/Management.
-            </DialogDescription>
+        <DialogContent
+          size="md"
+          noPadding
+          hideCloseButton
+          className="flex flex-col min-h-0 p-0 overflow-hidden bg-card max-w-lg max-h-[90vh]"
+        >
+          {/* Pinned Sticky Header */}
+          <DialogHeader className="px-6 py-5 bg-card shrink-0 select-none">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-foreground shrink-0">
+                  <XCircle size={20} />
+                </div>
+                <div>
+                  <DialogTitle className="text-lg sm:text-xl font-bold text-foreground">
+                    Mark Absent
+                  </DialogTitle>
+                  <DialogDescription className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                    Record your absence in the system for HR &amp; Management
+                  </DialogDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-[10px] font-medium text-muted-foreground bg-muted rounded-md">
+                  ESC
+                </span>
+                <DialogClose className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer">
+                  <X className="h-4 w-4" />
+                </DialogClose>
+              </div>
+            </div>
           </DialogHeader>
 
-          <form onSubmit={handleMarkAbsentSubmit} className="space-y-4 text-xs">
-            <div className="space-y-1.5">
-              <label className="font-semibold text-foreground">Absent Date *</label>
-              <input
-                type="date"
-                required
-                value={absentDate}
-                onChange={(e) => setAbsentDate(e.target.value)}
-                className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs outline-none focus:ring-2 focus:ring-primary/20"
-              />
+          {/* Form with Scrollable Body and Pinned Footer */}
+          <form onSubmit={handleMarkAbsentSubmit} className="flex flex-col min-h-0 flex-1 overflow-hidden">
+            <div className="space-y-6 p-6 sm:p-7 overflow-y-auto flex-1 min-h-0 custom-scrollbar overscroll-contain">
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                  Absent Date *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={absentDate}
+                  onChange={(e) => setAbsentDate(e.target.value)}
+                  onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
+                  className="w-full h-11 px-4 rounded-xl bg-background text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                  Reason for Absence *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Enter detailed reason for absence (e.g. Unwell, Personal Emergency)..."
+                  value={absentReason}
+                  onChange={(e) => setAbsentReason(e.target.value)}
+                  className="w-full rounded-xl bg-background p-4 text-sm outline-none focus:ring-2 focus:ring-primary/20 text-foreground resize-none min-h-[100px]"
+                />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="font-semibold text-foreground">Reason for Absence *</label>
-              <textarea
-                required
-                rows={3}
-                placeholder="Enter detailed reason for absence (e.g. Unwell, Emergency)..."
-                value={absentReason}
-                onChange={(e) => setAbsentReason(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background p-3 text-xs outline-none focus:ring-2 focus:ring-primary/20 text-foreground resize-none"
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-4 border-t border-border">
-              <button
-                type="button"
-                onClick={() => setShowAbsentModal(false)}
-                className="px-4 py-2 rounded-xl border border-border font-semibold text-xs hover:bg-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitAbsent.isPending}
-                className="px-4 py-2 rounded-xl bg-destructive text-destructive-foreground font-bold text-xs shadow-sm hover:bg-destructive/90 disabled:opacity-50"
-              >
-                {submitAbsent.isPending ? 'Submitting...' : 'Confirm Mark Absent'}
-              </button>
+
+            {/* Pinned Sticky Footer */}
+            <div className="shrink-0 bg-card px-6 py-4 flex items-center justify-between gap-3 z-10 select-none">
+              <span className="text-xs text-muted-foreground hidden sm:inline">Press ESC to exit</span>
+              <div className="flex items-center gap-2.5 ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowAbsentModal(false)}
+                  className="h-11 px-5 rounded-xl bg-background hover:bg-muted font-semibold text-sm text-foreground transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitAbsent.isPending}
+                  className="h-11 px-6 rounded-xl bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/90 disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  {submitAbsent.isPending ? 'Submitting...' : 'Confirm Mark Absent'}
+                </button>
+              </div>
             </div>
           </form>
         </DialogContent>
@@ -532,18 +667,47 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
 
       {/* Modal: Apply for Leave */}
       <Dialog open={showLeaveModal} onOpenChange={setShowLeaveModal}>
-        <DialogContent size="default">
-          <DialogHeader>
-            <DialogTitle>Apply for Leave</DialogTitle>
-            <DialogDescription>
-              Submit a formal leave application to Super Admin & Admin for review and approval.
-            </DialogDescription>
+        <DialogContent
+          size="lg"
+          noPadding
+          hideCloseButton
+          className="flex flex-col min-h-0 p-0 overflow-hidden bg-card max-w-xl max-h-[90vh]"
+        >
+          {/* Pinned Sticky Header */}
+          <DialogHeader className="px-6 py-5 bg-card shrink-0 select-none">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-foreground shrink-0">
+                  <Calendar size={20} />
+                </div>
+                <div>
+                  <DialogTitle className="text-lg sm:text-xl font-bold text-foreground">
+                    Apply for Leave
+                  </DialogTitle>
+                  <DialogDescription className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                    Submit a formal leave application to Management for review
+                  </DialogDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-[10px] font-medium text-muted-foreground bg-muted rounded-md">
+                  ESC
+                </span>
+                <DialogClose className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer">
+                  <X className="h-4 w-4" />
+                </DialogClose>
+              </div>
+            </div>
           </DialogHeader>
 
-          <form onSubmit={handleApplyLeaveSubmit} className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="font-semibold text-foreground">Leave Start Date *</label>
+          {/* Form with Scrollable Body and Pinned Footer */}
+          <form onSubmit={handleApplyLeaveSubmit} className="flex flex-col min-h-0 flex-1 overflow-hidden">
+            <div className="space-y-6 p-6 sm:p-7 overflow-y-auto flex-1 min-h-0 custom-scrollbar overscroll-contain">
+              {/* Leave Start Date */}
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                  Leave Start Date *
+                </label>
                 <input
                   type="date"
                   required
@@ -554,59 +718,80 @@ export const AttendanceWidget = ({ todayRecord: propTodayRecord, user: propUser 
                       setLeaveEndDate(e.target.value);
                     }
                   }}
-                  className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
+                  className="w-full h-11 px-4 rounded-xl bg-background text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="font-semibold text-foreground">Leave End Date *</label>
+
+              {/* Leave End Date */}
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                  Leave End Date *
+                </label>
                 <input
                   type="date"
                   required
                   min={leaveStartDate}
                   value={leaveEndDate}
                   onChange={(e) => setLeaveEndDate(e.target.value)}
-                  className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
+                  className="w-full h-11 px-4 rounded-xl bg-background text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
                 />
+              </div>
+
+              {/* Reason for Leave */}
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                  Reason for Leave *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Explain reason for leave (e.g. Medical appointment, Family event, Vacation, Casual leave)..."
+                  value={leaveReason}
+                  onChange={(e) => setLeaveReason(e.target.value)}
+                  className="w-full rounded-xl bg-background p-4 text-sm outline-none focus:ring-2 focus:ring-primary/20 text-foreground resize-none min-h-[100px]"
+                />
+              </div>
+
+              <div className="p-4 rounded-2xl bg-secondary/40 text-xs text-muted-foreground flex items-center gap-2.5">
+                <Info size={16} className="text-foreground shrink-0" />
+                <span>This request will be sent to Super Admin and Admin. Once approved, your attendance status will update to <strong>Leave Approved</strong>.</span>
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="font-semibold text-foreground">Reason for Leave *</label>
-              <textarea
-                required
-                rows={3}
-                placeholder="Explain reason for leave (e.g. Medical appointment, Family event, Vacation, Casual leave)..."
-                value={leaveReason}
-                onChange={(e) => setLeaveReason(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background p-3 text-xs outline-none focus:ring-2 focus:ring-primary/20 text-foreground resize-none"
-              />
-            </div>
-
-            <div className="p-3 rounded-xl bg-secondary/40 border border-border text-[11px] text-muted-foreground flex items-center gap-2">
-              <Info size={14} className="text-primary shrink-0" />
-              <span>This request will be sent to Super Admin and Admin. Once approved, your attendance status will update to <strong>Leave Approved</strong>.</span>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4 border-t border-border">
-              <button
-                type="button"
-                onClick={() => setShowLeaveModal(false)}
-                className="px-4 py-2 rounded-xl border border-border font-semibold text-xs hover:bg-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitLeave.isPending}
-                className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-sm hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1.5"
-              >
-                <Send size={13} />
-                {submitLeave.isPending ? 'Submitting Application...' : 'Submit Leave Application'}
-              </button>
+            {/* Pinned Sticky Footer */}
+            <div className="shrink-0 bg-card px-6 py-4 flex items-center justify-between gap-3 z-10 select-none">
+              <span className="text-xs text-muted-foreground hidden sm:inline">Press ESC to exit</span>
+              <div className="flex items-center gap-2.5 ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowLeaveModal(false)}
+                  className="h-11 px-5 rounded-xl font-semibold text-sm text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitLeave.isPending}
+                  className="h-11 px-6 rounded-xl bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Send size={14} />
+                  {submitLeave.isPending ? 'Submitting Application...' : 'Submit Leave Application'}
+                </button>
+              </div>
             </div>
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Celebratory Tamil Comedian Sticker Popup (Appears on clock in/out for all users, leaves 0 footprint in overview) */}
+      <AttendanceVibeCard
+        isOpen={showCelebrationModal}
+        onClose={() => setShowCelebrationModal(false)}
+        clockInTime={celebrationClockInTime || firstClockIn}
+        type={celebrationType}
+      />
     </div>
   );
 };

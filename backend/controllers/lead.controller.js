@@ -7,6 +7,9 @@ import Referral from '../models/referral.model.js';
 import { createNotification } from '../utils/notification.js';
 import { runAutomation } from '../services/automation.service.js';
 import { createActivityLog } from '../utils/activity.js';
+import { moveToRecycleBin } from '../utils/recycleBin.js';
+import { emitLiveEvent } from '../utils/socketEmitter.js';
+import { parsePagination } from '../utils/pagination.js';
 
 const sourceMap = {
   Website: 'website',
@@ -145,7 +148,8 @@ const buildScopedLeadFilter = (req, filter = {}) => {
 // @route  GET /api/leads
 export const getLeads = async (req, res) => {
   try {
-    const { stage, priority, assignedTo, search, followUp, page = 1, limit = 50 } = req.query;
+    const { stage, priority, assignedTo, search, followUp } = req.query;
+    const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 25, maxLimit: 100 });
     const filter = {};
 
     if (stage) filter.stage = stageMap[stage] || stage;
@@ -185,23 +189,26 @@ export const getLeads = async (req, res) => {
     }
 
     const scopedFilter = buildScopedLeadFilter(req, filter);
-    const total = await Lead.countDocuments(scopedFilter);
-    const leads = await Lead.find(scopedFilter)
-      .populate('assignedTo', 'name email avatar')
-      .populate('convertedToClient', 'name company')
-      .sort({ updatedAt: -1, createdAt: -1 })
-      .skip((Number(page) - 1) * Number(limit))
-      .limit(Number(limit));
+    const [total, leads] = await Promise.all([
+      Lead.countDocuments(scopedFilter),
+      Lead.find(scopedFilter)
+        .populate('assignedTo', 'name email avatar')
+        .populate('convertedToClient', 'name company')
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
 
     res.json({
       success: true,
       total,
-      page: Number(page),
-      pages: Math.ceil(total / Number(limit)),
+      page,
+      pages: Math.ceil(total / limit),
       leads: leads.map(serializeLead),
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(error.statusCode || 500).json({ success: false, message: error.message });
   }
 };
 
@@ -297,7 +304,9 @@ export const createLead = async (req, res) => {
     });
 
     const populated = await Lead.findById(lead._id).populate('assignedTo', 'name email avatar');
-    res.status(201).json({ success: true, lead: serializeLead(populated) });
+    const serialized = serializeLead(populated);
+    emitLiveEvent('leadCreated', serialized);
+    res.status(201).json({ success: true, lead: serialized });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -361,7 +370,9 @@ export const updateLead = async (req, res) => {
     });
 
     const updated = await Lead.findById(lead._id).populate('assignedTo', 'name email avatar');
-    res.json({ success: true, lead: serializeLead(updated) });
+    const serialized = serializeLead(updated);
+    emitLiveEvent('leadUpdated', serialized);
+    res.json({ success: true, lead: serialized });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -409,7 +420,9 @@ export const updateLeadStage = async (req, res) => {
       metadata: { stage: normalizedStage, stageOrder: lead.stageOrder },
     });
 
-    res.json({ success: true, lead: serializeLead(lead) });
+    const serialized = serializeLead(lead);
+    emitLiveEvent('leadUpdated', serialized);
+    res.json({ success: true, lead: serialized });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -510,8 +523,21 @@ export const addLeadActivity = async (req, res) => {
 // @route  DELETE /api/leads/:id
 export const deleteLead = async (req, res) => {
   try {
-    const lead = await Lead.findByIdAndDelete(req.params.id);
+    const lead = await Lead.findById(req.params.id);
     if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
+
+    await moveToRecycleBin({
+      entityType: 'lead',
+      originalId: lead._id,
+      title: lead.name,
+      subtitle: lead.company || lead.phone || lead.email || '',
+      originalLocation: 'CRM Leads',
+      modelName: 'Lead',
+      documentData: lead,
+      user: req.user,
+    });
+
+    await Lead.findByIdAndDelete(req.params.id);
 
     await Referral.deleteMany({ lead: lead._id });
 
@@ -524,6 +550,7 @@ export const deleteLead = async (req, res) => {
       description: `${lead.name} was deleted.`,
     });
 
+    emitLiveEvent('leadDeleted', req.params.id);
     res.json({ success: true, message: 'Lead deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

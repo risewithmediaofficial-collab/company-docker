@@ -5,6 +5,19 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js';
 
+// Short-lived in-memory cache for authenticated user lookups (TTL: 20s, max 500 entries)
+// Eliminates repetitive User.findById queries across parallel API calls on the same view
+const userAuthCache = new Map();
+const AUTH_CACHE_TTL_MS = 20 * 1000;
+
+export const clearAuthUserCache = (userId) => {
+  if (userId) {
+    userAuthCache.delete(String(userId));
+  } else {
+    userAuthCache.clear();
+  }
+};
+
 /**
  * Protect routes - verifies JWT access token
  */
@@ -20,8 +33,29 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Not authorized, no token' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('+passwordChangedAt -password -refreshToken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-super-secret-jwt-key');
+    if (decoded.tokenType && decoded.tokenType !== 'access') {
+      return res.status(401).json({ success: false, message: 'Not authorized, invalid token type' });
+    }
+
+    const cacheKey = String(decoded.id);
+    const cached = userAuthCache.get(cacheKey);
+    let user = null;
+
+    if (cached && (Date.now() - cached.timestamp < AUTH_CACHE_TTL_MS)) {
+      user = cached.user;
+    } else {
+      user = await User.findById(decoded.id)
+        .select('+passwordChangedAt -password -refreshToken')
+        .lean();
+      if (user) {
+        userAuthCache.set(cacheKey, { user, timestamp: Date.now() });
+        if (userAuthCache.size > 500) {
+          const oldestKey = userAuthCache.keys().next().value;
+          userAuthCache.delete(oldestKey);
+        }
+      }
+    }
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not found' });
@@ -57,6 +91,7 @@ export const protect = async (req, res, next) => {
 
     next();
   } catch (error) {
+    console.error('Auth protect error:', error.message);
     return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
   }
 };
@@ -67,16 +102,16 @@ export const protect = async (req, res, next) => {
  */
 export const authorize = (...roles) => {
   return (req, res, next) => {
-    // Admin and superAdmin have universal access across the entire platform
-    if (req.user && (req.user.role === 'superAdmin' || req.user.role === 'admin')) {
+    // Admin, superAdmin, and organizationOwner have universal access across the entire platform
+    if (req.user && (req.user.role === 'superAdmin' || req.user.role === 'admin' || req.user.role === 'organizationOwner')) {
       return next();
     }
     let allowedRoles = [...roles];
     if (allowedRoles.includes('superAdmin') && !allowedRoles.includes('admin')) {
       allowedRoles.push('admin');
     }
-    // Organization owners have full managerial access within their tenant workspace
-    if ((allowedRoles.includes('manager') || allowedRoles.includes('admin')) && !allowedRoles.includes('organizationOwner')) {
+    // Organization owners have full managerial/administrative access within their tenant workspace
+    if ((allowedRoles.includes('manager') || allowedRoles.includes('admin') || allowedRoles.includes('superAdmin')) && !allowedRoles.includes('organizationOwner')) {
       allowedRoles.push('organizationOwner');
     }
     if (!allowedRoles.includes(req.user.role)) {
@@ -94,8 +129,8 @@ export const authorize = (...roles) => {
  */
 export const requirePermission = (permissionKey) => {
   return (req, res, next) => {
-    // SuperAdmins & Admins bypass permission checks
-    if (req.user.role === 'superAdmin' || req.user.role === 'admin') return next();
+    // SuperAdmins, Admins & OrganizationOwners bypass permission checks
+    if (req.user?.role === 'superAdmin' || req.user?.role === 'admin' || req.user?.role === 'organizationOwner') return next();
     
     if (!req.user.permissions?.[permissionKey]) {
       return res.status(403).json({
@@ -109,6 +144,7 @@ export const requirePermission = (permissionKey) => {
 
 /**
  * Filter query builder based on workspace
+ * Hardened to fail closed and validate membership against x-workspace-id headers
  * Usage: const query = withWorkspaceScope(req, baseQuery)
  *
  * STRICT TENANT ISOLATION:
@@ -118,55 +154,102 @@ export const requirePermission = (permissionKey) => {
  * - User with no organizationId and not superAdmin → blocked (returns unmatchable filter)
  */
 export const withWorkspaceScope = (req, baseQuery = {}) => {
-  const user = req.user;
-  if (!user) return baseQuery;
+  const user = req?.user;
+  // Fail closed if user is missing
+  if (!user) {
+    return { ...baseQuery, _id: null };
+  }
 
   const ghostOrgId =
-    req.headers['x-impersonate-org-id'] ||
-    req.headers['x-ghost-org-id'] ||
+    req.headers?.['x-impersonate-org-id'] ||
+    req.headers?.['x-ghost-org-id'] ||
     (req.isGhostMode ? user.organizationId : null);
+
+  let query = { ...baseQuery };
 
   // Ghost Mode (superAdmin viewing a specific tenant CRM stealthily)
   if (ghostOrgId && (user.role === 'superAdmin' || user.role === 'admin')) {
-    const query = { ...baseQuery, organizationId: ghostOrgId };
-    if (req.headers['x-workspace-id'] && req.headers['x-workspace-id'] !== 'global') {
-      query.brandId = req.headers['x-workspace-id'];
+    query.organizationId = ghostOrgId;
+  } else if (user.role === 'superAdmin' && !user.organizationId) {
+    // Platform superAdmin — global access across all tenants
+  } else if (user.organizationId) {
+    // Strict tenant isolation: Scope to user's exact organization
+    query.organizationId = user.organizationId;
+  } else {
+    // Safety net: non-superAdmin user with no organization assigned - fail closed
+    return { ...baseQuery, organizationId: '__BLOCKED_NO_ORG__', _id: null };
+  }
+
+  const requestedWorkspace = req.headers?.['x-workspace-id'];
+
+  // 1. SuperAdmin, Admin & OrganizationOwner: Universal visibility within their org, with optional workspace filter
+  if (user.role === 'superAdmin' || user.role === 'admin' || user.role === 'organizationOwner') {
+    if (requestedWorkspace && requestedWorkspace !== 'global') {
+      query.brandId = requestedWorkspace;
     }
     return query;
   }
 
-  // Platform superAdmin — global access (no org scoping)
-  if (user.role === 'superAdmin' && !ghostOrgId && !user.organizationId) {
-    if (req.headers['x-workspace-id'] && req.headers['x-workspace-id'] !== 'global') {
-      return { ...baseQuery, brandId: req.headers['x-workspace-id'] };
+  // 2. Client-side users: Strictly restricted to their own brand/client.
+  // Must NOT allow arbitrary x-workspace-id to access other brands.
+  if (['client', 'clientAdmin', 'clientMember'].includes(user.role)) {
+    if (user.brandId) {
+      if (requestedWorkspace && requestedWorkspace !== 'global' && String(requestedWorkspace) !== String(user.brandId)) {
+        return { ...query, brandId: null, _id: null };
+      }
+      query.brandId = user.brandId;
+    } else if (user.clientId) {
+      query.client = user.clientId;
+    } else {
+      // Client has neither brandId nor clientId: fail closed
+      return { ...query, _id: null };
     }
-    return baseQuery;
-  }
-
-  // ───── STRICT TENANT ISOLATION ─────
-  // All tenant users (organizationOwner, admin, manager, employee, client, etc.)
-  // are STRICTLY limited to their own organizationId. No null/missing fallback.
-  const targetOrgId = user.organizationId;
-  if (!targetOrgId) {
-    // Safety net: user has no org but isn't superAdmin — block all data
-    return { ...baseQuery, organizationId: '__BLOCKED_NO_ORG__' };
-  }
-
-  const query = { ...baseQuery, organizationId: targetOrgId };
-
-  // Workspace/brand scoping within tenant
-  if (req.headers['x-workspace-id'] && req.headers['x-workspace-id'] !== 'global') {
-    query.brandId = req.headers['x-workspace-id'];
     return query;
   }
 
-  // Client-portal users: further restrict to their brand
-  if (user.role === 'clientAdmin' || user.role === 'clientMember') {
-    query.brandId = user.brandId;
-  } else if (['editor', 'designer', 'adsManager'].includes(user.role)) {
-    if (user.assignedBrands?.length > 0) {
+  // 3. Agency specialists (editor, designer, adsManager):
+  // Must be restricted to assignedBrands. Empty assignedBrands MUST FAIL CLOSED ({ $in: [] }).
+  if (['editor', 'designer', 'adsManager'].includes(user.role)) {
+    const assigned = Array.isArray(user.assignedBrands) ? user.assignedBrands : [];
+    if (assigned.length === 0) {
+      return { ...query, brandId: { $in: [] } };
+    }
+
+    if (requestedWorkspace && requestedWorkspace !== 'global') {
+      const isAuthorized = assigned.map(String).includes(String(requestedWorkspace));
+      if (!isAuthorized) {
+        return { ...query, brandId: null, _id: null };
+      }
+      query.brandId = requestedWorkspace;
+      return query;
+    }
+
+    query.brandId = { $in: assigned };
+    return query;
+  }
+
+  // 4. Employees & Managers:
+  // If assignedBrands is defined and non-empty, scope to it.
+  if (Array.isArray(user.assignedBrands) && user.assignedBrands.length > 0) {
+    if (requestedWorkspace && requestedWorkspace !== 'global') {
+      const isAuthorized = user.assignedBrands.map(String).includes(String(requestedWorkspace));
+      if (!isAuthorized) {
+        return { ...query, brandId: null, _id: null };
+      }
+      query.brandId = requestedWorkspace;
+    } else {
       query.brandId = { $in: user.assignedBrands };
     }
+    return query;
+  }
+
+  // General employee with no specific brand restriction:
+  if (requestedWorkspace && requestedWorkspace !== 'global') {
+    query.brandId = requestedWorkspace;
+  }
+
+  return query;
+};
   }
 
   return query;

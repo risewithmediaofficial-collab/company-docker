@@ -16,7 +16,7 @@ export const FormItem = React.forwardRef(({ className, ...props }, ref) => {
   const id = React.useId();
   return (
     <FormItemContext.Provider value={{ id }}>
-      <div ref={ref} className={cn('space-y-1.5', className)} {...props} />
+      <div ref={ref} className={cn('space-y-1.5 text-left', className)} {...props} />
     </FormItemContext.Provider>
   );
 });
@@ -24,7 +24,17 @@ FormItem.displayName = 'FormItem';
 
 export const FormLabel = React.forwardRef(({ className, ...props }, ref) => {
   const { id } = React.useContext(FormItemContext);
-  return <label ref={ref} htmlFor={id} className={cn('text-[13px] font-semibold text-foreground/85 flex items-center justify-between select-none tracking-normal', className)} {...props} />;
+  return (
+    <label
+      ref={ref}
+      htmlFor={id}
+      className={cn(
+        'text-sm font-semibold text-foreground flex items-center justify-start gap-1.5 text-left select-none tracking-normal normal-case leading-snug mb-1.5',
+        className
+      )}
+      {...props}
+    />
+  );
 });
 FormLabel.displayName = 'FormLabel';
 

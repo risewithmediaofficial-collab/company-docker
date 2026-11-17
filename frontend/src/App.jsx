@@ -2,106 +2,88 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useSelector, useDispatch } from 'react-redux';
 import { Suspense, lazy, useEffect } from 'react';
 import { fetchMe } from './store/slices/authSlice';
-import { Toaster as HotToaster } from 'react-hot-toast';
 import { Toaster as SonnerToaster } from 'sonner';
+import WebsiteLaunchLoader from './components/WebsiteLaunchLoader';
+import BannerNotificationHost from './components/notifications/BannerNotificationHost';
 
 // Layouts
 import MainLayout from './layouts/MainLayout';
 import AuthLayout from './layouts/AuthLayout';
 
-// Pages
-import Dashboard from './pages/Dashboard';
-import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
-import RegisterCompany from './pages/auth/RegisterCompany';
-import ForgotPassword from './pages/auth/ForgotPassword';
-import ResetPassword from './pages/auth/ResetPassword';
-import Leads from './pages/crm/Leads';
-import LeadDetails from './pages/crm/LeadDetails';
-import SOPDashboard from './pages/sop/SOPDashboard';
-import Proposals from './pages/proposals/Proposals';
-import ProposalDetails from './pages/proposals/ProposalDetails';
-import ClientProposals from './pages/proposals/ClientProposals';
-import AddTask from './pages/tasks/AddTask';
-import TaskDetails from './pages/tasks/TaskDetails';
-import Projects from './pages/projects/Projects';
-import ProjectDetails from './pages/projects/ProjectDetails';
-import Clients from './pages/clients/Clients';
-import ClientDetails from './pages/clients/ClientDetails';
-import ClientVault from './pages/clients/ClientVault';
-import ClientFollowups from './pages/clients/ClientFollowups';
-import Tasks from './pages/tasks/Tasks';
-import ContentCalendar from './pages/tasks/ContentCalendar';
-import DMCalendar from './pages/dmCalendar/DMCalendar';
-import InfluencersDashboard from './pages/influencers/InfluencersDashboard';
-import PendingNotes from './pages/tasks/PendingNotes';
-import ManagerBoard from './pages/tasks/ManagerBoard';
-import Finance from './pages/finance/Finance';
-import CallHistoryDashboard from './pages/finance/CallHistoryDashboard';
-import HR from './pages/hr/HR';
-import Reports from './pages/reports/Reports';
-import Attendance from './pages/employee/Attendance';
-import ReferralDashboard from './pages/referral/ReferralDashboard';
-import Users from './pages/admin/Users';
-import CompanyRequests from './pages/admin/CompanyRequests';
-import DomainRenewals from './pages/admin/DomainRenewals';
-import ManagerTaskAssignments from './pages/admin/ManagerTaskAssignments';
-import AssetsLibrary from './pages/assets/AssetsLibrary';
-import Settings from './pages/Settings';
-import NotFound from './pages/NotFound';
-import PortalDashboard from './pages/portal/sections/PortalDashboard';
-import PortalReports from './pages/portal/sections/PortalReports';
-import PortalDownloads from './pages/portal/sections/PortalDownloads';
-import BrandAssets from './pages/portal/sections/BrandAssets';
-import PortalSupport from './pages/portal/sections/PortalSupport';
-import PortalGuidelines from './pages/portal/sections/PortalGuidelines';
+// Route-Level Code Splitting (Lazy-loaded chunks)
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Login = lazy(() => import('./pages/auth/Login'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const RegisterCompany = lazy(() => import('./pages/auth/RegisterCompany'));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
+const Leads = lazy(() => import('./pages/crm/Leads'));
+const LeadDetails = lazy(() => import('./pages/crm/LeadDetails'));
+const SOPDashboard = lazy(() => import('./pages/sop/SOPDashboard'));
+const Proposals = lazy(() => import('./pages/proposals/Proposals'));
+const ProposalDetails = lazy(() => import('./pages/proposals/ProposalDetails'));
+const ClientProposals = lazy(() => import('./pages/proposals/ClientProposals'));
+const AddTask = lazy(() => import('./pages/tasks/AddTask'));
+const TaskDetails = lazy(() => import('./pages/tasks/TaskDetails'));
+const Projects = lazy(() => import('./pages/projects/Projects'));
+const ProjectDetails = lazy(() => import('./pages/projects/ProjectDetails'));
+const Clients = lazy(() => import('./pages/clients/Clients'));
+const ClientDetails = lazy(() => import('./pages/clients/ClientDetails'));
+const ClientVault = lazy(() => import('./pages/clients/ClientVault'));
+const ClientFollowups = lazy(() => import('./pages/clients/ClientFollowups'));
+const Tasks = lazy(() => import('./pages/tasks/Tasks'));
+const ContentCalendar = lazy(() => import('./pages/tasks/ContentCalendar'));
+const InfluencersDashboard = lazy(() => import('./pages/influencers/InfluencersDashboard'));
+const Finance = lazy(() => import('./pages/finance/Finance'));
+const CallHistoryDashboard = lazy(() => import('./pages/finance/CallHistoryDashboard'));
+const HR = lazy(() => import('./pages/hr/HR'));
+const Reports = lazy(() => import('./pages/reports/Reports'));
+const Attendance = lazy(() => import('./pages/employee/Attendance'));
+const MyEODReports = lazy(() => import('./pages/employee/MyEODReports'));
+const ReferralDashboard = lazy(() => import('./pages/referral/ReferralDashboard'));
+const Users = lazy(() => import('./pages/admin/Users'));
+const CompanyRequests = lazy(() => import('./pages/admin/CompanyRequests'));
+const DomainRenewals = lazy(() => import('./pages/admin/DomainRenewals'));
+const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
+const RecycleBin = lazy(() => import('./pages/admin/RecycleBin'));
+const AssetsLibrary = lazy(() => import('./pages/assets/AssetsLibrary'));
+const Settings = lazy(() => import('./pages/Settings'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const PortalDashboard = lazy(() => import('./pages/portal/sections/PortalDashboard'));
+const PortalInvoices = lazy(() => import('./pages/portal/sections/PortalInvoices'));
+const PortalTasks = lazy(() => import('./pages/portal/sections/PortalTasks'));
+const PortalAdBudget = lazy(() => import('./pages/portal/sections/PortalAdBudget'));
+const PortalSMMTracker = lazy(() => import('./pages/portal/sections/PortalSMMTracker'));
 
-// Social Media Manager Module Pages
-import SMMDashboard from './pages/smm/SMMDashboard';
-import SMMContent from './pages/smm/SMMContent';
-import SMMLeads from './pages/smm/SMMLeads';
-import SMMClients from './pages/smm/SMMClients';
+// Social Media Manager Module Pages - One-Page Tracker Only
+const SMMOnePageTracker = lazy(() => import('./pages/smm/SMMOnePageTracker'));
 
 // Platform Admin Pages (SaaS)
-import PlatformLayout from './pages/platform/PlatformLayout';
-import PlatformDashboard from './pages/platform/PlatformDashboard';
-import Companies from './pages/platform/Companies';
-import CompanyDetail from './pages/platform/CompanyDetail';
-import SMMProjects from './pages/smm/SMMProjects';
-import Campaigns from './pages/smm/Campaigns';
-import AdSets from './pages/smm/AdSets';
-import Ads from './pages/smm/Ads';
-import CreativeLibrary from './pages/smm/CreativeLibrary';
-import SMMContentCalendar from './pages/smm/ContentCalendar';
-import SMMPerformance from './pages/smm/Performance';
-import SMMReports from './pages/smm/Reports';
-import SMMDailyTracking from './pages/smm/DailyTracking';
-import SMMCallLogs from './pages/smm/SMMCallLogs';
-import SMMTeam from './pages/smm/Team';
-import AdBudgetDashboard from './pages/smm/AdBudgetDashboard';
-import SMMOnePageTracker from './pages/smm/SMMOnePageTracker';
+const PlatformLayout = lazy(() => import('./pages/platform/PlatformLayout'));
+const PlatformDashboard = lazy(() => import('./pages/platform/PlatformDashboard'));
+const Companies = lazy(() => import('./pages/platform/Companies'));
+const CompanyDetail = lazy(() => import('./pages/platform/CompanyDetail'));
 
 // Development Module Pages
-import DevelopmentDashboard from './pages/development/DevelopmentDashboard';
-import DevelopmentBoard from './pages/development/DevelopmentBoard';
-import MyDevTasks from './pages/development/MyDevTasks';
-import DevelopmentSprints from './pages/development/DevelopmentSprints';
-import DevelopmentReviews from './pages/development/DevelopmentReviews';
-import DevelopmentQA from './pages/development/DevelopmentQA';
-import DevelopmentReleases from './pages/development/DevelopmentReleases';
+const DevelopmentDashboard = lazy(() => import('./pages/development/DevelopmentDashboard'));
+const DevelopmentBoard = lazy(() => import('./pages/development/DevelopmentBoard'));
+const MyDevTasks = lazy(() => import('./pages/development/MyDevTasks'));
+const DevelopmentSprints = lazy(() => import('./pages/development/DevelopmentSprints'));
+const DevelopmentReviews = lazy(() => import('./pages/development/DevelopmentReviews'));
+const DevelopmentQA = lazy(() => import('./pages/development/DevelopmentQA'));
+const DevelopmentReleases = lazy(() => import('./pages/development/DevelopmentReleases'));
 
 // ─── Shared Loading Screen ────────────────────────────────────────────────────
 const LoadingScreen = () => (
-  <div className="flex h-screen w-full flex-col items-center justify-center bg-[#0a0a0a] text-white">
+  <div className="flex h-screen w-full flex-col items-center justify-center bg-[#0d0d0d] text-white">
     <div className="relative flex items-center justify-center">
-      <div className="h-16 w-16 animate-spin rounded-full border-4 border-indigo-500/20 border-t-indigo-500 border-r-indigo-500" />
-      <div className="absolute h-10 w-10 animate-ping rounded-full bg-indigo-500/25" />
-      <div className="absolute h-4 w-4 rounded-full bg-indigo-500" />
+      <div className="h-14 w-14 animate-spin rounded-full border-4 border-zinc-800 border-t-zinc-200 border-r-zinc-400" />
+      <div className="absolute h-3.5 w-3.5 rounded-full bg-zinc-200" />
     </div>
-    <p className="mt-6 text-sm font-bold tracking-widest uppercase text-indigo-400/80 animate-pulse">
+    <p className="mt-6 text-sm font-bold tracking-widest uppercase text-zinc-200">
       Rise With Media
     </p>
-    <span className="mt-1 text-[10px] text-slate-500 tracking-wider">Connecting Hub…</span>
+    <span className="mt-1 text-[10px] text-zinc-500 tracking-wider">Connecting Hub…</span>
   </div>
 );
 
@@ -163,13 +145,23 @@ const App = () => {
     }
   }, [dispatch, isAuthenticated, user, loading, authChecked]);
 
-  // Global boot-screen while the very first /me call is in-flight
-  if (loading && !user && isAuthenticated && !authChecked) return null;
+  const isResolvingInitialAuth = isAuthenticated && !user && !authChecked;
 
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <HotToaster position="top-right" reverseOrder={false} />
-      <SonnerToaster position="top-right" richColors closeButton />
+    <>
+      <WebsiteLaunchLoader />
+      {isResolvingInitialAuth ? (
+        <LoadingScreen />
+      ) : (
+        <Router future={{ v7_relativeSplatPath: true }}>
+      <SonnerToaster
+        position="top-right"
+        closeButton
+        toastOptions={{
+          className: 'bg-popover text-foreground border-0 shadow-[0_12px_32px_rgba(0,0,0,0.1)] rounded-xl',
+        }}
+      />
+      <BannerNotificationHost />
       <Suspense fallback={null}>
         <Routes>
           {/* ── Public Standalone SaaS Registration Page ──────────────── */}
@@ -212,7 +204,7 @@ const App = () => {
           {/* Root */}
           <Route
             path="/"
-            element={user?.role === 'client' ? <PortalDashboard dark={false} user={user} /> : <Dashboard />}
+            element={user?.role === 'client' ? <PortalDashboard user={user} /> : <Dashboard />}
           />
 
           {/* CRM */}
@@ -234,9 +226,13 @@ const App = () => {
           } />
 
           <Route path="/proposals" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
-              <Proposals />
-            </ProtectedRoute>
+            user?.role === 'client' ? (
+              <ClientProposals />
+            ) : (
+              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+                <Proposals />
+              </ProtectedRoute>
+            )
           } />
           <Route path="/proposals/new" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
@@ -268,7 +264,7 @@ const App = () => {
 
           {/* Clients */}
           <Route path="/clients" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
               <Clients />
             </ProtectedRoute>
           } />
@@ -278,7 +274,7 @@ const App = () => {
             </ProtectedRoute>
           } />
           <Route path="/client-vault" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
               <ClientVault />
             </ProtectedRoute>
           } />
@@ -292,9 +288,13 @@ const App = () => {
 
           {/* Tasks & Calendar */}
           <Route path="/tasks" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
-              <Tasks />
-            </ProtectedRoute>
+            user?.role === 'client' ? (
+              <PortalTasks />
+            ) : (
+              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+                <Tasks />
+              </ProtectedRoute>
+            )
           } />
           <Route path="/manager-tasks" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['manager']}>
@@ -316,11 +316,6 @@ const App = () => {
               <ContentCalendar />
             </ProtectedRoute>
           } />
-          <Route path="/dm-calendar" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
-              <DMCalendar />
-            </ProtectedRoute>
-          } />
           <Route path="/influencers" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
               <InfluencersDashboard />
@@ -333,33 +328,23 @@ const App = () => {
           } />
           <Route path="/daily_tasks" element={<Navigate to="/daily-tasks" replace />} />
 
-          {/* Task Change Notes & Ideas Hub */}
-          <Route path="/pending-notes" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
-              <PendingNotes />
-            </ProtectedRoute>
-          } />
-          <Route path="/notes" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
-              <PendingNotes />
-            </ProtectedRoute>
-          } />
-
-          {/* Manager Board – manager reviews & assigns notes */}
-          <Route path="/manager-board" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
-              <ManagerBoard />
-            </ProtectedRoute>
-          } />
-
-          {/* Finance */}
+          {/* Finance OS */}
           <Route path="/finance" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
-              <Finance />
-            </ProtectedRoute>
+            user?.role === 'client' ? <Navigate to="/" replace /> : (
+              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'financeManager', 'accountManager', 'employee']}>
+                <Finance />
+              </ProtectedRoute>
+            )
+          } />
+          <Route path="/finance/:section" element={
+            user?.role === 'client' ? <Navigate to="/" replace /> : (
+              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'financeManager', 'accountManager', 'employee']}>
+                <Finance />
+              </ProtectedRoute>
+            )
           } />
           <Route path="/call-history" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee', 'intern', 'editor', 'designer', 'adsManager']}>
               <CallHistoryDashboard />
             </ProtectedRoute>
           } />
@@ -390,8 +375,13 @@ const App = () => {
 
           {/* Attendance */}
           <Route path="/attendance" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
               <Attendance />
+            </ProtectedRoute>
+          } />
+          <Route path="/my-eod-reports" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+              <MyEODReports />
             </ProtectedRoute>
           } />
 
@@ -418,96 +408,31 @@ const App = () => {
               <CompanyRequests />
             </ProtectedRoute>
           } />
-          <Route path="/admin/manager-assignments" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin']}>
-              <ManagerTaskAssignments />
+          <Route path="/admin/manager-assignments" element={<Navigate to="/admin/users" replace />} />
+
+          {/* System Audit Logs & Recycle Bin — Super Admin, Admin, Manager */}
+          <Route path="/audit-logs" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager']}>
+              <AuditLogs />
+            </ProtectedRoute>
+          } />
+          <Route path="/recycle-bin" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager']}>
+              <RecycleBin />
             </ProtectedRoute>
           } />
 
           {/* Settings — any authenticated user */}
           <Route path="/settings" element={<Settings />} />
 
-          {/* Social Media Manager Routes */}
+          {/* Social Media & Ads - One-Page Tracker Only */}
           <Route path="/smm" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
-              <SMMDashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/smm/content" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
-              <SMMContent />
-            </ProtectedRoute>
-          } />
-          <Route path="/smm/campaigns" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
-              <Campaigns />
-            </ProtectedRoute>
-          } />
-          <Route path="/smm/leads" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
-              <SMMLeads />
-            </ProtectedRoute>
-          } />
-          <Route path="/smm/adsets" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
-              <AdSets />
-            </ProtectedRoute>
-          } />
-          <Route path="/smm/ads" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
-              <Ads />
-            </ProtectedRoute>
-          } />
-          <Route path="/smm/budget" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
-              <AdBudgetDashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/smm/tracker" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
               <SMMOnePageTracker />
             </ProtectedRoute>
           } />
-          <Route path="/smm/creatives" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
-              <CreativeLibrary />
-            </ProtectedRoute>
-          } />
-          <Route path="/smm/calendar" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
-              <SMMContentCalendar />
-            </ProtectedRoute>
-          } />
-          <Route path="/smm/analytics" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
-              <SMMPerformance />
-            </ProtectedRoute>
-          } />
-          <Route path="/smm/performance" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
-              <SMMPerformance />
-            </ProtectedRoute>
-          } />
-          <Route path="/smm/reports" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
-              <SMMReports />
-            </ProtectedRoute>
-          } />
-          <Route path="/smm/daily-tracking" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
-              <SMMDailyTracking />
-            </ProtectedRoute>
-          } />
-          <Route path="/smm/call-logs" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee', 'adsManager']}>
-              <SMMCallLogs />
-            </ProtectedRoute>
-          } />
-          <Route path="/smm/team" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
-              <SMMTeam />
-            </ProtectedRoute>
-          } />
+          <Route path="/smm/tracker" element={<Navigate to="/smm" replace />} />
+          <Route path="/smm/*" element={<Navigate to="/smm" replace />} />
 
           {/* Development Module Routes */}
           <Route path="/development" element={
@@ -547,38 +472,40 @@ const App = () => {
           } />
 
           {/* Client Portal Sections */}
-          <Route path="/portal/reports" element={
+          <Route path="/portal/invoices" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
-              <PortalReports dark={false} />
+              <PortalInvoices />
             </ProtectedRoute>
           } />
-          <Route path="/portal/downloads" element={
+          <Route path="/portal/tasks" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
-              <PortalDownloads dark={false} />
+              <PortalTasks />
             </ProtectedRoute>
           } />
-          <Route path="/portal/assets" element={
+          <Route path="/portal/tracker" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
-              <BrandAssets dark={false} />
+              <PortalSMMTracker />
             </ProtectedRoute>
           } />
-          <Route path="/portal/support" element={
+          <Route path="/portal/ad-budget" element={
             <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
-              <PortalSupport dark={false} />
+              <PortalAdBudget />
             </ProtectedRoute>
           } />
-          <Route path="/portal/guidelines" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
-              <PortalGuidelines dark={false} />
-            </ProtectedRoute>
-          } />
+          <Route path="/portal/downloads" element={<Navigate to="/" replace />} />
+          <Route path="/portal/reports" element={<Navigate to="/" replace />} />
+          <Route path="/portal/assets" element={<Navigate to="/" replace />} />
+          <Route path="/portal/support" element={<Navigate to="/" replace />} />
+          <Route path="/portal/guidelines" element={<Navigate to="/" replace />} />
           </Route>
 
           {/* 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
-    </Router>
+        </Router>
+      )}
+    </>
   );
 };
 

@@ -72,6 +72,7 @@ const userSchema = new mongoose.Schema(
     approvedAt: { type: Date },
     rejectedAt: { type: Date },
     lastLogin: { type: Date },
+    hasSeenOnboarding: { type: Boolean, default: false },
 
     // Permissions (granular overrides beyond role)
     permissions: {
@@ -91,6 +92,22 @@ const userSchema = new mongoose.Schema(
     // Notification preferences
     notifyEmail: { type: Boolean, default: true },
     notifyInApp: { type: Boolean, default: true },
+
+    // Web Push Subscriptions (multi-device support)
+    pushSubscriptions: [
+      {
+        endpoint: { type: String, required: true },
+        expirationTime: { type: Number, default: null },
+        keys: {
+          p256dh: { type: String, required: true },
+          auth: { type: String, required: true },
+        },
+        userAgent: { type: String, default: '' },
+        createdAt: { type: Date, default: Date.now },
+        lastUsedAt: { type: Date },
+        lastStatus: { type: String, default: 'active' },
+      },
+    ],
   },
   { timestamps: true }
 );

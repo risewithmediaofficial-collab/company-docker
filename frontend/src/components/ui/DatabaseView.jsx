@@ -8,7 +8,7 @@ import {
   Filter,
   Layers,
   ChevronRight,
-} from 'lucide-react';
+} from '@/components/ui/muiIcons';
 import { AppTooltip } from './tooltip';
 import { useAutoScrollOnDrag } from '../../hooks/useAutoScrollOnDrag';
 import { getCategoryTheme } from '../../utils/categoryColors';
@@ -162,9 +162,9 @@ export function DatabaseView({
   return (
     <div className="space-y-4">
       {/* Database Controls Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 bg-card rounded-2xl border border-border shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 bg-card rounded-2xl">
         {/* View Switchers */}
-        <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar shrink-0">
+        <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar shrink-0 max-w-full pb-1 sm:pb-0">
           {normalizedViews.map((v) => {
             const Icon = v.icon;
             const isSelected = currentView === v.id || (['board', 'kanban'].includes(v.id) && ['board', 'kanban'].includes(currentView));
@@ -173,9 +173,9 @@ export function DatabaseView({
                 <button
                   type="button"
                   onClick={() => handleViewSelect(v.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer min-h-[38px] ${
                     isSelected
-                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      ? 'bg-primary text-primary-foreground shadow-[0_4px_12px_-4px_hsl(var(--brand)/0.45)]'
                       : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                   }`}
                 >
@@ -183,8 +183,8 @@ export function DatabaseView({
                   <span>{v.label}</span>
                   {v.count !== undefined && (
                     <span
-                      className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] ${
-                        isSelected ? 'bg-white/20 text-white' : 'bg-secondary text-muted-foreground'
+                      className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] tabular-nums ${
+                        isSelected ? 'bg-primary-foreground/15 text-primary-foreground' : 'bg-secondary text-muted-foreground'
                       }`}
                     >
                       {v.count}
@@ -197,15 +197,15 @@ export function DatabaseView({
         </div>
 
         {/* Search & Action Bar */}
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end">
-          <div className="relative min-w-[200px] w-full sm:w-64">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end w-full sm:w-auto">
+          <div className="relative w-full sm:w-64 min-w-[140px]">
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               value={activeSearch}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
-              className="pl-8 pr-3 py-1.5 rounded-xl border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-full transition-all"
+              className="pl-8 pr-3 py-2 sm:py-1.5 rounded-xl bg-secondary/75 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:bg-background focus:ring-2 focus:ring-brand/40 w-full transition-colors min-h-[38px] sm:min-h-0"
             />
           </div>
 
@@ -213,7 +213,7 @@ export function DatabaseView({
 
           {totalCount !== undefined && (
             <AppTooltip content="Total items in this dataset">
-              <span className="hidden sm:inline-flex items-center text-xs font-semibold text-muted-foreground px-2.5 py-1 bg-secondary/50 rounded-xl whitespace-nowrap cursor-default">
+              <span className="hidden sm:inline-flex items-center text-xs font-semibold text-muted-foreground px-2.5 py-1 bg-background/80 rounded-xl whitespace-nowrap cursor-default">
                 {totalCount} {totalCount === 1 ? 'record' : 'records'}
               </span>
             </AppTooltip>
@@ -223,7 +223,7 @@ export function DatabaseView({
 
       {/* Dedicated Filters Toolbar */}
       {filters && (
-        <div className="flex items-center gap-2.5 flex-wrap p-2.5 bg-card/70 rounded-2xl border border-border/80 shadow-xs">
+        <div className="flex items-center gap-2.5 flex-wrap p-3 bg-card rounded-2xl">
           {filters}
         </div>
       )}
@@ -236,12 +236,12 @@ export function DatabaseView({
           {/* 1. TABLE VIEW */}
           {currentView === 'table' && (
             <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
-              <div className="w-full overflow-x-auto overflow-y-auto max-h-[calc(100vh-350px)] custom-scrollbar">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead className="sticky top-0 z-10 bg-card">
+              <div className="w-full overflow-x-auto overflow-y-auto max-h-[calc(100vh-350px)] custom-scrollbar responsive-table-container">
+                <table className="w-full min-w-[640px] text-left text-xs border-collapse">
+                  <thead className="sticky top-0 z-10 bg-secondary/60">
                     <tr className="border-b border-border bg-secondary/40 text-muted-foreground font-bold">
                       {effectiveColumns.map((col, idx) => (
-                        <th key={col.key || idx} className="py-3 px-4 whitespace-nowrap bg-secondary/40">
+                        <th key={col.key || idx} className="py-3.5 px-4 whitespace-nowrap bg-secondary/60">
                           {col.label}
                         </th>
                       ))}
@@ -261,10 +261,10 @@ export function DatabaseView({
                       items.map((item, rowIdx) => (
                         <tr
                           key={item._id || item.id || rowIdx}
-                          className="hover:bg-secondary/30 transition-colors group"
+                          className="hover:bg-secondary/50 transition-colors group"
                         >
                           {effectiveColumns.map((col, colIdx) => (
-                            <td key={col.key || colIdx} className="py-3 px-4 align-middle">
+                            <td key={col.key || colIdx} className="py-3.5 px-4 align-middle">
                               {col.render ? col.render(item, rowIdx) : item[col.key] || '—'}
                             </td>
                           ))}
@@ -296,7 +296,7 @@ export function DatabaseView({
                   {items.map((item, idx) => (
                     <div
                       key={item._id || item.id || idx}
-                      className="p-4 rounded-2xl border border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all"
+                      className="p-5 rounded-2xl bg-card hover:bg-secondary/70 transition-colors"
                     >
                       {renderCard ? renderCard(item, idx) : JSON.stringify(item)}
                     </div>
@@ -312,8 +312,8 @@ export function DatabaseView({
 
           {/* 3. KANBAN BOARD VIEW (With Smooth Click & Drag Between Columns & Up/Down Reordering) */}
           {(currentView === 'kanban' || currentView === 'board') && (
-            <div ref={kanbanScrollRef} className="w-full overflow-x-auto pb-4 custom-scrollbar">
-              <div className="grid w-max min-w-full auto-cols-[minmax(280px,320px)] grid-flow-col gap-4">
+            <div ref={kanbanScrollRef} className="w-full overflow-x-auto pb-4 custom-scrollbar responsive-table-container">
+              <div className="grid w-max min-w-full auto-cols-[minmax(260px,320px)] grid-flow-col gap-4">
                 {kanbanColumns.map((col) => {
                   const colItems = items.filter((item) => {
                     const val = item[groupBy];
@@ -331,17 +331,17 @@ export function DatabaseView({
                         }
                       }}
                       onDrop={(e) => handleDrop(e, col.key)}
-                      className={`flex flex-col min-h-[500px] max-h-[calc(100vh-300px)] rounded-2xl border transition-all p-3 space-y-3 ${
+                      className={`flex flex-col min-h-[500px] max-h-[calc(100vh-300px)] rounded-2xl transition-colors p-3 space-y-3 ${
                         isColActive
-                          ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20'
-                          : 'border-border bg-secondary/20'
+                          ? 'bg-brand/5 ring-2 ring-brand/45'
+                          : 'bg-card'
                       }`}
                     >
                       {/* Column Header */}
                       <div className="flex items-center justify-between px-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-black text-foreground uppercase tracking-wider">{col.label}</span>
-                          <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-secondary text-muted-foreground">
+                          <span className="text-xs font-bold text-foreground uppercase tracking-wider">{col.label}</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary text-muted-foreground tabular-nums">
                             {colItems.length}
                           </span>
                         </div>
@@ -357,7 +357,7 @@ export function DatabaseView({
                           return (
                             <React.Fragment key={itemId}>
                               {showDropIndicatorBefore && (
-                                <div className="h-2 my-1 rounded-full bg-primary/60 animate-pulse transition-all shadow-xs" />
+                                <div className="h-2 my-1 rounded-full bg-primary/60 animate-pulse transition-all" />
                               )}
                               <div
                                 draggable
@@ -365,12 +365,12 @@ export function DatabaseView({
                                 onDragEnd={handleDragEnd}
                                 onDragOver={(e) => handleItemDragOver(e, col.key, idx)}
                                 onDrop={(e) => handleDrop(e, col.key, idx)}
-                                className={`p-3.5 rounded-2xl border border-border bg-card hover:border-primary/50 shadow-xs transition-all cursor-grab active:cursor-grabbing border-l-[4px] ${
+                                className={`p-3.5 rounded-2xl bg-background hover:bg-background/90 transition-all cursor-grab active:cursor-grabbing border-l-[4px] ${
                                   getCategoryTheme(item.category || item.taskCategory || item.taskType || item.type).accentBorder
                                 } ${
                                   isBeingDragged
-                                    ? 'opacity-30 scale-95 border-dashed border-primary ring-1 ring-primary/40'
-                                    : 'hover:shadow-md hover:-translate-y-0.5'
+                                    ? 'opacity-30 scale-95 ring-1 ring-primary/40'
+                                    : ''
                                 }`}
                               >
                                 {renderKanbanCard
@@ -385,17 +385,17 @@ export function DatabaseView({
 
                         {/* Drop indicator at the bottom of the list */}
                         {isColActive && dragOverIndex >= colItems.length && (
-                          <div className="h-2 my-1 rounded-full bg-primary/60 animate-pulse transition-all shadow-xs" />
+                          <div className="h-2 my-1 rounded-full bg-primary/60 animate-pulse transition-all" />
                         )}
 
                         {colItems.length === 0 && (
                           <div
                             onDragOver={(e) => handleColumnDragOver(e, col.key)}
                             onDrop={(e) => handleDrop(e, col.key, 0)}
-                            className={`py-8 text-center text-xs border border-dashed rounded-xl transition-all ${
+                            className={`py-8 text-center text-xs rounded-xl transition-colors ${
                               isColActive
-                                ? 'border-primary bg-primary/10 text-primary font-semibold'
-                                : 'text-muted-foreground/60 border-border/60'
+                                ? 'bg-brand/10 text-primary font-semibold'
+                                : 'text-muted-foreground/60 bg-secondary/40'
                             }`}
                           >
                             {isColActive ? 'Drop here to move to ' + col.label : 'Empty'}

@@ -1,12 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { SelectDropdown } from './SelectDropdown';
 import { ProgressUpdateForm } from './ProgressUpdateForm';
-import { useAddCompletedFiles, useTask, useUpdateTaskStatus } from '../../hooks/useTasks';
+import { useAddCompletedFiles, useTask, useUpdateTaskStatus, useDeleteTask } from '../../hooks/useTasks';
 import { AddTaskModal } from '../modals/AddTaskModal';
+import { KanbanCreateTaskModal } from '../tasks/KanbanCreateTaskModal';
+import { TaskCountdownTimer } from '../tasks/TaskCountdownTimer';
+import { TaskSubmitModal } from '../tasks/TaskSubmitModal';
 import {
   CheckSquare,
   Edit,
@@ -45,7 +49,18 @@ import {
   GitPullRequest,
   Bug,
   AlertTriangle,
-} from 'lucide-react';
+  Trash2,
+  Scissors,
+  Camera,
+  Palette,
+  Share2,
+  MapPin,
+  Mic,
+  ClipboardList,
+  Target,
+  Laptop,
+  Link2,
+} from '@/components/ui/muiIcons';
 import {
   formatTaskTypeLabel,
   isWebsiteTaskType,
@@ -55,7 +70,7 @@ import {
   uploadFiles,
 } from '../../utils/taskFields';
 import { getAssetUrl } from '../../utils/assetUrl';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 const DEV_STAGE_LABELS = {
   backlog: 'Backlog',
@@ -73,37 +88,37 @@ const DEV_STAGE_LABELS = {
 };
 
 const STATUS_TONES = {
-  'To Do': 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700',
-  'On Process': 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700/50',
-  'Waiting for Client': 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700/50',
-  Completed: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700/50',
-  Rework: 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/40 dark:text-rose-300 dark:border-rose-700/50',
-  Approved: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700/50',
-  'Rework Completed': 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-700/50',
-  'Review Required': 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700/50',
+  'To Do': 'bg-secondary/70 text-muted-foreground ',
+  'On Process': 'bg-secondary text-foreground ',
+  'Waiting for Client': 'bg-secondary/90 text-foreground ',
+  Completed: 'bg-primary text-primary-foreground ',
+  Rework: 'bg-foreground/10 text-foreground ',
+  Approved: 'bg-primary text-primary-foreground ',
+  'Rework Completed': 'bg-secondary text-foreground ',
+  'Review Required': 'bg-secondary text-foreground ',
 };
 
 const PRIORITY_TONES = {
-  Low: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400',
-  Medium: 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400',
-  High: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400',
-  Urgent: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 font-bold',
+  Low: 'bg-secondary/60 text-muted-foreground ',
+  Medium: 'bg-secondary text-foreground ',
+  High: 'bg-foreground/10 text-foreground font-semibold',
+  Urgent: 'bg-primary text-primary-foreground font-bold',
 };
 
 const getCategoryIcon = (category, type) => {
   const cat = (category || '').toLowerCase();
   const t = (type || '').toLowerCase();
-  if (t.includes('reel') || t.includes('video') || t.includes('youtube')) return <Film className="text-purple-500" size={18} />;
-  if (t.includes('poster') || t.includes('design') || t.includes('carousel')) return <Sparkles className="text-amber-500" size={18} />;
-  if (t.includes('website') || t.includes('landing')) return <Globe className="text-blue-500" size={18} />;
-  if (cat.includes('content')) return <FileText className="text-emerald-500" size={18} />;
-  return <Layers className="text-primary" size={18} />;
+  if (t.includes('reel') || t.includes('video') || t.includes('youtube')) return <Film className="text-foreground" size={18} />;
+  if (t.includes('poster') || t.includes('design') || t.includes('carousel')) return <Sparkles className="text-foreground" size={18} />;
+  if (t.includes('website') || t.includes('landing')) return <Globe className="text-foreground" size={18} />;
+  if (cat.includes('content')) return <FileText className="text-foreground" size={18} />;
+  return <Layers className="text-foreground" size={18} />;
 };
 
 const NotionPropertyRow = ({ icon: Icon, label, children }) => (
   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 py-2 px-2.5 rounded-xl hover:bg-secondary/40 transition-colors">
     <div className="flex items-center gap-2 w-auto sm:w-36 md:w-40 shrink-0 text-xs font-semibold text-muted-foreground select-none">
-      <Icon size={13} className="shrink-0 text-muted-foreground/70" />
+      <Icon size={13} className="shrink-0 text-muted-foreground" />
       <span className="truncate">{label}</span>
     </div>
     <div className="flex-1 min-w-0 text-xs sm:text-sm font-medium text-foreground">
@@ -127,10 +142,10 @@ const CopyButton = ({ text, label = 'Copy' }) => {
     <button
       onClick={handleCopy}
       type="button"
-      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-lg bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground border border-border/60 transition-all active:scale-95 cursor-pointer select-none"
+      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-lg bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all active:scale-95 cursor-pointer select-none"
       title={`Copy ${label}`}
     >
-      {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+      {copied ? <Check size={12} className="text-foreground" /> : <Copy size={12} />}
       <span>{copied ? 'Copied' : label}</span>
     </button>
   );
@@ -146,12 +161,56 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
   const [completedFiles, setCompletedFiles] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [showAssignAnotherModal, setShowAssignAnotherModal] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showCredentials, setShowCredentials] = useState(false);
 
   const isEmployee = user?.role === 'employee';
   const isClient = user?.role === 'client';
-  const canEdit = ['superAdmin', 'admin', 'manager'].includes(user?.role);
+  const canEdit = ['superAdmin', 'admin', 'manager', 'organizationOwner'].includes(user?.role);
+  const canDelete = ['superAdmin', 'admin', 'manager', 'organizationOwner'].includes(user?.role);
+  const deleteTaskMutation = useDeleteTask();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const allowedStatusOptions = isEmployee ? TEAM_STATUS_OPTIONS : TASK_STATUS_OPTIONS;
+
+  const [equipmentChecklist, setEquipmentChecklist] = useState([]);
+  const [isEditingPendingReason, setIsEditingPendingReason] = useState(false);
+  const [pendingReasonText, setPendingReasonText] = useState('');
+
+  useEffect(() => {
+    if (task) {
+      if (Array.isArray(task.equipmentChecklist) && task.equipmentChecklist.length > 0) {
+        setEquipmentChecklist(task.equipmentChecklist);
+      } else if (Array.isArray(task.equipmentRequired) && task.equipmentRequired.length > 0) {
+        setEquipmentChecklist(task.equipmentRequired.map((name) => ({ name, checked: false })));
+      } else {
+        setEquipmentChecklist([]);
+      }
+      setPendingReasonText(task.pendingReason || '');
+    }
+  }, [task]);
+
+  const handleToggleEquipment = async (idx) => {
+    const updated = equipmentChecklist.map((item, i) =>
+      i === idx ? { ...item, checked: !item.checked } : item
+    );
+    setEquipmentChecklist(updated);
+    try {
+      await api.put(`/tasks/${taskId}`, { equipmentChecklist: updated });
+    } catch {
+      toast.error('Failed to update equipment checklist');
+    }
+  };
+
+  const handleSavePendingReason = async () => {
+    try {
+      await api.put(`/tasks/${taskId}`, { pendingReason: pendingReasonText.trim() });
+      setIsEditingPendingReason(false);
+      toast.success('Pending note saved');
+      refetch();
+    } catch {
+      toast.error('Failed to save pending note');
+    }
+  };
 
   const assigneesList = useMemo(() => {
     if (!task?.assignedTo) return [];
@@ -180,40 +239,46 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
     task?.videographerAssigned ||
     task?.editorAssigned ||
     task?.publisherAssigned ||
+    task?.designerAssigned ||
     task?.voiceScriptText ||
     task?.videographerContentNeeded ||
     task?.shootDate ||
+    task?.editDueDate ||
+    task?.designDueDate ||
     (task?.postingPlatforms && task.postingPlatforms.length > 0)
   );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="xl" noPadding className="flex flex-col min-h-0 p-0 overflow-hidden bg-card border-l border-border shadow-2xl">
+      <DialogContent size="xl" noPadding className="flex flex-col min-h-0 p-0 overflow-hidden bg-card ">
         {/* ── Sticky Pinned Header ── */}
-        <DialogHeader className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-border bg-card/95 backdrop-blur-md shrink-0 pr-14 sm:pr-24 select-none mb-0 pb-3.5 sm:pb-4">
+        <DialogHeader className="px-4 sm:px-6 py-3.5 sm:py-4 bg-card shrink-0 pr-14 sm:pr-24 select-none mb-0 pb-3.5 sm:pb-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/80 border border-border shrink-0">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary shrink-0">
                 {task ? getCategoryIcon(task.taskCategory, task.taskType) : <CheckSquare size={17} />}
               </div>
               <div className="min-w-0">
-                <DialogTitle className="text-sm sm:text-lg font-black text-foreground truncate">
+                <DialogTitle className="text-sm sm:text-lg font-bold text-foreground truncate">
                   {isLoading ? 'Loading task...' : task?.taskTitle || task?.title || 'Task Details'}
                 </DialogTitle>
-                <DialogDescription className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate flex items-center gap-1.5 flex-wrap">
+                <DialogDescription className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
                   {task?.client?.name && (
-                    <span className="font-semibold text-foreground">{task.client.name}</span>
+                    <span className="font-semibold text-foreground truncate max-w-[160px]">{task.client.name}</span>
                   )}
                   {task?.project?.name && (
                     <>
                       <span>•</span>
-                      <span className="truncate max-w-[120px] sm:max-w-none">{task.project.name}</span>
+                      <span className="truncate max-w-[140px] sm:max-w-none">{task.project.name}</span>
                     </>
                   )}
                   {task?.createdAt && (
                     <>
                       <span>•</span>
-                      <span>Created {new Date(task.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      <span className="inline-flex items-center gap-1 font-semibold text-foreground bg-secondary px-2 py-0.5 rounded-md tabular-nums">
+                        <Calendar size={11} className="text-muted-foreground shrink-0" />
+                        <span>Created {new Date(task.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      </span>
                     </>
                   )}
                 </DialogDescription>
@@ -221,13 +286,24 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {task?._id && (
+                <Link
+                  to={`/tasks/${task._id}`}
+                  className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-xl bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground text-xs font-bold inline-flex items-center gap-1.5 transition-all "
+                  title="Open dedicated full page view"
+                >
+                  <ExternalLink size={12} />
+                  <span>Full View</span>
+                </Link>
+              )}
               {task?.isOverTarget && (
-                <span className="rounded-lg bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 text-[10px] sm:text-[11px] font-extrabold uppercase text-rose-600 dark:text-rose-400">
-                  🔴 Over Task
+                <span className="inline-flex items-center gap-1 rounded-lg bg-primary text-primary-foreground px-2 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase">
+                  <AlertCircle size={11} />
+                  <span>Over Task</span>
                 </span>
               )}
               {task?.priority && (
-                <span className={`px-2 py-0.5 rounded-lg border text-[10px] sm:text-[11px] font-semibold ${PRIORITY_TONES[task.priority] || PRIORITY_TONES.Medium}`}>
+                <span className={`px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-semibold ${PRIORITY_TONES[task.priority] || PRIORITY_TONES.Medium}`}>
                   {task.priority}
                 </span>
               )}
@@ -236,51 +312,107 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                   size="sm"
                   variant="outline"
                   onClick={() => setIsEditing(true)}
-                  className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-xl border-border text-xs font-bold hover:bg-secondary flex items-center gap-1.5"
+                  className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-xl text-xs font-bold hover:bg-secondary inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <Edit size={12} />
                   <span className="hidden sm:inline">Edit</span>
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirm((prev) => !prev)}
+                  className={`h-7 sm:h-8 px-2 sm:px-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+                    showDeleteConfirm
+                      ? 'bg-primary text-primary-foreground '
+                      : ' text-muted-foreground hover:text-foreground hover:bg-secondary'
+                  }`}
+                  title="Delete Task"
+                >
+                  <Trash2 size={12} />
+                  <span className="hidden sm:inline">Delete</span>
                 </Button>
               )}
             </div>
           </div>
         </DialogHeader>
 
+        {/* Delete Confirmation Alert Banner */}
+        {showDeleteConfirm && (
+          <div className="bg-secondary px-4 py-3 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-200 shrink-0 select-none">
+            <div className="text-xs text-foreground">
+              <span className="font-bold">Are you sure you want to delete this task?</span>
+              <p className="text-[11px] text-muted-foreground mt-0.5">This action cannot be undone and will delete all associated subtasks.</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="rounded-lg px-3 py-1 text-xs font-semibold text-foreground bg-background hover:bg-card cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteTaskMutation.isLoading}
+                onClick={async () => {
+                  try {
+                    await deleteTaskMutation.mutateAsync(taskId);
+                    toast.success('Task deleted successfully');
+                    setShowDeleteConfirm(false);
+                    onOpenChange(false);
+                  } catch (err) {
+                    toast.error(err?.response?.data?.message || 'Failed to delete task');
+                  }
+                }}
+                className="rounded-lg bg-primary px-3 py-1 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Trash2 size={12} />
+                <span>{deleteTaskMutation.isLoading ? 'Deleting...' : 'Confirm Delete'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ── Scrollable Body ── */}
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 pb-12 custom-scrollbar space-y-4 sm:space-y-5 overflow-x-hidden">
           {isLoading ? (
             <div className="space-y-4 animate-pulse">
-              <div className="h-32 rounded-3xl bg-secondary/50 border border-border" />
-              <div className="h-64 rounded-3xl bg-secondary/50 border border-border" />
+              <div className="h-32 rounded-3xl bg-secondary " />
+              <div className="h-64 rounded-3xl bg-secondary " />
             </div>
           ) : task ? (
             <>
               {task?.isOverTarget && (
-                <div className="flex items-center gap-2 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs font-bold text-rose-600 dark:text-rose-400">
-                  <span>🔴 Over Target Task — This deliverable exceeded the configured monthly quota.</span>
+                <div className="flex items-center gap-2 rounded-2xl bg-secondary p-3 text-xs font-bold text-foreground">
+                  <AlertCircle size={14} className="shrink-0" />
+                  <span>Over Target Task — This deliverable exceeded the configured monthly quota.</span>
                 </div>
               )}
 
+              {/* ── Task Countdown Timer & Acceptance Banner ── */}
+              <TaskCountdownTimer
+                task={task}
+                onOpenSubmitModal={() => setShowSubmitModal(true)}
+              />
+
               {/* ── Notion Property Matrix Card ── */}
-              <div className="rounded-2xl border border-border bg-background/70 p-3 sm:p-4 shadow-2xs space-y-1">
+              <div className="rounded-2xl bg-background p-3 sm:p-4 space-y-1">
                 {!isClient && (
                   <NotionPropertyRow icon={ShieldCheck} label="Status">
-                    <div className="relative inline-flex items-center">
-                      <select
+                    <div className="relative inline-flex items-center min-w-[140px]">
+                      <SelectDropdown
                         value={normalizedStatus}
-                        onChange={(e) => updateStatus.mutate({ id: task._id, status: e.target.value })}
-                        className={`appearance-none cursor-pointer pl-3 pr-8 py-1 rounded-lg border text-xs font-bold transition-all outline-none focus:ring-2 focus:ring-primary/20 hover:brightness-105 shadow-2xs ${
+                        onChange={(val) => val && updateStatus.mutate({ id: task._id, status: val })}
+                        options={allowedStatusOptions.map((opt) => ({ value: opt, label: opt }))}
+                        allowCustom={false}
+                        allowDeselect={false}
+                        className="w-40 text-xs"
+                        buttonClassName={`h-8 py-1 px-3 text-xs font-bold rounded-lg border-none ${
                           STATUS_TONES[normalizedStatus] || STATUS_TONES['To Do']
                         }`}
-                        title="Change Task Status"
-                      >
-                        {allowedStatusOptions.map((opt) => (
-                          <option key={opt} value={opt} className="bg-card text-foreground font-semibold py-1">
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={13} className="absolute right-2.5 pointer-events-none opacity-60 shrink-0" />
+                      />
                     </div>
                   </NotionPropertyRow>
                 )}
@@ -292,7 +424,7 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                         const name = typeof assignee === 'object' ? assignee.name : assignee;
                         const avatar = typeof assignee === 'object' ? assignee.avatar : null;
                         return (
-                          <span key={idx} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-card border border-border text-xs font-semibold">
+                          <span key={idx} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-card text-xs font-semibold">
                             {avatar ? (
                               <img src={getAssetUrl(avatar)} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
                             ) : (
@@ -310,14 +442,20 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
 
                 {task.assignedManager && (
                   <NotionPropertyRow icon={User} label="Manager">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-card border border-border text-xs font-semibold">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-card text-xs font-semibold">
                       {task.assignedManager.avatar ? (
                         <img src={getAssetUrl(task.assignedManager.avatar)} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
                       ) : (
-                        <User size={11} className="text-primary" />
+                        <User size={11} className="text-muted-foreground" />
                       )}
                       <span>{task.assignedManager.name || 'Manager'}</span>
                     </span>
+                  </NotionPropertyRow>
+                )}
+
+                {task.nfId && (
+                  <NotionPropertyRow icon={Hash} label="NF ID">
+                    <span className="font-mono font-bold text-xs text-foreground tabular-nums">{task.nfId}</span>
                   </NotionPropertyRow>
                 )}
 
@@ -327,16 +465,127 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
 
                 {/* Created Date */}
                 <NotionPropertyRow icon={Calendar} label="Created Date">
-                  <span className="text-foreground font-semibold text-xs">
+                  <span className="text-foreground font-semibold text-xs tabular-nums">
                     {task.createdAt ? new Date(task.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
                   </span>
                 </NotionPropertyRow>
 
                 <NotionPropertyRow icon={Clock} label="Due Date">
-                  <span className="text-foreground font-semibold text-xs">
-                    {task.dueDate ? new Date(task.dueDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Not set'}
-                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-foreground font-semibold text-xs tabular-nums">
+                      {task.dueDate ? new Date(task.dueDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Not set'}
+                    </span>
+                    {task.dueTime && (
+                      <span className="px-2 py-0.5 rounded-md bg-secondary text-[11px] font-bold text-muted-foreground tabular-nums">
+                        Time: {task.dueTime}
+                      </span>
+                    )}
+                  </div>
                 </NotionPropertyRow>
+
+                {((Number(task.allocatedHours) || 0) > 0 || (Number(task.allocatedMinutes) || 0) > 0) && (
+                  <NotionPropertyRow icon={Clock} label="Timer Allocation">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-foreground font-bold text-xs tabular-nums">
+                        {task.allocatedHours || 0}h {task.allocatedMinutes || 0}m
+                      </span>
+                      {task.isAccepted ? (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          task.isOverdue
+                            ? 'bg-primary text-primary-foreground '
+                            : 'bg-secondary text-foreground '
+                        }`}>
+                          {task.isOverdue ? 'Overdue' : 'Running'}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-secondary text-muted-foreground ">
+                          Awaiting Acceptance
+                        </span>
+                      )}
+                    </div>
+                  </NotionPropertyRow>
+                )}
+
+                {task.completionReason && (
+                  <NotionPropertyRow icon={AlertCircle} label="Delay / Reason">
+                    <span className="text-foreground font-semibold text-xs italic">
+                      "{task.completionReason}"
+                    </span>
+                  </NotionPropertyRow>
+                )}
+
+                {task.editDueDate && (
+                  <NotionPropertyRow icon={Scissors} label="Edit Due Date">
+                    <span className="text-foreground font-semibold text-xs tabular-nums">
+                      {new Date(task.editDueDate).toLocaleDateString([], { dateStyle: 'medium' })}
+                    </span>
+                  </NotionPropertyRow>
+                )}
+
+                {task.shootDate && (
+                  <NotionPropertyRow icon={Camera} label="Shoot Schedule">
+                    <span className="text-foreground font-semibold text-xs tabular-nums">
+                      {new Date(task.shootDate).toLocaleDateString([], { dateStyle: 'medium' })}
+                      {task.shootEndDate && ` – ${new Date(task.shootEndDate).toLocaleDateString([], { dateStyle: 'medium' })}`}
+                    </span>
+                  </NotionPropertyRow>
+                )}
+
+                {task.designDueDate && (
+                  <NotionPropertyRow icon={Palette} label="Design Due">
+                    <span className="text-foreground font-semibold text-xs tabular-nums">
+                      {new Date(task.designDueDate).toLocaleDateString([], { dateStyle: 'medium' })}
+                    </span>
+                  </NotionPropertyRow>
+                )}
+
+                {task.postingScheduleDate && (
+                  <NotionPropertyRow icon={Share2} label="Posting Date">
+                    <span className="text-foreground font-semibold text-xs tabular-nums">
+                      {new Date(task.postingScheduleDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                    </span>
+                  </NotionPropertyRow>
+                )}
+
+                {task.videoType && (
+                  <NotionPropertyRow icon={Film} label="Video Type">
+                    <span className="px-2 py-0.5 rounded-md bg-secondary text-foreground font-bold text-xs ">
+                      {task.videoType}
+                    </span>
+                  </NotionPropertyRow>
+                )}
+
+                {task.videoFormat && (
+                  <NotionPropertyRow icon={Video} label="Video Format">
+                    <span className="font-semibold text-foreground text-xs">{task.videoFormat}</span>
+                  </NotionPropertyRow>
+                )}
+
+                {task.videoDuration && (
+                  <NotionPropertyRow icon={Clock} label="Duration">
+                    <span className="font-semibold text-foreground text-xs tabular-nums">{task.videoDuration}</span>
+                  </NotionPropertyRow>
+                )}
+
+                {(task.editingReferenceVideo || task.referenceVideoLink) && (
+                  <NotionPropertyRow icon={ExternalLink} label="Reference Video">
+                    <a
+                      href={task.editingReferenceVideo || task.referenceVideoLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-bold text-foreground hover:underline inline-flex items-center gap-1 text-xs truncate max-w-[280px]"
+                    >
+                      <span>Open Reference Link</span>
+                      <ExternalLink size={11} className="shrink-0" />
+                    </a>
+                  </NotionPropertyRow>
+                )}
+
+                {task.cta && (
+                  <NotionPropertyRow icon={Sparkles} label="Call to Action">
+                    <span className="font-semibold text-foreground text-xs">{task.cta}</span>
+                  </NotionPropertyRow>
+                )}
 
                 <NotionPropertyRow icon={CheckCircle2} label="Client Approval">
                   <span className="capitalize font-semibold text-foreground text-xs">
@@ -353,11 +602,11 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                 {(task.department === 'Development' || task.development?.isDevTask) && (
                   <NotionPropertyRow icon={Code2} label="Dev Stage">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-primary/10 text-primary font-bold text-xs border border-primary/20">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-secondary text-foreground font-bold text-xs ">
                         {DEV_STAGE_LABELS[task.development?.stage] || task.development?.stage || 'In Development'}
                       </span>
                       {task.development?.isBlocked && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold text-[11px] border border-rose-500/20">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-primary text-primary-foreground font-bold text-[11px] ">
                           <AlertCircle size={11} /> Blocked
                         </span>
                       )}
@@ -366,51 +615,111 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                 )}
               </div>
 
+              {/* ── Pending Reason / Delay Note ── */}
+              <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-900 dark:text-amber-200 inline-flex items-center gap-1.5">
+                    <AlertCircle size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span>Pending Reason / Delay Note</span>
+                  </span>
+                  {isEditingPendingReason ? (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingPendingReason(false)}
+                        className="px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSavePendingReason}
+                        className="px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-600 hover:bg-amber-700 text-white cursor-pointer"
+                      >
+                        Save Note
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingPendingReason(true)}
+                      className="text-xs font-semibold text-amber-700 dark:text-amber-300 hover:underline cursor-pointer"
+                    >
+                      {pendingReasonText ? 'Edit Reason' : '+ Add Delay Note'}
+                    </button>
+                  )}
+                </div>
+                {isEditingPendingReason ? (
+                  <textarea
+                    value={pendingReasonText}
+                    onChange={(e) => setPendingReasonText(e.target.value)}
+                    placeholder="Explain why this task is pending / waiting / delayed..."
+                    rows={2}
+                    className="w-full p-2.5 text-xs rounded-xl bg-background border border-amber-500/40 text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                ) : (
+                  <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap">
+                    {pendingReasonText || (
+                      <span className="italic text-muted-foreground">
+                        No pending note provided. Team members or managers can click &quot;+ Add Delay Note&quot; to explain reasons for hold or delay.
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+
               {/* ── Production Pipeline Workflow ── */}
               {hasPipeline && (
-                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3.5 sm:p-4 shadow-2xs space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                      <Flame size={14} className="text-primary" /> Multi-Role Sub-Assignments
+                <div className="rounded-2xl bg-secondary/40 p-3.5 sm:p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-foreground inline-flex items-center gap-1.5">
+                      <Flame size={14} className="text-foreground" /> Multi-Role Sub-Assignments
                     </span>
                     {task.postingScheduleDate && (
-                      <span className="text-[10px] font-bold text-primary px-2 py-0.5 rounded-full bg-primary/10">
+                      <span className="text-[10px] font-bold text-foreground px-2 py-0.5 rounded-full bg-card tabular-nums">
                         Post: {new Date(task.postingScheduleDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                       </span>
                     )}
                   </div>
 
-                  <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
-                    <div className="p-2.5 rounded-xl bg-card border border-border space-y-1">
-                      <span className="text-[9px] font-bold uppercase text-muted-foreground block">✍️ Script</span>
+                  <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-6">
+                    <div className="p-2.5 rounded-xl bg-card space-y-1">
+                      <span className="text-[9px] font-bold uppercase text-muted-foreground block">Script</span>
                       <p className="font-bold text-foreground text-xs truncate">
                         {task.scriptWriterAssigned?.name || task.scriptWriterName || 'Unassigned'}
                       </p>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-card border border-border space-y-1">
-                      <span className="text-[9px] font-bold uppercase text-muted-foreground block">🎙️ RJ / Voice</span>
+                    <div className="p-2.5 rounded-xl bg-card space-y-1">
+                      <span className="text-[9px] font-bold uppercase text-muted-foreground block">RJ / Voice</span>
                       <p className="font-bold text-foreground text-xs truncate">
                         {task.voiceArtistAssigned?.name || task.voiceArtistName || 'Unassigned'}
                       </p>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-card border border-border space-y-1">
-                      <span className="text-[9px] font-bold uppercase text-muted-foreground block">🎥 Shoot</span>
+                    <div className="p-2.5 rounded-xl bg-card space-y-1">
+                      <span className="text-[9px] font-bold uppercase text-muted-foreground block">Shoot</span>
                       <p className="font-bold text-foreground text-xs truncate">
                         {task.videographerAssigned?.name || task.videographerName || 'Unassigned'}
                       </p>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-card border border-border space-y-1">
-                      <span className="text-[9px] font-bold uppercase text-muted-foreground block">✂️ Edit</span>
+                    <div className="p-2.5 rounded-xl bg-card space-y-1">
+                      <span className="text-[9px] font-bold uppercase text-muted-foreground block">Edit</span>
                       <p className="font-bold text-foreground text-xs truncate">
                         {task.editorAssigned?.name || task.editorName || 'Unassigned'}
                       </p>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-card border border-border space-y-1">
-                      <span className="text-[9px] font-bold uppercase text-muted-foreground block">📱 Post</span>
+                    <div className="p-2.5 rounded-xl bg-card space-y-1">
+                      <span className="text-[9px] font-bold uppercase text-muted-foreground block">Design</span>
+                      <p className="font-bold text-foreground text-xs truncate">
+                        {task.designerAssigned?.name || task.designerName || 'Unassigned'}
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-card space-y-1">
+                      <span className="text-[9px] font-bold uppercase text-muted-foreground block">Post</span>
                       <p className="font-bold text-foreground text-xs truncate">
                         {task.publisherAssigned?.name || task.publisherName || 'Unassigned'}
                       </p>
@@ -420,17 +729,325 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                   {task.rawFootageLink && (
                     <div className="pt-1 text-xs flex items-center justify-between">
                       <span className="text-muted-foreground font-semibold">Raw Footage:</span>
-                      <a href={task.rawFootageLink} target="_blank" rel="noreferrer" className="font-bold text-primary hover:underline flex items-center gap-1">
+                      <a href={task.rawFootageLink} target="_blank" rel="noreferrer" className="font-bold text-foreground hover:underline inline-flex items-center gap-1">
                         <span>Open Drive</span>
                         <ExternalLink size={11} />
                       </a>
                     </div>
                   )}
+
+                  {task.editReminder && (
+                    <div className="pt-1 text-xs flex items-center justify-between ">
+                      <span className="text-muted-foreground font-semibold">Edit Reminder:</span>
+                      <span className="font-semibold text-foreground">{task.editReminder}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── Interconnected Upstream Details & Editor Hand-off Hub ── */}
+              {(task.editorAssigned || task.videographerAssigned || task.scriptWriterAssigned || task.shootDate || task.taskCategory === 'content') && (
+                <div className="rounded-2xl bg-secondary/30 p-4 sm:p-5 space-y-4">
+                  <div className="flex items-center justify-between pb-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-card text-foreground shrink-0">
+                        <Scissors size={16} />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-xs sm:text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Film size={14} className="shrink-0" />
+                            <span>Production Pipeline &amp; Editor Hub</span>
+                          </span>
+                          <span className="text-[10px] normal-case font-bold px-2 py-0.5 rounded-full bg-card text-foreground ">
+                            Interconnected Workflow
+                          </span>
+                        </h4>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          Upstream shoot details, videographer notes, and scripts automatically synced for the editor.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3-Column Pipeline Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Stage 1: Pre-Production & Script */}
+                    <div className="p-3.5 rounded-xl bg-card space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold uppercase text-foreground inline-flex items-center gap-1.5">
+                          <FileText size={13} className="shrink-0 text-muted-foreground" />
+                          <span>1. Script &amp; Pre-Production</span>
+                        </span>
+                        {task.scriptWriterAssigned?.name && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-secondary text-foreground truncate max-w-[110px]">
+                            {task.scriptWriterAssigned.name}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5 text-xs">
+                        {task.hookOpeningLine && (
+                          <div className="p-2 rounded-lg bg-secondary/40 space-y-0.5">
+                            <span className="text-[10px] font-bold uppercase text-muted-foreground inline-flex items-center gap-1">
+                              <Sparkles size={10} /> Hook / Opening Line
+                            </span>
+                            <p className="text-foreground font-medium italic text-xs">&ldquo;{task.hookOpeningLine}&rdquo;</p>
+                          </div>
+                        )}
+
+                        {(task.fullScript || task.scriptText) && (
+                          <div className="p-2 rounded-lg bg-secondary/40 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold uppercase text-muted-foreground inline-flex items-center gap-1">
+                                <FileText size={10} /> Script Content
+                              </span>
+                              <CopyButton text={task.fullScript || task.scriptText} label="Copy" />
+                            </div>
+                            <p className="text-foreground text-[11px] line-clamp-3 whitespace-pre-wrap font-mono">
+                              {task.fullScript || task.scriptText}
+                            </p>
+                          </div>
+                        )}
+
+                        {task.scriptLink && (
+                          <a
+                            href={task.scriptLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center justify-between p-2 rounded-lg bg-secondary/40 text-foreground hover:underline font-bold text-xs"
+                          >
+                            <span className="truncate">Google Docs Script</span>
+                            <ExternalLink size={12} className="shrink-0" />
+                          </a>
+                        )}
+
+                        {task.voiceOverAudioLink && (
+                          <a
+                            href={task.voiceOverAudioLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center justify-between p-2 rounded-lg bg-secondary/40 text-foreground hover:underline font-bold text-xs"
+                          >
+                            <span className="truncate inline-flex items-center gap-1">
+                              <Mic size={11} className="shrink-0" /> Voice-Over Audio
+                            </span>
+                            <ExternalLink size={12} className="shrink-0" />
+                          </a>
+                        )}
+
+                        {!task.hookOpeningLine && !task.fullScript && !task.scriptText && !task.scriptLink && (
+                          <p className="text-[11px] text-muted-foreground italic py-1">No script details added yet.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Stage 2: Production & Shoot Details */}
+                    <div className="p-3.5 rounded-xl bg-card space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold uppercase text-foreground inline-flex items-center gap-1.5">
+                          <Video size={13} className="shrink-0 text-muted-foreground" />
+                          <span>2. Shoot &amp; Videographer</span>
+                        </span>
+                        {task.videographerAssigned?.name && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-secondary text-foreground truncate max-w-[110px]">
+                            {task.videographerAssigned.name}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5 text-xs">
+                        <div className="p-2 rounded-lg bg-secondary/40 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase text-muted-foreground inline-flex items-center gap-1">
+                              <Calendar size={10} /> Shoot Schedule
+                            </span>
+                            <span className="text-foreground font-bold text-xs tabular-nums">
+                              {task.shootDate ? (
+                                <>
+                                  {new Date(task.shootDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                                  {task.shootEndDate && ` – ${new Date(task.shootEndDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                                </>
+                              ) : 'Date TBD'}
+                            </span>
+                          </div>
+                          {task.shootTime && (
+                            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                              <span>Time:</span>
+                              <span className="font-semibold text-foreground tabular-nums">{task.shootTime}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Extra Shoot Crew / Assistants */}
+                        {((task.extraShootPersons && task.extraShootPersons.length > 0) || (task.extraShootPersonNames && task.extraShootPersonNames.length > 0)) && (
+                          <div className="p-2 rounded-lg bg-secondary/40 space-y-1">
+                            <span className="text-[10px] font-bold uppercase text-muted-foreground inline-flex items-center gap-1">
+                              <Users size={10} /> Shoot Crew / Assistants
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {(task.extraShootPersons || task.extraShootPersonNames || []).map((p, i) => (
+                                <Badge key={i} variant="secondary" className="text-[10px] font-semibold">
+                                  {typeof p === 'object' ? p.name : p}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {(task.shootLocation || task.shootLocationLink) && (
+                          <div className="p-2 rounded-lg bg-secondary/40 space-y-0.5">
+                            <span className="text-[10px] font-bold uppercase text-muted-foreground inline-flex items-center gap-1">
+                              <MapPin size={10} /> Shoot Location
+                            </span>
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-foreground font-medium text-xs truncate">
+                                {task.shootLocation || 'Location specified'}
+                              </span>
+                              {task.shootLocationLink && (
+                                <a
+                                  href={task.shootLocationLink}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-foreground hover:underline font-bold text-[11px] shrink-0 inline-flex items-center gap-0.5"
+                                >
+                                  <span>Map</span>
+                                  <ExternalLink size={10} />
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {task.rawFootageLink && (
+                          <div className="p-2 rounded-lg bg-secondary/50 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold uppercase text-foreground inline-flex items-center gap-1">
+                                <UploadCloud size={10} /> Raw Footage Link
+                              </span>
+                              <CopyButton text={task.rawFootageLink} label="Copy" />
+                            </div>
+                            <a
+                              href={task.rawFootageLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold text-foreground hover:underline flex items-center justify-between text-xs"
+                            >
+                              <span className="truncate">Open Footage Drive</span>
+                              <ExternalLink size={11} className="shrink-0" />
+                            </a>
+                          </div>
+                        )}
+
+                        {task.videographerContentNeeded && (
+                          <div className="p-2 rounded-lg bg-secondary/40 space-y-0.5">
+                            <span className="text-[10px] font-bold uppercase text-muted-foreground inline-flex items-center gap-1">
+                              <Film size={10} /> Required Shots
+                            </span>
+                            <p className="text-[11px] text-foreground line-clamp-2">{task.videographerContentNeeded}</p>
+                          </div>
+                        )}
+
+                        {!task.shootDate && !task.shootLocation && !task.rawFootageLink && (
+                          <p className="text-[11px] text-muted-foreground italic py-1">Shoot schedule pending.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Stage 3: Post-Production & Editing */}
+                    <div className="p-3.5 rounded-xl bg-card space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold uppercase text-foreground inline-flex items-center gap-1.5">
+                          <Scissors size={13} className="shrink-0 text-muted-foreground" />
+                          <span>3. Video Editing Specs</span>
+                        </span>
+                        {task.editorAssigned?.name && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-secondary text-foreground truncate max-w-[110px]">
+                            {task.editorAssigned.name}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5 text-xs">
+                        <div className="p-2 rounded-lg bg-secondary/40 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase text-muted-foreground">Format</span>
+                            <span className="font-bold text-foreground text-xs">{task.videoFormat || '9:16 (Reels/Shorts)'}</span>
+                          </div>
+                          {task.videoDuration && (
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-muted-foreground">Duration:</span>
+                              <span className="font-semibold text-foreground tabular-nums">{task.videoDuration}</span>
+                            </div>
+                          )}
+                          {task.editDueDate && (
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-muted-foreground">Edit Due:</span>
+                              <span className="font-bold text-foreground tabular-nums">
+                                {new Date(task.editDueDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {(task.editingReferenceVideo || task.referenceVideoLink) && (
+                          <a
+                            href={task.editingReferenceVideo || task.referenceVideoLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center justify-between p-2 rounded-lg bg-secondary/40 text-foreground hover:underline font-bold text-xs"
+                          >
+                            <span className="truncate">Reference Video</span>
+                            <ExternalLink size={12} className="shrink-0" />
+                          </a>
+                        )}
+
+                        {task.brandAssetsDriveLink && (
+                          <a
+                            href={task.brandAssetsDriveLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center justify-between p-2 rounded-lg bg-secondary/40 text-foreground hover:underline font-bold text-xs"
+                          >
+                            <span className="truncate">Brand Assets / Fonts / Logos</span>
+                            <ExternalLink size={12} className="shrink-0" />
+                          </a>
+                        )}
+
+                        {task.finalVideoDriveLink && (
+                          <div className="p-2 rounded-lg bg-secondary/50 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold uppercase text-foreground inline-flex items-center gap-1">
+                                <Film size={10} /> Final Output Drive
+                              </span>
+                              <CopyButton text={task.finalVideoDriveLink} label="Copy" />
+                            </div>
+                            <a
+                              href={task.finalVideoDriveLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold text-foreground hover:underline flex items-center justify-between text-xs"
+                            >
+                              <span className="truncate">Open Final Video Link</span>
+                              <ExternalLink size={11} className="shrink-0" />
+                            </a>
+                          </div>
+                        )}
+
+                        {task.editingInstructions && (
+                          <div className="p-2 rounded-lg bg-secondary/40 space-y-0.5">
+                            <span className="text-[10px] font-bold uppercase text-muted-foreground block">Instructions</span>
+                            <p className="text-[11px] text-foreground line-clamp-2">{task.editingInstructions}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
               {/* ── Drawer Tabs ── */}
-              <div className="flex items-center gap-1.5 border-b border-border overflow-x-auto no-scrollbar py-0.5">
+              <div className="inline-flex max-w-full items-center gap-1 bg-secondary/75 p-1 rounded-xl overflow-x-auto no-scrollbar">
                 {[
                   { id: 'brief', label: 'Brief & Scope', icon: FileText },
                   ...((task.department === 'Development' || task.development?.isDevTask || isWebsiteTaskType(task.taskType))
@@ -443,10 +1060,10 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 whitespace-nowrap shrink-0 transition-all cursor-pointer select-none rounded-t-lg ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer select-none rounded-lg tabular-nums ${
                       activeTab === tab.id
-                        ? 'border-primary text-primary bg-primary/5'
-                        : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-secondary/40'
+                        ? 'bg-background text-foreground font-bold shadow-[0_1px_2px_rgba(0,0,0,0.06)]'
+                        : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     <tab.icon size={13} className="shrink-0" />
@@ -459,34 +1076,38 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
               {activeTab === 'brief' && (
                 <div className="space-y-4">
                   {/* Description / Requirements */}
-                  <div className="rounded-2xl border border-border bg-card p-4 shadow-2xs space-y-2">
+                  <div className="rounded-2xl bg-card p-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-foreground uppercase tracking-wider">📋 Brief & Requirements</span>
+                      <span className="text-xs font-bold text-foreground uppercase tracking-wider inline-flex items-center gap-1.5">
+                        <ClipboardList size={13} /> Brief &amp; Requirements
+                      </span>
                       {task.description && <CopyButton text={task.description} label="Copy" />}
                     </div>
-                    <div className="rounded-xl border border-border/70 bg-background/60 p-3 text-xs text-foreground whitespace-pre-wrap leading-relaxed">
+                    <div className="rounded-xl bg-background p-3 text-xs text-foreground whitespace-pre-wrap leading-relaxed">
                       {task.description || 'No description provided.'}
                     </div>
                   </div>
 
                   {/* Script */}
                   {task.taskCategory === 'content' && (
-                    <div className="rounded-2xl border border-border bg-card p-4 shadow-2xs space-y-2">
+                    <div className="rounded-2xl bg-card p-4 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-foreground uppercase tracking-wider">📜 Script</span>
+                        <span className="text-xs font-bold text-foreground uppercase tracking-wider inline-flex items-center gap-1.5">
+                          <FileText size={13} /> Script
+                        </span>
                         {task.scriptText && <CopyButton text={task.scriptText} label="Copy Script" />}
                       </div>
                       {task.scriptText ? (
-                        <div className="rounded-xl border border-border bg-background p-3 text-xs font-mono text-foreground whitespace-pre-wrap leading-relaxed">
+                        <div className="rounded-xl bg-background p-3 text-xs font-mono text-foreground whitespace-pre-wrap leading-relaxed">
                           {task.scriptText}
                         </div>
                       ) : (
-                        <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                        <div className="rounded-xl p-4 text-center text-xs text-muted-foreground">
                           No script provided.
                         </div>
                       )}
                       {task.scriptLink && (
-                        <a href={task.scriptLink} target="_blank" rel="noreferrer" className="text-xs font-bold text-primary hover:underline flex items-center gap-1 pt-1">
+                        <a href={task.scriptLink} target="_blank" rel="noreferrer" className="text-xs font-bold text-foreground hover:underline inline-flex items-center gap-1 pt-1">
                           <span>Open Google Docs Script</span>
                           <ExternalLink size={11} />
                         </a>
@@ -494,17 +1115,17 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                     </div>
                   )}
 
-                  {/* 🎙️ RJ / Voice-Over Script & Instructions */}
+                  {/* RJ / Voice-Over Script & Instructions */}
                   {task.taskCategory === 'content' && (task.voiceScriptText || task.voiceInstructions) && (
-                    <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/5 p-4 shadow-2xs space-y-2">
+                    <div className="rounded-2xl bg-secondary/40 p-4 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-                          🎙️ RJ / Voice-Over Script & Brief
+                        <span className="text-xs font-bold text-foreground uppercase tracking-wider inline-flex items-center gap-1.5">
+                          <Mic size={13} /> RJ / Voice-Over Script &amp; Brief
                         </span>
                         {task.voiceScriptText && <CopyButton text={task.voiceScriptText} label="Copy Script" />}
                       </div>
                       {task.voiceScriptText && (
-                        <div className="rounded-xl border border-border bg-background p-3 text-xs text-foreground whitespace-pre-wrap leading-relaxed">
+                        <div className="rounded-xl bg-background p-3 text-xs text-foreground whitespace-pre-wrap leading-relaxed">
                           {task.voiceScriptText}
                         </div>
                       )}
@@ -516,30 +1137,331 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                     </div>
                   )}
 
-                  {/* 🎥 Videographer Content Requirements */}
+                  {/* Videographer Content Requirements */}
                   {task.videographerContentNeeded && (
-                    <div className="rounded-2xl border border-sky-500/30 bg-sky-500/5 p-4 shadow-2xs space-y-2">
-                      <span className="text-xs font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
-                        🎥 What Content / Shots Needed for Videographer
+                    <div className="rounded-2xl bg-secondary/40 p-4 space-y-2">
+                      <span className="text-xs font-bold text-foreground uppercase tracking-wider inline-flex items-center gap-1.5">
+                        <Video size={13} /> What Content / Shots Needed for Videographer
                       </span>
-                      <div className="rounded-xl border border-border bg-background p-3 text-xs text-foreground whitespace-pre-wrap leading-relaxed">
+                      <div className="rounded-xl bg-background p-3 text-xs text-foreground whitespace-pre-wrap leading-relaxed">
                         {task.videographerContentNeeded}
                       </div>
                     </div>
                   )}
 
+                  {/* Video Production & Asset Details */}
+                  {(task.editingReferenceVideo ||
+                    task.referenceVideoLink ||
+                    task.finalVideoDriveLink ||
+                    task.voiceOverAudioLink ||
+                    task.musicReferenceLink ||
+                    task.brandAssetsDriveLink ||
+                    task.shootLocation ||
+                    task.shootLocationLink ||
+                    task.shootTime ||
+                    task.presenterPerson ||
+                    (Array.isArray(task.equipmentRequired) && task.equipmentRequired.length > 0) ||
+                    task.requiredShots ||
+                    task.specialInstructions ||
+                    task.hookOpeningLine ||
+                    task.fullScript ||
+                    task.sceneBySceneInstructions ||
+                    task.captionOnScreenText ||
+                    task.onScreenText ||
+                    task.coverImageDriveLink ||
+                    task.publishedPostUrl ||
+                    (Array.isArray(task.targetSocialPlatforms) && task.targetSocialPlatforms.length > 0)) && (
+                    <div className="rounded-2xl bg-secondary/30 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-foreground uppercase tracking-wider inline-flex items-center gap-1.5">
+                          <Film size={14} className="text-foreground" /> Video &amp; Production Details
+                        </span>
+                        {task.videoType && (
+                          <Badge variant="outline" className="text-[10px] font-bold">
+                            {task.videoType}
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Reference Links & Media Assets */}
+                      <div className="space-y-1.5 text-xs">
+                        {(task.editingReferenceVideo || task.referenceVideoLink) && (
+                          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-card ">
+                            <span className="text-muted-foreground font-semibold truncate flex items-center gap-1.5">
+                              <Film size={13} className="text-foreground shrink-0" />
+                              <span className="truncate">Reference Video: {task.editingReferenceVideo || task.referenceVideoLink}</span>
+                            </span>
+                            <a
+                              href={task.editingReferenceVideo || task.referenceVideoLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold text-foreground hover:underline inline-flex items-center gap-1 shrink-0"
+                            >
+                              <span>Watch</span>
+                              <ExternalLink size={11} />
+                            </a>
+                          </div>
+                        )}
+
+                        {task.finalVideoDriveLink && (
+                          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-card ">
+                            <span className="text-muted-foreground font-semibold truncate flex items-center gap-1.5">
+                              <Video size={13} className="text-foreground shrink-0" />
+                              <span className="truncate">Final Video Drive: {task.finalVideoDriveLink}</span>
+                            </span>
+                            <a
+                              href={task.finalVideoDriveLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold text-foreground hover:underline inline-flex items-center gap-1 shrink-0"
+                            >
+                              <span>Open</span>
+                              <ExternalLink size={11} />
+                            </a>
+                          </div>
+                        )}
+
+                        {task.voiceOverAudioLink && (
+                          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-card ">
+                            <span className="text-muted-foreground font-semibold truncate flex items-center gap-1.5">
+                              <Mic size={13} className="text-foreground shrink-0" />
+                              <span className="truncate">Voice-Over Audio Link: {task.voiceOverAudioLink}</span>
+                            </span>
+                            <a
+                              href={task.voiceOverAudioLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold text-foreground hover:underline inline-flex items-center gap-1 shrink-0"
+                            >
+                              <span>Listen</span>
+                              <ExternalLink size={11} />
+                            </a>
+                          </div>
+                        )}
+
+                        {task.musicReferenceLink && (
+                          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-card ">
+                            <span className="text-muted-foreground font-semibold truncate flex items-center gap-1.5">
+                              <Sparkles size={13} className="text-foreground shrink-0" />
+                              <span className="truncate">Music Reference Link: {task.musicReferenceLink}</span>
+                            </span>
+                            <a
+                              href={task.musicReferenceLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold text-foreground hover:underline inline-flex items-center gap-1 shrink-0"
+                            >
+                              <span>Open</span>
+                              <ExternalLink size={11} />
+                            </a>
+                          </div>
+                        )}
+
+                        {task.brandAssetsDriveLink && (
+                          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-card ">
+                            <span className="text-muted-foreground font-semibold truncate flex items-center gap-1.5">
+                              <FolderArchive size={13} className="text-foreground shrink-0" />
+                              <span className="truncate">Brand Assets Drive: {task.brandAssetsDriveLink}</span>
+                            </span>
+                            <a
+                              href={task.brandAssetsDriveLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold text-foreground hover:underline inline-flex items-center gap-1 shrink-0"
+                            >
+                              <span>Open</span>
+                              <ExternalLink size={11} />
+                            </a>
+                          </div>
+                        )}
+
+                        {task.shootLocationLink && (
+                          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-card ">
+                            <span className="text-muted-foreground font-semibold truncate flex items-center gap-1.5">
+                              <MapPin size={13} className="text-foreground shrink-0" />
+                              <span className="truncate">Location Maps: {task.shootLocationLink}</span>
+                            </span>
+                            <a
+                              href={task.shootLocationLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold text-foreground hover:underline inline-flex items-center gap-1 shrink-0"
+                            >
+                              <span>Open Map</span>
+                              <ExternalLink size={11} />
+                            </a>
+                          </div>
+                        )}
+
+                        {task.coverImageDriveLink && (
+                          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-card ">
+                            <span className="text-muted-foreground font-semibold truncate flex items-center gap-1.5">
+                              <Palette size={13} className="text-foreground shrink-0" />
+                              <span className="truncate">Cover Image / Thumbnail: {task.coverImageDriveLink}</span>
+                            </span>
+                            <a
+                              href={task.coverImageDriveLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold text-foreground hover:underline inline-flex items-center gap-1 shrink-0"
+                            >
+                              <span>Open</span>
+                              <ExternalLink size={11} />
+                            </a>
+                          </div>
+                        )}
+
+                        {task.publishedPostUrl && (
+                          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-card ">
+                            <span className="text-muted-foreground font-semibold truncate flex items-center gap-1.5">
+                              <Share2 size={13} className="text-foreground shrink-0" />
+                              <span className="truncate">Live Post URL: {task.publishedPostUrl}</span>
+                            </span>
+                            <a
+                              href={task.publishedPostUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold text-foreground hover:underline inline-flex items-center gap-1 shrink-0"
+                            >
+                              <span>View Post</span>
+                              <ExternalLink size={11} />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Shoot & Production Metadata Grid */}
+                      <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 text-xs pt-1">
+                        {task.shootTime && (
+                          <div className="p-2 rounded-xl bg-card ">
+                            <span className="text-[10px] uppercase font-bold text-muted-foreground block">Shoot Time</span>
+                            <span className="font-semibold text-foreground truncate block tabular-nums">{task.shootTime}</span>
+                          </div>
+                        )}
+                        {task.shootLocation && (
+                          <div className="p-2 rounded-xl bg-card ">
+                            <span className="text-[10px] uppercase font-bold text-muted-foreground block">Shoot Location</span>
+                            <span className="font-semibold text-foreground truncate block">{task.shootLocation}</span>
+                          </div>
+                        )}
+                        {task.presenterPerson && (
+                          <div className="p-2 rounded-xl bg-card ">
+                            <span className="text-[10px] uppercase font-bold text-muted-foreground block">Presenter</span>
+                            <span className="font-semibold text-foreground truncate block">{task.presenterPerson}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Interactive Pre-Shoot Equipment Checklist */}
+                      {equipmentChecklist.length > 0 && (
+                        <div className="p-3.5 rounded-2xl bg-card space-y-2.5 text-xs border border-border/50">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-foreground inline-flex items-center gap-1.5">
+                              <Camera size={13} className="text-primary" />
+                              <span>Pre-Shoot Equipment Checklist</span>
+                            </span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary tabular-nums">
+                              {equipmentChecklist.filter((c) => c.checked).length} / {equipmentChecklist.length} Packed
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Shoot crew: Check off gear before heading to the shoot location to ensure nothing is missed.
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                            {equipmentChecklist.map((item, idx) => (
+                              <label
+                                key={idx}
+                                className={`flex items-center gap-2 p-2 rounded-xl border transition-colors cursor-pointer select-none ${
+                                  item.checked
+                                    ? 'bg-primary/10 border-primary/40 text-foreground font-semibold'
+                                    : 'bg-background border-border/50 text-foreground hover:bg-secondary/40'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={!!item.checked}
+                                  onChange={() => handleToggleEquipment(idx)}
+                                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/20 cursor-pointer"
+                                />
+                                <span className={item.checked ? 'line-through text-muted-foreground' : ''}>
+                                  {item.name}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Target Platforms */}
+                      {Array.isArray(task.targetSocialPlatforms) && task.targetSocialPlatforms.length > 0 && (
+                        <div className="p-2.5 rounded-xl bg-card space-y-1.5 text-xs">
+                          <span className="text-[10px] font-bold uppercase text-muted-foreground block">Target Social Platforms</span>
+                          <div className="flex flex-wrap gap-1">
+                            {task.targetSocialPlatforms.map((plat, i) => (
+                              <Badge key={i} variant="outline" className="text-[10px] font-semibold text-foreground">
+                                {plat}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Hook */}
+                      {task.hookOpeningLine && (
+                        <div className="p-2.5 rounded-xl bg-secondary text-xs space-y-1">
+                          <span className="text-[10px] font-bold uppercase text-muted-foreground inline-flex items-center gap-1">
+                            <Sparkles size={10} /> Hook / Opening Line
+                          </span>
+                          <p className="font-semibold text-foreground italic">"{task.hookOpeningLine}"</p>
+                        </div>
+                      )}
+
+                      {/* Required Shots */}
+                      {task.requiredShots && (
+                        <div className="p-2.5 rounded-xl bg-card text-xs space-y-1">
+                          <span className="text-[10px] font-bold uppercase text-muted-foreground inline-flex items-center gap-1">
+                            <Video size={10} /> Required Shots List
+                          </span>
+                          <p className="text-foreground whitespace-pre-wrap">{task.requiredShots}</p>
+                        </div>
+                      )}
+
+                      {/* Special Instructions */}
+                      {task.specialInstructions && (
+                        <div className="p-2.5 rounded-xl bg-card text-xs space-y-1">
+                          <span className="text-[10px] font-bold uppercase text-muted-foreground inline-flex items-center gap-1">
+                            <FileText size={10} /> Special Instructions
+                          </span>
+                          <p className="text-foreground whitespace-pre-wrap">{task.specialInstructions}</p>
+                        </div>
+                      )}
+
+                      {/* On-Screen Text / Captions */}
+                      {(task.captionOnScreenText || task.onScreenText) && (
+                        <div className="p-2.5 rounded-xl bg-card text-xs space-y-1">
+                          <span className="text-[10px] font-bold uppercase text-muted-foreground inline-flex items-center gap-1">
+                            <MessageSquare size={10} /> On-Screen Text &amp; Captions
+                          </span>
+                          <p className="text-foreground whitespace-pre-wrap">{task.captionOnScreenText || task.onScreenText}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Caption & Tags */}
                   {task.taskCategory === 'content' && (
-                    <div className="rounded-2xl border border-border bg-card p-4 shadow-2xs space-y-2">
+                    <div className="rounded-2xl bg-card p-4 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-foreground uppercase tracking-wider">💬 Social Caption</span>
+                        <span className="text-xs font-bold text-foreground uppercase tracking-wider inline-flex items-center gap-1.5">
+                          <MessageSquare size={13} /> Social Caption
+                        </span>
                         {task.caption && <CopyButton text={`${task.caption}\n\n${task.hashtags || ''}`} label="Copy Caption" />}
                       </div>
-                      <div className="rounded-xl border border-border bg-background p-3 text-xs text-foreground whitespace-pre-wrap leading-relaxed">
+                      <div className="rounded-xl bg-background p-3 text-xs text-foreground whitespace-pre-wrap leading-relaxed">
                         {task.caption || 'No caption drafted yet.'}
                       </div>
                       {task.hashtags && (
-                        <p className="text-[11px] font-semibold text-primary break-all pt-1">
+                        <p className="text-[11px] font-semibold text-muted-foreground break-all pt-1">
                           {task.hashtags}
                         </p>
                       )}
@@ -548,28 +1470,30 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
 
                   {/* Website Technical Specs */}
                   {isWebsiteTaskType(task.taskType) && (
-                    <div className="rounded-2xl border border-border bg-card p-4 shadow-2xs space-y-3">
-                      <span className="text-xs font-bold text-foreground uppercase tracking-wider">💻 Website Specifications</span>
+                    <div className="rounded-2xl bg-card p-4 space-y-3">
+                      <span className="text-xs font-bold text-foreground uppercase tracking-wider inline-flex items-center gap-1.5">
+                        <Laptop size={13} /> Website Specifications
+                      </span>
                       <div className="grid gap-2 sm:grid-cols-2 text-xs">
-                        <div className="p-2.5 rounded-xl border border-border bg-background">
+                        <div className="p-2.5 rounded-xl bg-background">
                           <span className="text-[10px] text-muted-foreground uppercase block font-bold">Website Type</span>
                           <span className="font-semibold">{task.websiteType || 'Custom Website'}</span>
                         </div>
-                        <div className="p-2.5 rounded-xl border border-border bg-background">
-                          <span className="text-[10px] text-muted-foreground uppercase block font-bold">Domain & Hosting</span>
+                        <div className="p-2.5 rounded-xl bg-background">
+                          <span className="text-[10px] text-muted-foreground uppercase block font-bold">Domain &amp; Hosting</span>
                           <span className="font-semibold">{[task.domainDetails, task.hostingDetails].filter(Boolean).join(' • ') || 'Not specified'}</span>
                         </div>
                       </div>
 
                       {task.adminCredentials && (
-                        <div className="rounded-xl border border-border bg-secondary/30 p-3 space-y-1.5">
+                        <div className="rounded-xl bg-secondary/40 p-3 space-y-1.5">
                           <div className="flex items-center justify-between text-xs">
                             <span className="font-bold">Admin Credentials:</span>
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => setShowCredentials(!showCredentials)}
-                                className="font-semibold text-muted-foreground hover:text-foreground text-[11px] flex items-center gap-1"
+                                className="font-semibold text-muted-foreground hover:text-foreground text-[11px] inline-flex items-center gap-1 cursor-pointer"
                               >
                                 {showCredentials ? <EyeOff size={11} /> : <Eye size={11} />}
                                 <span>{showCredentials ? 'Hide' : 'Show'}</span>
@@ -577,7 +1501,7 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                               <CopyButton text={task.adminCredentials} label="Copy" />
                             </div>
                           </div>
-                          <div className="text-xs font-mono bg-background p-2 rounded-lg border border-border">
+                          <div className="text-xs font-mono bg-background p-2 rounded-lg ">
                             {showCredentials ? task.adminCredentials : '••••••••••••••••••••'}
                           </div>
                         </div>
@@ -587,36 +1511,38 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
 
                   {/* Reference Links */}
                   {(task.referenceLink || task.audioReference || task.editorGuide || task.internalNotes) && (
-                    <div className="rounded-2xl border border-border bg-card p-4 shadow-2xs space-y-2">
-                      <span className="text-xs font-bold text-foreground uppercase tracking-wider">🔗 References & Direction</span>
+                    <div className="rounded-2xl bg-card p-4 space-y-2">
+                      <span className="text-xs font-bold text-foreground uppercase tracking-wider inline-flex items-center gap-1.5">
+                        <Link2 size={13} /> References &amp; Direction
+                      </span>
                       <div className="space-y-2 text-xs">
                         {task.referenceLink && (
-                          <div className="flex items-center justify-between p-2 rounded-xl border border-border bg-background">
+                          <div className="flex items-center justify-between p-2 rounded-xl bg-background">
                             <span className="text-muted-foreground">Inspiration Link:</span>
-                            <a href={task.referenceLink} target="_blank" rel="noreferrer" className="font-bold text-primary hover:underline flex items-center gap-1 truncate max-w-[200px]">
-                              <span>{task.referenceLink}</span>
-                              <ArrowUpRight size={11} />
+                            <a href={task.referenceLink} target="_blank" rel="noreferrer" className="font-bold text-foreground hover:underline inline-flex items-center gap-1 truncate max-w-[200px]">
+                              <span className="truncate">{task.referenceLink}</span>
+                              <ArrowUpRight size={11} className="shrink-0" />
                             </a>
                           </div>
                         )}
                         {task.audioReference && (
-                          <div className="flex items-center justify-between p-2 rounded-xl border border-border bg-background">
+                          <div className="flex items-center justify-between p-2 rounded-xl bg-background">
                             <span className="text-muted-foreground">Audio Reference:</span>
-                            <a href={task.audioReference} target="_blank" rel="noreferrer" className="font-bold text-primary hover:underline flex items-center gap-1 truncate max-w-[200px]">
-                              <span>{task.audioReference}</span>
-                              <ArrowUpRight size={11} />
+                            <a href={task.audioReference} target="_blank" rel="noreferrer" className="font-bold text-foreground hover:underline inline-flex items-center gap-1 truncate max-w-[200px]">
+                              <span className="truncate">{task.audioReference}</span>
+                              <ArrowUpRight size={11} className="shrink-0" />
                             </a>
                           </div>
                         )}
                         {task.editorGuide && (
-                          <div className="p-2.5 rounded-xl border border-border bg-background space-y-1">
+                          <div className="p-2.5 rounded-xl bg-background space-y-1">
                             <span className="text-[10px] font-bold text-muted-foreground uppercase">Editor Guide:</span>
                             <p className="text-xs whitespace-pre-wrap">{task.editorGuide}</p>
                           </div>
                         )}
                         {task.internalNotes && (
-                          <div className="p-2.5 rounded-xl border border-amber-200/60 bg-amber-500/5 space-y-1">
-                            <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase">Internal Notes:</span>
+                          <div className="p-2.5 rounded-xl bg-secondary/40 space-y-1">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Internal Notes:</span>
                             <p className="text-xs whitespace-pre-wrap">{task.internalNotes}</p>
                           </div>
                         )}
@@ -630,28 +1556,28 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
               {activeTab === 'development' && (
                 <div className="space-y-4">
                   {/* Pipeline Stage Card */}
-                  <div className="rounded-2xl border border-border bg-card p-4 shadow-2xs space-y-3">
+                  <div className="rounded-2xl bg-card p-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                        <Code2 size={14} className="text-primary" /> Development Pipeline
+                      <span className="text-xs font-bold text-foreground uppercase tracking-wider inline-flex items-center gap-1.5">
+                        <Code2 size={14} className="text-foreground" /> Development Pipeline
                       </span>
-                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 capitalize">
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-secondary text-foreground capitalize">
                         {DEV_STAGE_LABELS[task.development?.stage] || task.development?.stage || 'Backlog'}
                       </span>
                     </div>
 
                     {task.development?.isBlocked && (
-                      <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 space-y-1 text-xs text-rose-700 dark:text-rose-400">
+                      <div className="rounded-xl bg-secondary p-3 space-y-1 text-xs text-foreground">
                         <div className="flex items-center gap-1.5 font-bold">
-                          <AlertTriangle size={14} className="text-rose-500" />
+                          <AlertTriangle size={14} className="text-foreground shrink-0" />
                           <span>Task is Currently Blocked</span>
                         </div>
-                        <p className="text-muted-foreground dark:text-rose-300">
+                        <p className="text-muted-foreground">
                           <span className="font-semibold text-foreground">Reason: </span>
                           {task.development?.blockedReason || 'No reason specified'}
                         </p>
                         {task.development?.blockedAt && (
-                          <span className="text-[10px] text-muted-foreground block">
+                          <span className="text-[10px] text-muted-foreground block tabular-nums">
                             Blocked on {new Date(task.development.blockedAt).toLocaleString()}
                           </span>
                         )}
@@ -659,13 +1585,13 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                     )}
 
                     <div className="grid gap-2 sm:grid-cols-2 text-xs">
-                      <div className="p-2.5 rounded-xl border border-border bg-background">
+                      <div className="p-2.5 rounded-xl bg-background">
                         <span className="text-[10px] text-muted-foreground uppercase block font-bold">Developer</span>
                         <span className="font-semibold text-foreground">
                           {task.development?.developer?.name || (Array.isArray(task.assignedTo) ? task.assignedTo[0]?.name : task.assignedTo?.name) || 'Assigned Lead'}
                         </span>
                       </div>
-                      <div className="p-2.5 rounded-xl border border-border bg-background">
+                      <div className="p-2.5 rounded-xl bg-background">
                         <span className="text-[10px] text-muted-foreground uppercase block font-bold">Environment</span>
                         <span className="font-semibold text-foreground capitalize">{task.development?.environment || 'Development'}</span>
                       </div>
@@ -673,25 +1599,25 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                   </div>
 
                   {/* Git & Branch Specs */}
-                  <div className="rounded-2xl border border-border bg-card p-4 shadow-2xs space-y-3">
-                    <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                      <GitBranch size={14} className="text-primary" /> Repository & Version Control
+                  <div className="rounded-2xl bg-card p-4 space-y-3">
+                    <span className="text-xs font-bold text-foreground uppercase tracking-wider inline-flex items-center gap-1.5">
+                      <GitBranch size={14} className="text-foreground" /> Repository &amp; Version Control
                     </span>
                     <div className="space-y-2 text-xs">
-                      <div className="flex items-center justify-between p-2 rounded-xl border border-border bg-background">
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-background">
                         <span className="text-muted-foreground font-semibold">Branch:</span>
                         <span className="font-mono font-bold text-foreground text-[11px] bg-secondary px-2 py-0.5 rounded">
                           {task.development?.branch || `feat/${task.taskTitle ? task.taskTitle.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30) : 'task-' + task._id?.slice(-4)}`}
                         </span>
                       </div>
                       {task.development?.pullRequestUrl && (
-                        <div className="flex items-center justify-between p-2 rounded-xl border border-border bg-background">
+                        <div className="flex items-center justify-between p-2 rounded-xl bg-background">
                           <span className="text-muted-foreground font-semibold">Pull Request:</span>
                           <a
                             href={task.development.pullRequestUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="font-bold text-primary hover:underline flex items-center gap-1 truncate max-w-[240px]"
+                            className="font-bold text-foreground hover:underline inline-flex items-center gap-1 truncate max-w-[240px]"
                           >
                             <GitPullRequest size={12} />
                             <span>{task.development.pullRequestNumber ? `PR #${task.development.pullRequestNumber}` : task.development.pullRequestUrl}</span>
@@ -700,7 +1626,7 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                         </div>
                       )}
                       {task.development?.commitHash && (
-                        <div className="flex items-center justify-between p-2 rounded-xl border border-border bg-background">
+                        <div className="flex items-center justify-between p-2 rounded-xl bg-background">
                           <span className="text-muted-foreground font-semibold">Commit Hash:</span>
                           <span className="font-mono text-xs text-foreground">{task.development.commitHash}</span>
                         </div>
@@ -709,35 +1635,35 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                   </div>
 
                   {/* Code Review Details */}
-                  <div className="rounded-2xl border border-border bg-card p-4 shadow-2xs space-y-3">
+                  <div className="rounded-2xl bg-card p-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                        <GitPullRequest size={14} className="text-indigo-500" /> Code Review
+                      <span className="text-xs font-bold text-foreground uppercase tracking-wider inline-flex items-center gap-1.5">
+                        <GitPullRequest size={14} className="text-foreground" /> Code Review
                       </span>
                       <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
                         task.development?.reviewStatus === 'approved'
-                          ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                          ? 'bg-primary text-primary-foreground '
                           : task.development?.reviewStatus === 'changes_requested'
-                          ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
-                          : 'bg-secondary text-muted-foreground'
+                          ? 'bg-foreground/10 text-foreground '
+                          : 'bg-secondary text-muted-foreground '
                       }`}>
                         {task.development?.reviewStatus?.replace('_', ' ') || 'Pending'}
                       </span>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-2 text-xs">
-                      <div className="p-2.5 rounded-xl border border-border bg-background">
+                      <div className="p-2.5 rounded-xl bg-background">
                         <span className="text-[10px] text-muted-foreground uppercase block font-bold">Reviewer</span>
                         <span className="font-semibold text-foreground">{task.development?.reviewer?.name || 'Unassigned'}</span>
                       </div>
-                      <div className="p-2.5 rounded-xl border border-border bg-background">
+                      <div className="p-2.5 rounded-xl bg-background">
                         <span className="text-[10px] text-muted-foreground uppercase block font-bold">Reviewed At</span>
-                        <span className="font-semibold text-foreground">
+                        <span className="font-semibold text-foreground tabular-nums">
                           {task.development?.reviewedAt ? new Date(task.development.reviewedAt).toLocaleDateString() : '—'}
                         </span>
                       </div>
                     </div>
                     {task.development?.reviewComments && (
-                      <div className="p-3 rounded-xl border border-border bg-background text-xs space-y-1">
+                      <div className="p-3 rounded-xl bg-background text-xs space-y-1">
                         <span className="font-bold text-foreground">Review Comments:</span>
                         <p className="text-muted-foreground whitespace-pre-wrap">{task.development.reviewComments}</p>
                       </div>
@@ -745,37 +1671,35 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                   </div>
 
                   {/* QA / Testing Details */}
-                  <div className="rounded-2xl border border-border bg-card p-4 shadow-2xs space-y-3">
+                  <div className="rounded-2xl bg-card p-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                        <ShieldCheck size={14} className="text-emerald-500" /> QA & Verification
+                      <span className="text-xs font-bold text-foreground uppercase tracking-wider inline-flex items-center gap-1.5">
+                        <ShieldCheck size={14} className="text-foreground" /> QA &amp; Verification
                       </span>
                       <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
                         task.development?.testStatus === 'passed'
-                          ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                          : task.development?.testStatus === 'failed'
-                          ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
-                          : task.development?.testStatus === 'blocked'
-                          ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
-                          : 'bg-secondary text-muted-foreground'
+                          ? 'bg-primary text-primary-foreground '
+                          : task.development?.testStatus === 'failed' || task.development?.testStatus === 'blocked'
+                          ? 'bg-foreground/10 text-foreground '
+                          : 'bg-secondary text-muted-foreground '
                       }`}>
                         {task.development?.testStatus || 'Pending'}
                       </span>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-2 text-xs">
-                      <div className="p-2.5 rounded-xl border border-border bg-background">
+                      <div className="p-2.5 rounded-xl bg-background">
                         <span className="text-[10px] text-muted-foreground uppercase block font-bold">Tester</span>
                         <span className="font-semibold text-foreground">{task.development?.tester?.name || 'Unassigned'}</span>
                       </div>
-                      <div className="p-2.5 rounded-xl border border-border bg-background">
+                      <div className="p-2.5 rounded-xl bg-background">
                         <span className="text-[10px] text-muted-foreground uppercase block font-bold">Tested At</span>
-                        <span className="font-semibold text-foreground">
+                        <span className="font-semibold text-foreground tabular-nums">
                           {task.development?.testedAt ? new Date(task.development.testedAt).toLocaleDateString() : '—'}
                         </span>
                       </div>
                     </div>
                     {task.development?.testNotes && (
-                      <div className="p-3 rounded-xl border border-border bg-background text-xs space-y-1">
+                      <div className="p-3 rounded-xl bg-background text-xs space-y-1">
                         <span className="font-bold text-foreground">QA Test Notes:</span>
                         <p className="text-muted-foreground whitespace-pre-wrap">{task.development.testNotes}</p>
                       </div>
@@ -784,19 +1708,19 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
 
                   {/* Sprints & Releases */}
                   {(task.development?.sprint || task.development?.release) && (
-                    <div className="rounded-2xl border border-border bg-card p-4 shadow-2xs space-y-3">
-                      <span className="text-xs font-bold text-foreground uppercase tracking-wider">
-                        🎯 Sprint & Release Target
+                    <div className="rounded-2xl bg-card p-4 space-y-3">
+                      <span className="text-xs font-bold text-foreground uppercase tracking-wider inline-flex items-center gap-1.5">
+                        <Target size={13} /> Sprint &amp; Release Target
                       </span>
                       <div className="grid gap-2 sm:grid-cols-2 text-xs">
                         {task.development?.sprint && (
-                          <div className="p-2.5 rounded-xl border border-border bg-background">
+                          <div className="p-2.5 rounded-xl bg-background">
                             <span className="text-[10px] text-muted-foreground uppercase block font-bold">Sprint</span>
                             <span className="font-semibold text-foreground">{task.development.sprint.name || 'Assigned Sprint'}</span>
                           </div>
                         )}
                         {task.development?.release && (
-                          <div className="p-2.5 rounded-xl border border-border bg-background">
+                          <div className="p-2.5 rounded-xl bg-background">
                             <span className="text-[10px] text-muted-foreground uppercase block font-bold">Release</span>
                             <span className="font-semibold text-foreground">
                               {task.development.release.version ? `v${task.development.release.version} - ${task.development.release.name}` : task.development.release.name || 'Assigned Release'}
@@ -809,31 +1733,31 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
 
                   {/* Bug Tracking */}
                   {task.development?.isBug && (
-                    <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 shadow-2xs space-y-3">
+                    <div className="rounded-2xl bg-secondary/40 p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
-                          <Bug size={14} className="text-rose-500" /> Defect / Bug Report
+                        <span className="text-xs font-bold text-foreground uppercase tracking-wider inline-flex items-center gap-1.5">
+                          <Bug size={14} className="text-foreground" /> Defect / Bug Report
                         </span>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-rose-500/20 text-rose-600 border border-rose-500/30">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-primary text-primary-foreground ">
                           {task.development?.bugSeverity || 'Medium'} Severity
                         </span>
                       </div>
                       {task.development?.stepsToReproduce && (
-                        <div className="p-2.5 rounded-xl border border-border bg-background text-xs space-y-1">
+                        <div className="p-2.5 rounded-xl bg-background text-xs space-y-1">
                           <span className="font-bold text-foreground">Steps to Reproduce:</span>
                           <p className="text-muted-foreground whitespace-pre-wrap">{task.development.stepsToReproduce}</p>
                         </div>
                       )}
                       <div className="grid gap-2 sm:grid-cols-2 text-xs">
                         {task.development?.expectedResult && (
-                          <div className="p-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 space-y-1">
-                            <span className="font-bold text-emerald-700 dark:text-emerald-400 text-[10px] uppercase">Expected:</span>
+                          <div className="p-2.5 rounded-xl bg-card space-y-1">
+                            <span className="font-bold text-foreground text-[10px] uppercase">Expected:</span>
                             <p className="text-foreground">{task.development.expectedResult}</p>
                           </div>
                         )}
                         {task.development?.actualResult && (
-                          <div className="p-2.5 rounded-xl border border-rose-500/20 bg-rose-500/5 space-y-1">
-                            <span className="font-bold text-rose-700 dark:text-rose-400 text-[10px] uppercase">Actual:</span>
+                          <div className="p-2.5 rounded-xl bg-card space-y-1">
+                            <span className="font-bold text-foreground text-[10px] uppercase">Actual:</span>
                             <p className="text-foreground">{task.development.actualResult}</p>
                           </div>
                         )}
@@ -847,7 +1771,7 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
               {activeTab === 'deliverables' && (
                 <div className="space-y-4">
                   {!isClient && (
-                    <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+                    <div className="rounded-2xl bg-card p-4 space-y-3">
                       <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
                         <UploadCloud size={14} className="text-primary" /> Upload Final Deliverables
                       </span>
@@ -866,7 +1790,7 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                   )}
 
                   {/* Completed Files */}
-                  <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+                  <div className="rounded-2xl bg-card p-4 space-y-2">
                     <span className="text-xs font-bold text-foreground uppercase tracking-wider">
                       Completed Deliverables ({(task.completedFiles || []).length})
                     </span>
@@ -878,14 +1802,14 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                             href={getAssetUrl(file.url)}
                             target="_blank"
                             rel="noreferrer"
-                            className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-border bg-background hover:bg-secondary/40 text-xs"
+                            className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-background hover:bg-secondary/40 text-xs"
                           >
                             <span className="font-bold text-foreground truncate">{file.name || 'Deliverable'}</span>
                             <Download size={13} className="text-muted-foreground shrink-0" />
                           </a>
                         ))
                       ) : (
-                        <div className="text-xs text-muted-foreground p-4 text-center border border-dashed border-border rounded-xl">
+                        <div className="text-xs text-muted-foreground p-4 text-center rounded-xl">
                           No completed deliverables uploaded.
                         </div>
                       )}
@@ -893,7 +1817,7 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                   </div>
 
                   {/* Initial Attachments */}
-                  <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+                  <div className="rounded-2xl bg-card p-4 space-y-2">
                     <span className="text-xs font-bold text-foreground uppercase tracking-wider">
                       Initial Attachments ({(task.attachments || []).length})
                     </span>
@@ -905,14 +1829,14 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                             href={getAssetUrl(file.url)}
                             target="_blank"
                             rel="noreferrer"
-                            className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-border bg-background hover:bg-secondary/40 text-xs"
+                            className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-background hover:bg-secondary/40 text-xs"
                           >
                             <span className="font-bold text-foreground truncate">{file.name || 'Attachment'}</span>
                             <Download size={13} className="text-muted-foreground shrink-0" />
                           </a>
                         ))
                       ) : (
-                        <div className="text-xs text-muted-foreground p-4 text-center border border-dashed border-border rounded-xl">
+                        <div className="text-xs text-muted-foreground p-4 text-center rounded-xl">
                           No initial attachments uploaded.
                         </div>
                       )}
@@ -925,20 +1849,20 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
               {activeTab === 'progress' && (
                 <div className="space-y-4">
                   {!isClient && (
-                    <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+                    <div className="rounded-2xl bg-card p-4 space-y-2">
                       <span className="text-xs font-bold text-foreground uppercase tracking-wider">Log Today&apos;s Work</span>
                       <ProgressUpdateForm taskId={taskId} onSuccess={refetch} />
                     </div>
                   )}
 
-                  <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+                  <div className="rounded-2xl bg-card p-4 space-y-2">
                     <span className="text-xs font-bold text-foreground uppercase tracking-wider">
                       Work Progress History ({(task.progressUpdates || []).length})
                     </span>
                     <div className="space-y-2">
                       {(task.progressUpdates || []).length > 0 ? (
                         task.progressUpdates.slice().reverse().map((update, idx) => (
-                          <div key={idx} className="p-3 rounded-xl border border-border bg-background space-y-1 text-xs">
+                          <div key={idx} className="p-3 rounded-xl bg-background space-y-1 text-xs">
                             <div className="flex items-center justify-between">
                               <span className="font-bold text-foreground">{update.description}</span>
                               <span className="text-[10px] text-muted-foreground">
@@ -952,7 +1876,7 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                           </div>
                         ))
                       ) : (
-                        <div className="text-xs text-muted-foreground p-4 text-center border border-dashed border-border rounded-xl">
+                        <div className="text-xs text-muted-foreground p-4 text-center rounded-xl">
                           No progress updates logged yet.
                         </div>
                       )}
@@ -963,37 +1887,37 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
 
               {/* ── CLIENT REVIEW TAB ── */}
               {activeTab === 'review' && (
-                <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+                <div className="rounded-2xl bg-card p-4 space-y-3">
                   <span className="text-xs font-bold text-foreground uppercase tracking-wider">Client Approval & Feedback</span>
                   <div className="grid gap-2 sm:grid-cols-2 text-xs">
-                    <div className="p-2.5 rounded-xl border border-border bg-background">
+                    <div className="p-2.5 rounded-xl bg-background">
                       <span className="text-[10px] text-muted-foreground uppercase block font-bold">Approval Status</span>
                       <span className="font-bold capitalize">{task.approvalStatus || 'Pending'}</span>
                     </div>
-                    <div className="p-2.5 rounded-xl border border-border bg-background">
+                    <div className="p-2.5 rounded-xl bg-background">
                       <span className="text-[10px] text-muted-foreground uppercase block font-bold">Client Response</span>
                       <span className="font-bold capitalize">{task.clientResponse || 'Pending'}</span>
                     </div>
                   </div>
 
                   {task.clientFeedback && (
-                    <div className="p-3 rounded-xl border border-border bg-background text-xs space-y-1">
+                    <div className="p-3 rounded-xl bg-background text-xs space-y-1">
                       <span className="font-bold text-foreground">Client Feedback:</span>
                       <p className="text-muted-foreground whitespace-pre-wrap">{task.clientFeedback}</p>
                     </div>
                   )}
 
                   {task.rejectionReason && (
-                    <div className="p-3 rounded-xl border border-rose-200 bg-rose-500/10 text-rose-700 dark:text-rose-400 text-xs space-y-1">
+                    <div className="p-3 rounded-xl bg-secondary text-foreground text-xs space-y-1">
                       <span className="font-bold">Rework Reason:</span>
-                      <p className="whitespace-pre-wrap">{task.rejectionReason}</p>
+                      <p className="whitespace-pre-wrap text-muted-foreground">{task.rejectionReason}</p>
                     </div>
                   )}
                 </div>
               )}
             </>
           ) : (
-            <div className="rounded-2xl border border-border bg-card p-8 text-center text-xs text-muted-foreground">
+            <div className="rounded-2xl bg-card p-8 text-center text-xs text-muted-foreground">
               Task not found.
             </div>
           )}
@@ -1011,11 +1935,11 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
 
         {/* Assign Another Task Modal */}
         {showAssignAnotherModal && (
-          <AddTaskModal
-            open={showAssignAnotherModal}
-            onOpenChange={(val) => {
-              setShowAssignAnotherModal(val);
-              if (!val) refetch();
+          <KanbanCreateTaskModal
+            isOpen={showAssignAnotherModal}
+            onClose={() => {
+              setShowAssignAnotherModal(false);
+              refetch();
             }}
             initialValues={{
               client: task.client?._id || task.client || '',
@@ -1025,6 +1949,17 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
               priority: task.priority || 'Medium',
               dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
             }}
+            onTaskCreated={() => refetch()}
+          />
+        )}
+
+        {/* Submit Task Modal */}
+        {showSubmitModal && (
+          <TaskSubmitModal
+            open={showSubmitModal}
+            onOpenChange={setShowSubmitModal}
+            task={task}
+            onSubmitted={() => refetch()}
           />
         )}
       </DialogContent>

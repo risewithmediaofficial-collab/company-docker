@@ -1,51 +1,93 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../../api';
-import { motion } from 'framer-motion';
 import {
   FileCheck, BarChart3, CheckCircle2, Clock, FolderKanban,
   Receipt, TrendingUp, TrendingDown, AlertCircle, ArrowUpRight,
-  Layers, Star, Activity, Calendar, FileText, IndianRupee
-} from 'lucide-react';
+  Layers, Star, Activity, Calendar, FileText, IndianRupee,
+  Film, Sparkles, CheckSquare, ArrowRight, ExternalLink,
+  Megaphone, CreditCard, Download, ShieldCheck, Check,
+  Eye, EyeOff, Copy, LockKeyhole, FolderOpen, X
+} from '@/components/ui/muiIcons';
 import { toast } from 'sonner';
 import { useSocket } from '../../../context/SocketContext';
-import { exportProposalToPDF } from '../../../utils/pdfExport';
-import { useEodReports } from '../../../hooks/useEodReports';
-import { EODDetailModal } from '../../../components/modals/EODDetailModal';
+import { useDateFilter } from '../../../context/DateFilterContext';
+import { exportProposalToPDF, exportInvoiceToPDF } from '../../../utils/pdfExport';
 import { CardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
+import { useProposals } from '../../../hooks/useProposals';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { Input } from '../../../components/ui/input';
+import { Textarea } from '../../../components/ui/textarea';
+import { Button } from '../../../components/ui/button';
 
-const KPICard = ({ label, value, icon: Icon, color, sub, dark }) => (
-  <motion.div
-    whileHover={{ y: -3 }}
-    className="rounded-2xl p-4 flex flex-col gap-3"
-    style={{
-      background: dark ? 'rgba(255,255,255,0.04)' : '#fff',
-      border: dark ? `1px solid ${color}25` : '1px solid rgba(0,0,0,0.07)',
-      boxShadow: dark ? 'none' : '0 1px 8px rgba(0,0,0,0.06)',
-    }}
+const KPICard = ({ label, value, icon: Icon, sub }) => (
+  <div
+    className="rounded-2xl p-4 flex flex-col gap-3 transition-all duration-150 hover:-translate-y-0.5 bg-card "
   >
-    <div className="flex items-center justify-between">
-      <span className="text-xs font-medium" style={{ color: dark ? '#94a3b8' : '#64748b' }}>{label}</span>
-      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `${color}20` }}>
-        <Icon size={15} style={{ color }} />
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <div className="w-8 h-8 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
+        <Icon size={16} />
       </div>
     </div>
-    <p className="text-2xl font-black" style={{ color: dark ? '#fff' : '#0f172a' }}>{value}</p>
-    {sub && <p className="text-[11px]" style={{ color: dark ? '#64748b' : '#94a3b8' }}>{sub}</p>}
-  </motion.div>
+    <p className="text-2xl font-black tracking-tight tabular-nums leading-none text-foreground">{value}</p>
+    {sub && <p className="text-[11px] truncate text-muted-foreground">{sub}</p>}
+  </div>
 );
 
 const fmt = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
+const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export default function PortalDashboard({ dark, user, setPendingCount }) {
+export default function PortalDashboard({ user, setPendingCount }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedEod, setSelectedEod] = useState(null);
-  const [showEodDetail, setShowEodDetail] = useState(false);
+
+  // New Interactive State for Client Portal
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [isSubmittingOnboarding, setIsSubmittingOnboarding] = useState(false);
+  const [activeTaskTab, setActiveTaskTab] = useState('daily');
+  const [revealedPasswords, setRevealedPasswords] = useState({});
+  const [copiedKey, setCopiedKey] = useState(null);
+
+  const [onboardingForm, setOnboardingForm] = useState({
+    companyLegalName: '',
+    brandName: '',
+    tagline: '',
+    industryNiche: '',
+    targetAudience: '',
+    primaryGoals: '',
+    servicesRequested: [],
+    estimatedBudget: '',
+    competitors: '',
+    websiteUrl: '',
+    driveAssetsUrl: '',
+    socialMedia: { instagram: '', facebook: '', linkedin: '', youtube: '' },
+    primaryContactName: '',
+    primaryContactPhone: '',
+    primaryContactEmail: '',
+  });
 
   const socket = useSocket();
-  const { data: eodData, refetch: refetchEod } = useEodReports(7);
-  const eodReports = eodData?.records || [];
+  const { isDateInRange, isFiltered: isDateFiltered } = useDateFilter();
+  const { data: clientProposals = [] } = useProposals();
+
+  const proposalMetrics = useMemo(() => {
+    const list = (Array.isArray(clientProposals) ? clientProposals : []).filter((p) =>
+      isDateInRange([p.sentDate, p.createdAt, p.validUntil])
+    );
+    const total = list.length;
+    const accepted = list.filter((p) => p.status === 'accepted').length;
+    const pending = list.filter((p) => ['sent', 'viewed', 'draft', 'pending'].includes(p.status)).length;
+    const totalValue = list.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    return { total, accepted, pending, totalValue, list: list.slice(0, 5) };
+  }, [clientProposals, isDateInRange]);
 
   const fetchData = () => {
     api.get('/portal/dashboard')
@@ -62,55 +104,187 @@ export default function PortalDashboard({ dark, user, setPendingCount }) {
   }, []);
 
   useEffect(() => {
+    if (data?.client?.onboardingDetails) {
+      setOnboardingForm((prev) => ({
+        ...prev,
+        ...data.client.onboardingDetails,
+        socialMedia: {
+          ...prev.socialMedia,
+          ...(data.client.onboardingDetails.socialMedia || {}),
+        },
+      }));
+    } else if (data?.client) {
+      setOnboardingForm((prev) => ({
+        ...prev,
+        companyLegalName: data.client.company || '',
+        brandName: data.client.name || '',
+        primaryContactName: data.client.name || '',
+        primaryContactEmail: data.client.email || '',
+        primaryContactPhone: data.client.phone || '',
+      }));
+    }
+  }, [data?.client]);
+
+  const handleCopyText = (text, key) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    toast.success('Copied to clipboard');
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const togglePasswordVisibility = (id) => {
+    setRevealedPasswords((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleServiceRequested = (serviceName) => {
+    setOnboardingForm((prev) => {
+      const current = prev.servicesRequested || [];
+      if (current.includes(serviceName)) {
+        return { ...prev, servicesRequested: current.filter((s) => s !== serviceName) };
+      } else {
+        return { ...prev, servicesRequested: [...current, serviceName] };
+      }
+    });
+  };
+
+  const handleSaveOnboarding = async (e) => {
+    e?.preventDefault();
+    if (!onboardingForm.companyLegalName && !onboardingForm.brandName) {
+      return toast.error('Please provide your brand or company name.');
+    }
+    setIsSubmittingOnboarding(true);
+    try {
+      const res = await api.post('/portal/onboarding', onboardingForm);
+      if (res.data?.success) {
+        toast.success('Onboarding details submitted successfully!');
+        setShowOnboardingModal(false);
+        fetchData();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit onboarding form');
+    } finally {
+      setIsSubmittingOnboarding(false);
+    }
+  };
+
+  useEffect(() => {
     if (!socket) return;
 
     const handleUpdate = () => {
       fetchData();
-      refetchEod();
     };
 
-    socket.on('clientUpdated', handleUpdate);
-    socket.on('portalUpdated', handleUpdate);
-    socket.on('eodSubmitted', handleUpdate);
+    const portalEvents = [
+      'clientUpdated',
+      'portalUpdated',
+      'trackerUpdated',
+      'smmTrackerUpdated',
+      'taskUpdated',
+      'projectUpdated',
+      'financeUpdated',
+      'invoicePaid',
+      'contentProductionUpdated',
+    ];
+
+    portalEvents.forEach((evt) => socket.on(evt, handleUpdate));
 
     return () => {
-      socket.off('clientUpdated', handleUpdate);
-      socket.off('portalUpdated', handleUpdate);
-      socket.off('eodSubmitted', handleUpdate);
+      portalEvents.forEach((evt) => socket.off(evt, handleUpdate));
     };
-  }, [socket, refetchEod]);
-
-  const txt = dark ? 'text-white' : 'text-slate-800';
-  const sub = dark ? 'text-slate-400' : 'text-slate-500';
-  const card = dark ? 'rgba(255,255,255,0.04)' : '#fff';
-  const border = dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.07)';
+  }, [socket]);
 
   if (loading) return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto animate-pulse">
-      <div className="h-32 w-full rounded-2xl bg-muted/60 mb-6" />
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {[...Array(6)].map((_, i) => (
-          <CardSkeleton key={i} dark={dark} />
+      <div className="h-36 w-full rounded-2xl bg-muted/60 mb-6" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[...Array(4)].map((_, i) => (
+          <CardSkeleton key={i} />
         ))}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
-        <div className="lg:col-span-2">
-          <TableSkeleton columns={3} rows={5} dark={dark} />
-        </div>
-        <div className="space-y-4">
-          <div className="h-44 w-full bg-muted/60 rounded-2xl" />
-          <div className="h-44 w-full bg-muted/60 rounded-2xl" />
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+        <TableSkeleton columns={3} rows={4} />
+        <TableSkeleton columns={3} rows={4} />
       </div>
     </div>
   );
 
   const stats = data?.stats || {};
   const client = data?.client || {};
+  const rawProjectMetrics = data?.projectMetrics || { total: 0, active: 0, completed: 0, projects: [] };
+  const filteredProjects = (rawProjectMetrics.projects || []).filter((p) =>
+    isDateInRange([p.startDate, p.dueDate, p.createdAt])
+  );
+  const projectMetrics = isDateFiltered
+    ? {
+        total: filteredProjects.length,
+        active: filteredProjects.filter((p) => ['active', 'in_progress', 'planning'].includes(p.status)).length,
+        completed: filteredProjects.filter((p) => ['completed', 'done'].includes(p.status)).length,
+        projects: filteredProjects,
+      }
+    : rawProjectMetrics;
 
-  const handleProposalDownload = (project) => {
+  const rawTaskMetrics = data?.taskMetrics || { total: 0, completed: 0, inProgress: 0, review: 0, pending: 0, completionRate: 0, tasks: [] };
+  const filteredTasks = (rawTaskMetrics.tasks || []).filter((t) =>
+    isDateInRange([t.dueDate, t.createdAt])
+  );
+  const taskMetrics = isDateFiltered
+    ? {
+        ...rawTaskMetrics,
+        total: filteredTasks.length,
+        completed: filteredTasks.filter((t) => ['done', 'approved', 'completed', 'Completed', 'Done', 'Approved'].includes(t.status)).length,
+        inProgress: filteredTasks.filter((t) => ['in_progress', 'on_process', 'review', 'In Progress', 'Internal Approval', 'review_required', 'rework'].includes(t.status)).length,
+        review: filteredTasks.filter((t) => ['client_approval', 'waiting_for_client', 'Client Approval'].includes(t.status)).length,
+        tasks: filteredTasks,
+      }
+    : rawTaskMetrics;
+
+  const smmMetrics = data?.smmMetrics || {
+    month: 'This Month',
+    year: new Date().getFullYear(),
+    reels: { planned: 0, posted: 0, pending: 0 },
+    posts: { planned: 0, posted: 0, pending: 0 },
+    stories: { planned: 0, posted: 0, pending: 0 },
+    total: { planned: 0, posted: 0, pending: 0, completionRate: 0 },
+  };
+  const rawInvoiceMetrics = data?.invoiceMetrics || {
+    totalQuoted: 0,
+    totalPaid: 0,
+    balanceDue: 0,
+    openCount: 0,
+    overdueCount: 0,
+    recentInvoices: [],
+  };
+  const filteredInvoices = (rawInvoiceMetrics.recentInvoices || []).filter((inv) =>
+    isDateInRange([inv.invoiceDate, inv.dueDate, inv.createdAt])
+  );
+  const invoiceMetrics = isDateFiltered
+    ? {
+        ...rawInvoiceMetrics,
+        totalQuoted: filteredInvoices.reduce((sum, item) => sum + Number(item.totalAmount || item.total || 0), 0),
+        totalPaid: filteredInvoices.reduce((sum, item) => sum + Number(item.paidAmount || 0), 0),
+        balanceDue: filteredInvoices.reduce(
+          (sum, item) => sum + Number(item.balanceAmount !== undefined ? item.balanceAmount : Math.max(0, (item.totalAmount || item.total || 0) - (item.paidAmount || 0))),
+          0
+        ),
+        openCount: filteredInvoices.filter((item) => ['sent', 'overdue', 'partially_paid', 'draft'].includes(String(item.status).toLowerCase())).length,
+        recentInvoices: filteredInvoices,
+      }
+    : rawInvoiceMetrics;
+
+  const rawAdBudget = data?.adBudget;
+  const adBudget = rawAdBudget && isDateFiltered
+    ? {
+        ...rawAdBudget,
+        campaigns: (rawAdBudget.campaigns || []).filter((c) => isDateInRange([c.updatedAt, c.createdAt])),
+      }
+    : rawAdBudget;
+  const tracker = data?.tracker || null;
+  const clientCredentials = data?.credentials || [];
+
+  const handleProposalDownload = async (project) => {
     try {
-      exportProposalToPDF({ project, client });
+      await exportProposalToPDF({ project, client });
       toast.success('Proposal PDF downloaded');
     } catch (error) {
       toast.error(error.message || 'Failed to download proposal PDF');
@@ -127,266 +301,1464 @@ export default function PortalDashboard({ dark, user, setPendingCount }) {
   const onboardingPct = Math.round((onboardingSteps.filter(s => s.done).length / onboardingSteps.length) * 100);
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Welcome Banner */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl p-6"
-        style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)' }}>
-        <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, #fff 0%, transparent 60%)' }} />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+      {/* ── Welcome Banner ── */}
+      <div
+        className="relative overflow-hidden rounded-3xl p-6 sm:p-8 bg-zinc-950 text-zinc-50 ring-1 ring-brand/25"
+      >
+        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-brand/15 blur-3xl" />
+        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-indigo-200 text-sm font-medium mb-1">Welcome back 👋</p>
-            <h2 className="text-white text-2xl font-black mb-1">{client.name || user?.name || 'Client'}</h2>
-            <p className="text-indigo-200 text-sm">{client.company || ''}</p>
-            <Link
-              to="/calendar"
-              className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-black text-indigo-700 shadow-lg shadow-indigo-950/20 transition-all hover:bg-indigo-50"
-            >
-              <Calendar size={16} />
-              Content Calendar
-            </Link>
-          </div>
-          <div className="text-left sm:text-right">
-            <div className="text-white/80 text-xs mb-1">Onboarding Progress</div>
-            <div className="text-white text-3xl font-black">{onboardingPct}%</div>
-            <div className="w-32 h-1.5 rounded-full bg-white/20 mt-1">
-              <div className="h-full rounded-full bg-white transition-all" style={{ width: `${onboardingPct}%` }} />
-            </div>
-          </div>
-        </div>
-        <p className="relative text-indigo-100 text-xs mt-4 max-w-xl">
-          Welcome to your client portal. Here you can review content, approve posts, track campaign performance, access reports, and communicate with your team — all in one place.
-        </p>
-      </motion.div>
-
-      {/* ── Client Ad Budget Overview ── */}
-      {data?.adBudget && (
-        <div
-          className="rounded-2xl p-5 space-y-3"
-          style={{ background: card, border }}
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-border/40">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-                <IndianRupee size={17} />
-              </div>
-              <div>
-                <h3 className={`text-sm font-bold ${txt}`}>Ad Budget & Spend Overview</h3>
-                <p className={`text-[11px] ${sub}`}>Live campaign budget status configured by your agency</p>
-              </div>
-            </div>
-            {data.adBudget.notes && (
-              <div className="text-[11px] px-3 py-1 rounded-xl bg-primary/10 text-primary font-medium flex items-center gap-1.5 max-w-md truncate">
-                <FileText size={13} className="shrink-0" />
-                <span className="truncate">Note: {data.adBudget.notes}</span>
-              </div>
+            {client.company && (
+              <span className="inline-block text-brand text-xs font-bold uppercase tracking-wider mb-1">
+                {client.company}
+              </span>
             )}
+            <h1 className="text-zinc-50 text-2xl sm:text-3xl font-black tracking-tight">
+              Welcome back, {client.name || user?.name || 'Client'}
+            </h1>
+
+            {/* Quick Action Navigation Buttons */}
+            <div className="mt-5 flex flex-wrap items-center gap-2.5">
+              <Link
+                to="/projects"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-xs font-black text-brand-foreground shadow-[0_6px_18px_-6px_rgba(18,183,212,0.65)] transition-all hover:bg-brand/90"
+              >
+                <FolderKanban size={15} />
+                <span>My Projects</span>
+              </Link>
+              <Link
+                to="/tasks"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 px-3.5 py-2 text-xs font-bold text-zinc-100 ring-1 ring-white/10 transition-all hover:bg-zinc-800 hover:ring-brand/40"
+              >
+                <CheckSquare size={15} className="text-brand" />
+                <span>My Tasks &amp; Status</span>
+              </Link>
+              <Link
+                to="/calendar"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 px-3.5 py-2 text-xs font-bold text-zinc-100 ring-1 ring-white/10 transition-all hover:bg-zinc-800 hover:ring-brand/40"
+              >
+                <Calendar size={15} className="text-brand" />
+                <span>Content Calendar</span>
+              </Link>
+              <Link
+                to="/portal/invoices"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 px-3.5 py-2 text-xs font-bold text-zinc-100 ring-1 ring-white/10 transition-all hover:bg-zinc-800 hover:ring-brand/40"
+              >
+                <Receipt size={15} className="text-brand" />
+                <span>Invoices &amp; Billing</span>
+              </Link>
+              <Link
+                to="/client/proposals"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 px-3.5 py-2 text-xs font-bold text-zinc-100 ring-1 ring-white/10 transition-all hover:bg-zinc-800 hover:ring-brand/40"
+              >
+                <FileText size={15} className="text-brand" />
+                <span>Proposals &amp; Agreements</span>
+              </Link>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
-            <div className="p-3 rounded-xl bg-secondary/40 border border-border/40 space-y-1">
-              <span className={`text-[11px] font-semibold uppercase tracking-wider ${sub}`}>Monthly Budget</span>
-              <p className={`text-lg font-black ${txt}`}>{fmt(data.adBudget.monthlyBudget)}</p>
+          <div className="text-left sm:text-right shrink-0 bg-zinc-900 sm:bg-transparent p-4 sm:p-0 rounded-2xl sm:border-0">
+            <div className="text-zinc-400 text-xs font-semibold mb-1">Onboarding Progress</div>
+            <div className="text-brand text-3xl font-black tabular-nums leading-none">{onboardingPct}%</div>
+            <div className="w-36 h-2 rounded-full bg-zinc-800 mt-2 overflow-hidden">
+              <div className="h-full rounded-full bg-brand transition-all duration-500" style={{ width: `${onboardingPct}%` }} />
             </div>
-            <div className="p-3 rounded-xl bg-secondary/40 border border-border/40 space-y-1">
-              <span className={`text-[11px] font-semibold uppercase tracking-wider ${sub}`}>Daily Budget</span>
-              <p className={`text-lg font-black ${txt}`}>{fmt(data.adBudget.dailyBudget)}</p>
-            </div>
-            <div className="p-3 rounded-xl bg-secondary/40 border border-border/40 space-y-1">
-              <span className={`text-[11px] font-semibold uppercase tracking-wider ${sub}`}>Amount Added</span>
-              <p className="text-lg font-black text-amber-500">{fmt(data.adBudget.amountAdded)}</p>
-            </div>
-            <div className="p-3 rounded-xl bg-secondary/40 border border-border/40 space-y-1">
-              <span className={`text-[11px] font-semibold uppercase tracking-wider ${sub}`}>Available Balance</span>
-              <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">{fmt(data.adBudget.balance)}</p>
-            </div>
+            <span className="text-zinc-400 text-[10px] mt-1 block tabular-nums">
+              {onboardingSteps.filter(s => s.done).length} of {onboardingSteps.length} stages ready
+            </span>
           </div>
         </div>
-      )}
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KPICard label="Pending Review" value={stats.pendingApproval ?? 0} icon={Clock} color="#f59e0b" dark={dark}
-          sub="Awaiting your approval" />
-        <KPICard label="Total Content" value={stats.totalContent ?? 0} icon={Layers} color="#6366f1" dark={dark}
-          sub="All content items" />
-        <KPICard label="Approved" value={stats.approvedContent ?? 0} icon={CheckCircle2} color="#10b981" dark={dark}
-          sub="Client approved" />
-        <KPICard label="Completed" value={stats.doneContent ?? 0} icon={Star} color="#8b5cf6" dark={dark}
-          sub="Fully done" />
-        <KPICard label="Active Projects" value={stats.activeProjects ?? 0} icon={FolderKanban} color="#3b82f6" dark={dark}
-          sub="In progress" />
-        <KPICard label="Open Invoices" value={stats.openInvoices ?? 0} icon={Receipt} color="#ec4899" dark={dark}
-          sub="Awaiting payment" />
       </div>
 
-      {/* Body Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* Left Column: Recent Activity & EOD Reports */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="rounded-2xl p-5" style={{ background: card, border }}>
-            <div className="flex items-center gap-2 mb-4">
-              <Activity size={16} className="text-indigo-400" />
-              <h3 className={`text-sm font-bold ${txt}`}>Recent Content Activity</h3>
-            </div>
-            {(data?.recentContent || []).length === 0 ? (
-              <div className="text-center py-8">
-                <AlertCircle size={32} className="mx-auto text-slate-500 mb-2" />
-                <p className={`text-xs ${sub}`}>No recent content</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {(data?.recentContent || []).slice(0, 6).map(item => (
-                  <div key={item._id} className="flex items-center gap-3 p-2.5 rounded-xl"
-                    style={{ background: dark ? 'rgba(255,255,255,0.03)' : '#f8fafc' }}>
-                    <StatusDot status={item.status} />
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-xs font-semibold truncate ${txt}`}>{item.taskName}</p>
-                      <p className={`text-[10px] ${sub}`}>{item.platform} · {item.contentType}</p>
-                    </div>
-                    <StatusBadge status={item.status} dark={dark} />
-                  </div>
-                ))}
-              </div>
-            )}
+      {/* ── Client Onboarding Intake Form Banner ── */}
+      <div className="rounded-3xl p-5 sm:p-6 bg-gradient-to-r from-primary/10 via-card to-card border border-primary/25 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="h-11 w-11 rounded-2xl bg-primary/20 text-primary flex items-center justify-center shrink-0">
+            <Sparkles size={22} className="fill-current" />
           </div>
-
-          {/* Daily Team EOD Reports Widget */}
-          <div className="rounded-2xl p-5" style={{ background: card, border }}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <FileText size={16} className="text-indigo-400" />
-                <h3 className={`text-sm font-bold ${txt}`}>Daily Team Work & EOD Reports</h3>
-              </div>
-              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${dark ? 'bg-white/10 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
-                {eodReports.length} Reports
-              </span>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm sm:text-base font-bold text-foreground">
+                {client.onboardingDetails?.submittedAt
+                  ? 'Business & Service Profile Submitted'
+                  : 'Complete Your Brand & Business Onboarding Intake'}
+              </h3>
+              {client.onboardingDetails?.submittedAt ? (
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                  Profile Complete
+                </span>
+              ) : (
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                  Action Required
+                </span>
+              )}
             </div>
-
-            {eodReports.length === 0 ? (
-              <div className="text-center py-6">
-                <FileText size={28} className="mx-auto text-slate-500 mb-2 opacity-50" />
-                <p className={`text-xs ${sub}`}>No daily team EOD reports yet for your projects</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {eodReports.slice(0, 4).map((item) => (
-                  <div
-                    key={item._id}
-                    onClick={() => { setSelectedEod(item); setShowEodDetail(true); }}
-                    className="p-3.5 rounded-xl cursor-pointer transition-all hover:scale-[1.01]"
-                    style={{
-                      background: dark ? 'rgba(255,255,255,0.03)' : '#f8fafc',
-                      border: dark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
-                          {item.user?.name ? item.user.name.charAt(0).toUpperCase() : 'T'}
-                        </div>
-                        <span className={`text-xs font-bold truncate ${txt}`}>{item.user?.name || 'Team Member'}</span>
-                      </div>
-                      <span className={`text-[10px] ${sub}`}>
-                        {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </span>
-                    </div>
-                    <p className={`text-xs line-clamp-2 ${sub}`}>{item.eodReport?.summary}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {client.onboardingDetails?.submittedAt
+                ? `Submitted on ${new Date(client.onboardingDetails.submittedAt).toLocaleDateString('en-IN')}. Our strategy and production team is actively aligning with your goals.`
+                : 'Help us serve you better. Share your company legal name, niche, target audience, competitors, and service requirements so we deliver exceptional work.'}
+            </p>
           </div>
         </div>
 
-        {/* Right column */}
-        <div className="space-y-4">
-          {/* Onboarding checklist */}
-          <div className="rounded-2xl p-4" style={{ background: card, border }}>
-            <h3 className={`text-sm font-bold mb-3 ${txt}`}>Onboarding Status</h3>
-            <div className="space-y-2">
-              {onboardingSteps.map(s => (
-                <div key={s.label} className="flex items-center gap-2">
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-black`}
-                    style={{ background: s.done ? '#10b981' : dark ? '#1e293b' : '#e2e8f0' }}>
-                    {s.done ? '✓' : ''}
-                  </div>
-                  <span className={`text-xs ${s.done ? (dark ? 'text-white' : 'text-slate-700') : sub}`}>{s.label}</span>
+        <button
+          type="button"
+          onClick={() => setShowOnboardingModal(true)}
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold shrink-0 hover:bg-primary/90 transition-all shadow-sm cursor-pointer"
+        >
+          <FileText size={14} />
+          <span>{client.onboardingDetails?.submittedAt ? 'Review / Edit Profile' : 'Start Onboarding Form →'}</span>
+        </button>
+      </div>
+
+      {/* ── SECTION 1: SMM DELIVERABLES THIS MONTH (Reels, Posts, Stories Planned vs Posted) ── */}
+      <div className="rounded-3xl p-5 sm:p-6 space-y-4 bg-card ">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
+              <Sparkles size={17} />
+            </div>
+            <h2 className="text-base font-bold text-foreground">
+              SMM Deliverables — {smmMetrics.month} {smmMetrics.year}
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-secondary text-foreground tabular-nums">
+              {smmMetrics.total.posted} of {smmMetrics.total.planned} Completed ({smmMetrics.total.completionRate}%)
+            </span>
+          </div>
+        </div>
+
+        {/* Deliverables 3-Column Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* 1. Reels / Short Videos */}
+          <div className="rounded-2xl p-4 bg-secondary/40 flex flex-col justify-between space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-card text-foreground flex items-center justify-center shrink-0">
+                  <Film size={16} />
                 </div>
-              ))}
+                <div>
+                  <h3 className="text-xs font-bold text-foreground">Reels / Shorts</h3>
+                  <span className="text-[10px] text-muted-foreground font-medium">Video Deliverables</span>
+                </div>
+              </div>
+              <span className="text-xs font-black text-foreground tabular-nums">
+                {smmMetrics.reels.planned > 0
+                  ? `${Math.round((smmMetrics.reels.posted / smmMetrics.reels.planned) * 100)}%`
+                  : '0%'}
+              </span>
+            </div>
+            <div>
+              <div className="flex items-baseline justify-between mb-1 tabular-nums">
+                <span className="text-2xl font-black text-foreground">
+                  {smmMetrics.reels.posted}
+                  <span className="text-xs font-semibold text-muted-foreground ml-1">/ {smmMetrics.reels.planned} posted</span>
+                </span>
+                <span className="text-[11px] font-semibold text-muted-foreground">
+                  {smmMetrics.reels.pending} to post
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-secondary overflow-hidden ">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-500"
+                  style={{
+                    width: `${smmMetrics.reels.planned > 0 ? Math.min(100, Math.round((smmMetrics.reels.posted / smmMetrics.reels.planned) * 100)) : 0}%`,
+                  }}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Active Projects */}
-          <div className="rounded-2xl p-4" style={{ background: card, border }}>
-            <h3 className={`text-sm font-bold mb-3 ${txt}`}>Active Projects</h3>
-            {(data?.activeProjects || []).length === 0
-              ? <p className={`text-xs ${sub}`}>No active projects</p>
-              : (data?.activeProjects || []).map(p => (
-                <div key={p._id} className="mb-3 last:mb-0">
-                  <div className="mb-1 flex items-start justify-between gap-3">
+          {/* 2. Feed Posts & Carousels */}
+          <div className="rounded-2xl p-4 bg-secondary/40 flex flex-col justify-between space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-card text-foreground flex items-center justify-center shrink-0">
+                  <Layers size={16} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-foreground">Feed Posts</h3>
+                  <span className="text-[10px] text-muted-foreground font-medium">Graphics &amp; Carousels</span>
+                </div>
+              </div>
+              <span className="text-xs font-black text-foreground tabular-nums">
+                {smmMetrics.posts.planned > 0
+                  ? `${Math.round((smmMetrics.posts.posted / smmMetrics.posts.planned) * 100)}%`
+                  : '0%'}
+              </span>
+            </div>
+            <div>
+              <div className="flex items-baseline justify-between mb-1 tabular-nums">
+                <span className="text-2xl font-black text-foreground">
+                  {smmMetrics.posts.posted}
+                  <span className="text-xs font-semibold text-muted-foreground ml-1">/ {smmMetrics.posts.planned} posted</span>
+                </span>
+                <span className="text-[11px] font-semibold text-muted-foreground">
+                  {smmMetrics.posts.pending} to post
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-secondary overflow-hidden ">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-500"
+                  style={{
+                    width: `${smmMetrics.posts.planned > 0 ? Math.min(100, Math.round((smmMetrics.posts.posted / smmMetrics.posts.planned) * 100)) : 0}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Daily Stories */}
+          <div className="rounded-2xl p-4 bg-secondary/40 flex flex-col justify-between space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-card text-foreground flex items-center justify-center shrink-0">
+                  <Sparkles size={16} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-foreground">Daily Stories</h3>
+                  <span className="text-[10px] text-muted-foreground font-medium">Stories &amp; Updates</span>
+                </div>
+              </div>
+              <span className="text-xs font-black text-foreground tabular-nums">
+                {smmMetrics.stories.planned > 0
+                  ? `${Math.round((smmMetrics.stories.posted / smmMetrics.stories.planned) * 100)}%`
+                  : '0%'}
+              </span>
+            </div>
+            <div>
+              <div className="flex items-baseline justify-between mb-1 tabular-nums">
+                <span className="text-2xl font-black text-foreground">
+                  {smmMetrics.stories.posted}
+                  <span className="text-xs font-semibold text-muted-foreground ml-1">/ {smmMetrics.stories.planned} posted</span>
+                </span>
+                <span className="text-[11px] font-semibold text-muted-foreground">
+                  {smmMetrics.stories.pending} to post
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-secondary overflow-hidden ">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-500"
+                  style={{
+                    width: `${smmMetrics.stories.planned > 0 ? Math.min(100, Math.round((smmMetrics.stories.posted / smmMetrics.stories.planned) * 100)) : 0}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── SECTION 2: PROJECTS & TASK METRICS (Side-by-side) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Project Metrics & Status Card */}
+        <div className="rounded-3xl p-5 sm:p-6 space-y-4 bg-card ">
+          <div className="flex items-center justify-between pb-3 ">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
+                <FolderKanban size={17} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground">My Projects</h3>
+              </div>
+            </div>
+            <Link
+              to="/projects"
+              className="text-xs font-bold text-foreground hover:underline flex items-center gap-1"
+            >
+              View Projects <ArrowRight size={13} />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 tabular-nums">
+            <div className="p-3 rounded-xl bg-secondary/40 text-center">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Total</span>
+              <p className="text-xl font-black text-foreground">{projectMetrics.total}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-secondary/40 text-center">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active</span>
+              <p className="text-xl font-black text-foreground">{projectMetrics.active}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-secondary/40 text-center">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Completed</span>
+              <p className="text-xl font-black text-foreground">{projectMetrics.completed}</p>
+            </div>
+          </div>
+
+          {/* Project List */}
+          <div className="space-y-3 pt-1">
+            {(projectMetrics.projects || []).length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground text-xs">
+                No active projects found
+              </div>
+            ) : (
+              (projectMetrics.projects || []).slice(0, 4).map((p) => (
+                <div key={p._id} className="p-3.5 rounded-2xl bg-secondary/30 space-y-2.5 border border-border/30">
+                  <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className={`text-xs font-medium ${txt}`}>{p.name}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-xs font-bold text-foreground">{p.name}</h4>
+                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-secondary text-foreground">
+                          {p.status || 'Active'}
+                        </span>
+                      </div>
                       {p.dueDate && (
-                        <p className={`mt-1 text-[10px] ${sub}`}>
-                          Due {new Date(p.dueDate).toLocaleDateString('en-IN')}
+                        <p className="text-[10px] text-muted-foreground tabular-nums mt-0.5">
+                          Due: {new Date(p.dueDate).toLocaleDateString('en-IN')}
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-indigo-400">{p.progress || 0}%</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-xs font-extrabold text-foreground tabular-nums">
+                        {p.progress || 0}%
+                      </span>
                       {p.proposalText?.trim() && (
                         <button
                           type="button"
                           onClick={() => handleProposalDownload(p)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 px-2 py-1 text-[10px] font-semibold text-indigo-600 transition-colors hover:bg-indigo-50"
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold text-foreground hover:bg-secondary transition-colors cursor-pointer"
                         >
-                          <FileCheck size={12} />
-                          Proposal PDF
+                          <FileCheck size={11} /> PDF
                         </button>
                       )}
                     </div>
                   </div>
-                  <div className="h-1.5 rounded-full" style={{ background: dark ? '#1e293b' : '#e2e8f0' }}>
-                    <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${p.progress || 0}%` }} />
+
+                  <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-500"
+                      style={{ width: `${p.progress || 0}%` }}
+                    />
+                  </div>
+
+                  {/* Individual Project Financial Status */}
+                  <div className="grid grid-cols-3 gap-2 pt-1 text-[10px] tabular-nums">
+                    <div className="p-2 rounded-xl bg-secondary/50 text-center">
+                      <span className="text-[9px] font-bold text-muted-foreground block uppercase">Quoted</span>
+                      <span className="font-black text-foreground text-xs">{fmt(p.totalAmount)}</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-emerald-500/10 text-center">
+                      <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 block uppercase">Paid</span>
+                      <span className="font-black text-emerald-600 dark:text-emerald-400 text-xs">{fmt(p.paidAmount)}</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-amber-500/10 text-center">
+                      <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 block uppercase">Pending</span>
+                      <span className="font-black text-amber-600 dark:text-amber-400 text-xs">{fmt(p.pendingAmount)}</span>
+                    </div>
                   </div>
                 </div>
-              ))}
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Task Metrics & Status Card */}
+        <div className="rounded-3xl p-5 sm:p-6 space-y-4 bg-card ">
+          <div className="flex items-center justify-between pb-3 ">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
+                <CheckSquare size={17} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Tasks &amp; Deliverables</h3>
+              </div>
+            </div>
+            <Link
+              to="/tasks"
+              className="text-xs font-bold text-foreground hover:underline flex items-center gap-1"
+            >
+              View Tasks <ArrowRight size={13} />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-4 gap-2 tabular-nums">
+            <div className="p-3 rounded-xl bg-secondary/40 text-center">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Total</span>
+              <p className="text-xl font-black text-foreground">{taskMetrics.total}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-secondary/40 text-center">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Done</span>
+              <p className="text-xl font-black text-foreground">{taskMetrics.completed}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-secondary/40 text-center">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Process</span>
+              <p className="text-xl font-black text-foreground">{taskMetrics.inProgress}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-secondary/40 text-center">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Review</span>
+              <p className="text-xl font-black text-foreground">{taskMetrics.review}</p>
+            </div>
+          </div>
+
+          {/* Task Mini-Tabs: Daily Active Tasks vs All Deliverables */}
+          <div className="flex items-center gap-2 pt-1 border-b border-border/30 pb-2">
+            <button
+              type="button"
+              onClick={() => setActiveTaskTab('daily')}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTaskTab === 'daily'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'bg-secondary text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              ⚡ Daily Tasks ({(data?.taskMetrics?.dailyTasks || []).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTaskTab('all')}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTaskTab === 'all'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'bg-secondary text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              📋 All Deliverables ({(taskMetrics.tasks || []).length})
+            </button>
+          </div>
+
+          {/* Task Items List */}
+          <div className="space-y-2 pt-1">
+            {activeTaskTab === 'daily' ? (
+              (data?.taskMetrics?.dailyTasks || []).length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground text-xs">
+                  No active daily sprint tasks today. All project tasks are progressing smoothly!
+                </div>
+              ) : (
+                (data?.taskMetrics?.dailyTasks || []).slice(0, 5).map((t) => (
+                  <div key={t._id} className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-secondary/30 ">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-xs font-semibold truncate text-foreground">{t.taskTitle || t.title}</p>
+                        {t.project?.name && (
+                          <span className="text-[9px] font-medium px-1.5 py-0.2 rounded-md bg-secondary text-muted-foreground">
+                            {t.project.name}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground tabular-nums">
+                        {t.taskCategory === 'non_content' ? 'Development / Operations' : 'Content Deliverable'}
+                        {t.dueDate && ` • Due ${new Date(t.dueDate).toLocaleDateString('en-IN')}`}
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary shrink-0">
+                      {t.status}
+                    </span>
+                  </div>
+                ))
+              )
+            ) : (
+              (taskMetrics.tasks || []).length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground text-xs">
+                  No deliverables pending review right now.
+                </div>
+              ) : (
+                (taskMetrics.tasks || []).slice(0, 5).map((t) => (
+                  <div key={t._id} className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-secondary/30 ">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold truncate text-foreground">{t.taskTitle || t.title}</p>
+                      <p className="text-[10px] text-muted-foreground tabular-nums">
+                        {t.taskCategory === 'non_content' ? 'Development / Operations' : 'Content Deliverable'}
+                        {t.dueDate && ` • Due ${new Date(t.dueDate).toLocaleDateString('en-IN')}`}
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-secondary text-foreground shrink-0">
+                      {t.status}
+                    </span>
+                  </div>
+                ))
+              )
+            )}
           </div>
         </div>
       </div>
 
-      <EODDetailModal open={showEodDetail} onOpenChange={setShowEodDetail} record={selectedEod} />
+      {/* ── SECTION 3: CLIENT INVOICES & FINANCE (Strictly Client Scoped) ── */}
+      <div className="rounded-3xl p-5 sm:p-6 space-y-4 bg-card ">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 ">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
+              <Receipt size={17} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-foreground">Invoices &amp; Billing Summary</h2>
+            </div>
+          </div>
+          <Link
+            to="/portal/invoices"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all self-start sm:self-center"
+          >
+            View All Invoices <ArrowRight size={13} />
+          </Link>
+        </div>
+
+        {/* 4 Financial Metrics for the Client */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 tabular-nums">
+          <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Quoted</span>
+            <p className="text-xl font-black text-foreground">{fmt(invoiceMetrics.totalQuoted)}</p>
+            <span className="text-[10px] text-muted-foreground block">Cumulative invoice value</span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Paid</span>
+            <p className="text-xl font-black text-foreground">{fmt(invoiceMetrics.totalPaid)}</p>
+            <span className="text-[10px] text-muted-foreground block">Verified payments received</span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Balance Due</span>
+            <p className="text-xl font-black text-foreground">{fmt(invoiceMetrics.balanceDue)}</p>
+            <span className="text-[10px] text-muted-foreground block">Pending balance to clear</span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Open Invoices</span>
+            <p className="text-xl font-black text-foreground">{invoiceMetrics.openCount}</p>
+            <span className="text-[10px] text-muted-foreground block">Awaiting payment</span>
+          </div>
+        </div>
+
+        {/* Recent Invoices Table */}
+        {(invoiceMetrics.recentInvoices || []).length > 0 && (
+          <div className="pt-2">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="text-[11px] font-semibold text-muted-foreground uppercase">
+                    <th className="py-2.5 px-3">Invoice #</th>
+                    <th className="py-2.5 px-3">Project</th>
+                    <th className="py-2.5 px-3">Quoted Amount</th>
+                    <th className="py-2.5 px-3">Paid</th>
+                    <th className="py-2.5 px-3">Balance</th>
+                    <th className="py-2.5 px-3">Status</th>
+                    <th className="py-2.5 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-foreground/[0.05] tabular-nums">
+                  {invoiceMetrics.recentInvoices.map((inv) => (
+                    <tr key={inv._id} className="hover:bg-secondary/30 transition-colors">
+                      <td className="py-3 px-3 font-bold text-foreground">{inv.invoiceNumber}</td>
+                      <td className="py-3 px-3 text-muted-foreground">{inv.project?.name || 'Project'}</td>
+                      <td className="py-3 px-3 font-semibold text-foreground">{fmt(inv.totalAmount || inv.total)}</td>
+                      <td className="py-3 px-3 font-semibold text-foreground">{fmt(inv.paidAmount)}</td>
+                      <td className="py-3 px-3 font-semibold text-muted-foreground">{fmt(inv.balanceAmount || ((inv.totalAmount || inv.total || 0) - (inv.paidAmount || 0)))}</td>
+                      <td className="py-3 px-3">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          inv.status === 'paid'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-secondary text-foreground'
+                        }`}>
+                          {inv.status ? inv.status.toUpperCase() : 'SENT'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => exportInvoiceToPDF(inv, { save: true })}
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                        >
+                          <Download size={12} /> PDF
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── SECTION: PROPOSALS & CONTRACTS ── */}
+      <div className="rounded-3xl p-5 sm:p-6 space-y-4 bg-card ">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 ">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
+              <FileText size={17} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-foreground">Proposals &amp; Scope Agreements</h2>
+            </div>
+          </div>
+          <Link
+            to="/client/proposals"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all self-start sm:self-center"
+          >
+            Proposal Dashboard <ArrowRight size={13} />
+          </Link>
+        </div>
+
+        {/* Proposal KPI Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 tabular-nums">
+          <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Proposals</span>
+            <p className="text-xl font-black text-foreground">{proposalMetrics.total}</p>
+            <span className="text-[10px] text-muted-foreground block">Formal agreements</span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Accepted</span>
+            <p className="text-xl font-black text-foreground">{proposalMetrics.accepted}</p>
+            <span className="text-[10px] text-muted-foreground block">Active signed agreements</span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Awaiting Decision</span>
+            <p className="text-xl font-black text-foreground">{proposalMetrics.pending}</p>
+            <span className="text-[10px] text-muted-foreground block">Pending your review</span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Agreement Value</span>
+            <p className="text-xl font-black text-foreground">{fmt(proposalMetrics.totalValue)}</p>
+            <span className="text-[10px] text-muted-foreground block">Total contract value</span>
+          </div>
+        </div>
+
+        {/* Proposals Table */}
+        {proposalMetrics.list.length > 0 ? (
+          <div className="pt-2">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="text-[11px] font-semibold text-muted-foreground uppercase">
+                    <th className="py-2.5 px-3">Proposal #</th>
+                    <th className="py-2.5 px-3">Title &amp; Scope</th>
+                    <th className="py-2.5 px-3">Category</th>
+                    <th className="py-2.5 px-3">Amount</th>
+                    <th className="py-2.5 px-3">Status</th>
+                    <th className="py-2.5 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-foreground/[0.05] tabular-nums">
+                  {proposalMetrics.list.map((prop) => (
+                    <tr key={prop._id} className="hover:bg-secondary/30 transition-colors">
+                      <td className="py-3 px-3 font-bold text-foreground font-mono">{prop.proposalNumber || 'PROP-DRAFT'}</td>
+                      <td className="py-3 px-3">
+                        <span className="font-semibold text-foreground block truncate max-w-[200px]">{prop.title}</span>
+                        {prop.timeline && <span className="text-[11px] text-muted-foreground">{prop.timeline}</span>}
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="capitalize px-2 py-0.5 rounded-md bg-secondary text-muted-foreground text-[10px] font-medium">
+                          {(prop.serviceCategory || prop.proposalType || 'General').replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 font-semibold text-foreground">{fmt(prop.amount)}</td>
+                      <td className="py-3 px-3">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          prop.status === 'accepted'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-secondary text-foreground'
+                        }`}>
+                          {(prop.status || 'draft').toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <Link
+                          to={`/proposals/${prop._id}`}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground transition-all font-semibold text-xs"
+                        >
+                          <span>{prop.status === 'accepted' ? 'View' : 'Review & Sign'}</span>
+                          <ArrowRight size={12} />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-2xl py-8 text-center bg-card/40">
+            <FileText size={28} className="mx-auto text-muted-foreground mb-2 opacity-50" />
+            <p className="text-xs font-semibold text-foreground">No proposals yet</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── SECTION: CLIENT SECURE CREDENTIALS VAULT (Strictly Client Scoped & Granted Access Only) ── */}
+      <div className="rounded-3xl p-5 sm:p-6 space-y-4 bg-card border border-border/40">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/40">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
+              <ShieldCheck size={18} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-foreground">Dedicated Credentials &amp; Access Vault</h2>
+              <p className="text-xs text-muted-foreground">
+                Securely encrypted logins, account keys, and credentials granted specifically to your portal.
+              </p>
+            </div>
+          </div>
+          <span className="px-3 py-1 rounded-full text-xs font-bold bg-secondary text-foreground self-start sm:self-center">
+            {clientCredentials.length} Accessible Credential{clientCredentials.length === 1 ? '' : 's'}
+          </span>
+        </div>
+
+        {clientCredentials.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+            {clientCredentials.map((c) => {
+              const isPasswordVisible = Boolean(revealedPasswords[c._id]);
+              return (
+                <div
+                  key={c._id}
+                  className="p-4 rounded-2xl bg-secondary/30 space-y-3 flex flex-col justify-between border border-border/30 hover:border-primary/40 transition-all shadow-xs"
+                >
+                  <div className="space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-secondary text-foreground">
+                          {(c.credentialType || 'Service').replace(/_/g, ' ')}
+                        </span>
+                        <h4 className="text-xs font-bold text-foreground mt-1.5">{c.credentialName}</h4>
+                      </div>
+                      {c.url && (
+                        <a
+                          href={c.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                          title="Open login link in new tab"
+                        >
+                          <ExternalLink size={13} />
+                        </a>
+                      )}
+                    </div>
+
+                    {/* Username Field */}
+                    {c.username && (
+                      <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-card text-xs">
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[9px] font-semibold uppercase text-muted-foreground block">
+                            Username / Login
+                          </span>
+                          <span className="font-mono text-xs font-semibold text-foreground truncate block">
+                            {c.username}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(c.username, `user_${c._id}`)}
+                          className="p-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                          title="Copy username"
+                        >
+                          {copiedKey === `user_${c._id}` ? (
+                            <Check size={13} className="text-emerald-500" />
+                          ) : (
+                            <Copy size={13} />
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Password Field with Show/Hide & Copy */}
+                    {c.password && (
+                      <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-card text-xs">
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[9px] font-semibold uppercase text-muted-foreground block">
+                            Password
+                          </span>
+                          <span className="font-mono text-xs font-semibold text-foreground truncate block">
+                            {isPasswordVisible ? c.password : '••••••••••••'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => togglePasswordVisibility(c._id)}
+                            className="p-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                            title={isPasswordVisible ? 'Hide password' : 'Show password'}
+                          >
+                            {isPasswordVisible ? <EyeOff size={13} /> : <Eye size={13} />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyText(c.password, `pass_${c._id}`)}
+                            className="p-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                            title="Copy password"
+                          >
+                            {copiedKey === `pass_${c._id}` ? (
+                              <Check size={13} className="text-emerald-500" />
+                            ) : (
+                              <Copy size={13} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {c.notes && (
+                      <p className="text-[11px] text-muted-foreground bg-secondary/40 p-2 rounded-xl line-clamp-2">
+                        {c.notes}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="pt-1.5 text-[10px] text-muted-foreground border-t border-border/20 flex items-center justify-between">
+                    <span>Added: {c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-IN') : '—'}</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 size={11} /> Granted to Client
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-8 text-center bg-card/40 rounded-2xl">
+            <ShieldCheck size={28} className="mx-auto text-muted-foreground mb-2 opacity-50" />
+            <p className="text-xs font-semibold text-foreground">No credentials shared with your portal yet</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Credentials that your account manager grants client access to will securely appear here.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* ── SECTION 4: CLIENT AD BUDGET & CAMPAIGNS ── */}
+      {adBudget && (
+        <div className="rounded-3xl p-5 sm:p-6 space-y-4 bg-card ">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 ">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
+                <Megaphone size={17} />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-foreground">Ad Budget &amp; Live Campaigns</h2>
+              </div>
+            </div>
+            {adBudget.notes && (
+              <div className="text-[11px] px-3 py-1 rounded-xl bg-secondary text-foreground font-medium flex items-center gap-1.5 max-w-md truncate">
+                <FileText size={13} className="shrink-0" />
+                <span className="truncate">Note: {adBudget.notes}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 tabular-nums">
+            <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Monthly Budget</span>
+              <p className="text-xl font-black text-foreground">{fmt(adBudget.monthlyBudget)}</p>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Daily Budget</span>
+              <p className="text-xl font-black text-foreground">{fmt(adBudget.dailyBudget)}</p>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Amount Added</span>
+              <p className="text-xl font-black text-foreground">{fmt(adBudget.amountAdded)}</p>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Available Balance</span>
+              <p className="text-xl font-black text-foreground">{fmt(adBudget.balance)}</p>
+            </div>
+          </div>
+
+          {/* Active Campaigns List */}
+          {(adBudget.campaigns || []).length > 0 && (
+            <div className="pt-2">
+              <h3 className="text-xs font-bold mb-2 text-foreground">Configured Campaigns</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {adBudget.campaigns.map((c) => (
+                  <div key={c._id} className="p-3.5 rounded-2xl bg-secondary/30 flex flex-col justify-between space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-secondary text-foreground">
+                          {c.platform || 'Meta Ads'}
+                        </span>
+                        <h4 className="text-xs font-bold mt-1.5 text-foreground">{c.name}</h4>
+                        {c.objective && <p className="text-[10px] text-muted-foreground">{c.objective}</p>}
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        c.status === 'Active' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+                      }`}>
+                        {c.status || 'Active'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 pt-1 text-[11px] tabular-nums">
+                      <div>
+                        <span className="text-[9px] font-semibold uppercase text-muted-foreground">Added</span>
+                        <p className="font-bold text-foreground">{fmt(c.amountAdded)}</p>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-semibold uppercase text-muted-foreground">Spent</span>
+                        <p className="font-bold text-muted-foreground">{fmt(c.amountSpent)}</p>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-semibold uppercase text-muted-foreground">Balance</span>
+                        <p className="font-bold text-foreground">{fmt(c.balance)}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── SECTION 5: SMM MONTHLY TRACKER SHEET (Day-by-Day Client Scope) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 rounded-3xl p-5 sm:p-6 space-y-4 bg-card ">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 ">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-secondary text-foreground flex items-center justify-center shrink-0">
+                <Calendar size={17} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground">
+                  {smmMetrics?.month || 'Monthly'} SMM Tracker Sheet
+                </h3>
+              </div>
+            </div>
+            <Link
+              to="/portal/tracker"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all self-start sm:self-center"
+            >
+              Full Tracker Sheet <ArrowRight size={13} />
+            </Link>
+          </div>
+
+          {!tracker || (tracker?.days || []).length === 0 ? (
+            <div className="text-center py-8">
+              <Calendar size={28} className="mx-auto text-muted-foreground mb-2 opacity-50" />
+              <p className="text-xs text-muted-foreground">SMM Monthly Tracker is being scheduled for your brand</p>
+            </div>
+          ) : (
+            <div className="responsive-table-container custom-scrollbar">
+              <table className="w-full min-w-[500px] text-left text-xs border-collapse">
+                <thead>
+                  <tr className="text-[10px] font-semibold text-muted-foreground uppercase">
+                    <th className="py-2.5 px-3 w-16">Day</th>
+                    <th className="py-2.5 px-3">Post / Reel Topic</th>
+                    <th className="py-2.5 px-3 w-24 text-center">Post</th>
+                    <th className="py-2.5 px-3">Story</th>
+                    <th className="py-2.5 px-3 w-24 text-center">Story</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-foreground/[0.05] tabular-nums">
+                  {(tracker?.days || []).slice(0, 15).map((d) => {
+                    const nowDay = new Date().getDate();
+                    const isToday = d.day === nowDay;
+                    const isSunday = new Date(tracker?.year || new Date().getFullYear(), (tracker?.month || new Date().getMonth() + 1) - 1, d.day).getDay() === 0;
+
+                    return (
+                      <tr
+                        key={d.day}
+                        className={`transition-colors ${
+                          isToday ? 'bg-secondary font-medium' : isSunday ? 'bg-muted/30' : 'hover:bg-secondary/30'
+                        }`}
+                      >
+                        <td className="py-2.5 px-3 font-bold">
+                          <span className={`inline-flex items-center justify-center w-6 h-6 rounded-md text-[11px] ${
+                            isToday ? 'bg-primary text-primary-foreground font-black' : 'text-muted-foreground'
+                          }`}>
+                            {d.day}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          {d.postLabel ? (
+                            <span className="font-semibold text-foreground truncate max-w-xs block">
+                              {d.postLabel}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/50 italic">—</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-center">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                            d.postStatus === 'done'
+                              ? 'bg-primary text-primary-foreground'
+                              : d.postStatus === 'pending'
+                              ? 'bg-secondary text-foreground'
+                              : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {d.postStatus === 'done' ? 'DONE' : d.postStatus === 'pending' ? 'PENDING' : 'TO POST'}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-muted-foreground truncate max-w-[140px]">
+                          {d.storyLabel || '—'}
+                        </td>
+                        <td className="py-2.5 px-3 text-center">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                            d.storyStatus === 'done'
+                              ? 'bg-primary text-primary-foreground'
+                              : d.storyStatus === 'pending'
+                              ? 'bg-secondary text-foreground'
+                              : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {d.storyStatus === 'done' ? 'DONE' : d.storyStatus === 'pending' ? 'PENDING' : 'TO POST'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {(tracker?.days || []).length > 15 && (
+                <div className="pt-3 text-center ">
+                  <Link
+                    to="/portal/tracker"
+                    className="text-xs font-bold text-foreground hover:underline inline-flex items-center gap-1"
+                  >
+                    View All {tracker?.days?.length || 0} Days in SMM Tracker <ArrowRight size={12} />
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Onboarding Checklist Card */}
+        <div className="rounded-3xl p-5 sm:p-6 space-y-3 bg-card ">
+          <h3 className="text-sm font-bold pb-2 text-foreground">Onboarding Status</h3>
+          <div className="space-y-2.5 pt-1">
+            {onboardingSteps.map((s) => (
+              <div key={s.label} className="flex items-center gap-2.5">
+                <div
+                  className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
+                    s.done ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {s.done ? <Check size={11} /> : null}
+                </div>
+                <span className={`text-xs font-medium ${s.done ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>
+                  {s.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Client Brand & Business Onboarding Intake Dialog Modal ── */}
+      <Dialog open={showOnboardingModal} onOpenChange={setShowOnboardingModal}>
+        <DialogContent
+          size="lg"
+          noPadding
+          hideCloseButton
+          className="flex flex-col min-h-0 p-0 overflow-hidden bg-card w-[calc(100vw-24px)] max-w-3xl max-h-[90dvh]"
+        >
+          <div className="flex flex-col min-h-0 h-full">
+            {/* Header */}
+            <div className="shrink-0 bg-card px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between gap-3 border-b border-border/40 select-none">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-base sm:text-xl font-bold tracking-tight text-foreground">
+                    Client Brand &amp; Business Intake Form
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                    Share your business profile so RiseWithMedia can tailor campaigns to your exact goals.
+                  </DialogDescription>
+                </div>
+              </div>
+              <DialogClose asChild>
+                <button
+                  type="button"
+                  className="h-9 w-9 rounded-xl bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </DialogClose>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleSaveOnboarding} className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-6 custom-scrollbar">
+              {/* Section 1: Business Identity */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-1 border-b border-border/30">
+                  <span className="h-5 w-5 rounded-md bg-primary/10 text-primary flex items-center justify-center text-xs font-black">
+                    1
+                  </span>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
+                    Brand &amp; Legal Identity
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-foreground mb-1 block">
+                      Legal Company / Registered Name *
+                    </label>
+                    <Input
+                      value={onboardingForm.companyLegalName}
+                      onChange={(e) => setOnboardingForm({ ...onboardingForm, companyLegalName: e.target.value })}
+                      placeholder="e.g. Apex Retail Private Limited"
+                      className="h-10 rounded-xl text-xs"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-foreground mb-1 block">
+                      Brand / Trade Name *
+                    </label>
+                    <Input
+                      value={onboardingForm.brandName}
+                      onChange={(e) => setOnboardingForm({ ...onboardingForm, brandName: e.target.value })}
+                      placeholder="e.g. Apex Studio"
+                      className="h-10 rounded-xl text-xs"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-foreground mb-1 block">Tagline / Slogan</label>
+                    <Input
+                      value={onboardingForm.tagline}
+                      onChange={(e) => setOnboardingForm({ ...onboardingForm, tagline: e.target.value })}
+                      placeholder="e.g. Precision In Every Frame"
+                      className="h-10 rounded-xl text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-foreground mb-1 block">Industry / Business Niche</label>
+                    <select
+                      value={onboardingForm.industryNiche}
+                      onChange={(e) => setOnboardingForm({ ...onboardingForm, industryNiche: e.target.value })}
+                      className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs text-foreground focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="">Select industry niche...</option>
+                      <option value="E-Commerce & D2C Brands">E-Commerce &amp; D2C Brands</option>
+                      <option value="Healthcare, Dental & Wellness">Healthcare, Dental &amp; Wellness</option>
+                      <option value="Real Estate, Interiors & Architecture">Real Estate &amp; Interiors</option>
+                      <option value="Food, Restaurants & Hospitality">Food, Restaurants &amp; Hospitality</option>
+                      <option value="Automotive & Dealerships">Automotive &amp; Dealerships</option>
+                      <option value="Education, Coaching & EdTech">Education &amp; EdTech</option>
+                      <option value="B2B Software, IT & Corporate">B2B Software &amp; Tech</option>
+                      <option value="Fashion, Beauty & Lifestyle">Fashion &amp; Lifestyle</option>
+                      <option value="Professional Services">Professional Services</option>
+                      <option value="Other Industry">Other Industry</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Strategy, Audience & Goals */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-1 border-b border-border/30">
+                  <span className="h-5 w-5 rounded-md bg-primary/10 text-primary flex items-center justify-center text-xs font-black">
+                    2
+                  </span>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
+                    Target Audience &amp; Objectives
+                  </h4>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-foreground mb-1 block">
+                    Target Audience &amp; Demographics
+                  </label>
+                  <Textarea
+                    rows={2}
+                    value={onboardingForm.targetAudience}
+                    onChange={(e) => setOnboardingForm({ ...onboardingForm, targetAudience: e.target.value })}
+                    placeholder="Who are your ideal customers? Age, gender, location, income level, or key problems you solve for them..."
+                    className="text-xs rounded-xl"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-foreground mb-1 block">Primary Business Objective</label>
+                    <select
+                      value={onboardingForm.primaryGoals}
+                      onChange={(e) => setOnboardingForm({ ...onboardingForm, primaryGoals: e.target.value })}
+                      className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs text-foreground focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="">Select primary objective...</option>
+                      <option value="High-Quality Inbound Leads">High-Quality Inbound Leads</option>
+                      <option value="Brand Awareness & Social Growth">Brand Awareness &amp; Social Growth</option>
+                      <option value="Direct Online Sales / E-Commerce">Direct Online Sales / E-Commerce</option>
+                      <option value="Local Footfall & Appointments">Local Footfall &amp; Appointments</option>
+                      <option value="Mobile App Downloads & Users">Mobile App Downloads &amp; Users</option>
+                      <option value="Complete Brand Overhaul & Positioning">Brand Overhaul &amp; Positioning</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-foreground mb-1 block">Estimated Monthly Marketing Budget</label>
+                    <select
+                      value={onboardingForm.estimatedBudget}
+                      onChange={(e) => setOnboardingForm({ ...onboardingForm, estimatedBudget: e.target.value })}
+                      className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs text-foreground focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="">Select estimated budget...</option>
+                      <option value="Under ₹25,000 / month">Under ₹25,000 / month</option>
+                      <option value="₹25,000 - ₹50,000 / month">₹25,000 - ₹50,000 / month</option>
+                      <option value="₹50,000 - ₹1,00,000 / month">₹50,000 - ₹1,00,000 / month</option>
+                      <option value="₹1,00,000 - ₹2,50,000 / month">₹1,00,000 - ₹2,50,000 / month</option>
+                      <option value="₹2,50,000+ / month">₹2,50,000+ / month</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-foreground mb-1 block">Key Competitors (Names or URLs)</label>
+                  <Input
+                    value={onboardingForm.competitors}
+                    onChange={(e) => setOnboardingForm({ ...onboardingForm, competitors: e.target.value })}
+                    placeholder="e.g. CompetitorA, CompetitorB.com"
+                    className="h-10 rounded-xl text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Section 3: Services Needed */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 pb-1 border-b border-border/30">
+                  <span className="h-5 w-5 rounded-md bg-primary/10 text-primary flex items-center justify-center text-xs font-black">
+                    3
+                  </span>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
+                    Services Requested from RiseWithMedia
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                  {[
+                    'Social Media Management & Content',
+                    'Reels & Short-Form Video Production',
+                    'Paid Ads (Meta & Google Ads)',
+                    'Web & Mobile App Development',
+                    'Local SEO & Google Maps Optimization',
+                    'Branding, Identity & Graphics Design',
+                  ].map((serviceName) => {
+                    const checked = (onboardingForm.servicesRequested || []).includes(serviceName);
+                    return (
+                      <label
+                        key={serviceName}
+                        onClick={() => toggleServiceRequested(serviceName)}
+                        className={`p-3 rounded-2xl border text-xs font-bold flex items-center gap-2.5 cursor-pointer transition-all select-none ${
+                          checked
+                            ? 'bg-primary/10 border-primary text-primary shadow-xs'
+                            : 'bg-secondary/40 border-border/40 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {}}
+                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary pointer-events-none"
+                        />
+                        <span className="leading-snug">{serviceName}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Section 4: Digital Assets & Cloud Links */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-1 border-b border-border/30">
+                  <span className="h-5 w-5 rounded-md bg-primary/10 text-primary flex items-center justify-center text-xs font-black">
+                    4
+                  </span>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
+                    Digital Assets &amp; Brand Links
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-foreground mb-1 block">Brand Website URL</label>
+                    <Input
+                      value={onboardingForm.websiteUrl}
+                      onChange={(e) => setOnboardingForm({ ...onboardingForm, websiteUrl: e.target.value })}
+                      placeholder="https://yourbrand.com"
+                      className="h-10 rounded-xl text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-foreground mb-1 block">
+                      Google Drive / Brand Assets Folder
+                    </label>
+                    <Input
+                      value={onboardingForm.driveAssetsUrl}
+                      onChange={(e) => setOnboardingForm({ ...onboardingForm, driveAssetsUrl: e.target.value })}
+                      placeholder="https://drive.google.com/drive/folders/..."
+                      className="h-10 rounded-xl text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Instagram Handle</label>
+                    <Input
+                      value={onboardingForm.socialMedia?.instagram || ''}
+                      onChange={(e) =>
+                        setOnboardingForm({
+                          ...onboardingForm,
+                          socialMedia: { ...onboardingForm.socialMedia, instagram: e.target.value },
+                        })
+                      }
+                      placeholder="@yourbrand"
+                      className="h-9 rounded-xl text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Facebook Page</label>
+                    <Input
+                      value={onboardingForm.socialMedia?.facebook || ''}
+                      onChange={(e) =>
+                        setOnboardingForm({
+                          ...onboardingForm,
+                          socialMedia: { ...onboardingForm.socialMedia, facebook: e.target.value },
+                        })
+                      }
+                      placeholder="facebook.com/yourbrand"
+                      className="h-9 rounded-xl text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">LinkedIn Page</label>
+                    <Input
+                      value={onboardingForm.socialMedia?.linkedin || ''}
+                      onChange={(e) =>
+                        setOnboardingForm({
+                          ...onboardingForm,
+                          socialMedia: { ...onboardingForm.socialMedia, linkedin: e.target.value },
+                        })
+                      }
+                      placeholder="linkedin.com/company/yourbrand"
+                      className="h-9 rounded-xl text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">YouTube Channel</label>
+                    <Input
+                      value={onboardingForm.socialMedia?.youtube || ''}
+                      onChange={(e) =>
+                        setOnboardingForm({
+                          ...onboardingForm,
+                          socialMedia: { ...onboardingForm.socialMedia, youtube: e.target.value },
+                        })
+                      }
+                      placeholder="@yourchannel"
+                      className="h-9 rounded-xl text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 5: Primary Contact */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-1 border-b border-border/30">
+                  <span className="h-5 w-5 rounded-md bg-primary/10 text-primary flex items-center justify-center text-xs font-black">
+                    5
+                  </span>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
+                    Primary Contact Person
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-foreground mb-1 block">Contact Name</label>
+                    <Input
+                      value={onboardingForm.primaryContactName}
+                      onChange={(e) =>
+                        setOnboardingForm({ ...onboardingForm, primaryContactName: e.target.value })
+                      }
+                      placeholder="e.g. John Doe"
+                      className="h-10 rounded-xl text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-foreground mb-1 block">Phone / WhatsApp</label>
+                    <Input
+                      value={onboardingForm.primaryContactPhone}
+                      onChange={(e) =>
+                        setOnboardingForm({ ...onboardingForm, primaryContactPhone: e.target.value })
+                      }
+                      placeholder="+91 98765 43210"
+                      className="h-10 rounded-xl text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-foreground mb-1 block">Work Email</label>
+                    <Input
+                      type="email"
+                      value={onboardingForm.primaryContactEmail}
+                      onChange={(e) =>
+                        setOnboardingForm({ ...onboardingForm, primaryContactEmail: e.target.value })
+                      }
+                      placeholder="contact@brand.com"
+                      className="h-10 rounded-xl text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Sticky Footer */}
+              <div className="pt-4 border-t border-border/40 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <span className="text-xs text-muted-foreground">
+                  Submissions are reviewed by RiseWithMedia Admin &amp; SuperAdmin.
+                </span>
+
+                <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowOnboardingModal(false)}
+                    className="h-10 px-4 rounded-xl text-xs font-semibold"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmittingOnboarding}
+                    className="h-10 px-6 rounded-xl bg-primary text-primary-foreground text-xs font-bold"
+                  >
+                    {isSubmittingOnboarding ? 'Submitting...' : 'Save & Submit Onboarding Form'}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 function StatusDot({ status }) {
   const colors = {
-    'Draft': '#64748b', 'Editing': '#3b82f6', 'Send to Client': '#f59e0b',
-    'Revision Requested': '#ef4444', 'Approved': '#10b981',
-    'Scheduled': '#8b5cf6', 'Posted': '#14b8a6', 'Done': '#6366f1',
+    'Draft': '#a1a1aa', 'Editing': '#71717a', 'Send to Client': '#52525b',
+    'Revision Requested': '#3f3f46', 'Approved': '#18181b',
+    'Scheduled': '#71717a', 'Posted': '#27272a', 'Done': '#18181b',
   };
-  return <div className="w-2 h-2 rounded-full shrink-0" style={{ background: colors[status] || '#64748b' }} />;
+  return <div className="w-2 h-2 rounded-full shrink-0" style={{ background: colors[status] || '#71717a' }} />;
 }
 
-export function StatusBadge({ status, dark }) {
+export function StatusBadge({ status }) {
   const map = {
-    'Draft':              { bg: '#64748b20', color: '#94a3b8', label: 'Draft' },
-    'Editing':            { bg: '#3b82f620', color: '#60a5fa', label: 'Editing' },
-    'Send to Client':     { bg: '#f59e0b20', color: '#fbbf24', label: 'For Review' },
-    'Revision Requested': { bg: '#ef444420', color: '#f87171', label: 'Revision' },
-    'Approved':           { bg: '#10b98120', color: '#34d399', label: 'Approved' },
-    'Scheduled':          { bg: '#8b5cf620', color: '#a78bfa', label: 'Scheduled' },
-    'Posted':             { bg: '#14b8a620', color: '#2dd4bf', label: 'Posted' },
-    'Done':               { bg: '#6366f120', color: '#818cf8', label: 'Done' },
+    'Draft':              { bg: 'bg-secondary', color: 'text-muted-foreground', label: 'Draft' },
+    'Editing':            { bg: 'bg-secondary', color: 'text-foreground', label: 'Editing' },
+    'Send to Client':     { bg: 'bg-secondary', color: 'text-foreground', label: 'For Review' },
+    'Revision Requested': { bg: 'bg-secondary', color: 'text-foreground', label: 'Revision' },
+    'Approved':           { bg: 'bg-primary', color: 'text-primary-foreground', label: 'Approved' },
+    'Scheduled':          { bg: 'bg-secondary', color: 'text-foreground', label: 'Scheduled' },
+    'Posted':             { bg: 'bg-primary', color: 'text-primary-foreground', label: 'Posted' },
+    'Done':               { bg: 'bg-primary', color: 'text-primary-foreground', label: 'Done' },
   };
-  const s = map[status] || { bg: '#64748b20', color: '#94a3b8', label: status };
+  const s = map[status] || { bg: 'bg-secondary', color: 'text-muted-foreground', label: status };
   return (
-    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-      style={{ background: s.bg, color: s.color }}>
+    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${s.bg} ${s.color}`}>
       {s.label}
     </span>
   );

@@ -1,40 +1,30 @@
-import { Inbox, Search } from 'lucide-react';
+import { Inbox, Search } from '@/components/ui/muiIcons';
 import { cn } from '../../utils/cn';
 
 const toneStyles = {
-  primary: 'bg-primary/10 text-primary',
-  success: 'bg-emerald-500/10 text-emerald-600',
-  info: 'bg-blue-500/10 text-blue-600',
-  warning: 'bg-amber-500/10 text-amber-600',
-  danger: 'bg-red-500/10 text-red-600',
-  violet: 'bg-violet-500/10 text-violet-600',
-  neutral: 'bg-secondary text-muted-foreground',
+  primary: 'bg-primary/15 text-primary border border-primary/25',
+  success: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30',
+  info: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30',
+  warning: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30',
+  danger: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30',
+  violet: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30',
+  neutral: 'bg-secondary text-muted-foreground border border-border',
 };
 
 export const PageHeader = ({
-  eyebrow,
   title,
-  subtitle,
-  description,
   actions,
   children,
   className,
 }) => {
-  const sub = subtitle || description;
   return (
     <div className={cn('space-y-4', className)}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          {eyebrow ? (
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary/80">{eyebrow}</p>
-          ) : null}
-          <h1 className={cn('text-xl font-bold tracking-tight text-foreground sm:text-2xl', eyebrow && 'mt-1')}>{title}</h1>
-          {sub ? (
-            <p className="mt-1 text-xs text-muted-foreground max-w-3xl">{sub}</p>
-          ) : null}
+          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">{title}</h1>
         </div>
 
-        {actions ? <div className="flex flex-wrap items-center gap-3">{actions}</div> : null}
+        {actions ? <div className="flex flex-wrap items-center gap-2 shrink-0">{actions}</div> : null}
       </div>
 
       {children ? <div>{children}</div> : null}
@@ -51,17 +41,17 @@ export const MetricCard = ({ label, title, value, icon: Icon, tone = 'primary', 
   return (
     <div
       className={cn(
-        'rounded-[24px] border border-border/80 bg-card/90 px-4 py-4 shadow-sm backdrop-blur-sm',
+        'rounded-2xl bg-card px-5 py-5 transition-colors hover:bg-secondary/60',
         className,
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">{cardLabel}</p>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">{value}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{cardLabel}</p>
+          <p className="mt-2.5 text-2xl sm:text-3xl font-bold tracking-tight text-foreground tabular-nums">{value}</p>
         </div>
         {Icon ? (
-          <div className={cn('rounded-2xl p-3 flex-shrink-0', toneStyles[tone] || toneStyles.primary)}>
+          <div className={cn('rounded-xl p-2.5 flex-shrink-0 bg-brand/10 text-primary', tone === 'danger' && toneStyles.danger)}>
             <Icon size={18} />
           </div>
         ) : null}
@@ -82,33 +72,32 @@ export const StatusBadge = ({ tone = 'primary', children, className }) => (
   </span>
 );
 
-export const EmptyState = ({ title = 'No data', description = 'There is no data available right now.', action, icon: Icon = Inbox, className }) => (
+export const EmptyState = ({ title = 'No data', action, icon: Icon = Inbox, className }) => (
   <div className={cn('flex flex-col items-center justify-center p-8 text-center', className)}>
     <div className="rounded-full bg-secondary p-4 text-muted-foreground mb-3">
       <Icon size={24} />
     </div>
     <h3 className="text-base font-bold text-foreground">{title}</h3>
-    <p className="mt-1 text-xs text-muted-foreground max-w-sm">{description}</p>
     {action ? <div className="mt-4">{action}</div> : null}
   </div>
 );
 
 export const PageToolbar = ({ children, className }) => (
-  <div className={cn('rounded-[24px] border border-border/80 bg-card/85 p-3 shadow-sm backdrop-blur-sm', className)}>
+  <div className={cn('rounded-2xl bg-card p-3.5', className)}>
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">{children}</div>
   </div>
 );
 
 export const SearchField = ({ value, onChange, placeholder, className, inputClassName }) => (
   <div className={cn('relative flex-1', className)}>
-    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+    <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
     <input
       type="text"
       value={value}
       onChange={onChange}
       placeholder={placeholder}
       className={cn(
-        'w-full rounded-2xl border border-border bg-background py-3 pl-11 pr-4 text-sm shadow-inner outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15',
+        'w-full rounded-xl bg-secondary/75 py-2.5 pl-10 pr-4 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 hover:bg-secondary focus:bg-background focus:ring-2 focus:ring-brand/40',
         inputClassName,
       )}
     />
@@ -116,11 +105,11 @@ export const SearchField = ({ value, onChange, placeholder, className, inputClas
 );
 
 export const SectionCard = ({ title, action, children, className }) => (
-  <section className={cn('rounded-[28px] border border-border bg-card shadow-sm', className)}>
+  <section className={cn('rounded-2xl bg-card', className)}>
     {(title || action) ? (
-      <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 px-5 pt-5 pb-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          {title ? <h2 className="text-lg font-bold text-foreground">{title}</h2> : null}
+          {title ? <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground">{title}</h2> : null}
         </div>
         {action ? <div className="flex flex-wrap items-center gap-2">{action}</div> : null}
       </div>

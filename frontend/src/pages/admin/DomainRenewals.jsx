@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   Building2,
   Clock,
-} from 'lucide-react';
+  X,
+} from '@/components/ui/muiIcons';
 import { useClients } from '../../hooks/useClients';
 import { useProjects } from '../../hooks/useProjects';
 import {
@@ -28,9 +29,10 @@ import {
   useUpdateDomainRenewal,
 } from '../../hooks/useDomainRenewals';
 import { Button } from '../../components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
+import { SelectDropdown } from '../../components/ui/SelectDropdown';
 import WorkspacePage from '../../components/ui/WorkspacePage';
 import DatabaseView from '../../components/ui/DatabaseView';
 import { formatINR } from '../../utils/currency';
@@ -72,14 +74,14 @@ const getRemainingDays = (expiryDate) => {
 };
 
 const toneByStatus = {
-  active: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-  pending: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-  renewed: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-  expired: 'bg-rose-500/10 text-rose-600 border-rose-500/20',
+  active: 'bg-secondary text-foreground ',
+  pending: 'bg-muted text-foreground ',
+  renewed: 'bg-primary text-primary-foreground ',
+  expired: 'bg-secondary text-foreground font-black',
 };
 
 const FormField = ({ label, children }) => (
-  <label className="space-y-1.5 text-xs font-semibold text-foreground block">
+  <label className="space-y-1.5 text-sm font-semibold text-foreground block text-left">
     <span>{label}</span>
     {children}
   </label>
@@ -126,123 +128,165 @@ const RenewalFormDialog = ({ open, onOpenChange, record, clients, projects, onSa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl bg-card border border-border">
-        <DialogHeader>
-          <DialogTitle className="text-base font-black text-foreground">
-            {record ? 'Edit Domain / Renewal Asset' : 'Add Domain / Hosting Asset'}
-          </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
-            Track registrar expiration dates and prevent website downtime for clients.
-          </DialogDescription>
+      <DialogContent size="lg" noPadding hideCloseButton className="flex flex-col min-h-0 p-0 overflow-hidden bg-card w-[calc(100vw-24px)] max-w-2xl max-h-[90dvh]">
+        <DialogHeader className="px-6 py-4 sm:py-5 bg-card shrink-0 select-none flex flex-row items-center justify-between gap-4 m-0 space-y-0">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-foreground shrink-0 ">
+              <Globe2 size={20} />
+            </div>
+            <div className="min-w-0">
+              <DialogTitle className="text-lg sm:text-xl font-bold text-foreground leading-tight truncate">
+                {record ? 'Edit Domain / Renewal Asset' : 'Add Domain / Hosting Asset'}
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                Domain renewal asset form
+              </DialogDescription>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <kbd className="hidden sm:inline-flex items-center justify-center h-6 px-2 rounded-md bg-secondary text-[10px] font-mono font-medium text-muted-foreground select-none">
+              ESC
+            </kbd>
+            <DialogClose className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-all active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20">
+              <X size={16} className="stroke-[2.5]" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
+          </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Asset / Domain Name *">
-              <Input
-                value={form.itemName}
-                onChange={(e) => updateField('itemName', e.target.value)}
-                placeholder="e.g. risewithmedia.com, Client AWS Hosting"
-                required
-                className="h-9 text-xs rounded-xl"
-              />
-            </FormField>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {/* Scrollable Form Body - Google Form Linear Stack */}
+          <div className="space-y-6 p-6 sm:p-7 overflow-y-auto flex-1 min-h-0 custom-scrollbar overscroll-contain">
+            <div className="space-y-6">
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                  Asset / Domain Name <span className="text-foreground">*</span>
+                </label>
+                <Input
+                  value={form.itemName}
+                  onChange={(e) => updateField('itemName', e.target.value)}
+                  placeholder="e.g. risewithmedia.com, Client AWS Hosting"
+                  required
+                  className="h-11 rounded-xl bg-background px-4 text-sm focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
 
-            <FormField label="Asset Type *">
-              <select
-                value={form.itemType}
-                onChange={(e) => updateField('itemType', e.target.value)}
-                required
-                className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs"
-              >
-                {renewalTypeOptions.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </FormField>
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                  Asset Type <span className="text-foreground">*</span>
+                </label>
+                <SelectDropdown
+                  value={form.itemType}
+                  onChange={(val) => updateField('itemType', val)}
+                  options={renewalTypeOptions}
+                  allowCustom={false}
+                  allowDeselect={false}
+                  placeholder="Select asset type"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">Linked Client</label>
+                <SelectDropdown
+                  value={form.clientId}
+                  onChange={(val) => updateField('clientId', val)}
+                  options={[
+                    { value: 'all', label: 'None / Internal' },
+                    ...clients.map((c) => ({ value: c._id, label: c.company || c.name })),
+                  ]}
+                  allowCustom={false}
+                  allowDeselect={false}
+                  placeholder="Select linked client"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">Registrar / Hosting Provider</label>
+                <Input
+                  value={form.provider}
+                  onChange={(e) => updateField('provider', e.target.value)}
+                  placeholder="e.g. GoDaddy, Hostinger, AWS, Namecheap"
+                  className="h-11 rounded-xl bg-background px-4 text-sm focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                  Expiry Date <span className="text-foreground">*</span>
+                </label>
+                <Input
+                  type="date"
+                  value={form.expiryDate}
+                  onChange={(e) => updateField('expiryDate', e.target.value)}
+                  required
+                  className="h-11 rounded-xl bg-background px-4 text-sm focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">Renewal Cost (₹)</label>
+                <Input
+                  type="number"
+                  value={form.renewalCost}
+                  onChange={(e) => updateField('renewalCost', e.target.value)}
+                  placeholder="₹ Amount"
+                  className="h-11 rounded-xl bg-background px-4 text-sm focus:ring-2 focus:ring-primary/20 "
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">Status</label>
+                <SelectDropdown
+                  value={form.status}
+                  onChange={(val) => updateField('status', val)}
+                  options={renewalStatusOptions}
+                  allowCustom={false}
+                  allowDeselect={false}
+                  placeholder="Select status"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">Notes & Access Details</label>
+                <Textarea
+                  value={form.notes}
+                  onChange={(e) => updateField('notes', e.target.value)}
+                  placeholder="Auto-renewal enabled, primary billing card info, credentials location..."
+                  rows={3}
+                  className="min-h-[100px] rounded-xl bg-background p-3.5 text-sm focus:ring-2 focus:ring-primary/20 resize-y"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Linked Client">
-              <select
-                value={form.clientId}
-                onChange={(e) => updateField('clientId', e.target.value)}
-                className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs"
+          {/* Pinned Sticky Bottom Action Footer */}
+          <div className="shrink-0 bg-card px-6 py-4 flex items-center justify-between gap-3 z-10 select-none">
+            <span className="text-xs text-muted-foreground hidden sm:inline-flex items-center gap-1.5">
+              <span>Press</span>
+              <kbd className="px-1.5 py-0.5 rounded-md bg-secondary text-[10px] font-mono font-medium text-foreground">
+                ESC
+              </kbd>
+              <span>to close</span>
+            </span>
+
+            <div className="flex items-center gap-3 ml-auto">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => onOpenChange(false)}
+                className="h-11 px-5 rounded-xl text-sm font-semibold cursor-pointer"
               >
-                <option value="all">None / Internal</option>
-                {clients.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.company || c.name}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-
-            <FormField label="Registrar / Provider">
-              <Input
-                value={form.provider}
-                onChange={(e) => updateField('provider', e.target.value)}
-                placeholder="e.g. GoDaddy, Hostinger, AWS, Namecheap"
-                className="h-9 text-xs rounded-xl"
-              />
-            </FormField>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField label="Expiry Date *">
-              <Input
-                type="date"
-                value={form.expiryDate}
-                onChange={(e) => updateField('expiryDate', e.target.value)}
-                required
-                className="h-9 text-xs rounded-xl"
-              />
-            </FormField>
-
-            <FormField label="Renewal Cost (₹)">
-              <Input
-                type="number"
-                value={form.renewalCost}
-                onChange={(e) => updateField('renewalCost', e.target.value)}
-                placeholder="₹ Amount"
-                className="h-9 text-xs rounded-xl"
-              />
-            </FormField>
-
-            <FormField label="Status">
-              <select
-                value={form.status}
-                onChange={(e) => updateField('status', e.target.value)}
-                className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs"
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={saving}
+                className="h-11 px-6 rounded-xl bg-primary hover:opacity-90 text-sm font-bold text-primary-foreground cursor-pointer transition-all"
               >
-                {renewalStatusOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-          </div>
-
-          <FormField label="Notes & Access Details">
-            <Textarea
-              value={form.notes}
-              onChange={(e) => updateField('notes', e.target.value)}
-              placeholder="Auto-renewal enabled, primary billing card info..."
-              rows={2}
-              className="text-xs rounded-xl"
-            />
-          </FormField>
-
-          <div className="flex justify-end gap-2 pt-3 border-t border-border">
-            <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)} className="rounded-xl text-xs">
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" disabled={saving} className="rounded-xl text-xs font-bold">
-              {saving ? 'Saving...' : record ? 'Save Changes' : 'Track Asset'}
-            </Button>
+                {saving ? 'Saving...' : record ? 'Save Changes' : 'Track Asset'}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>
@@ -274,9 +318,11 @@ export default function DomainRenewals() {
   };
 
   const renewalsList = useMemo(() => {
-    if (Array.isArray(renewals)) return renewals;
-    if (Array.isArray(renewals?.records)) return renewals.records;
-    return [];
+    return Array.isArray(renewals)
+      ? renewals
+      : Array.isArray(renewals?.records)
+      ? renewals.records
+      : [];
   }, [renewals]);
 
   const filteredRenewals = useMemo(() => {
@@ -310,12 +356,15 @@ export default function DomainRenewals() {
       label: 'Domain / Asset',
       render: (item) => (
         <div className="flex items-center gap-2.5">
-          <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+          <div className="h-7 w-7 rounded-lg bg-secondary text-foreground flex items-center justify-center font-bold text-xs shrink-0">
             {item.itemType === 'hosting' ? <Server size={14} /> : <Globe2 size={14} />}
           </div>
           <div>
             <p className="font-bold text-foreground">{item.itemName}</p>
-            <p className="text-[11px] text-muted-foreground">🏢 {item.clientId?.company || item.clientId?.name || 'Internal'}</p>
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+              <Building2 size={11} className="shrink-0" />
+              <span>{item.clientId?.company || item.clientId?.name || 'Internal'}</span>
+            </p>
           </div>
         </div>
       ),
@@ -333,18 +382,16 @@ export default function DomainRenewals() {
       render: (item) => {
         const days = getRemainingDays(item.expiryDate);
         return (
-          <div className="text-xs">
+          <div className="text-xs tabular-nums">
             <p className="font-semibold text-foreground">{formatDate(item.expiryDate)}</p>
             {days !== null && (
               <span
-                className={`inline-block text-[10px] font-bold px-1.5 py-0.2 rounded mt-0.5 ${
-                  days < 0
-                    ? 'bg-rose-500/10 text-rose-600'
-                    : days <= 15
-                    ? 'bg-rose-500/10 text-rose-600'
+                className={`inline-block text-[10px] font-bold px-1.5 py-0.2 rounded mt-0.5 tabular-nums ${
+                  days < 0 || days <= 15
+                    ? 'bg-primary text-primary-foreground '
                     : days <= 30
-                    ? 'bg-amber-500/10 text-amber-600'
-                    : 'bg-emerald-500/10 text-emerald-600'
+                    ? 'bg-secondary text-foreground '
+                    : 'bg-secondary text-muted-foreground '
                 }`}
               >
                 {days < 0 ? `Expired ${Math.abs(days)}d ago` : `${days} days remaining`}
@@ -358,7 +405,7 @@ export default function DomainRenewals() {
       key: 'renewalCost',
       label: 'Renewal Fee',
       render: (item) => (
-        <span className="font-bold text-xs text-foreground">
+        <span className="font-bold text-xs text-foreground tabular-nums">
           {item.renewalCost ? formatINR(item.renewalCost) : '—'}
         </span>
       ),
@@ -367,7 +414,7 @@ export default function DomainRenewals() {
       key: 'status',
       label: 'Status',
       render: (item) => (
-        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border capitalize ${toneByStatus[item.status] || toneByStatus.active}`}>
+        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold capitalize ${toneByStatus[item.status] || toneByStatus.active}`}>
           {item.status}
         </span>
       ),
@@ -389,7 +436,7 @@ export default function DomainRenewals() {
           </button>
           <button
             onClick={() => setDeleteId(item._id)}
-            className="p-1 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600"
+            className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
             title="Delete"
           >
             <Trash2 size={14} />
@@ -408,34 +455,37 @@ export default function DomainRenewals() {
           <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-secondary uppercase tracking-wider">
             {item.itemType}
           </span>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${toneByStatus[item.status] || toneByStatus.active}`}>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded capitalize ${toneByStatus[item.status] || toneByStatus.active}`}>
             {item.status}
           </span>
         </div>
 
         <div>
           <h4 className="font-bold text-sm text-foreground">{item.itemName}</h4>
-          <p className="text-xs text-muted-foreground mt-0.5">🏢 {item.clientId?.company || item.clientId?.name || 'Internal'}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+            <Building2 size={12} className="shrink-0" />
+            <span>{item.clientId?.company || item.clientId?.name || 'Internal'}</span>
+          </p>
         </div>
 
-        <div className="p-2.5 rounded-xl bg-secondary/40 border border-border/60 space-y-1 text-xs">
+        <div className="p-2.5 rounded-xl bg-secondary/40 space-y-1 text-xs">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Provider:</span>
             <span className="font-semibold text-foreground">{item.provider || '—'}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Expires:</span>
-            <span className="font-semibold text-foreground">{formatDate(item.expiryDate)}</span>
+            <span className="font-semibold text-foreground tabular-nums">{formatDate(item.expiryDate)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Annual Cost:</span>
-            <span className="font-bold text-foreground">{item.renewalCost ? formatINR(item.renewalCost) : '—'}</span>
+            <span className="font-bold text-foreground tabular-nums">{item.renewalCost ? formatINR(item.renewalCost) : '—'}</span>
           </div>
         </div>
 
         {days !== null && days <= 30 && (
-          <div className="flex items-center gap-1.5 p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 text-xs font-bold">
-            <AlertTriangle size={13} />
+          <div className="flex items-center gap-1.5 p-2 rounded-lg bg-secondary text-foreground text-xs font-bold tabular-nums">
+            <AlertTriangle size={13} className="shrink-0" />
             <span>Expires in {days} days! Action required.</span>
           </div>
         )}
@@ -447,8 +497,7 @@ export default function DomainRenewals() {
     <WorkspacePage
       breadcrumbs={['RiseWithMedia', 'Business & Finance', 'Domain & Hosting Renewals']}
       title="Domain & Hosting Renewals"
-      subtitle="Track client domains, hosting packages, SSL certificates, recurring renewals, and expiry alerts."
-      icon="🌐"
+      icon={Globe2}
       properties={[
         { label: 'Total Tracked', value: total, icon: Globe2 },
         { label: 'Expiring Soon (30d)', value: expiringSoonCount, tone: expiringSoonCount > 0 ? 'danger' : 'neutral' },
@@ -462,7 +511,7 @@ export default function DomainRenewals() {
             setSelectedRecord(null);
             setOpenDialog(true);
           }}
-          className="rounded-xl text-xs font-bold gap-1.5 shadow-sm"
+          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground font-semibold text-xs rounded-xl transition-all hover:bg-primary/90 min-h-[38px] cursor-pointer"
         >
           <Plus size={14} className="stroke-[2.5]" />
           <span>Add Asset</span>
@@ -470,15 +519,15 @@ export default function DomainRenewals() {
       }
     >
       {/* Quick Filter Tabs */}
-      <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-1">
+      <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1 custom-scrollbar">
         {['all', 'active', 'pending', 'renewed', 'expired'].map((st) => (
           <button
             key={st}
             onClick={() => setStatusFilter(st)}
-            className={`px-3 py-1 rounded-xl text-xs font-semibold capitalize transition-all whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-all whitespace-nowrap shrink-0 min-h-[36px] ${
               statusFilter === st
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary'
+                ? 'bg-primary text-primary-foreground '
+                : 'bg-card text-muted-foreground hover:text-foreground hover:bg-secondary'
             }`}
           >
             {st === 'all' ? 'All Statuses' : st}
@@ -508,10 +557,10 @@ export default function DomainRenewals() {
       />
 
       <AlertDialog open={Boolean(deleteId)} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent className="bg-card border border-border">
+        <AlertDialogContent className="bg-card ">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-base font-bold">Delete Renewal Asset?</AlertDialogTitle>
-            <AlertDialogDescription className="text-xs">
+            <AlertDialogDescription className="sr-only">
               This will remove this asset from the renewal tracking dashboard.
             </AlertDialogDescription>
           </AlertDialogHeader>

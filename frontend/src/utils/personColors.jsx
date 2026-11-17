@@ -1,132 +1,91 @@
 import React from 'react';
-import { User } from 'lucide-react';
 import { getAssetUrl } from './assetUrl';
 
 export const PERSON_COLOR_PALETTES = [
   {
-    bg: 'bg-emerald-500/15 dark:bg-emerald-500/25',
-    text: 'text-emerald-800 dark:text-emerald-300',
-    border: 'border-emerald-500/35 dark:border-emerald-500/50',
-    avatarBg: 'bg-emerald-600 dark:bg-emerald-500',
-    accentBorder: 'border-l-emerald-500',
-    accentGlow: 'hover:border-emerald-500/60',
-    dot: 'bg-emerald-500',
-    name: 'emerald',
-  },
-  {
-    bg: 'bg-indigo-500/15 dark:bg-indigo-500/25',
-    text: 'text-indigo-800 dark:text-indigo-300',
-    border: 'border-indigo-500/35 dark:border-indigo-500/50',
-    avatarBg: 'bg-indigo-600 dark:bg-indigo-500',
-    accentBorder: 'border-l-indigo-500',
-    accentGlow: 'hover:border-indigo-500/60',
-    dot: 'bg-indigo-500',
-    name: 'indigo',
-  },
-  {
-    bg: 'bg-amber-500/15 dark:bg-amber-500/25',
-    text: 'text-amber-900 dark:text-amber-300',
-    border: 'border-amber-500/35 dark:border-amber-500/50',
-    avatarBg: 'bg-amber-600 dark:bg-amber-500',
-    accentBorder: 'border-l-amber-500',
-    accentGlow: 'hover:border-amber-500/60',
-    dot: 'bg-amber-500',
-    name: 'amber',
-  },
-  {
-    bg: 'bg-violet-500/15 dark:bg-violet-500/25',
-    text: 'text-violet-800 dark:text-violet-300',
-    border: 'border-violet-500/35 dark:border-violet-500/50',
-    avatarBg: 'bg-violet-600 dark:bg-violet-500',
-    accentBorder: 'border-l-violet-500',
-    accentGlow: 'hover:border-violet-500/60',
-    dot: 'bg-violet-500',
-    name: 'violet',
-  },
-  {
-    bg: 'bg-rose-500/15 dark:bg-rose-500/25',
-    text: 'text-rose-800 dark:text-rose-300',
-    border: 'border-rose-500/35 dark:border-rose-500/50',
-    avatarBg: 'bg-rose-600 dark:bg-rose-500',
-    accentBorder: 'border-l-rose-500',
-    accentGlow: 'hover:border-rose-500/60',
-    dot: 'bg-rose-500',
-    name: 'rose',
-  },
-  {
-    bg: 'bg-cyan-500/15 dark:bg-cyan-500/25',
-    text: 'text-cyan-800 dark:text-cyan-300',
-    border: 'border-cyan-500/35 dark:border-cyan-500/50',
+    bg: 'bg-cyan-50 dark:bg-cyan-950/40',
+    text: 'text-cyan-800 dark:text-cyan-200',
+    border: 'border-cyan-200/80 dark:border-cyan-800/50',
     avatarBg: 'bg-cyan-600 dark:bg-cyan-500',
     accentBorder: 'border-l-cyan-500',
-    accentGlow: 'hover:border-cyan-500/60',
+    accentGlow: 'hover:border-cyan-500/50',
     dot: 'bg-cyan-500',
     name: 'cyan',
   },
   {
-    bg: 'bg-fuchsia-500/15 dark:bg-fuchsia-500/25',
-    text: 'text-fuchsia-800 dark:text-fuchsia-300',
-    border: 'border-fuchsia-500/35 dark:border-fuchsia-500/50',
-    avatarBg: 'bg-fuchsia-600 dark:bg-fuchsia-500',
-    accentBorder: 'border-l-fuchsia-500',
-    accentGlow: 'hover:border-fuchsia-500/60',
-    dot: 'bg-fuchsia-500',
-    name: 'fuchsia',
+    bg: 'bg-indigo-50 dark:bg-indigo-950/40',
+    text: 'text-indigo-800 dark:text-indigo-200',
+    border: 'border-indigo-200/80 dark:border-indigo-800/50',
+    avatarBg: 'bg-indigo-600 dark:bg-indigo-500',
+    accentBorder: 'border-l-indigo-500',
+    accentGlow: 'hover:border-indigo-500/50',
+    dot: 'bg-indigo-500',
+    name: 'indigo',
   },
   {
-    bg: 'bg-teal-500/15 dark:bg-teal-500/25',
-    text: 'text-teal-800 dark:text-teal-300',
-    border: 'border-teal-500/35 dark:border-teal-500/50',
+    bg: 'bg-emerald-50 dark:bg-emerald-950/40',
+    text: 'text-emerald-800 dark:text-emerald-200',
+    border: 'border-emerald-200/80 dark:border-emerald-800/50',
+    avatarBg: 'bg-emerald-600 dark:bg-emerald-500',
+    accentBorder: 'border-l-emerald-500',
+    accentGlow: 'hover:border-emerald-500/50',
+    dot: 'bg-emerald-500',
+    name: 'emerald',
+  },
+  {
+    bg: 'bg-purple-50 dark:bg-purple-950/40',
+    text: 'text-purple-800 dark:text-purple-200',
+    border: 'border-purple-200/80 dark:border-purple-800/50',
+    avatarBg: 'bg-purple-600 dark:bg-purple-500',
+    accentBorder: 'border-l-purple-500',
+    accentGlow: 'hover:border-purple-500/50',
+    dot: 'bg-purple-500',
+    name: 'purple',
+  },
+  {
+    bg: 'bg-amber-50 dark:bg-amber-950/40',
+    text: 'text-amber-800 dark:text-amber-200',
+    border: 'border-amber-200/80 dark:border-amber-800/50',
+    avatarBg: 'bg-amber-600 dark:bg-amber-500',
+    accentBorder: 'border-l-amber-500',
+    accentGlow: 'hover:border-amber-500/50',
+    dot: 'bg-amber-500',
+    name: 'amber',
+  },
+  {
+    bg: 'bg-rose-50 dark:bg-rose-950/40',
+    text: 'text-rose-800 dark:text-rose-200',
+    border: 'border-rose-200/80 dark:border-rose-800/50',
+    avatarBg: 'bg-rose-600 dark:bg-rose-500',
+    accentBorder: 'border-l-rose-500',
+    accentGlow: 'hover:border-rose-500/50',
+    dot: 'bg-rose-500',
+    name: 'rose',
+  },
+  {
+    bg: 'bg-sky-50 dark:bg-sky-950/40',
+    text: 'text-sky-800 dark:text-sky-200',
+    border: 'border-sky-200/80 dark:border-sky-800/50',
+    avatarBg: 'bg-sky-600 dark:bg-sky-500',
+    accentBorder: 'border-l-sky-500',
+    accentGlow: 'hover:border-sky-500/50',
+    dot: 'bg-sky-500',
+    name: 'sky',
+  },
+  {
+    bg: 'bg-teal-50 dark:bg-teal-950/40',
+    text: 'text-teal-800 dark:text-teal-200',
+    border: 'border-teal-200/80 dark:border-teal-800/50',
     avatarBg: 'bg-teal-600 dark:bg-teal-500',
     accentBorder: 'border-l-teal-500',
-    accentGlow: 'hover:border-teal-500/60',
+    accentGlow: 'hover:border-teal-500/50',
     dot: 'bg-teal-500',
     name: 'teal',
-  },
-  {
-    bg: 'bg-orange-500/15 dark:bg-orange-500/25',
-    text: 'text-orange-800 dark:text-orange-300',
-    border: 'border-orange-500/35 dark:border-orange-500/50',
-    avatarBg: 'bg-orange-600 dark:bg-orange-500',
-    accentBorder: 'border-l-orange-500',
-    accentGlow: 'hover:border-orange-500/60',
-    dot: 'bg-orange-500',
-    name: 'orange',
-  },
-  {
-    bg: 'bg-blue-500/15 dark:bg-blue-500/25',
-    text: 'text-blue-800 dark:text-blue-300',
-    border: 'border-blue-500/35 dark:border-blue-500/50',
-    avatarBg: 'bg-blue-600 dark:bg-blue-500',
-    accentBorder: 'border-l-blue-500',
-    accentGlow: 'hover:border-blue-500/60',
-    dot: 'bg-blue-500',
-    name: 'blue',
-  },
-  {
-    bg: 'bg-lime-500/15 dark:bg-lime-500/25',
-    text: 'text-lime-900 dark:text-lime-300',
-    border: 'border-lime-500/35 dark:border-lime-500/50',
-    avatarBg: 'bg-lime-600 dark:bg-lime-500',
-    accentBorder: 'border-l-lime-500',
-    accentGlow: 'hover:border-lime-500/60',
-    dot: 'bg-lime-500',
-    name: 'lime',
-  },
-  {
-    bg: 'bg-pink-500/15 dark:bg-pink-500/25',
-    text: 'text-pink-800 dark:text-pink-300',
-    border: 'border-pink-500/35 dark:border-pink-500/50',
-    avatarBg: 'bg-pink-600 dark:bg-pink-500',
-    accentBorder: 'border-l-pink-500',
-    accentGlow: 'hover:border-pink-500/60',
-    dot: 'bg-pink-500',
-    name: 'pink',
   },
 ];
 
 /**
- * Returns a deterministic color palette based on person's name or ID
+ * Returns a deterministic monochrome palette based on person's name or ID
  */
 export const getPersonColor = (nameOrId = '') => {
   const str = String(nameOrId || 'unassigned').trim().toLowerCase();
@@ -181,7 +140,7 @@ export const extractTaskAssignees = (task = {}) => {
 };
 
 /**
- * Renders a color-coded person badge with avatar/initials and name
+ * Renders a monochrome assignee badge with avatar/initials and name
  */
 export const PersonAssigneeBadge = ({ person, size = 'sm', showRole = false }) => {
   if (!person) return null;
@@ -202,22 +161,22 @@ export const PersonAssigneeBadge = ({ person, size = 'sm', showRole = false }) =
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-lg border font-bold transition-all ${
+      className={`inline-flex items-center gap-1.5 rounded-lg font-semibold transition-colors border ${
         isSmall ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs'
-      } ${color.bg} ${color.text} ${color.border} shadow-2xs`}
+      } ${color.bg} ${color.text} ${color.border}`}
       title={`Assigned to: ${name}${role ? ` (${role})` : ''}`}
     >
       {avatar ? (
         <img
           src={getAssetUrl(avatar)}
           alt=""
-          className={`${isSmall ? 'w-3.5 h-3.5' : 'w-4 h-4'} rounded-full object-cover shrink-0 ring-1 ring-white/20`}
+          className={`${isSmall ? 'w-3.5 h-3.5' : 'w-4 h-4'} rounded-full object-cover shrink-0`}
         />
       ) : (
         <span
           className={`${
             isSmall ? 'w-3.5 h-3.5 text-[8px]' : 'w-4 h-4 text-[9px]'
-          } rounded-full ${color.avatarBg} text-white flex items-center justify-center font-black shrink-0 shadow-xs`}
+          } rounded-full ${color.avatarBg} text-white dark:text-zinc-950 flex items-center justify-center font-black shrink-0`}
         >
           {initials}
         </span>

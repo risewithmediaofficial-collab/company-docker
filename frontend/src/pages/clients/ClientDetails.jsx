@@ -1,23 +1,60 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useParams, useSearchParams, Link, Navigate, useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSelector } from 'react-redux';
+import { toast } from 'sonner';
 import api from '../../api';
 import {
-  Building2, Phone, Mail, IndianRupee,
+  Building2, Phone, Mail, ListChecks, ArrowRight,
   Briefcase, CheckCircle2, Clock, AlertCircle, Users,
-  FileText, TrendingUp, Edit2, FolderOpen, Calendar
-} from 'lucide-react';
-import { motion } from 'framer-motion';
+  FileText, TrendingUp, Edit2, FolderOpen, Calendar,
+  LockKeyhole, KeyRound, Eye, EyeOff, Copy, Check, ExternalLink, Plus, ChevronDown, ChevronUp, AtSign, DollarSign, X, Trash2
+} from '@/components/ui/muiIcons';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
 import { AddClientModal } from '../../components/modals/AddClientModal';
 import { AddProjectModal } from '../../components/modals/AddProjectModal';
-import ClientFinancialSummary from '../../components/ui/ClientFinancialSummary';
+import { AddProposalModal } from '../../components/modals/AddProposalModal';
+import FinanceQuickAddModal from '../finance/components/FinanceQuickAddModal';
+import { CredentialFormDialog } from './ClientVault';
 import ClientProjectsPanel from '../../components/ui/ClientProjectsPanel';
 import {
   NotionDetailPage,
   NotionTabs,
 } from '../../components/ui/NotionDetailTemplate';
 import { formatINR } from '../../utils/currency';
+import { getProjectCategoryMeta } from '../../utils/projectCategories';
+import { useCredential, useCreateCredential, useDeleteCredential } from '../../hooks/useClientCredentials';
+import { useClientProposals } from '../../hooks/useProposals';
+import { useDeleteClient } from '../../hooks/useClients';
+
+const PLATFORM_MAP = {
+  instagram: { label: 'Instagram', code: 'IG' },
+  facebook: { label: 'Facebook', code: 'FB' },
+  x: { label: 'X (Twitter)', code: 'X' },
+  youtube: { label: 'YouTube', code: 'YT' },
+  linkedin: { label: 'LinkedIn', code: 'IN' },
+  threads: { label: 'Threads', code: 'TH' },
+  tiktok: { label: 'TikTok', code: 'TT' },
+  snapchat: { label: 'Snapchat', code: 'SC' },
+  pinterest: { label: 'Pinterest', code: 'PI' },
+  other: { label: 'Other', code: 'OT' },
+};
+const getPlatformMeta = (val) => PLATFORM_MAP[val] || { label: val || 'Account', code: 'AC' };
 
 const onboardingStepLabels = {
   welcomeEmailSent: 'Welcome Email Sent',
@@ -28,90 +65,344 @@ const onboardingStepLabels = {
 };
 
 const statusStyles = {
-  Active: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
-  Prospect: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
-  Churned: 'bg-red-500/10 text-red-600 border-red-500/30',
-  Inactive: 'bg-secondary text-muted-foreground border-border',
-  Renew: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30',
+  Active: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold',
+  Prospect: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30',
+  Churned: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30',
+  Inactive: 'bg-secondary text-muted-foreground border border-border',
+  Renew: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold',
 };
 
 const ClientDetails = () => {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useSelector((state) => state.auth);
-  const [activeTab, setActiveTab] = useState('overview');
+
+  // If user is a client, restrict access strictly to their own client record
+  const isClientUser = user?.role === 'client';
+  const myClientId = user?.clientId || user?.client?._id || user?.client;
+  if (isClientUser && myClientId && String(myClientId) !== String(id)) {
+    return <Navigate to={`/clients/${myClientId}`} replace />;
+  }
+
+  const queryClient = useQueryClient();
+  const createCredentialMutation = useCreateCredential();
+  const deleteCredentialMutation = useDeleteCredential();
+  const deleteClientMutation = useDeleteClient();
+  const navigate = useNavigate();
+
+  const [showDeleteClientDialog, setShowDeleteClientDialog] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabParam || (isClientUser ? 'vault' : 'overview'));
   const [showEditModal, setShowEditModal] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [showProposalModal, setShowProposalModal] = useState(false);
+  const [showPaymentNoteModal, setShowPaymentNoteModal] = useState(false);
+  const [showVaultModal, setShowVaultModal] = useState(false);
+  const [showCallModal, setShowCallModal] = useState(false);
+  const [showReferralModal, setShowReferralModal] = useState(false);
+  const [activePasswordId, setActivePasswordId] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
+  const [expandedCards, setExpandedCards] = useState({});
+
+  const handleDeleteClient = async () => {
+    if (!id) return;
+    try {
+      await deleteClientMutation.mutateAsync(id);
+      setShowDeleteClientDialog(false);
+      navigate('/clients');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete client');
+    }
+  };
+
+  const handleExecuteDelete = async () => {
+    if (!deleteConfirm?.id || !deleteConfirm?.type) return;
+    try {
+      const { type, id: itemId } = deleteConfirm;
+      if (type === 'project') {
+        await api.delete(`/projects/${itemId}`);
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        toast.success('Project deleted successfully');
+      } else if (type === 'invoice') {
+        await api.delete(`/finance/invoices/${itemId}`);
+        toast.success('Invoice deleted successfully');
+      } else if (type === 'proposal') {
+        await api.delete(`/proposals/${itemId}`);
+        queryClient.invalidateQueries({ queryKey: ['client-proposals', id] });
+        toast.success('Proposal deleted successfully');
+      } else if (type === 'paymentNote') {
+        if (deleteConfirm.isReceipt) {
+          await api.delete(`/finance/receipts/${itemId}`);
+        } else {
+          await api.delete(`/finance/records/${itemId}`);
+        }
+        toast.success('Payment record removed');
+      } else if (type === 'credential') {
+        await deleteCredentialMutation.mutateAsync(itemId);
+        queryClient.invalidateQueries({ queryKey: ['client-credentials', id] });
+        toast.success('Credential deleted');
+      } else if (type === 'call') {
+        await api.delete(`/finance/call-history/${itemId}`);
+        toast.success('Call log deleted');
+      } else if (type === 'referral') {
+        await api.delete(`/referrals/${itemId}`);
+        toast.success('Referral deleted');
+      }
+      setDeleteConfirm(null);
+      refetch();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete item');
+    }
+  };
+
+  useEffect(() => {
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', newTab);
+      return next;
+    }, { replace: true });
+  };
+
+  const { data: revealedCredential } = useCredential(activePasswordId);
+
+  const { data: credentials = [] } = useQuery({
+    queryKey: ['client-credentials', id],
+    queryFn: async () => {
+      const res = await api.get(`/credentials/clients/${id}`);
+      return res.data?.credentials || [];
+    },
+    enabled: Boolean(id),
+  });
+
+  const { data: clientProposals = [] } = useClientProposals(id);
+
+  const handleCopy = (text, copyKey) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedId(copyKey);
+    toast.success('Copied to clipboard!');
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const toggleCard = (cardId) => setExpandedCards((prev) => ({ ...prev, [cardId]: !prev[cardId] }));
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['client', id],
     queryFn: async () => {
-      const [clientRes, projectsRes, invoicesRes, financeRes, callRes, referralRes] = await Promise.allSettled([
-        api.get(`/clients/${id}`),
-        api.get(`/projects?client=${id}`),
-        api.get(`/finance/invoices?client=${id}`),
-        api.get(`/finance?client=${id}`),
-        api.get(`/finance/call-history?clientId=${id}`),
-        api.get(`/referrals?client=${id}`),
-      ]);
+      let clientRes = null;
+      let projectsRes = null;
+      let invoicesRes = null;
+      let financeRes = null;
+      let callRes = null;
+      let referralRes = null;
+      let receiptsRes = null;
+
+      try {
+        const results = await Promise.allSettled([
+          api.get(`/clients/${id}`),
+          api.get(`/projects?client=${id}`),
+          api.get(`/finance/invoices?client=${id}`),
+          api.get(`/finance?client=${id}`),
+          api.get(`/finance/call-history?clientId=${id}`),
+          api.get(`/referrals?client=${id}`),
+          api.get(`/finance/receipts?client=${id}`),
+        ]);
+        [clientRes, projectsRes, invoicesRes, financeRes, callRes, referralRes, receiptsRes] = results;
+      } catch (err) {
+        console.error('Failed to load client 360 bundle', err);
+      }
+
+      let client = clientRes?.status === 'fulfilled' ? clientRes.value?.data?.client : null;
+
+      // Fallback 1: If not found in primary client table, attempt lookup via SMM clients endpoint
+      if (!client) {
+        try {
+          const smmRes = await api.get(`/smm/clients/${encodeURIComponent(id)}`);
+          if (smmRes.data?.data) {
+            const smm = smmRes.data.data;
+            client = {
+              _id: smm._id,
+              name: smm.primaryContact || smm.companyName,
+              company: smm.companyName,
+              email: smm.email || '',
+              phone: smm.phone || '',
+              status: smm.status === 'active' ? 'Active' : (smm.status || 'Active'),
+              website: smm.website || '',
+              services: ['Social Media Marketing'],
+              onboardingSteps: smm.onboardingSteps || {},
+              createdAt: smm.createdAt || new Date().toISOString(),
+              ...smm,
+            };
+          }
+        } catch (_) {}
+      }
+
+      // Fallback 2: Search all clients if id was a name/slug or partial match
+      if (!client) {
+        try {
+          const allRes = await api.get('/clients?limit=500');
+          const allList = allRes.data?.clients || allRes.data?.data || [];
+          const decodedId = decodeURIComponent(id).toLowerCase().trim();
+          const found = allList.find(c => 
+            String(c._id) === id || 
+            (c.company && c.company.toLowerCase().trim() === decodedId) ||
+            (c.name && c.name.toLowerCase().trim() === decodedId)
+          );
+          if (found) {
+            client = found;
+          }
+        } catch (_) {}
+      }
+
+      // If client was resolved and has a different _id than raw id param, ensure sub-resources load
+      const toArray = (val) => (Array.isArray(val) ? val : []);
+      let projects = projectsRes?.status === 'fulfilled' ? toArray(projectsRes.value.data?.projects || projectsRes.value.data) : [];
+      let invoices = invoicesRes?.status === 'fulfilled' ? toArray(invoicesRes.value.data?.invoices || invoicesRes.value.data) : [];
+      let financeRecords = financeRes?.status === 'fulfilled' ? toArray(financeRes.value.data?.records || financeRes.value.data) : [];
+      let callHistory = callRes?.status === 'fulfilled' ? toArray(callRes.value.data?.calls || callRes.value.data?.callHistory || callRes.value.data) : [];
+      let referrals = referralRes?.status === 'fulfilled' ? toArray(referralRes.value.data?.referrals || referralRes.value.data) : [];
+      let receipts = receiptsRes?.status === 'fulfilled' ? toArray(receiptsRes.value.data?.receipts || receiptsRes.value.data?.data || receiptsRes.value.data) : [];
+
+      if (client?._id && String(client._id) !== String(id) && projects.length === 0) {
+        try {
+          const [subP, subI, subF, subR] = await Promise.allSettled([
+            api.get(`/projects?client=${client._id}`),
+            api.get(`/finance/invoices?client=${client._id}`),
+            api.get(`/finance?client=${client._id}`),
+            api.get(`/finance/receipts?client=${client._id}`),
+          ]);
+          if (subP.status === 'fulfilled') projects = subP.value.data?.projects || subP.value.data || [];
+          if (subI.status === 'fulfilled') invoices = subI.value.data?.invoices || [];
+          if (subF.status === 'fulfilled') financeRecords = subF.value.data?.records || [];
+          if (subR.status === 'fulfilled') receipts = subR.value.data?.receipts || subR.value.data?.data || subR.value.data || [];
+        } catch (_) {}
+      }
 
       return {
-        client: clientRes.status === 'fulfilled' ? clientRes.value.data.client : null,
-        projects: projectsRes.status === 'fulfilled' ? (projectsRes.value.data.projects || projectsRes.value.data || []) : [],
-        invoices: invoicesRes.status === 'fulfilled' ? invoicesRes.value.data.invoices || [] : [],
-        financeRecords: financeRes.status === 'fulfilled' ? financeRes.value.data.records || [] : [],
-        callHistory: callRes.status === 'fulfilled' ? callRes.value.data.calls || [] : [],
-        referrals: referralRes.status === 'fulfilled' ? referralRes.value.data.referrals || [] : [],
+        client,
+        projects,
+        invoices,
+        financeRecords,
+        callHistory,
+        referrals,
+        receipts,
       };
     },
+    enabled: Boolean(id) && id !== 'undefined',
   });
 
   if (isLoading) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-40 bg-card rounded-3xl border border-border" />
-        <div className="grid grid-cols-4 gap-4">
-          {[1,2,3,4].map(i => <div key={i} className="h-24 bg-card rounded-2xl border border-border" />)}
+      <div className="space-y-6">
+        <div className="h-40 bg-card rounded-3xl " />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => <div key={i} className="h-24 bg-card rounded-2xl " />)}
         </div>
       </div>
     );
   }
 
-  if (!data?.client) return (
-    <div className="p-12 text-center text-muted-foreground">Client not found.</div>
-  );
+  if (!data?.client) {
+    return (
+      <div className="p-6 sm:p-10 text-center bg-card rounded-3xl max-w-md mx-auto my-12 space-y-4">
+        <div className="w-12 h-12 rounded-2xl bg-secondary text-foreground flex items-center justify-center mx-auto">
+          <Building2 size={24} />
+        </div>
+        <div className="space-y-1">
+          <h3 className="text-base font-bold text-foreground">Client Profile Not Found</h3>
+          <p className="text-xs text-muted-foreground">
+            We couldn't locate client details for ID <code className="px-1.5 py-0.5 rounded bg-secondary font-mono text-[11px]">{id}</code>.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+          <Link
+            to="/clients"
+            className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-all inline-flex items-center gap-1.5"
+          >
+            <Users size={14} />
+            <span>Return to Clients 360</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="px-4 py-2 rounded-xl bg-secondary text-secondary-foreground font-semibold text-xs hover:bg-secondary/80 transition-all cursor-pointer"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  const { client, projects, invoices, financeRecords = [], callHistory = [], referrals = [] } = data;
+  const client = data?.client || {};
+  const projects = Array.isArray(data?.projects) ? data.projects : [];
+  const invoices = Array.isArray(data?.invoices) ? data.invoices : [];
+  const financeRecords = Array.isArray(data?.financeRecords) ? data.financeRecords : [];
+  const callHistory = Array.isArray(data?.callHistory) ? data.callHistory : [];
+  const referrals = Array.isArray(data?.referrals) ? data.referrals : [];
+  const receipts = Array.isArray(data?.receipts) ? data.receipts : [];
 
   const onboardingSteps = client.onboardingSteps || {};
   const completedSteps = Object.values(onboardingSteps).filter(Boolean).length;
   const totalSteps = Object.keys(onboardingStepLabels).length;
   const onboardingPercent = Math.round((completedSteps / totalSteps) * 100);
 
-  const paidInvoices = invoices.filter(inv => inv.status?.toLowerCase() === 'paid');
-  const pendingInvoices = invoices.filter(inv => inv.status?.toLowerCase() !== 'paid' && inv.status?.toLowerCase() !== 'cancelled');
-  const totalRevenue = paidInvoices.reduce((sum, inv) => sum + (inv.total || inv.amount || 0), 0);
-  const paymentNotes = financeRecords.flatMap((record) => record.paymentHistory || []);
+  const totalTasksAvailable = projects.reduce((sum, p) => sum + (p.totalTasks || 0), 0);
+  const totalCompletedTasks = projects.reduce((sum, p) => sum + (p.completedTasks ?? p.doneTasks ?? 0), 0);
+  const totalOngoingTasks = projects.reduce((sum, p) => sum + (p.ongoingTasks || 0), 0);
+  const totalPendingTasks = projects.reduce(
+    (sum, p) => sum + (p.pendingTasks ?? Math.max(0, (p.totalTasks || 0) - (p.ongoingTasks || 0) - (p.completedTasks ?? p.doneTasks ?? 0))),
+    0
+  );
+
+  const paymentNotes = [
+    ...receipts.map((r) => ({
+      _id: r._id,
+      noteTitle: r.invoice?.invoiceNumber ? `Payment on ${r.invoice.invoiceNumber}` : 'Payment Receipt',
+      noteDescription: r.notes || (r.reference ? `Ref: ${r.reference}` : 'Client payment receipt recorded'),
+      amountPaid: r.amount || 0,
+      paymentDate: r.receivedDate || r.paidAt || r.createdAt,
+      paymentMode: r.paymentMode || 'Bank',
+      reference: r.reference || '',
+    })),
+    ...financeRecords.flatMap((record) => record.paymentHistory || []),
+  ];
+
+  const handleSaveCredential = async ({ data: credPayload }) => {
+    try {
+      await createCredentialMutation.mutateAsync({
+        ...credPayload,
+        clientId: client._id,
+      });
+      setShowVaultModal(false);
+      queryClient.invalidateQueries({ queryKey: ['client-credentials', id] });
+      refetch();
+      toast.success('Credential added to client vault');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save credential');
+    }
+  };
 
   const isFinanceVisible = user?.role === 'superAdmin' || user?.role === 'admin' || user?.role === 'manager' || !!user?.permissions?.canManageFinance;
-
-  const stats = [
-    ...(isFinanceVisible ? [
-      { label: 'Total Revenue', value: formatINR(totalRevenue), icon: IndianRupee, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    ] : []),
-    { label: 'Active Projects', value: projects.filter(p => p.status === 'active').length, icon: Briefcase, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { label: 'Account Created', value: client.createdAt ? new Date(client.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—', icon: Calendar, color: 'text-violet-500', bg: 'bg-violet-500/10' },
-    ...(isFinanceVisible ? [
-      { label: 'Paid Invoices', value: paidInvoices.length, icon: CheckCircle2, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-      { label: 'Pending Invoices', value: pendingInvoices.length, icon: AlertCircle, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-    ] : []),
-  ];
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
     { id: 'projects', label: `Projects (${projects.length})`, icon: Briefcase },
+    { id: 'proposals', label: `Proposals (${clientProposals.length})`, icon: FileText },
+    { id: 'vault', label: `Client Vault (${credentials.length})`, icon: LockKeyhole },
     ...(isFinanceVisible ? [
       { id: 'invoices', label: `Invoices (${invoices.length})`, icon: FileText },
-      { id: 'paymentNotes', label: 'Payment Notes', icon: AlertCircle },
+      { id: 'paymentNotes', label: `Payment Notes (${paymentNotes.length})`, icon: AlertCircle },
       { id: 'callHistory', label: `Call History (${callHistory.length})`, icon: Phone },
       { id: 'referrals', label: `Referrals (${referrals.length})`, icon: Users },
     ] : []),
@@ -119,11 +410,11 @@ const ClientDetails = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-4 animate-in fade-in duration-300">
 
       <NotionDetailPage
-        backTo="/clients"
-        backLabel="Clients"
+        backTo={isClientUser ? null : '/clients'}
+        backLabel={isClientUser ? null : 'Clients'}
         title={client.company || client.name}
         subtitle={[
           client.email,
@@ -133,15 +424,96 @@ const ClientDetails = () => {
         ].filter(Boolean).join(' | ')}
         icon={Building2}
         status={client.status}
-        statusClassName={`border ${statusStyles[client.status] || statusStyles.Active}`}
+        statusClassName={` ${statusStyles[client.status] || statusStyles.Active}`}
         actions={(
           <>
+            {user?.role !== 'client' && (
+              <div className="relative group">
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all cursor-pointer shadow-xs"
+                >
+                  <Plus size={15} />
+                  <span>+ Add New</span>
+                  <ChevronDown size={13} />
+                </button>
+                <div className="absolute right-0 top-full mt-1.5 w-48 rounded-2xl bg-card border border-border/60 shadow-xl p-1.5 hidden group-hover:flex group-focus-within:flex flex-col z-50 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setShowInvoiceModal(true)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-foreground hover:bg-secondary transition-colors text-left font-semibold cursor-pointer"
+                  >
+                    <FileText size={14} className="text-primary shrink-0" />
+                    <span>Create Invoice</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowProposalModal(true)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-foreground hover:bg-secondary transition-colors text-left font-semibold cursor-pointer"
+                  >
+                    <FileText size={14} className="text-sky-500 shrink-0" />
+                    <span>Create Proposal</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowPaymentNoteModal(true)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-foreground hover:bg-secondary transition-colors text-left font-semibold cursor-pointer"
+                  >
+                    <AlertCircle size={14} className="text-emerald-500 shrink-0" />
+                    <span>Record Payment</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowProjectModal(true)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-foreground hover:bg-secondary transition-colors text-left font-semibold cursor-pointer"
+                  >
+                    <Briefcase size={14} className="text-amber-500 shrink-0" />
+                    <span>New Project</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowVaultModal(true)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-foreground hover:bg-secondary transition-colors text-left font-semibold cursor-pointer"
+                  >
+                    <LockKeyhole size={14} className="text-indigo-500 shrink-0" />
+                    <span>Add Credential</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCallModal(true)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-foreground hover:bg-secondary transition-colors text-left font-semibold cursor-pointer"
+                  >
+                    <Phone size={14} className="text-purple-500 shrink-0" />
+                    <span>Log Call</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowReferralModal(true)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-foreground hover:bg-secondary transition-colors text-left font-semibold cursor-pointer"
+                  >
+                    <Users size={14} className="text-rose-500 shrink-0" />
+                    <span>Add Referral</span>
+                  </button>
+                </div>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => handleTabChange('vault')}
+              className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                activeTab === 'vault'
+                  ? ' bg-primary text-primary-foreground '
+                  : ' bg-secondary text-foreground hover:bg-muted'
+              }`}
+            >
+              <LockKeyhole size={15} className="shrink-0" /> Client Vault
+            </button>
             {client.email && (
               <a
                 href={`mailto:${client.email}`}
-                className="flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
+                className="flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold bg-secondary text-foreground transition-colors hover:bg-muted"
               >
-                <Mail size={16} /> Email Client
+                <Mail size={15} className="shrink-0" /> Email Client
               </a>
             )}
             {client.driveLink && (
@@ -149,57 +521,40 @@ const ClientDetails = () => {
                 href={client.driveLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-600 transition-colors hover:bg-emerald-500/20"
+                className="flex items-center gap-2 rounded-xl bg-secondary px-3.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
               >
-                <FolderOpen size={16} /> Drive Folder
+                <FolderOpen size={15} className="shrink-0" /> Drive Folder
               </a>
             )}
             {user?.role !== 'client' && (
               <button
                 onClick={() => setShowEditModal(true)}
-                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90"
+                className="flex items-center gap-2 rounded-xl bg-secondary px-3.5 py-2 text-xs font-bold text-foreground transition-all hover:bg-muted cursor-pointer"
               >
-                <Edit2 size={16} /> Edit Client
+                <Edit2 size={15} className="shrink-0" /> Edit Client
+              </button>
+            )}
+            {(user?.role === 'superAdmin' || user?.role === 'admin' || user?.role === 'manager') && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteClientDialog(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 px-3.5 py-2 text-xs font-bold transition-all cursor-pointer"
+                title="Delete Client"
+              >
+                <Trash2 size={15} className="shrink-0" /> Delete Client
               </button>
             )}
           </>
         )}
-      >
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {stats.map((stat, i) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.07 }}
-              className="flex items-center gap-4 rounded-2xl border border-border/70 bg-secondary/20 p-4"
-            >
-              <div className={`rounded-2xl p-3 ${stat.bg} ${stat.color}`}>
-                <stat.icon size={20} />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">{stat.label}</p>
-                <p className="mt-0.5 text-xl font-bold">{stat.value}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </NotionDetailPage>
+      />
 
       {/* Tabs */}
-      <NotionTabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      <NotionTabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          {/* Financial Summary */}
-          <ClientFinancialSummary 
-            clientId={client._id}
-            clientName={client.name}
-            clientTier={client.tier}
-          />
-
-          {/* Projects Panel */}
+          {/* Projects & Task Overview (Initial Landing Section) */}
           <ClientProjectsPanel
             clientId={client._id}
             clientName={client.name}
@@ -208,27 +563,24 @@ const ClientDetails = () => {
 
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Details */}
-            <div className="lg:col-span-2 bg-card rounded-3xl border border-border shadow-sm p-6 space-y-6">
+            <div className="lg:col-span-2 bg-card rounded-3xl p-6 space-y-6">
               <h2 className="font-bold text-lg">Client Information</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm">
                 {[
                   ['Type / Sector', client.industry || 'Not set'],
-                  [
-                    client.budgetType === 'overall' ? 'Overall Budget Amount' : 'Monthly Budget Amount',
-                    client.contractValue ? `${formatINR(client.contractValue)} (${client.budgetType === 'overall' ? 'Overall' : 'Monthly'})` : '—',
-                  ],
-                  ['Billing Cycle', client.billingCycle || '—'],
+                  ['Account Tier', client.tier || 'Starter'],
                   ['Contract Start', client.contractStartDate ? new Date(client.contractStartDate).toLocaleDateString() : '—'],
                   ['Contract End', client.contractEndDate ? new Date(client.contractEndDate).toLocaleDateString() : 'Ongoing / Retainer (No End Date)'],
                   ['Requirements', client.services?.join(', ') || 'Not set'],
+                  ['Active Projects', `${projects.filter((p) => p.status === 'In Progress' || p.status === 'active').length} of ${projects.length}`],
                 ].map(([label, value]) => (
-                  <div key={label} className="p-4 bg-secondary/30 rounded-2xl border border-border/50">
+                  <div key={label} className="p-4 bg-secondary/30 rounded-2xl ">
                     <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
                     <p className="font-semibold capitalize">{value}</p>
                   </div>
                 ))}
                 {/* Drive Link — full-width card */}
-                <div className="sm:col-span-2 p-4 bg-secondary/30 rounded-2xl border border-border/50">
+                <div className="sm:col-span-2 p-4 bg-secondary/30 rounded-2xl ">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
                     <FolderOpen size={13} /> Google Drive Folder
                   </p>
@@ -237,9 +589,9 @@ const ClientDetails = () => {
                       href={client.driveLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-600 hover:underline break-all"
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-foreground hover:underline break-all"
                     >
-                      <FolderOpen size={15} />
+                      <FolderOpen size={15} className="shrink-0" />
                       {client.driveLink}
                     </a>
                   ) : (
@@ -248,7 +600,7 @@ const ClientDetails = () => {
                       {user?.role !== 'client' && (
                         <button
                           onClick={() => setShowEditModal(true)}
-                          className="text-primary underline font-medium"
+                          className="text-foreground underline font-medium"
                         >
                           Add one
                         </button>
@@ -258,7 +610,7 @@ const ClientDetails = () => {
                 </div>
               </div>
               {client.notes && (
-                <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50">
+                <div className="p-4 bg-secondary/30 rounded-2xl ">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Notes</p>
                   <p className="text-sm text-muted-foreground leading-relaxed">{client.notes}</p>
                 </div>
@@ -266,19 +618,17 @@ const ClientDetails = () => {
             </div>
 
             {/* Onboarding Progress Card */}
-            <div className="bg-card rounded-3xl border border-border shadow-sm p-6">
+            <div className="bg-card rounded-3xl p-6">
               <h2 className="font-bold text-lg mb-5">Onboarding Progress</h2>
               <div className="relative mb-6">
                 <div className="flex items-end justify-between mb-2">
-                  <span className="text-xs text-muted-foreground font-medium">{completedSteps}/{totalSteps} steps</span>
-                  <span className="text-2xl font-black text-primary">{onboardingPercent}%</span>
+                  <span className="text-xs text-muted-foreground font-medium tabular-nums">{completedSteps}/{totalSteps} steps</span>
+                  <span className="text-2xl font-black text-foreground tabular-nums">{onboardingPercent}%</span>
                 </div>
                 <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${onboardingPercent}%` }}
-                    transition={{ duration: 0.8, ease: 'easeOut' }}
-                    className="h-full bg-gradient-to-r from-primary to-indigo-500 rounded-full"
+                  <div
+                    style={{ width: `${onboardingPercent}%` }}
+                    className="h-full bg-primary rounded-full transition-[width] duration-500 ease-out"
                   />
                 </div>
               </div>
@@ -286,11 +636,11 @@ const ClientDetails = () => {
                 {Object.entries(onboardingStepLabels).map(([key, label]) => {
                   const done = onboardingSteps[key];
                   return (
-                    <div key={key} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${done ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-border bg-secondary/20'}`}>
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${done ? 'bg-emerald-500' : 'bg-secondary border-2 border-border'}`}>
-                        {done && <CheckCircle2 size={12} className="text-white" />}
+                    <div key={key} className={`flex items-center gap-3 p-3 rounded-xl transition-all ${done ? ' bg-secondary/60' : ' bg-background'}`}>
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${done ? 'bg-primary text-primary-foreground' : 'bg-secondary '}`}>
+                        {done && <CheckCircle2 size={12} />}
                       </div>
-                      <span className={`text-xs font-semibold ${done ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'}`}>{label}</span>
+                      <span className={`text-xs font-semibold ${done ? 'text-foreground' : 'text-muted-foreground'}`}>{label}</span>
                     </div>
                   );
                 })}
@@ -301,62 +651,810 @@ const ClientDetails = () => {
       )}
 
       {activeTab === 'projects' && (
-        <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
-          <div className="p-5 border-b border-border bg-secondary/10 flex items-center justify-between">
-            <h2 className="font-bold flex items-center gap-2"><Briefcase size={18} className="text-primary"/>Projects</h2>
-          </div>
-          <div className="divide-y divide-border">
-            {projects.length > 0 ? projects.map(proj => (
-              <Link key={proj._id} to={`/projects/${proj._id}`} className="flex items-center justify-between p-5 hover:bg-secondary/20 transition-colors group">
-                <div>
-                  <p className="font-semibold group-hover:text-primary transition-colors">{proj.name}</p>
-                  <p className="text-xs text-muted-foreground mt-1 capitalize">{proj.status?.replace(/_/g, ' ')}</p>
-                </div>
-                <div className="text-right">
-                  <div className="w-32 h-1.5 bg-secondary rounded-full overflow-hidden">
-                    <div className="h-full bg-primary rounded-full" style={{ width: `${proj.progress || 0}%` }} />
-                  </div>
-                  <span className="text-xs text-muted-foreground mt-1 block">{proj.progress || 0}% complete</span>
-                </div>
-              </Link>
-            )) : (
-              <div className="p-12 text-center text-muted-foreground text-sm">No projects yet for this client.</div>
+        <div className="space-y-5">
+          {/* Projects Header */}
+          <div className="bg-card rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-2xl bg-secondary text-foreground flex items-center justify-center shrink-0">
+                <Briefcase size={20} />
+              </div>
+              <div>
+                <h2 className="font-bold text-lg text-foreground">Projects & Completion Status</h2>
+                <p className="text-xs text-muted-foreground tabular-nums mt-0.5">
+                  {projects.length} {projects.length === 1 ? 'project' : 'projects'} · {totalTasksAvailable} tasks available · {totalCompletedTasks} completed
+                </p>
+              </div>
+            </div>
+            {user?.role !== 'client' && (
+              <button
+                type="button"
+                onClick={() => setShowProjectModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all cursor-pointer self-start sm:self-auto"
+              >
+                <Plus size={14} />
+                <span>New Project</span>
+              </button>
             )}
           </div>
+
+          {projects.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {projects.map((proj) => {
+                const catMeta = getProjectCategoryMeta(proj.category);
+                const CatIcon = catMeta.icon;
+                const projStatus = String(proj.status || 'Planning').replace(/_/g, ' ');
+                const isDoneStatus = projStatus.toLowerCase() === 'completed';
+                const isActiveStatus = projStatus.toLowerCase() === 'in progress' || projStatus.toLowerCase() === 'active';
+                const pTotal = proj.totalTasks || 0;
+                const pOngoing = proj.ongoingTasks || 0;
+                const pCompleted = proj.completedTasks ?? proj.doneTasks ?? 0;
+                const pPending = proj.pendingTasks ?? Math.max(0, pTotal - pOngoing - pCompleted);
+                const pProgress = proj.progress || 0;
+                const endDateVal = proj.endDate || proj.dueDate;
+
+                return (
+                  <Link
+                    key={proj._id}
+                    to={`/projects/${proj._id}`}
+                    className="bg-card rounded-3xl p-5 sm:p-6 hover:bg-secondary/40 transition-all flex flex-col justify-between gap-4 group"
+                  >
+                    {/* Header: Type, Project Status & Title */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-secondary text-foreground">
+                          <CatIcon size={12} className="shrink-0" />
+                          <span>{catMeta.shortLabel || catMeta.label}</span>
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase tracking-wider ${
+                              isActiveStatus
+                                ? 'bg-primary text-primary-foreground'
+                                : isDoneStatus
+                                ? 'bg-secondary text-foreground'
+                                : 'bg-muted text-muted-foreground'
+                            }`}
+                          >
+                            {projStatus}
+                          </span>
+                          {(user?.role === 'superAdmin' || user?.role === 'admin' || user?.role === 'manager') && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDeleteConfirm({
+                                  type: 'project',
+                                  id: proj._id,
+                                  title: `Delete Project "${proj.name}"?`,
+                                  message: 'Are you sure you want to delete this project? All associated tasks will be permanently removed.',
+                                });
+                              }}
+                              className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                              title="Delete Project"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                          {proj.name}
+                        </h3>
+                        <ArrowRight size={16} className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0 mt-0.5" />
+                      </div>
+
+                      {/* Start & End Dates */}
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground tabular-nums flex-wrap">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Calendar size={12} className="shrink-0" />
+                          <span>
+                            Start: <strong className="text-foreground font-semibold">{proj.startDate ? new Date(proj.startDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</strong>
+                          </span>
+                        </span>
+                        <span>
+                          End: <strong className="text-foreground font-semibold">{endDateVal ? new Date(endDateVal).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'Ongoing'}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Tasks Completion Status Block */}
+                    <div className="p-4 rounded-2xl bg-background space-y-3 tabular-nums">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-foreground inline-flex items-center gap-1.5">
+                          <ListChecks size={14} className="text-muted-foreground shrink-0" />
+                          <span>Tasks Completion Status</span>
+                        </span>
+                        <span className="font-bold text-foreground">
+                          {pCompleted}/{pTotal} ({pProgress}%)
+                        </span>
+                      </div>
+
+                      <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(pProgress, 100)}%` }}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-2 pt-0.5 text-center">
+                        <div className="rounded-xl bg-card p-2">
+                          <div className="text-[10px] font-medium text-muted-foreground">Available</div>
+                          <div className="text-sm font-bold text-foreground mt-0.5">{pTotal}</div>
+                        </div>
+                        <div className="rounded-xl bg-card p-2">
+                          <div className="text-[10px] font-medium text-muted-foreground">Ongoing</div>
+                          <div className="text-sm font-bold text-foreground mt-0.5">{pOngoing}</div>
+                        </div>
+                        <div className="rounded-xl bg-card p-2">
+                          <div className="text-[10px] font-medium text-muted-foreground">Pending</div>
+                          <div className="text-sm font-bold text-foreground mt-0.5">{pPending}</div>
+                        </div>
+                        <div className="rounded-xl bg-card p-2">
+                          <div className="text-[10px] font-medium text-muted-foreground">Done</div>
+                          <div className="text-sm font-bold text-foreground mt-0.5">{pCompleted}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-card rounded-3xl p-12 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-secondary text-muted-foreground flex items-center justify-center mx-auto">
+                <Briefcase size={22} />
+              </div>
+              <p className="text-sm text-muted-foreground">No projects yet for this client.</p>
+              {user?.role !== 'client' && (
+                <button
+                  type="button"
+                  onClick={() => setShowProjectModal(true)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all cursor-pointer"
+                >
+                  <Plus size={14} />
+                  <span>Create First Project</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'proposals' && (
+        <div className="space-y-5">
+          <div className="bg-card rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-2xl bg-secondary text-foreground flex items-center justify-center shrink-0">
+                <FileText size={20} />
+              </div>
+              <div>
+                <h2 className="font-bold text-lg text-foreground">Proposals Sent</h2>
+                <p className="text-xs text-muted-foreground tabular-nums mt-0.5">
+                  {clientProposals.length} {clientProposals.length === 1 ? 'proposal' : 'proposals'} sent to this client
+                </p>
+              </div>
+            </div>
+            {user?.role !== 'client' && (
+              <button
+                type="button"
+                onClick={() => setShowProposalModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all cursor-pointer shrink-0"
+              >
+                <Plus size={14} />
+                <span>Create Proposal</span>
+              </button>
+            )}
+          </div>
+
+          {clientProposals.length === 0 ? (
+            <div className="rounded-3xl bg-card p-12 text-center space-y-3">
+              <div className="mx-auto w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground">
+                <FileText size={24} />
+              </div>
+              <h3 className="font-bold text-base text-foreground">No Proposals Found</h3>
+              <p className="text-xs text-muted-foreground">
+                No formal proposals have been generated or sent to this client yet.
+              </p>
+              {user?.role !== 'client' && (
+                <button
+                  type="button"
+                  onClick={() => setShowProposalModal(true)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all cursor-pointer mt-2"
+                >
+                  <Plus size={14} />
+                  <span>Create First Proposal</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {clientProposals.map((prop) => (
+                <div
+                  key={prop._id}
+                  className="rounded-3xl bg-card p-5 space-y-3 border border-border/50 hover:bg-secondary/40 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-sm text-foreground truncate">{prop.title}</span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-primary/10 text-primary">
+                      {prop.status || 'Sent'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground tabular-nums">
+                    <span>{prop.proposalNumber || 'Proposal'}</span>
+                    <span className="font-bold text-foreground text-sm">
+                      {prop.totalAmount ? formatINR(prop.totalAmount) : '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-border/30 text-xs">
+                    <span className="text-muted-foreground">
+                      {prop.createdAt ? new Date(prop.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {user?.role !== 'client' && (
+                        <button
+                          type="button"
+                          onClick={() => setDeleteConfirm({
+                            type: 'proposal',
+                            id: prop._id,
+                            title: `Delete Proposal "${prop.title}"?`,
+                            message: 'Are you sure you want to delete this proposal? This action cannot be undone.',
+                          })}
+                          className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                          title="Delete Proposal"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                      <Link
+                        to={`/proposals/${prop._id}`}
+                        className="font-bold text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        <span>View Proposal</span>
+                        <ArrowRight size={12} />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'vault' && (
+        <div className="space-y-6">
+          {/* Header Banner */}
+          <div className="bg-card rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-2xl bg-secondary text-foreground flex items-center justify-center font-bold text-xl shrink-0">
+                <LockKeyhole size={24} />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  Client Vault & Logins
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-secondary text-foreground tabular-nums">
+                    {credentials.length} {credentials.length === 1 ? 'Record' : 'Records'}
+                  </span>
+                </h2>
+              </div>
+            </div>
+
+            {!isClientUser && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowVaultModal(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold bg-primary text-primary-foreground hover:opacity-90 px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+                >
+                  <Plus size={14} className="shrink-0" /> Add Credential
+                </button>
+                <Link
+                  to="/client-vault"
+                  className="inline-flex items-center gap-2 text-xs font-bold text-foreground bg-secondary hover:bg-muted px-3.5 py-2 rounded-xl transition-all"
+                >
+                  <KeyRound size={14} className="shrink-0" /> Open Full Vault Manager
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Cards or Empty State */}
+          {credentials.length === 0 ? (
+            <div className="bg-card rounded-3xl p-12 text-center space-y-3">
+              <div className="mx-auto w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground">
+                <LockKeyhole size={24} />
+              </div>
+              <h3 className="font-bold text-base">No Vault Credentials Added</h3>
+              {!isClientUser && (
+                <button
+                  type="button"
+                  onClick={() => setShowVaultModal(true)}
+                  className="inline-flex items-center gap-2 text-xs font-bold bg-primary text-primary-foreground px-4 py-2 rounded-xl shadow hover:opacity-90 transition-all mt-2 cursor-pointer"
+                >
+                  <Plus size={14} className="shrink-0" /> Add Credential
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {credentials.map((item) => {
+                const isRevealed = activePasswordId === item._id && Boolean(revealedCredential?.password);
+                const isExpanded = expandedCards[item._id];
+                const accounts = item.socialAccounts || [];
+
+                return (
+                  <div
+                    key={item._id}
+                    className="bg-card rounded-3xl p-5 space-y-4 flex flex-col justify-between transition-all"
+                  >
+                    <div className="space-y-3.5">
+                      {/* Top Bar */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-secondary uppercase tracking-wider text-muted-foreground ">
+                          {item.credentialType?.replace(/_/g, ' ') || 'Credential'}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {item.url && (
+                            <a
+                              href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-foreground hover:underline"
+                              title="Open login URL"
+                            >
+                              <span>Login Portal</span>
+                              <ExternalLink size={11} className="shrink-0" />
+                            </a>
+                          )}
+                          {user?.role !== 'client' && (
+                            <button
+                              type="button"
+                              onClick={() => setDeleteConfirm({
+                                type: 'credential',
+                                id: item._id,
+                                title: `Delete Credential "${item.credentialName}"?`,
+                                message: 'Are you sure you want to delete this vault credential? This action cannot be undone.',
+                              })}
+                              className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                              title="Delete Credential"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card Title */}
+                      <div>
+                        <h3 className="font-bold text-base text-foreground flex items-center gap-2">
+                          <LockKeyhole size={16} className="text-foreground shrink-0" />
+                          <span className="truncate">{item.credentialName}</span>
+                        </h3>
+                        {item.notes && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {item.notes}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Primary Credential Box */}
+                      <div className="p-3.5 rounded-2xl bg-secondary/35 space-y-2 text-xs">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
+                          <KeyRound size={11} className="shrink-0" /> Primary Credential
+                        </div>
+
+                        {/* Username */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-muted-foreground text-[11px]">User:</span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-mono font-medium truncate max-w-[170px]">
+                              {item.username || '—'}
+                            </span>
+                            {item.username && (
+                              <button
+                                type="button"
+                                onClick={() => handleCopy(item.username, `user-${item._id}`)}
+                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-all cursor-pointer"
+                                title="Copy username"
+                              >
+                                {copiedId === `user-${item._id}` ? (
+                                  <Check size={12} className="text-foreground" />
+                                ) : (
+                                  <Copy size={12} />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Password */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-muted-foreground text-[11px]">Pass:</span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-mono font-medium truncate max-w-[170px]">
+                              {isRevealed ? revealedCredential.password : '••••••••••••'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setActivePasswordId(activePasswordId === item._id ? null : item._id)}
+                              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-all cursor-pointer"
+                              title={isRevealed ? 'Hide password' : 'View password'}
+                            >
+                              {isRevealed ? <EyeOff size={12} /> : <Eye size={12} />}
+                            </button>
+                            {isRevealed && (
+                              <button
+                                type="button"
+                                onClick={() => handleCopy(revealedCredential.password, `pass-${item._id}`)}
+                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-all cursor-pointer"
+                                title="Copy password"
+                              >
+                                {copiedId === `pass-${item._id}` ? (
+                                  <Check size={12} className="text-foreground" />
+                                ) : (
+                                  <Copy size={12} />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Email */}
+                        {item.email && (
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-muted-foreground text-[11px]">Email:</span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="font-mono font-medium truncate max-w-[170px]">
+                                {item.email}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopy(item.email, `email-${item._id}`)}
+                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-all cursor-pointer"
+                              >
+                                {copiedId === `email-${item._id}` ? (
+                                  <Check size={12} className="text-foreground" />
+                                ) : (
+                                  <Copy size={12} />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Mobile */}
+                        {item.mobileNumber && (
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-muted-foreground text-[11px]">Mobile:</span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="font-mono font-medium tabular-nums">{item.mobileNumber}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopy(item.mobileNumber, `mob-${item._id}`)}
+                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-all cursor-pointer"
+                              >
+                                {copiedId === `mob-${item._id}` ? (
+                                  <Check size={12} className="text-foreground" />
+                                ) : (
+                                  <Copy size={12} />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Platform Accounts Expandable Section */}
+                      {accounts.length > 0 && (
+                        <div className="space-y-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActivePasswordId(item._id);
+                              toggleCard(item._id);
+                            }}
+                            className="w-full flex items-center justify-between text-xs font-semibold text-foreground px-3 py-2 rounded-xl bg-secondary/20 hover:bg-secondary/40 transition-all cursor-pointer"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <AtSign size={13} className="text-foreground shrink-0" />
+                              <span className="tabular-nums">{accounts.length} Platform Account{accounts.length > 1 ? 's' : ''}</span>
+                              <span className="text-muted-foreground font-mono text-[10px] ml-1 uppercase">
+                                {accounts.map((a) => getPlatformMeta(a.platform).code).join(' · ')}
+                              </span>
+                            </span>
+                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          </button>
+
+                          {isExpanded && (
+                            <div className="space-y-2.5 pt-1">
+                              {accounts.map((acc, accIdx) => {
+                                const meta = getPlatformMeta(acc.platform);
+                                const revealedAcc =
+                                  isRevealed && revealedCredential?.socialAccounts?.[accIdx]
+                                    ? { ...acc, password: revealedCredential.socialAccounts[accIdx].password }
+                                    : acc;
+                                const accPassRevealed = Boolean(revealedAcc.password);
+
+                                return (
+                                  <div
+                                    key={accIdx}
+                                    className="rounded-2xl bg-background p-3 space-y-2 text-xs"
+                                  >
+                                    <div className="flex items-center justify-between font-bold text-foreground">
+                                      <span className="flex items-center gap-1.5">
+                                        <span className="px-1.5 py-0.5 rounded bg-secondary text-[9px] font-mono">{meta.code}</span>
+                                        <span>{acc.platformLabel || meta.label}</span>
+                                      </span>
+                                      {acc.pages && acc.pages.length > 0 && (
+                                        <span className="text-[10px] font-medium text-muted-foreground px-2 py-0.5 rounded bg-secondary tabular-nums">
+                                          {acc.pages.length} page{acc.pages.length > 1 ? 's' : ''}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1.5 text-[11px] pt-1">
+                                      {acc.accountHandle && (
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-muted-foreground">Handle:</span>
+                                          <div className="flex items-center gap-1">
+                                            <span className="font-mono font-medium truncate max-w-[120px]">
+                                              {acc.accountHandle}
+                                            </span>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleCopy(acc.accountHandle, `hnd-${item._id}-${accIdx}`)}
+                                              className="cursor-pointer"
+                                            >
+                                              {copiedId === `hnd-${item._id}-${accIdx}` ? (
+                                                <Check size={10} className="text-foreground" />
+                                              ) : (
+                                                <Copy size={10} />
+                                              )}
+                                            </button>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {acc.email && (
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-muted-foreground">Email:</span>
+                                          <div className="flex items-center gap-1">
+                                            <span className="font-mono font-medium truncate max-w-[120px]">
+                                              {acc.email}
+                                            </span>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleCopy(acc.email, `aem-${item._id}-${accIdx}`)}
+                                              className="cursor-pointer"
+                                            >
+                                              {copiedId === `aem-${item._id}-${accIdx}` ? (
+                                                <Check size={10} className="text-foreground" />
+                                              ) : (
+                                                <Copy size={10} />
+                                              )}
+                                            </button>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {acc.mobileNumber && (
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-muted-foreground">Mobile:</span>
+                                          <div className="flex items-center gap-1">
+                                            <span className="font-mono font-medium tabular-nums">
+                                              {acc.mobileNumber}
+                                            </span>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleCopy(acc.mobileNumber, `amob-${item._id}-${accIdx}`)}
+                                              className="cursor-pointer"
+                                            >
+                                              {copiedId === `amob-${item._id}-${accIdx}` ? (
+                                                <Check size={10} className="text-foreground" />
+                                              ) : (
+                                                <Copy size={10} />
+                                              )}
+                                            </button>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Password:</span>
+                                        <div className="flex items-center gap-1">
+                                          <span className="font-mono font-medium truncate max-w-[120px]">
+                                            {accPassRevealed ? revealedAcc.password : '••••••••'}
+                                          </span>
+                                          {accPassRevealed ? (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleCopy(revealedAcc.password, `apass-${item._id}-${accIdx}`)}
+                                              className="cursor-pointer"
+                                            >
+                                              {copiedId === `apass-${item._id}-${accIdx}` ? (
+                                                <Check size={10} className="text-foreground" />
+                                              ) : (
+                                                <Copy size={10} />
+                                              )}
+                                            </button>
+                                          ) : (
+                                            <button
+                                              type="button"
+                                              onClick={() => setActivePasswordId(item._id)}
+                                              title="Reveal password"
+                                              className="cursor-pointer"
+                                            >
+                                              <Eye size={10} />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Pages if any */}
+                                    {acc.pages && acc.pages.length > 0 && (
+                                      <div className="mt-2 pt-2 space-y-1">
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                          Pages & Roles
+                                        </p>
+                                        {acc.pages.map((p, pIdx) => (
+                                          <div
+                                            key={pIdx}
+                                            className="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-secondary/40 text-[11px]"
+                                          >
+                                            <div className="min-w-0">
+                                              <span className="font-semibold">{p.pageName || 'Page'}</span>
+                                              {p.pageId && (
+                                                <span className="text-muted-foreground ml-1.5 text-[10px] font-mono">
+                                                  ID: {p.pageId}
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                              <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-secondary text-foreground">
+                                                {p.role || 'Admin'}
+                                              </span>
+                                              {p.pageUrl && (
+                                                <a
+                                                  href={p.pageUrl.startsWith('http') ? p.pageUrl : `https://${p.pageUrl}`}
+                                                  target="_blank"
+                                                  rel="noreferrer"
+                                                  className="text-foreground hover:underline"
+                                                >
+                                                  <ExternalLink size={10} />
+                                                </a>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bottom Tags / Footer */}
+                    {item.tags && (Array.isArray(item.tags) ? item.tags.length > 0 : Boolean(item.tags)) && (
+                      <div className="pt-2 flex items-center gap-1.5 flex-wrap">
+                        {(Array.isArray(item.tags) ? item.tags : item.tags.split(','))
+                          .map((t) => t.trim())
+                          .filter(Boolean)
+                          .map((tag, tIdx) => (
+                            <span
+                              key={tIdx}
+                              className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-secondary/60 text-muted-foreground"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
       {activeTab === 'invoices' && (
-        <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
-          <div className="p-5 border-b border-border bg-secondary/10">
-            <h2 className="font-bold flex items-center gap-2"><FileText size={18} className="text-primary"/>Invoices</h2>
+        <div className="bg-card rounded-3xl overflow-hidden">
+          <div className="p-5 bg-secondary/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center shrink-0">
+                <FileText size={18} className="text-foreground shrink-0"/>
+              </div>
+              <div>
+                <h2 className="font-bold text-base flex items-center gap-2">
+                  Invoices
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-foreground tabular-nums">
+                    {invoices.length}
+                  </span>
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Manage and track billing invoices for this client</p>
+              </div>
+            </div>
+            {user?.role !== 'client' && (
+              <button
+                type="button"
+                onClick={() => setShowInvoiceModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all cursor-pointer shrink-0"
+              >
+                <Plus size={14} />
+                <span>Create Invoice</span>
+              </button>
+            )}
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto responsive-table-container">
+            <table className="w-full min-w-[540px] text-sm">
               <thead>
-                <tr className="text-muted-foreground font-medium border-b border-border text-left">
+                <tr className="text-muted-foreground font-medium text-left">
                   <th className="px-6 py-4">Invoice #</th>
-                  <th className="px-6 py-4">Amount</th>
+                  <th className="px-6 py-4 text-right">Amount</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Due Date</th>
+                  {user?.role !== 'client' && (
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-foreground/[0.05]">
                 {invoices.length > 0 ? invoices.map(inv => (
                   <tr key={inv._id} className="hover:bg-secondary/20 transition-colors">
-                    <td className="px-6 py-4 font-bold">{inv.invoiceNumber}</td>
-                    <td className="px-6 py-4 font-bold text-emerald-600">{formatINR(inv.total || inv.amount || 0)}</td>
+                    <td className="px-6 py-4 font-bold tabular-nums">{inv.invoiceNumber}</td>
+                    <td className="px-6 py-4 font-bold text-foreground text-right tabular-nums">{formatINR(inv.total || inv.amount || 0)}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        inv.status?.toLowerCase() === 'paid' ? 'bg-emerald-500/10 text-emerald-600' :
-                        inv.status?.toLowerCase() === 'overdue' ? 'bg-red-500/10 text-red-600' :
-                        'bg-amber-500/10 text-amber-600'
+                        inv.status?.toLowerCase() === 'paid' ? 'bg-primary text-primary-foreground ' :
+                        inv.status?.toLowerCase() === 'overdue' ? 'bg-secondary text-foreground' :
+                        'bg-secondary text-muted-foreground'
                       }`}>{inv.status}</span>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : '—'}</td>
+                    <td className="px-6 py-4 text-muted-foreground tabular-nums">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : '—'}</td>
+                    {user?.role !== 'client' && (
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setDeleteConfirm({
+                            type: 'invoice',
+                            id: inv._id,
+                            title: `Delete Invoice ${inv.invoiceNumber}?`,
+                            message: 'Are you sure you want to delete this invoice? This will remove the invoice record from the system.',
+                          })}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer inline-flex items-center justify-center"
+                          title="Delete Invoice"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 )) : (
-                  <tr><td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">No invoices yet.</td></tr>
+                  <tr>
+                    <td colSpan={user?.role !== 'client' ? 5 : 4} className="px-6 py-12 text-center text-muted-foreground">
+                      <div className="space-y-3">
+                        <p>No invoices yet for this client.</p>
+                        {user?.role !== 'client' && (
+                          <button
+                            type="button"
+                            onClick={() => setShowInvoiceModal(true)}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all cursor-pointer"
+                          >
+                            <Plus size={13} />
+                            <span>Create First Invoice</span>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -367,117 +1465,284 @@ const ClientDetails = () => {
       {activeTab === 'finance' && (
         <div className="grid gap-6 lg:grid-cols-2">
           {financeRecords.length > 0 ? financeRecords.map((record) => (
-            <div key={record._id} className="bg-card rounded-3xl border border-border shadow-sm p-6">
+            <div key={record._id} className="bg-card rounded-3xl p-6">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-bold">{record.serviceName}</h3>
                   <p className="text-sm text-muted-foreground mt-1">{record.projectName || record.projectId?.name}</p>
                 </div>
                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                  record.paymentStatus === 'Paid' ? 'bg-emerald-500/10 text-emerald-600' :
-                  record.paymentStatus === 'Overdue' ? 'bg-red-500/10 text-red-600' :
-                  record.paymentStatus === 'Partially Paid' ? 'bg-amber-500/10 text-amber-600' :
-                  'bg-slate-500/10 text-slate-600'
+                  record.paymentStatus === 'Paid' ? 'bg-primary text-primary-foreground ' :
+                  record.paymentStatus === 'Overdue' ? 'bg-secondary text-foreground' :
+                  record.paymentStatus === 'Partially Paid' ? 'bg-secondary text-foreground' :
+                  'bg-muted text-muted-foreground'
                 }`}>{record.paymentStatus}</span>
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-3">
-                <div className="rounded-2xl bg-secondary/30 border border-border/50 p-4">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="rounded-2xl bg-secondary/30 p-4">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total</p>
-                  <p className="mt-1 font-semibold">₹{Number(record.totalProjectAmount || 0).toLocaleString()}</p>
+                  <p className="mt-1 font-semibold tabular-nums">₹{Number(record.totalProjectAmount || 0).toLocaleString()}</p>
                 </div>
-                <div className="rounded-2xl bg-secondary/30 border border-border/50 p-4">
+                <div className="rounded-2xl bg-secondary/30 p-4">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Paid</p>
-                  <p className="mt-1 font-semibold">₹{Number(record.totalPaidAmount || 0).toLocaleString()}</p>
+                  <p className="mt-1 font-semibold tabular-nums">₹{Number(record.totalPaidAmount || 0).toLocaleString()}</p>
                 </div>
-                <div className="rounded-2xl bg-secondary/30 border border-border/50 p-4">
+                <div className="rounded-2xl bg-secondary/30 p-4">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Balance</p>
-                  <p className="mt-1 font-semibold">₹{Number(record.balanceAmount || 0).toLocaleString()}</p>
+                  <p className="mt-1 font-semibold tabular-nums">₹{Number(record.balanceAmount || 0).toLocaleString()}</p>
                 </div>
               </div>
-              <div className="mt-4 text-sm text-muted-foreground space-y-1">
+              <div className="mt-4 text-sm text-muted-foreground space-y-1 tabular-nums">
                 <p>Invoice Status: <span className="font-semibold text-foreground">{record.invoiceStatus}</span></p>
                 <p>Due Date: <span className="font-semibold text-foreground">{record.paymentDueDate ? new Date(record.paymentDueDate).toLocaleDateString() : '—'}</span></p>
                 <p>Next Follow-up: <span className="font-semibold text-foreground">{record.nextFollowUpDate ? new Date(record.nextFollowUpDate).toLocaleDateString() : '—'}</span></p>
               </div>
             </div>
           )) : (
-            <div className="bg-card rounded-3xl border border-border shadow-sm p-12 text-center text-muted-foreground lg:col-span-2">No finance records yet.</div>
+            <div className="bg-card rounded-3xl p-12 text-center text-muted-foreground lg:col-span-2">No finance records yet.</div>
           )}
         </div>
       )}
 
       {activeTab === 'paymentNotes' && (
-        <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
-          <div className="p-5 border-b border-border bg-secondary/10">
-            <h2 className="font-bold flex items-center gap-2"><AlertCircle size={18} className="text-primary"/>Payment Notes</h2>
+        <div className="bg-card rounded-3xl overflow-hidden">
+          <div className="p-5 bg-secondary/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center shrink-0">
+                <AlertCircle size={18} className="text-foreground shrink-0"/>
+              </div>
+              <div>
+                <h2 className="font-bold text-base flex items-center gap-2">
+                  Payment Notes & Receipts
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-foreground tabular-nums">
+                    {paymentNotes.length}
+                  </span>
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Recorded payments, payment history, and receipts from this client</p>
+              </div>
+            </div>
+            {user?.role !== 'client' && (
+              <button
+                type="button"
+                onClick={() => setShowPaymentNoteModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all cursor-pointer shrink-0"
+              >
+                <Plus size={14} />
+                <span>Add Payment Note</span>
+              </button>
+            )}
           </div>
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-foreground/[0.05]">
             {paymentNotes.length > 0 ? paymentNotes.map((note, index) => (
-              <div key={note._id || index} className="p-5">
+              <div key={note._id || index} className="p-5 hover:bg-secondary/20 transition-colors">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold">{note.noteTitle || 'Payment note'}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{note.noteDescription || 'No description added'}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">{note.noteTitle || (note.paymentMode ? `Payment Receipt (${note.paymentMode})` : 'Payment Note')}</p>
+                      {note.paymentMode && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-secondary text-foreground">
+                          {note.paymentMode}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">{note.noteDescription || note.remarks || 'No description added'}</p>
+                    {note.receiptNumber && (
+                      <p className="text-xs text-muted-foreground font-mono mt-1">Receipt #: {note.receiptNumber}</p>
+                    )}
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-emerald-600">₹{Number(note.amountPaid || 0).toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">{note.paymentDate ? new Date(note.paymentDate).toLocaleDateString() : '—'}</p>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="text-right tabular-nums">
+                      <p className="font-bold text-foreground">₹{Number(note.amountPaid || note.amount || 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">{note.paymentDate || note.receivedDate ? new Date(note.paymentDate || note.receivedDate).toLocaleDateString() : '—'}</p>
+                    </div>
+                    {user?.role !== 'client' && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteConfirm({
+                          type: 'paymentNote',
+                          id: note._id,
+                          isReceipt: Boolean(note.receiptNumber || note.paymentMode),
+                          title: 'Delete Payment Record?',
+                          message: 'Are you sure you want to delete this payment record?',
+                        })}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                        title="Delete Payment Record"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
             )) : (
-              <div className="p-12 text-center text-muted-foreground">No payment notes yet.</div>
+              <div className="p-12 text-center text-muted-foreground space-y-3">
+                <p>No payment notes yet.</p>
+                {user?.role !== 'client' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPaymentNoteModal(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all cursor-pointer"
+                  >
+                    <Plus size={13} />
+                    <span>Add First Payment Note</span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
       )}
 
       {activeTab === 'callHistory' && (
-        <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
-          <div className="p-5 border-b border-border bg-secondary/10">
-            <h2 className="font-bold flex items-center gap-2"><Phone size={18} className="text-primary"/>Call History</h2>
+        <div className="bg-card rounded-3xl overflow-hidden">
+          <div className="p-5 bg-secondary/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center shrink-0">
+                <Phone size={18} className="text-primary"/>
+              </div>
+              <div>
+                <h2 className="font-bold text-base flex items-center gap-2">
+                  Call History
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-foreground tabular-nums">
+                    {callHistory.length}
+                  </span>
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Logged calls and discussions with this client</p>
+              </div>
+            </div>
+            {user?.role !== 'client' && (
+              <button
+                type="button"
+                onClick={() => setShowCallModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all cursor-pointer shrink-0"
+              >
+                <Plus size={14} />
+                <span>Log Call</span>
+              </button>
+            )}
           </div>
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-foreground/[0.05]">
             {callHistory.length > 0 ? callHistory.map((call) => (
-              <div key={call._id} className="p-5">
+              <div key={call._id} className="p-5 hover:bg-secondary/20 transition-colors">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold">{call.callPurpose} • {call.callType}</p>
+                    <p className="font-semibold">{call.callPurpose} • {call.callType || 'Call'}</p>
                     <p className="text-sm text-muted-foreground mt-1">{call.callSummary || 'No summary added'}</p>
                     <p className="text-xs text-muted-foreground mt-2">Spoken with {call.spokenWith || 'N/A'} • {call.nextFollowUpDate ? `Next follow-up ${new Date(call.nextFollowUpDate).toLocaleDateString()}` : 'No follow-up set'}</p>
                   </div>
-                  <p className="text-xs font-semibold text-muted-foreground">{call.callDate ? new Date(call.callDate).toLocaleDateString() : '—'}</p>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <p className="text-xs font-semibold text-muted-foreground">{call.callDate ? new Date(call.callDate).toLocaleDateString() : '—'}</p>
+                    {user?.role !== 'client' && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteConfirm({
+                          type: 'call',
+                          id: call._id,
+                          title: 'Delete Call Log?',
+                          message: 'Are you sure you want to delete this call history log?',
+                        })}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                        title="Delete Call Log"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )) : (
-              <div className="p-12 text-center text-muted-foreground">No call history yet.</div>
+              <div className="p-12 text-center text-muted-foreground space-y-3">
+                <p>No call history yet.</p>
+                {user?.role !== 'client' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCallModal(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all cursor-pointer"
+                  >
+                    <Plus size={13} />
+                    <span>Log First Call</span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
       )}
 
       {activeTab === 'referrals' && (
-        <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
-          <div className="p-5 border-b border-border bg-secondary/10">
-            <h2 className="font-bold flex items-center gap-2"><Users size={18} className="text-primary"/>Referrals</h2>
+        <div className="bg-card rounded-3xl overflow-hidden">
+          <div className="p-5 bg-secondary/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center shrink-0">
+                <Users size={18} className="text-primary"/>
+              </div>
+              <div>
+                <h2 className="font-bold text-base flex items-center gap-2">
+                  Referrals
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-foreground tabular-nums">
+                    {referrals.length}
+                  </span>
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Leads and clients referred by or associated with this client</p>
+              </div>
+            </div>
+            {user?.role !== 'client' && (
+              <button
+                type="button"
+                onClick={() => setShowReferralModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all cursor-pointer shrink-0"
+              >
+                <Plus size={14} />
+                <span>Add Referral</span>
+              </button>
+            )}
           </div>
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-foreground/[0.05]">
             {referrals.length > 0 ? referrals.map((referral) => (
-              <div key={referral._id} className="p-5">
+              <div key={referral._id} className="p-5 hover:bg-secondary/20 transition-colors">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-semibold">{referral.referralSource || 'Other'}</p>
                     <p className="text-sm text-muted-foreground mt-1">{referral.referralPersonName || 'Unknown person'} • {referral.campaignName || 'No campaign'}</p>
                     <p className="text-xs text-muted-foreground mt-2">{referral.notes || 'No notes added.'}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs font-bold uppercase tracking-wider text-primary">{referral.conversionStatus || referral.status}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{referral.leadQuality || '—'}</p>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="text-right">
+                      <p className="text-xs font-bold uppercase tracking-wider text-primary">{referral.conversionStatus || referral.status}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{referral.leadQuality || '—'}</p>
+                    </div>
+                    {user?.role !== 'client' && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteConfirm({
+                          type: 'referral',
+                          id: referral._id,
+                          title: 'Delete Referral?',
+                          message: 'Are you sure you want to delete this referral record?',
+                        })}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                        title="Delete Referral"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
             )) : (
-              <div className="p-12 text-center text-muted-foreground">No referral records yet.</div>
+              <div className="p-12 text-center text-muted-foreground space-y-3">
+                <p>No referral records yet.</p>
+                {user?.role !== 'client' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowReferralModal(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all cursor-pointer"
+                  >
+                    <Plus size={13} />
+                    <span>Add First Referral</span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -485,18 +1750,18 @@ const ClientDetails = () => {
 
       {activeTab === 'onboarding' && (
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="bg-card rounded-3xl border border-border shadow-sm p-6">
+          <div className="bg-card rounded-3xl p-6">
             <h2 className="font-bold text-lg mb-5">Onboarding Checklist</h2>
             <div className="space-y-3">
               {Object.entries(onboardingStepLabels).map(([key, label]) => {
                 const done = onboardingSteps[key];
                 return (
-                  <div key={key} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${done ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-border bg-secondary/10'}`}>
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${done ? 'bg-emerald-500' : 'bg-secondary'}`}>
-                      {done ? <CheckCircle2 size={16} className="text-white" /> : <Clock size={16} className="text-muted-foreground" />}
+                  <div key={key} className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${done ? ' bg-secondary/50' : ' bg-background'}`}>
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${done ? 'bg-primary text-primary-foreground' : 'bg-secondary '}`}>
+                      {done ? <CheckCircle2 size={16} /> : <Clock size={16} className="text-muted-foreground" />}
                     </div>
                     <div className="flex-1">
-                      <p className={`text-sm font-semibold ${done ? 'text-emerald-700 dark:text-emerald-400 line-through' : ''}`}>{label}</p>
+                      <p className={`text-sm font-semibold ${done ? 'text-foreground line-through' : 'text-foreground'}`}>{label}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">{done ? 'Completed' : 'Pending'}</p>
                     </div>
                   </div>
@@ -504,12 +1769,12 @@ const ClientDetails = () => {
               })}
             </div>
           </div>
-          <div className="bg-card rounded-3xl border border-border shadow-sm p-6">
+          <div className="bg-card rounded-3xl p-6">
             <h2 className="font-bold text-lg mb-5">Social Media</h2>
             {client.socialMedia && Object.entries(client.socialMedia).some(([, v]) => v) ? (
               <div className="space-y-3">
                 {Object.entries(client.socialMedia).filter(([, v]) => v).map(([platform, handle]) => (
-                  <div key={platform} className="flex items-center gap-3 p-4 bg-secondary/30 rounded-2xl border border-border/50">
+                  <div key={platform} className="flex items-center gap-3 p-4 bg-secondary/30 rounded-2xl ">
                     <span className="font-bold capitalize text-sm w-24">{platform}</span>
                     <span className="text-sm text-muted-foreground">{handle}</span>
                   </div>
@@ -517,6 +1782,186 @@ const ClientDetails = () => {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No social media accounts linked yet.</p>
+            )}
+          </div>
+
+          {/* ── Client Business Intake Form Submissions (Admin & Super Admin View) ── */}
+          <div className="bg-card rounded-3xl p-6 lg:col-span-2 space-y-5 border border-border/40">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/40">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <FileText size={18} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-foreground">Client Business &amp; Service Intake Form</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Comprehensive brand profile and project preferences submitted by the client.
+                  </p>
+                </div>
+              </div>
+
+              {client.onboardingDetails?.submittedAt ? (
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                    Status: {client.onboardingDetails.status || 'Submitted'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(client.onboardingDetails.submittedAt).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </span>
+                </div>
+              ) : (
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                  Intake Form Pending
+                </span>
+              )}
+            </div>
+
+            {client.onboardingDetails ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+                {/* Brand & Legal Info */}
+                <div className="p-4 rounded-2xl bg-secondary/30 space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    1. Brand &amp; Legal Identity
+                  </span>
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Legal Company Name</span>
+                    <p className="text-xs font-bold text-foreground">
+                      {client.onboardingDetails.companyLegalName || client.company || '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Brand / Trade Name</span>
+                    <p className="text-xs font-bold text-foreground">
+                      {client.onboardingDetails.brandName || client.name || '—'}
+                    </p>
+                  </div>
+                  {client.onboardingDetails.tagline && (
+                    <div>
+                      <span className="text-xs text-muted-foreground block">Tagline / Slogan</span>
+                      <p className="text-xs italic text-foreground">&ldquo;{client.onboardingDetails.tagline}&rdquo;</p>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Industry / Niche</span>
+                    <span className="inline-block mt-0.5 px-2 py-0.5 rounded-md bg-secondary text-[11px] font-semibold text-foreground">
+                      {client.onboardingDetails.industryNiche || '—'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Audience & Strategy */}
+                <div className="p-4 rounded-2xl bg-secondary/30 space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    2. Audience &amp; Objectives
+                  </span>
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Target Audience</span>
+                    <p className="text-xs font-medium text-foreground leading-relaxed">
+                      {client.onboardingDetails.targetAudience || 'Not specified'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Primary Goals</span>
+                    <p className="text-xs font-medium text-foreground leading-relaxed">
+                      {client.onboardingDetails.primaryGoals || 'Not specified'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Top Competitors</span>
+                    <p className="text-xs font-medium text-foreground">
+                      {client.onboardingDetails.competitors || 'None listed'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Estimated Budget</span>
+                    <span className="text-xs font-black text-foreground">
+                      {client.onboardingDetails.estimatedBudget || 'Not specified'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Services Requested & Assets */}
+                <div className="p-4 rounded-2xl bg-secondary/30 space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    3. Services &amp; Digital Assets
+                  </span>
+                  <div>
+                    <span className="text-xs text-muted-foreground block mb-1">Services Requested</span>
+                    <div className="flex flex-wrap gap-1">
+                      {Array.isArray(client.onboardingDetails.servicesRequested) &&
+                      client.onboardingDetails.servicesRequested.length > 0 ? (
+                        client.onboardingDetails.servicesRequested.map((svc, i) => (
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold"
+                          >
+                            {svc}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground">None selected</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {client.onboardingDetails.driveAssetsUrl && (
+                    <div className="pt-1">
+                      <span className="text-xs text-muted-foreground block">Drive Assets Folder</span>
+                      <a
+                        href={client.onboardingDetails.driveAssetsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 mt-0.5"
+                      >
+                        <FolderOpen size={13} />
+                        <span>Open Brand Assets Drive &rarr;</span>
+                      </a>
+                    </div>
+                  )}
+
+                  {client.onboardingDetails.websiteUrl && (
+                    <div className="pt-1">
+                      <span className="text-xs text-muted-foreground block">Website</span>
+                      <a
+                        href={client.onboardingDetails.websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-bold text-foreground hover:underline inline-flex items-center gap-1 mt-0.5"
+                      >
+                        <ExternalLink size={12} />
+                        <span>{client.onboardingDetails.websiteUrl}</span>
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Primary Contact */}
+                  <div className="pt-1 border-t border-border/40">
+                    <span className="text-xs text-muted-foreground block">Primary Contact</span>
+                    <p className="text-xs font-bold text-foreground">
+                      {client.onboardingDetails.primaryContactName || client.name}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {client.onboardingDetails.primaryContactPhone || client.phone} •{' '}
+                      {client.onboardingDetails.primaryContactEmail || client.email}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-8 text-center bg-secondary/20 rounded-2xl">
+                <FileText size={32} className="mx-auto text-muted-foreground mb-2 opacity-50" />
+                <p className="text-xs font-semibold text-foreground">
+                  The client has not yet submitted their digital onboarding form.
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Once they complete the onboarding intake in their Client Portal, their complete company profile,
+                  target demographics, and service requirements will appear right here.
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -531,13 +1976,416 @@ const ClientDetails = () => {
           />
           <AddProjectModal
             open={showProjectModal}
-            onOpenChange={setShowProjectModal}
+            onOpenChange={(open) => {
+              setShowProjectModal(open);
+              if (!open) refetch();
+            }}
             defaultClientId={client._id}
+          />
+          <AddProposalModal
+            open={showProposalModal}
+            onOpenChange={setShowProposalModal}
+            defaultClientId={client._id}
+            onSuccess={refetch}
+          />
+          <FinanceQuickAddModal
+            open={showInvoiceModal}
+            onOpenChange={setShowInvoiceModal}
+            initialAction="invoice"
+            defaultClientId={client._id}
+            onSuccess={refetch}
+          />
+          <FinanceQuickAddModal
+            open={showPaymentNoteModal}
+            onOpenChange={setShowPaymentNoteModal}
+            initialAction="receipt"
+            defaultClientId={client._id}
+            onSuccess={refetch}
+          />
+          <CredentialFormDialog
+            open={showVaultModal}
+            onOpenChange={setShowVaultModal}
+            credential={{ clientId: client._id }}
+            clients={[client]}
+            onSave={handleSaveCredential}
+            saving={createCredentialMutation.isPending}
+          />
+          <LogCallDialog
+            open={showCallModal}
+            onOpenChange={setShowCallModal}
+            clientId={client._id}
+            clientName={client.name || client.company}
+            onSuccess={refetch}
+          />
+          <AddReferralDialog
+            open={showReferralModal}
+            onOpenChange={setShowReferralModal}
+            clientId={client._id}
+            clientName={client.name || client.company}
+            onSuccess={refetch}
           />
         </>
       )}
+
+      {/* Delete Client Dialog */}
+      <AlertDialog open={showDeleteClientDialog} onOpenChange={setShowDeleteClientDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Client?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong className="text-foreground">{client?.company || client?.name}</strong>? All associated records, vaults, and history will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteClient}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl font-bold cursor-pointer"
+            >
+              Delete Client
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Item Confirmation Dialog */}
+      <AlertDialog open={Boolean(deleteConfirm)} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{deleteConfirm?.title || 'Delete Item?'}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteConfirm?.message || 'Are you sure you want to permanently delete this item? This action cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleExecuteDelete}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl font-bold cursor-pointer"
+            >
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
+
+function LogCallDialog({ open, onOpenChange, clientId, clientName, onSuccess }) {
+  const [form, setForm] = useState({
+    callType: 'Outgoing',
+    callPurpose: 'General Update',
+    spokenWith: '',
+    callSummary: '',
+    clientResponse: '',
+    nextAction: '',
+    nextFollowUpDate: '',
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setForm({
+        callType: 'Outgoing',
+        callPurpose: 'General Update',
+        spokenWith: clientName || '',
+        callSummary: '',
+        clientResponse: '',
+        nextAction: '',
+        nextFollowUpDate: '',
+      });
+    }
+  }, [open, clientName]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.callSummary.trim()) {
+      toast.error('Please enter a call summary or notes');
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post('/finance/call-history', {
+        clientId,
+        callDate: new Date(),
+        ...form,
+        nextFollowUpDate: form.nextFollowUpDate || undefined,
+      });
+      toast.success('Call logged successfully');
+      onOpenChange(false);
+      if (onSuccess) onSuccess();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to log call');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md w-full p-6 rounded-3xl bg-card border border-border">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="text-xl font-bold flex items-center gap-2">
+            <Phone size={18} className="text-primary" />
+            <span>Log Call</span>
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Record a call discussion with {clientName || 'this client'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Call Type</label>
+              <select
+                value={form.callType}
+                onChange={(e) => setForm({ ...form, callType: e.target.value })}
+                className="w-full text-xs rounded-xl bg-secondary/50 border border-border px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="Outgoing">Outgoing</option>
+                <option value="Incoming">Incoming</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Call Purpose</label>
+              <select
+                value={form.callPurpose}
+                onChange={(e) => setForm({ ...form, callPurpose: e.target.value })}
+                className="w-full text-xs rounded-xl bg-secondary/50 border border-border px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="General Update">General Update</option>
+                <option value="Payment Follow-up">Payment Follow-up</option>
+                <option value="Task Discussion">Task Discussion</option>
+                <option value="Requirement Collection">Requirement Collection</option>
+                <option value="Approval Follow-up">Approval Follow-up</option>
+                <option value="Rework Discussion">Rework Discussion</option>
+                <option value="Complaint">Complaint</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Spoken With</label>
+            <input
+              type="text"
+              placeholder="Client / Contact Person Name"
+              value={form.spokenWith}
+              onChange={(e) => setForm({ ...form, spokenWith: e.target.value })}
+              className="w-full text-xs rounded-xl bg-secondary/50 border border-border px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+              Call Summary / Notes <span className="text-destructive">*</span>
+            </label>
+            <textarea
+              rows={3}
+              placeholder="What was discussed in this call?"
+              value={form.callSummary}
+              onChange={(e) => setForm({ ...form, callSummary: e.target.value })}
+              className="w-full text-xs rounded-xl bg-secondary/50 border border-border px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Next Follow-up Date</label>
+              <input
+                type="date"
+                value={form.nextFollowUpDate}
+                onChange={(e) => setForm({ ...form, nextFollowUpDate: e.target.value })}
+                className="w-full text-xs rounded-xl bg-secondary/50 border border-border px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Next Action</label>
+              <input
+                type="text"
+                placeholder="e.g. Send revised quote"
+                value={form.nextAction}
+                onChange={(e) => setForm({ ...form, nextAction: e.target.value })}
+                className="w-full text-xs rounded-xl bg-secondary/50 border border-border px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-secondary text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {loading ? 'Saving...' : 'Save Call Log'}
+            </button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddReferralDialog({ open, onOpenChange, clientId, clientName, onSuccess }) {
+  const [form, setForm] = useState({
+    referralSource: 'Existing Client Referral',
+    referralPersonName: '',
+    referralPersonContact: '',
+    conversionStatus: 'Lead',
+    notes: '',
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setForm({
+        referralSource: 'Existing Client Referral',
+        referralPersonName: '',
+        referralPersonContact: '',
+        conversionStatus: 'Lead',
+        notes: '',
+      });
+    }
+  }, [open]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.referralPersonName.trim()) {
+      toast.error('Please enter the referred person or company name');
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post('/referrals', {
+        clientId,
+        client: clientId,
+        referrerType: 'outside',
+        outsideReferrerName: clientName || '',
+        ...form,
+      });
+      toast.success('Referral created successfully');
+      onOpenChange(false);
+      if (onSuccess) onSuccess();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to create referral');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md w-full p-6 rounded-3xl bg-card border border-border">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="text-xl font-bold flex items-center gap-2">
+            <Users size={18} className="text-primary" />
+            <span>Add Referral</span>
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Record a lead or contact referred by or linked to {clientName || 'this client'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Referral Source</label>
+              <select
+                value={form.referralSource}
+                onChange={(e) => setForm({ ...form, referralSource: e.target.value })}
+                className="w-full text-xs rounded-xl bg-secondary/50 border border-border px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="Existing Client Referral">Client Referral</option>
+                <option value="Friend Referral">Friend Referral</option>
+                <option value="Partner Referral">Partner Referral</option>
+                <option value="LinkedIn">LinkedIn</option>
+                <option value="Instagram">Instagram</option>
+                <option value="Website">Website</option>
+                <option value="Direct Call">Direct Call</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Status</label>
+              <select
+                value={form.conversionStatus}
+                onChange={(e) => setForm({ ...form, conversionStatus: e.target.value })}
+                className="w-full text-xs rounded-xl bg-secondary/50 border border-border px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="Lead">Lead</option>
+                <option value="In Discussion">In Discussion</option>
+                <option value="Converted">Converted</option>
+                <option value="Lost">Lost</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+              Referred Person / Business <span className="text-destructive">*</span>
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. John Doe / ABC Enterprises"
+              value={form.referralPersonName}
+              onChange={(e) => setForm({ ...form, referralPersonName: e.target.value })}
+              className="w-full text-xs rounded-xl bg-secondary/50 border border-border px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Contact Number / Email</label>
+            <input
+              type="text"
+              placeholder="Phone or email"
+              value={form.referralPersonContact}
+              onChange={(e) => setForm({ ...form, referralPersonContact: e.target.value })}
+              className="w-full text-xs rounded-xl bg-secondary/50 border border-border px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Notes / Details</label>
+            <textarea
+              rows={3}
+              placeholder="Project requirements, budget, or other notes..."
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              className="w-full text-xs rounded-xl bg-secondary/50 border border-border px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-secondary text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {loading ? 'Saving...' : 'Add Referral'}
+            </button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default ClientDetails;

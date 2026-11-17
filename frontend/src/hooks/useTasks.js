@@ -259,3 +259,95 @@ export const useLogTime = () => {
     },
   });
 };
+
+export const useUpdateTaskChecklist = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...data }) => {
+      const response = await api.patch(`/tasks/${id}/checklist`, data);
+      return response.data;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task', variables.id] });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to update checklist');
+    },
+  });
+};
+
+export const useAddTaskNote = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, content }) => {
+      const response = await api.post(`/tasks/${id}/notes`, { content });
+      return response.data;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task', variables.id] });
+      toast.success('Note added successfully');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to add note');
+    },
+  });
+};
+
+export const useAcceptTask = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id) => {
+      const response = await api.post(`/tasks/${id}/accept`);
+      return response.data.task;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task', data._id] });
+      toast.success('Task accepted! Completion timer is now running.');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to accept task');
+    },
+  });
+};
+
+export const useSubmitTaskWithReason = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...data }) => {
+      const response = await api.post(`/tasks/${id}/submit`, data);
+      return response.data.task;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task', data._id] });
+      toast.success('Task submitted successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to submit task');
+    },
+  });
+};
+
+export const useCheckTaskOverdue = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id) => {
+      const response = await api.post(`/tasks/${id}/check-overdue`);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      if (data?.task?._id) {
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        queryClient.invalidateQueries({ queryKey: ['task', data.task._id] });
+      }
+    },
+  });
+};

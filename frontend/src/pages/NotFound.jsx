@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Home, ArrowLeft, Ghost } from 'lucide-react';
+import { Home, ArrowLeft, Ghost } from '@/components/ui/muiIcons';
 
 const NotFound = () => {
   return (
@@ -11,22 +11,19 @@ const NotFound = () => {
         </div>
       </div>
       
-      <h2 className="text-3xl font-bold tracking-tight mb-2">Lost in space?</h2>
-      <p className="text-muted-foreground max-w-md mb-8">
-        The page you're looking for doesn't exist or has been moved to another quadrant of the agency.
-      </p>
+      <h2 className="text-3xl font-bold tracking-tight mb-6">Page not found</h2>
       
       <div className="flex items-center space-x-4">
         <button 
           onClick={() => window.history.back()}
-          className="flex items-center px-6 py-3 border border-border rounded-2xl font-bold hover:bg-secondary transition-all"
+          className="flex items-center px-6 py-3 rounded-2xl font-bold hover:bg-secondary transition-all"
         >
           <ArrowLeft size={18} className="mr-2" />
           Go Back
         </button>
         <Link 
           to="/"
-          className="flex items-center px-6 py-3 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
+          className="flex items-center px-6 py-3 bg-primary text-primary-foreground rounded-2xl font-bold hover:bg-primary/90 transition-all"
         >
           <Home size={18} className="mr-2" />
           Dashboard

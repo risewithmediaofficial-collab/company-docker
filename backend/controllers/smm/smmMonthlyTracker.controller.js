@@ -4,6 +4,11 @@
 import SmmMonthlyTracker from '../../models/smm/smmMonthlyTracker.model.js';
 import SmmClient from '../../models/smm/smmClient.model.js';
 import SmmContent from '../../models/smm/smmContent.model.js';
+import Client from '../../models/client.model.js';
+import Task from '../../models/task.model.js';
+import Project from '../../models/project.model.js';
+import ProjectMonthlyDeliverable from '../../models/projectMonthlyDeliverable.model.js';
+import { emitLiveEvent } from '../../utils/socketEmitter.js';
 
 // ── Helper: build empty days array for a month ─────────────────────────────
 const buildEmptyDays = (year, month) => {
@@ -11,11 +16,112 @@ const buildEmptyDays = (year, month) => {
   return Array.from({ length: daysInMonth }, (_, i) => ({
     day: i + 1,
     postLabel: '',
-    postStatus: 'pending',
+    postStatus: 'todo',
     storyLabel: '',
-    storyStatus: 'pending',
+    storyStatus: 'todo',
     note: '',
+    items: [],
   }));
+};
+
+// ── Helper: detect if label contains actual poster/content text (not just dashes or blank) ──
+const hasPosterContent = (label) => {
+  if (!label) return false;
+  const clean = String(label).trim();
+  if (!clean) return false;
+  return !/^[-—–\s]+$/.test(clean);
+};
+
+// ── Helper: determine if a day is before the live date (in the past) ────────
+const isDayBeforeToday = (dayNum, month, year) => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const currentDay = now.getDate();
+
+  const numYear = Number(year);
+  const numMonth = Number(month);
+  const numDay = Number(dayNum);
+
+  if (numYear < currentYear) return true;
+  if (numYear > currentYear) return false;
+  if (numMonth < currentMonth) return true;
+  if (numMonth > currentMonth) return false;
+  return numDay < currentDay;
+};
+
+// ── Helper: resolve a client object from either SmmClient or CRM Client ────
+const resolveClientObj = async (clientId) => {
+  if (!clientId) return null;
+  const idStr = clientId.toString();
+  try {
+    const smmClient = await SmmClient.findById(idStr).select('companyName status brandLogo email phone').lean();
+    if (smmClient) {
+      return {
+        _id: smmClient._id,
+        companyName: smmClient.companyName || 'Client',
+        status: smmClient.status || 'Active',
+      };
+    }
+    const crmClient = await Client.findById(idStr).select('company name status logo email phone').lean();
+    if (crmClient) {
+      const cName = crmClient.company || crmClient.name || 'Client';
+      // Auto-mirror to SmmClient so future queries & refs also find it
+      SmmClient.findByIdAndUpdate(
+        crmClient._id,
+        {
+          $setOnInsert: {
+            _id: crmClient._id,
+            companyName: cName,
+            status: crmClient.status === 'active' || crmClient.status === 'Active' ? 'Active' : 'Inactive',
+            email: crmClient.email || '',
+            phone: crmClient.phone || '',
+          },
+        },
+        { upsert: true }
+      ).catch(() => {});
+
+      return {
+        _id: crmClient._id,
+        companyName: cName,
+        status: crmClient.status === 'active' || crmClient.status === 'Active' ? 'Active' : 'Inactive',
+      };
+    }
+  } catch (err) {
+    console.error('resolveClientObj error:', err);
+  }
+  return { _id: clientId, companyName: 'Client', status: 'Active' };
+};
+
+// ── Helper: resolve client details from logged-in client user ───────────────
+const resolveClientForUser = async (user) => {
+  if (!user) return null;
+  const userId = user._id;
+  let client = await Client.findOne({ userId }).select('_id company name email phone').lean();
+  if (!client && user.clientId) {
+    client = await Client.findById(user.clientId).select('_id company name email phone').lean();
+  }
+  if (!client && user.email) {
+    client = await Client.findOne({ email: user.email }).select('_id company name email phone').lean();
+  }
+  if (!client) {
+    let smmC = user.clientId ? await SmmClient.findById(user.clientId).select('_id companyName email phone').lean() : null;
+    if (!smmC && user.email) {
+      smmC = await SmmClient.findOne({ email: user.email }).select('_id companyName email phone').lean();
+    }
+    if (smmC) return { id: smmC._id.toString(), smmId: smmC._id.toString(), companyName: smmC.companyName };
+  }
+  if (client) {
+    let smmId = client._id.toString();
+    const smmC = await SmmClient.findById(client._id).select('_id companyName').lean()
+      || (client.company ? await SmmClient.findOne({ companyName: { $regex: new RegExp(`^${client.company.trim()}$`, 'i') } }).select('_id companyName').lean() : null);
+    return {
+      id: client._id.toString(),
+      smmId: smmC ? smmC._id.toString() : client._id.toString(),
+      companyName: client.company || client.name,
+    };
+  }
+  return null;
 };
 
 // ── GET all tracker rows for a given month/year ─────────────────────────────
@@ -24,40 +130,216 @@ export const getMonthlyTrackers = async (req, res) => {
   try {
     const month = parseInt(req.query.month) || new Date().getMonth() + 1;
     const year  = parseInt(req.query.year)  || new Date().getFullYear();
+    const daysInMonth = new Date(year, month, 0).getDate();
 
-    // Fetch all active SMM clients
-    const clients = await SmmClient.find({ status: 'Active' }).sort({ companyName: 1 }).lean();
+    // STRICT CLIENT SCOPING: When logged in as client, ONLY return their own tracker
+    if (req.user.role === 'client') {
+      const client = await resolveClientForUser(req.user);
+      if (!client) {
+        return res.json({ success: true, data: { rows: [], month, year, daysInMonth } });
+      }
 
-    // Fetch existing tracker docs for this month/year
-    const existingTrackers = await SmmMonthlyTracker.find({ month, year })
-      .populate('client', 'companyName status')
-      .lean();
-
-    const trackerMap = {};
-    existingTrackers.forEach((t) => {
-      if (t.client?._id) trackerMap[t.client._id.toString()] = t;
-    });
-
-    // For every active client, return existing or a scaffold
-    const rows = clients.map((client, index) => {
-      const existing = trackerMap[client._id.toString()];
-      if (existing) return existing;
-
-      // Scaffold (not yet saved)
-      return {
-        _id: null,
-        client: { _id: client._id, companyName: client.companyName },
-        team: 'RWM',
-        plan: '',
-        storyPlan: '30 STORIES',
+      const clientIds = [client.id, client.smmId].filter(Boolean);
+      let tracker = await SmmMonthlyTracker.findOne({
+        client: { $in: clientIds },
         month,
         year,
-        days: buildEmptyDays(year, month),
-        _scaffold: true,
+      }).lean();
+
+      if (!tracker && client.companyName) {
+        const smmC = await SmmClient.findOne({
+          companyName: { $regex: new RegExp(`^${client.companyName.trim()}$`, 'i') },
+        }).lean();
+        if (smmC) {
+          tracker = await SmmMonthlyTracker.findOne({ client: smmC._id, month, year }).lean();
+        }
+      }
+
+      const clientObj = {
+        _id: client.id,
+        companyName: client.companyName || 'My Company',
+        status: 'Active',
       };
+
+      let rowData;
+      if (tracker && !tracker.isExcluded) {
+        let modified = false;
+        const updatedDays = (tracker.days || []).map((day) => {
+          const isPast = isDayBeforeToday(day.day, month, year);
+          let newDay = day;
+          if (isPast) {
+            if (hasPosterContent(day.postLabel) && (!day.postStatus || day.postStatus === 'todo')) {
+              if (newDay === day) newDay = { ...day };
+              newDay.postStatus = 'pending';
+              modified = true;
+            }
+            if (hasPosterContent(day.storyLabel) && (!day.storyStatus || day.storyStatus === 'todo')) {
+              if (newDay === day) newDay = { ...day };
+              newDay.storyStatus = 'pending';
+              modified = true;
+            }
+          }
+          return newDay;
+        });
+
+        if (modified && tracker._id) {
+          SmmMonthlyTracker.findByIdAndUpdate(tracker._id, { $set: { days: updatedDays } }).catch(() => {});
+        }
+
+        rowData = { ...tracker, days: updatedDays, client: clientObj };
+      } else {
+        rowData = {
+          _id: null,
+          client: clientObj,
+          team: 'RWM',
+          plan: '',
+          storyPlan: '30 STORIES',
+          month,
+          year,
+          days: buildEmptyDays(year, month),
+          _scaffold: true,
+        };
+      }
+
+      return res.json({ success: true, data: { rows: [rowData], month, year, daysInMonth } });
+    }
+
+    // 1. Fetch all active clients from BOTH CRM Client and SMM Client
+    const [crmClients, smmClientsList] = await Promise.all([
+      Client.find({ status: { $regex: /^active$/i } }).sort({ company: 1, name: 1 }).lean(),
+      SmmClient.find({ status: { $regex: /^active$/i } }).sort({ companyName: 1 }).lean(),
+    ]);
+
+    // Build unified active client map
+    const clientMap = new Map();
+    crmClients.forEach((c) => {
+      const cName = c.company || c.name || 'Client';
+      clientMap.set(c._id.toString(), {
+        _id: c._id,
+        companyName: cName,
+        status: 'Active',
+      });
+      // Background mirror to SmmClient for consistency
+      SmmClient.findByIdAndUpdate(
+        c._id,
+        {
+          $setOnInsert: {
+            _id: c._id,
+            companyName: cName,
+            status: 'Active',
+            email: c.email || '',
+            phone: c.phone || '',
+          },
+        },
+        { upsert: true }
+      ).catch(() => {});
     });
 
-    const daysInMonth = new Date(year, month, 0).getDate();
+    smmClientsList.forEach((c) => {
+      if (!clientMap.has(c._id.toString())) {
+        clientMap.set(c._id.toString(), {
+          _id: c._id,
+          companyName: c.companyName || 'Client',
+          status: c.status || 'Active',
+        });
+      }
+    });
+
+    // 2. Fetch existing tracker docs for this month/year
+    const existingTrackers = await SmmMonthlyTracker.find({ month, year }).lean();
+
+    // Look for any client IDs in existingTrackers not yet in clientMap
+    const missingClientIds = existingTrackers
+      .map(t => t.client?.toString())
+      .filter(id => id && !clientMap.has(id));
+
+    if (missingClientIds.length > 0) {
+      const [extraCrm, extraSmm] = await Promise.all([
+        Client.find({ _id: { $in: missingClientIds } }).lean(),
+        SmmClient.find({ _id: { $in: missingClientIds } }).lean(),
+      ]);
+      extraCrm.forEach(c => clientMap.set(c._id.toString(), { _id: c._id, companyName: c.company || c.name || 'Client', status: 'Active' }));
+      extraSmm.forEach(c => {
+        if (!clientMap.has(c._id.toString())) {
+          clientMap.set(c._id.toString(), { _id: c._id, companyName: c.companyName || 'Client', status: c.status || 'Active' });
+        }
+      });
+    }
+
+    const trackerMap = {};
+    const existingPopulatedList = [];
+
+    existingTrackers.forEach((t) => {
+      const cIdStr = t.client?.toString();
+      if (cIdStr) {
+        let modified = false;
+        const updatedDays = (t.days || []).map((day) => {
+          const isPast = isDayBeforeToday(day.day, month, year);
+          let newDay = day;
+          if (isPast) {
+            if (hasPosterContent(day.postLabel) && (!day.postStatus || day.postStatus === 'todo')) {
+              if (newDay === day) newDay = { ...day };
+              newDay.postStatus = 'pending';
+              modified = true;
+            }
+            if (hasPosterContent(day.storyLabel) && (!day.storyStatus || day.storyStatus === 'todo')) {
+              if (newDay === day) newDay = { ...day };
+              newDay.storyStatus = 'pending';
+              modified = true;
+            }
+          }
+          return newDay;
+        });
+
+        if (modified && t._id) {
+          SmmMonthlyTracker.findByIdAndUpdate(t._id, { $set: { days: updatedDays } }).catch(() => {});
+        }
+
+        const clientObj = clientMap.get(cIdStr) || { _id: t.client, companyName: 'Client', status: 'Active' };
+        const pop = { ...t, days: updatedDays, client: clientObj };
+        trackerMap[cIdStr] = pop;
+        existingPopulatedList.push(pop);
+      }
+    });
+
+    const handledClientIds = new Set();
+    const rows = [];
+
+    // For active clients, return existing (if not excluded) or scaffold (if not excluded)
+    for (const [cIdStr, client] of clientMap.entries()) {
+      handledClientIds.add(cIdStr);
+      const existing = trackerMap[cIdStr];
+
+      // If explicitly marked as excluded for this month, skip it
+      if (existing?.isExcluded) {
+        continue;
+      }
+
+      if (existing) {
+        rows.push(existing);
+      } else {
+        // Scaffold (not yet saved)
+        rows.push({
+          _id: null,
+          client: { _id: client._id, companyName: client.companyName },
+          team: 'RWM',
+          plan: '',
+          storyPlan: '30 STORIES',
+          month,
+          year,
+          days: buildEmptyDays(year, month),
+          _scaffold: true,
+        });
+      }
+    }
+
+    // Also include any other non-excluded trackers for this month
+    for (const existing of existingPopulatedList) {
+      const cIdStr = existing.client?._id?.toString();
+      if (cIdStr && !handledClientIds.has(cIdStr) && !existing.isExcluded) {
+        rows.push(existing);
+      }
+    }
 
     res.json({ success: true, data: { rows, month, year, daysInMonth } });
   } catch (err) {
@@ -66,6 +348,7 @@ export const getMonthlyTrackers = async (req, res) => {
   }
 };
 
+
 // ── GET single tracker row by clientId + month/year ─────────────────────────
 export const getTrackerByClient = async (req, res) => {
   try {
@@ -73,12 +356,43 @@ export const getTrackerByClient = async (req, res) => {
     const month = parseInt(req.query.month) || new Date().getMonth() + 1;
     const year  = parseInt(req.query.year)  || new Date().getFullYear();
 
-    const tracker = await SmmMonthlyTracker.findOne({ client: clientId, month, year })
-      .populate('client', 'companyName status');
+    if (req.user.role === 'client') {
+      const client = await resolveClientForUser(req.user);
+      if (!client || (client.id !== clientId && client.smmId !== clientId)) {
+        return res.status(403).json({ success: false, message: 'Access denied to this client tracker' });
+      }
+    }
+
+    const tracker = await SmmMonthlyTracker.findOne({ client: clientId, month, year }).lean();
 
     if (!tracker) {
       return res.status(404).json({ success: false, message: 'Tracker not found' });
     }
+    let modified = false;
+    const updatedDays = (tracker.days || []).map((day) => {
+      const isPast = isDayBeforeToday(day.day, month, year);
+      let newDay = day;
+      if (isPast) {
+        if (hasPosterContent(day.postLabel) && (!day.postStatus || day.postStatus === 'todo')) {
+          if (newDay === day) newDay = { ...day };
+          newDay.postStatus = 'pending';
+          modified = true;
+        }
+        if (hasPosterContent(day.storyLabel) && (!day.storyStatus || day.storyStatus === 'todo')) {
+          if (newDay === day) newDay = { ...day };
+          newDay.storyStatus = 'pending';
+          modified = true;
+        }
+      }
+      return newDay;
+    });
+
+    if (modified && tracker._id) {
+      SmmMonthlyTracker.findByIdAndUpdate(tracker._id, { $set: { days: updatedDays } }).catch(() => {});
+    }
+
+    tracker.days = updatedDays;
+    tracker.client = await resolveClientObj(clientId);
     res.json({ success: true, data: tracker });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error', error: err.message });
@@ -103,6 +417,7 @@ export const upsertTracker = async (req, res) => {
           plan: plan || '',
           storyPlan: storyPlan || '30 STORIES',
           days: days || buildEmptyDays(year, month),
+          isExcluded: false,
           updatedBy: req.user?._id,
         },
         $setOnInsert: {
@@ -113,7 +428,16 @@ export const upsertTracker = async (req, res) => {
         },
       },
       { upsert: true, new: true, runValidators: true }
-    ).populate('client', 'companyName status');
+    ).lean();
+
+    tracker.client = await resolveClientObj(clientId);
+
+    emitLiveEvent('smmTrackerUpdated', {
+      trackerId: tracker._id,
+      clientId,
+      month,
+      year,
+    });
 
     res.json({ success: true, data: tracker });
   } catch (err) {
@@ -122,37 +446,115 @@ export const upsertTracker = async (req, res) => {
   }
 };
 
-// ── PATCH a single day cell status ─────────────────────────────────────────
-// PATCH /api/smm/tracker/:id/day/:day  { field: 'postStatus'|'storyStatus'|'postLabel'|'storyLabel'|'note', value }
+// ── PATCH a single day cell status & items ─────────────────────────────────
+// PATCH /api/smm/tracker/:id/day/:day  { field, value } OR { items, postStatus, postLabel, storyStatus, storyLabel, note }
 export const updateDayCell = async (req, res) => {
   try {
     const { id, day } = req.params;
-    const { field, value } = req.body;
-
     const dayNum = parseInt(day);
-    const allowedFields = ['postStatus', 'postLabel', 'storyStatus', 'storyLabel', 'note'];
-    if (!allowedFields.includes(field)) {
-      return res.status(400).json({ success: false, message: 'Invalid field' });
-    }
 
-    // Find the tracker and update the specific day cell
     const tracker = await SmmMonthlyTracker.findById(id);
     if (!tracker) {
       return res.status(404).json({ success: false, message: 'Tracker not found' });
     }
 
-    const dayCell = tracker.days.find((d) => d.day === dayNum);
+    let dayCell = tracker.days.find((d) => d.day === dayNum);
     if (!dayCell) {
-      // Add missing day cell
-      tracker.days.push({ day: dayNum, [field]: value });
-    } else {
+      dayCell = { day: dayNum, postLabel: '', postStatus: 'todo', storyLabel: '', storyStatus: 'todo', items: [] };
+      tracker.days.push(dayCell);
+      dayCell = tracker.days.find((d) => d.day === dayNum);
+    }
+
+    // 1. Direct items update (from Day Details Drawer)
+    if (req.body.items !== undefined) {
+      const itemsList = Array.isArray(req.body.items) ? req.body.items : [];
+      dayCell.items = itemsList;
+
+      // Automatically sync primary post/story fields from items if not explicitly provided
+      const contentItems = itemsList.filter((it) => ['reel', 'post', 'video', 'carousel'].includes(it.type));
+      const storyItems = itemsList.filter((it) => it.type === 'story');
+
+      if (req.body.postLabel !== undefined) {
+        dayCell.postLabel = req.body.postLabel;
+      } else if (contentItems.length > 0) {
+        dayCell.postLabel = contentItems[0].label || '';
+      } else {
+        dayCell.postLabel = '';
+      }
+
+      if (req.body.postStatus !== undefined) {
+        dayCell.postStatus = req.body.postStatus;
+      } else if (contentItems.length > 0) {
+        // If all done, done; if any pending, pending; else first item status
+        const allDone = contentItems.every((it) => it.status === 'done');
+        const anyPending = contentItems.some((it) => it.status === 'pending');
+        dayCell.postStatus = allDone ? 'done' : (anyPending ? 'pending' : (contentItems[0].status || 'todo'));
+      } else {
+        dayCell.postStatus = 'todo';
+      }
+
+      if (req.body.storyLabel !== undefined) {
+        dayCell.storyLabel = req.body.storyLabel;
+      } else if (storyItems.length > 0) {
+        dayCell.storyLabel = storyItems[0].label || '';
+      } else {
+        dayCell.storyLabel = '';
+      }
+
+      if (req.body.storyStatus !== undefined) {
+        dayCell.storyStatus = req.body.storyStatus;
+      } else if (storyItems.length > 0) {
+        const allDone = storyItems.every((it) => it.status === 'done');
+        const anyPending = storyItems.some((it) => it.status === 'pending');
+        dayCell.storyStatus = allDone ? 'done' : (anyPending ? 'pending' : (storyItems[0].status || 'todo'));
+      } else {
+        dayCell.storyStatus = 'todo';
+      }
+
+      if (req.body.note !== undefined) {
+        dayCell.note = req.body.note;
+      }
+    } else if (req.body.field) {
+      // 2. Legacy single-field update
+      const { field, value } = req.body;
+      const allowedFields = ['postStatus', 'postLabel', 'storyStatus', 'storyLabel', 'note', 'items'];
+      if (!allowedFields.includes(field)) {
+        return res.status(400).json({ success: false, message: 'Invalid field' });
+      }
       dayCell[field] = value;
+    } else {
+      // 3. Selective field updates
+      if (req.body.postLabel !== undefined) dayCell.postLabel = req.body.postLabel;
+      if (req.body.postStatus !== undefined) dayCell.postStatus = req.body.postStatus;
+      if (req.body.storyLabel !== undefined) dayCell.storyLabel = req.body.storyLabel;
+      if (req.body.storyStatus !== undefined) dayCell.storyStatus = req.body.storyStatus;
+      if (req.body.note !== undefined) dayCell.note = req.body.note;
     }
 
     tracker.updatedBy = req.user?._id;
     await tracker.save();
 
-    res.json({ success: true, data: tracker });
+    const result = tracker.toObject();
+    result.client = await resolveClientObj(tracker.client);
+
+    emitLiveEvent('smmTrackerCellUpdated', {
+      trackerId: tracker._id.toString(),
+      clientId: tracker.client?._id?.toString() || tracker.client?.toString(),
+      day: dayNum,
+      cell: dayCell,
+      field: req.body.field || 'cell',
+      value: req.body.value !== undefined ? req.body.value : dayCell,
+      month: tracker.month,
+      year: tracker.year,
+      updatedBy: req.user?._id,
+    });
+    emitLiveEvent('smmTrackerUpdated', {
+      trackerId: tracker._id.toString(),
+      month: tracker.month,
+      year: tracker.year,
+    });
+
+    res.json({ success: true, data: result });
   } catch (err) {
     console.error('updateDayCell error:', err);
     res.status(500).json({ success: false, message: 'Server error', error: err.message });
@@ -170,11 +572,29 @@ export const updateTrackerMeta = async (req, res) => {
       id,
       { $set: { plan, storyPlan, team, updatedBy: req.user?._id } },
       { new: true }
-    ).populate('client', 'companyName status');
+    ).lean();
 
     if (!tracker) {
       return res.status(404).json({ success: false, message: 'Tracker not found' });
     }
+    tracker.client = await resolveClientObj(tracker.client);
+
+    emitLiveEvent('smmTrackerMetaUpdated', {
+      trackerId: tracker._id.toString(),
+      clientId: tracker.client?._id?.toString() || tracker.client?.toString(),
+      month: tracker.month,
+      year: tracker.year,
+      plan,
+      storyPlan,
+      team,
+    });
+    emitLiveEvent('smmTrackerUpdated', {
+      trackerId: tracker._id.toString(),
+      clientId: tracker.client?._id?.toString() || tracker.client?.toString(),
+      month: tracker.month,
+      year: tracker.year,
+    });
+
     res.json({ success: true, data: tracker });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error', error: err.message });
@@ -184,13 +604,459 @@ export const updateTrackerMeta = async (req, res) => {
 // ── Helper: format "18:30" -> "6:30P", "10:00" -> "10A"
 const formatShortTime = (timeStr) => {
   if (!timeStr) return '';
-  const match = timeStr.match(/^(\d{1,2}):(\d{2})/);
-  if (!match) return timeStr;
+  if (timeStr instanceof Date) {
+    let h = timeStr.getHours();
+    const m = String(timeStr.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'P' : 'A';
+    h = h % 12 || 12;
+    return m === '00' ? `${h}${ampm}` : `${h}:${m}${ampm}`;
+  }
+  const str = String(timeStr);
+  if (str.includes('T')) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      let h = d.getHours();
+      const m = String(d.getMinutes()).padStart(2, '0');
+      const ampm = h >= 12 ? 'P' : 'A';
+      h = h % 12 || 12;
+      return m === '00' ? `${h}${ampm}` : `${h}:${m}${ampm}`;
+    }
+  }
+  const match = str.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return str;
   let h = parseInt(match[1], 10);
   const m = match[2];
   const ampm = h >= 12 ? 'P' : 'A';
   h = h % 12 || 12;
   return m === '00' ? `${h}${ampm}` : `${h}:${m}${ampm}`;
+};
+
+// ── Helper: classify task content type (Reel vs Post vs Story) ───────────────
+export const classifyTaskContentType = (task) => {
+  const tType = (task.taskType || '').toLowerCase();
+  const cType = (task.contentType || '').toLowerCase();
+  const vType = (task.videoType || '').toLowerCase();
+  const title = (task.title || '').toLowerCase();
+
+  if (
+    tType === 'story' ||
+    title.includes('[story]') ||
+    title.startsWith('story:')
+  ) {
+    return 'story';
+  }
+
+  if (
+    tType === 'reel' ||
+    tType === 'video' ||
+    tType === 'video_content' ||
+    cType === 'videos' ||
+    vType === 'reels' ||
+    vType === 'shorts' ||
+    vType === 'youtube' ||
+    vType === 'long_video' ||
+    title.includes('[reel]') ||
+    title.startsWith('reel:')
+  ) {
+    return 'reel';
+  }
+
+  return 'post';
+};
+
+// ── Helper: classify deliverable type from ProjectMonthlyDeliverable ──────────
+export const classifyDeliverableType = (contentType) => {
+  const norm = (contentType || '').toLowerCase().trim();
+  if (
+    norm.includes('reel') ||
+    norm.includes('short') ||
+    norm.includes('video') ||
+    norm.includes('youtube')
+  ) {
+    return 'reel';
+  }
+  if (norm.includes('story') || norm.includes('stories')) {
+    return 'story';
+  }
+  return 'post';
+};
+
+// ── Helper: map task workflow status to tracker cell status ───────────────────
+export const mapTaskStatusToCellStatus = (task) => {
+  const pStatus = (task.postingStatus || '').toLowerCase();
+  const status = (task.status || '').toLowerCase();
+
+  if (pStatus === 'posted' || status === 'completed' || status === 'done' || status === 'approved') {
+    return 'done';
+  }
+  if (status === 'rejected') {
+    return 'skip';
+  }
+  if (
+    pStatus === 'scheduled' ||
+    ['in_progress', 'review', 'client_approval', 'smm_team', 'on_process', 'review_required'].includes(status)
+  ) {
+    return 'pending';
+  }
+  return 'todo';
+};
+
+// ── POST /api/smm/tracker/sync-tasks ─────────────────────────────────────────
+// Syncs One-Page Tracker with Tasks and Project Monthly Deliverables:
+// 1. Project monthly deliverables count sets target count for Reels and Posts in Plan
+// 2. Task postingScheduleDate (post date) places tasks on corresponding day cells
+export const syncTasksWithTracker = async (req, res) => {
+  try {
+    const month = parseInt(req.body.month, 10) || new Date().getMonth() + 1;
+    const year  = parseInt(req.body.year, 10)  || new Date().getFullYear();
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0);
+    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+
+    // 1. Fetch all active clients from both CRM Client and SmmClient
+    const [crmClients, smmClientsList] = await Promise.all([
+      Client.find({ status: { $regex: /^active$/i } }).lean(),
+      SmmClient.find({ status: { $regex: /^active$/i } }).lean(),
+    ]);
+
+    const clientMap = new Map();
+    crmClients.forEach((c) => {
+      clientMap.set(c._id.toString(), { _id: c._id, companyName: c.company || c.name || 'Client' });
+    });
+    smmClientsList.forEach((c) => {
+      if (!clientMap.has(c._id.toString())) {
+        clientMap.set(c._id.toString(), { _id: c._id, companyName: c.companyName || 'Client' });
+      }
+    });
+
+    const nameToClientId = new Map();
+    crmClients.forEach((c) => {
+      const name = (c.company || c.name || '').trim().toLowerCase();
+      if (name) nameToClientId.set(name, c._id.toString());
+    });
+    smmClientsList.forEach((c) => {
+      const name = (c.companyName || '').trim().toLowerCase();
+      if (name && !nameToClientId.has(name)) nameToClientId.set(name, c._id.toString());
+    });
+
+    // 2. Fetch projects to map project -> client
+    const projects = await Project.find({}).select('_id client name category').lean();
+    const projectToClient = new Map();
+    projects.forEach((p) => {
+      if (p.client) {
+        projectToClient.set(p._id.toString(), p.client.toString());
+      }
+    });
+
+    // 3. Fetch monthly deliverables for this month and year from projects
+    const deliverables = await ProjectMonthlyDeliverable.find({ month, year }).lean();
+    const deliverablesByClient = {};
+    deliverables.forEach((d) => {
+      const pIdStr = d.projectId?.toString();
+      const cId = projectToClient.get(pIdStr);
+      if (!cId) return;
+
+      if (!deliverablesByClient[cId]) {
+        deliverablesByClient[cId] = { reels: 0, posts: 0, stories: 0, total: 0 };
+      }
+      const type = classifyDeliverableType(d.contentType);
+      const qty = Number(d.targetQuantity) || 0;
+      if (type === 'reel') deliverablesByClient[cId].reels += qty;
+      else if (type === 'post') deliverablesByClient[cId].posts += qty;
+      else if (type === 'story') deliverablesByClient[cId].stories += qty;
+      deliverablesByClient[cId].total += qty;
+    });
+
+    // 4. Fetch content tasks that have a posting date in this month
+    const tasks = await Task.find({
+      $or: [
+        { postingScheduleDate: { $gte: startOfMonth, $lte: endOfMonth } },
+        { publishingDate: { $gte: startOfMonth, $lte: endOfMonth } },
+      ],
+      taskCategory: { $ne: 'non_content' },
+      taskType: {
+        $nin: [
+          'non_content',
+          'website_development',
+          'web_dev',
+          'app_development',
+          'software_development',
+          'seo',
+          'maintenance',
+        ],
+      },
+    })
+      .populate('project', '_id client name')
+      .populate('client', '_id company name')
+      .lean();
+
+    const tasksByClient = {};
+    tasks.forEach((t) => {
+      let cId = t.client?._id?.toString() || (t.client ? t.client.toString() : null);
+      if (!cId && t.project) {
+        cId = t.project.client?._id?.toString() || (t.project.client ? t.project.client.toString() : null) || projectToClient.get(t.project._id?.toString());
+      }
+      if (!cId && t.clientName) {
+        cId = nameToClientId.get(t.clientName.trim().toLowerCase());
+      }
+      if (cId) {
+        if (!tasksByClient[cId]) tasksByClient[cId] = [];
+        tasksByClient[cId].push(t);
+
+        if (!clientMap.has(cId)) {
+          const cName = t.client?.company || t.client?.name || t.clientName || 'Client';
+          clientMap.set(cId, { _id: cId, companyName: cName });
+        }
+      }
+    });
+
+    const clients = Array.from(clientMap.values());
+    let updatedCount = 0;
+    let syncedTaskCount = 0;
+
+    for (const client of clients) {
+      const cId = client._id.toString();
+      const clientTasks = tasksByClient[cId] || [];
+      const clientDeliv = deliverablesByClient[cId];
+
+      // If client has neither deliverables nor tasks scheduled, skip automatic overwrite
+      if (!clientDeliv && clientTasks.length === 0) {
+        continue;
+      }
+
+      // Calculate reels, posts, stories target from project deliverables
+      let reelsTarget = clientDeliv?.reels ?? 0;
+      let postsTarget = clientDeliv?.posts ?? 0;
+      let storiesTarget = clientDeliv?.stories ?? 0;
+
+      // Fallback: If no project monthly deliverables found, fallback to count of scheduled tasks
+      if (!clientDeliv || (reelsTarget === 0 && postsTarget === 0)) {
+        const rTaskCount = clientTasks.filter((t) => classifyTaskContentType(t) === 'reel').length;
+        const pTaskCount = clientTasks.filter((t) => classifyTaskContentType(t) === 'post').length;
+        const sTaskCount = clientTasks.filter((t) => classifyTaskContentType(t) === 'story').length;
+        if (reelsTarget === 0 && rTaskCount > 0) reelsTarget = rTaskCount;
+        if (postsTarget === 0 && pTaskCount > 0) postsTarget = pTaskCount;
+        if (storiesTarget === 0 && sTaskCount > 0) storiesTarget = sTaskCount;
+      }
+
+      const plan = `${reelsTarget}R + ${postsTarget}P`;
+      const storyPlan = `${storiesTarget || 30} STORIES`;
+
+      let tracker = await SmmMonthlyTracker.findOne({ client: client._id, month, year });
+      const days = tracker?.days && tracker.days.length > 0 ? tracker.days : buildEmptyDays(year, month);
+
+      // Sort tasks chronologically
+      clientTasks.sort((a, b) => {
+        const da = new Date(a.postingScheduleDate || a.publishingDate || a.createdAt);
+        const db = new Date(b.postingScheduleDate || b.publishingDate || b.createdAt);
+        return da - db;
+      });
+
+      let reelIdx = 1, postIdx = 1, storyIdx = 1;
+      clientTasks.forEach((task) => {
+        const pDate = task.postingScheduleDate || task.publishingDate;
+        const dayNum = new Date(pDate).getDate();
+        if (dayNum < 1 || dayNum > daysInMonth) return;
+
+        const dayCell = days.find((d) => d.day === dayNum);
+        if (!dayCell) return;
+
+        const timeStr = formatShortTime(task.publishingTime || pDate);
+        const status = mapTaskStatusToCellStatus(task);
+        const cType = classifyTaskContentType(task);
+
+        let label = '';
+        let itemType = 'post';
+
+        if (cType === 'reel') {
+          itemType = 'reel';
+          label = `R${reelIdx++} ${timeStr}`.trim();
+          dayCell.postLabel = label;
+          dayCell.postStatus = status;
+        } else if (cType === 'story') {
+          itemType = 'story';
+          label = `S${storyIdx++} ${timeStr}`.trim();
+          dayCell.storyLabel = label;
+          dayCell.storyStatus = status;
+        } else {
+          itemType = 'post';
+          label = `P${postIdx++} ${timeStr}`.trim();
+          dayCell.postLabel = label;
+          dayCell.postStatus = status;
+        }
+
+        if (!dayCell.note && (task.description || task.notes)) {
+          dayCell.note = (task.description || task.notes || '').slice(0, 200);
+        }
+
+        if (!Array.isArray(dayCell.items)) {
+          dayCell.items = [];
+        }
+        const existingIdx = dayCell.items.findIndex((it) => it.id === task._id.toString());
+        const dayItem = {
+          id: task._id.toString(),
+          type: itemType,
+          label,
+          time: timeStr,
+          status,
+          title: task.title || '',
+          note: task.description || '',
+          driveLink: task.rawFootageLink || '',
+        };
+        if (existingIdx >= 0) {
+          dayCell.items[existingIdx] = dayItem;
+        } else {
+          dayCell.items.push(dayItem);
+        }
+        syncedTaskCount++;
+      });
+
+      // Mirror to SmmClient for consistency
+      await SmmClient.findByIdAndUpdate(
+        client._id,
+        {
+          $setOnInsert: {
+            _id: client._id,
+            companyName: client.companyName || 'Client',
+            status: 'Active',
+          },
+        },
+        { upsert: true }
+      ).catch(() => {});
+
+      await SmmMonthlyTracker.findOneAndUpdate(
+        { client: client._id, month, year },
+        {
+          $set: {
+            plan,
+            storyPlan,
+            days,
+            isExcluded: false,
+            updatedBy: req.user?._id,
+          },
+        },
+        { upsert: true, new: true }
+      );
+      updatedCount++;
+    }
+
+    emitLiveEvent('smmTrackerUpdated', { month, year });
+
+    res.json({
+      success: true,
+      message: `Successfully synced ${syncedTaskCount} tasks and deliverables across ${updatedCount} clients`,
+      syncedClients: updatedCount,
+      totalTasks: syncedTaskCount,
+      totalDeliverables: deliverables.length,
+    });
+  } catch (err) {
+    console.error('syncTasksWithTracker error:', err);
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+};
+
+// ── GET /api/smm/tracker/client-deliverables-summary ────────────────────────
+// Fetches deliverables and scheduled tasks for a single client for Add Client modal
+export const getClientDeliverablesSummary = async (req, res) => {
+  try {
+    const { clientId } = req.query;
+    const month = parseInt(req.query.month, 10) || new Date().getMonth() + 1;
+    const year  = parseInt(req.query.year, 10)  || new Date().getFullYear();
+
+    if (!clientId) {
+      return res.status(400).json({ success: false, message: 'clientId is required' });
+    }
+
+    const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0);
+    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+
+    // Find all projects for this client
+    const projects = await Project.find({ client: clientId }).select('_id name category').lean();
+    const projectIds = projects.map((p) => p._id);
+
+    // Find ProjectMonthlyDeliverable for these projects
+    const deliverables = await ProjectMonthlyDeliverable.find({
+      projectId: { $in: projectIds },
+      month,
+      year,
+    }).lean();
+
+    let reelsCount = 0;
+    let postsCount = 0;
+    let storiesCount = 0;
+
+    deliverables.forEach((d) => {
+      const type = classifyDeliverableType(d.contentType);
+      const qty = Number(d.targetQuantity) || 0;
+      if (type === 'reel') reelsCount += qty;
+      else if (type === 'post') postsCount += qty;
+      else if (type === 'story') storiesCount += qty;
+    });
+
+    // Find tasks scheduled with postingScheduleDate or publishingDate
+    const tasks = await Task.find({
+      $or: [
+        { client: clientId },
+        { project: { $in: projectIds } },
+      ],
+      $and: [
+        {
+          $or: [
+            { postingScheduleDate: { $gte: startOfMonth, $lte: endOfMonth } },
+            { publishingDate: { $gte: startOfMonth, $lte: endOfMonth } },
+          ],
+        },
+      ],
+      taskCategory: { $ne: 'non_content' },
+      taskType: {
+        $nin: [
+          'non_content',
+          'website_development',
+          'web_dev',
+          'app_development',
+          'software_development',
+          'seo',
+          'maintenance',
+        ],
+      },
+    }).lean();
+
+    const taskReels = tasks.filter((t) => classifyTaskContentType(t) === 'reel').length;
+    const taskPosts = tasks.filter((t) => classifyTaskContentType(t) === 'post').length;
+    const taskStories = tasks.filter((t) => classifyTaskContentType(t) === 'story').length;
+
+    const finalReels = reelsCount > 0 ? reelsCount : taskReels;
+    const finalPosts = postsCount > 0 ? postsCount : taskPosts;
+    const finalStories = storiesCount > 0 ? storiesCount : taskStories;
+
+    const items = tasks.map((t) => {
+      const pDate = t.postingScheduleDate || t.publishingDate;
+      const cType = classifyTaskContentType(t);
+      return {
+        id: t._id.toString(),
+        title: t.title,
+        taskType: t.taskType,
+        contentType: cType === 'reel' ? 'Reel' : cType === 'story' ? 'Story' : 'Post',
+        scheduledDate: pDate,
+        postingStatus: t.postingStatus,
+        status: t.status,
+      };
+    });
+
+    res.json({
+      success: true,
+      reels: finalReels,
+      posts: finalPosts,
+      stories: finalStories,
+      total: items.length,
+      hasDeliverables: deliverables.length > 0,
+      items,
+    });
+  } catch (err) {
+    console.error('getClientDeliverablesSummary error:', err);
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
 };
 
 // ── POST /api/smm/tracker/sync-content ──────────────────────────────────────
@@ -228,8 +1094,23 @@ export const syncContentWithTracker = async (req, res) => {
       }
     });
 
-    // Fetch all active SMM clients
-    const clients = await SmmClient.find({ status: 'Active' }).lean();
+    // Fetch all active clients from BOTH CRM Client and SmmClient
+    const [crmClients, smmClientsList] = await Promise.all([
+      Client.find({ status: { $regex: /^active$/i } }).lean(),
+      SmmClient.find({ status: { $regex: /^active$/i } }).lean(),
+    ]);
+
+    const clientMap = new Map();
+    crmClients.forEach((c) => {
+      clientMap.set(c._id.toString(), { _id: c._id, companyName: c.company || c.name || 'Client' });
+    });
+    smmClientsList.forEach((c) => {
+      if (!clientMap.has(c._id.toString())) {
+        clientMap.set(c._id.toString(), { _id: c._id, companyName: c.companyName || 'Client' });
+      }
+    });
+
+    const clients = Array.from(clientMap.values());
 
     let updatedCount = 0;
     for (const client of clients) {
@@ -291,6 +1172,7 @@ export const syncContentWithTracker = async (req, res) => {
             plan,
             storyPlan,
             days,
+            isExcluded: false,
             updatedBy: req.user?._id,
           },
         },
@@ -298,6 +1180,8 @@ export const syncContentWithTracker = async (req, res) => {
       );
       updatedCount++;
     }
+
+    emitLiveEvent('smmTrackerUpdated', { month, year });
 
     res.json({
       success: true,
@@ -315,9 +1199,71 @@ export const syncContentWithTracker = async (req, res) => {
 export const deleteTracker = async (req, res) => {
   try {
     const { id } = req.params;
-    await SmmMonthlyTracker.findByIdAndDelete(id);
-    res.json({ success: true, message: 'Tracker deleted' });
+    const deleteClient = req.query.deleteClient === 'true' || req.body?.deleteClient === true;
+    const month = parseInt(req.query.month) || parseInt(req.body?.month);
+    const year = parseInt(req.query.year) || parseInt(req.body?.year);
+    const clientId = req.query.clientId || req.body?.clientId;
+
+    let targetClientId = clientId;
+
+    // If id is a valid Mongo tracker ID, locate tracker
+    if (id && id !== 'scaffold' && id !== 'null' && id !== 'undefined') {
+      const tracker = await SmmMonthlyTracker.findById(id);
+      if (tracker) {
+        if (!targetClientId && tracker.client) {
+          targetClientId = tracker.client.toString();
+        }
+        if (!deleteClient) {
+          tracker.isExcluded = true;
+          tracker.updatedBy = req.user?._id;
+          await tracker.save();
+        }
+      }
+    }
+
+    if (deleteClient && targetClientId) {
+      // Permanently remove client and all trackers for this client
+      await SmmMonthlyTracker.deleteMany({ client: targetClientId });
+      await Promise.allSettled([
+        SmmClient.findByIdAndDelete(targetClientId),
+        Client.findByIdAndDelete(targetClientId),
+      ]);
+
+      emitLiveEvent('clientDeleted', targetClientId);
+      emitLiveEvent('smmTrackerDeleted', { trackerId: id, clientId: targetClientId, month, year });
+      emitLiveEvent('smmTrackerUpdated', { month, year });
+
+      return res.json({ success: true, message: 'Client and all tracker data permanently deleted' });
+    }
+
+    if (!deleteClient && targetClientId && month && year) {
+      // Exclude from this month's tracker so scaffold doesn't regenerate it
+      await SmmMonthlyTracker.findOneAndUpdate(
+        { client: targetClientId, month, year },
+        {
+          $set: {
+            isExcluded: true,
+            updatedBy: req.user?._id,
+          },
+          $setOnInsert: {
+            days: buildEmptyDays(year, month),
+            createdBy: req.user?._id,
+          },
+        },
+        { upsert: true, new: true }
+      );
+
+      emitLiveEvent('smmTrackerDeleted', { trackerId: id, clientId: targetClientId, month, year });
+      emitLiveEvent('smmTrackerUpdated', { month, year });
+
+      return res.json({ success: true, message: 'Client removed from monthly tracker' });
+    }
+
+    emitLiveEvent('smmTrackerUpdated', { month, year });
+    res.json({ success: true, message: 'Tracker updated' });
   } catch (err) {
+    console.error('deleteTracker error:', err);
     res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
+

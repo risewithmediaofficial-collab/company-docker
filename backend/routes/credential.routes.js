@@ -13,12 +13,15 @@ import { authorize, protect } from '../middleware/auth.middleware.js';
 const router = express.Router();
 router.use(protect);
 
-router.get('/', authorize('superAdmin', 'manager', 'employee'), getCredentialsVault);
-router.get('/clients/:clientId', authorize('superAdmin', 'manager', 'employee'), getClientCredentials);
-router.post('/clients/:clientId', authorize('superAdmin', 'manager'), createCredential);
-router.get('/:credentialId', authorize('superAdmin', 'manager', 'employee'), getCredential);
-router.put('/:credentialId', authorize('superAdmin', 'manager'), updateCredential);
-router.delete('/:credentialId', authorize('superAdmin', 'manager'), deleteCredential);
-router.get('/:credentialId/logs', authorize('superAdmin', 'manager'), getCredentialLogs);
+const allowedReadRoles = ['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager', 'employee', 'client'];
+const allowedWriteRoles = ['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager', 'employee'];
+
+router.get('/', authorize(...allowedReadRoles), getCredentialsVault);
+router.get('/clients/:clientId', authorize(...allowedReadRoles), getClientCredentials);
+router.post('/clients/:clientId', authorize(...allowedWriteRoles), createCredential);
+router.get('/:credentialId', authorize(...allowedReadRoles), getCredential);
+router.put('/:credentialId', authorize(...allowedWriteRoles), updateCredential);
+router.delete('/:credentialId', authorize(...allowedWriteRoles), deleteCredential);
+router.get('/:credentialId/logs', authorize(...allowedWriteRoles), getCredentialLogs);
 
 export default router;

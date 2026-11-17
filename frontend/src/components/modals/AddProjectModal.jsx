@@ -5,17 +5,34 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { X, CalendarDays, IndianRupee, Briefcase } from 'lucide-react';
-import { useAcceptedProposals } from '../../hooks/useProposals';
+import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  X,
+  CalendarDays,
+  IndianRupee,
+  Briefcase,
+  Target,
+  Rocket,
+  CheckCircle2,
+  Globe,
+  Sparkles,
+  Layers,
+  Code2,
+  ArrowRight,
+  FileText,
+  Check,
+} from '@/components/ui/muiIcons';
+import { useProposals, useClientProposals } from '../../hooks/useProposals';
 import { formatINR } from '../../utils/currency';
+import { SelectDropdown } from '../ui/SelectDropdown';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -27,13 +44,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateProject, useUpdateProject } from '../../hooks/useProjects';
 import { useClients } from '../../hooks/useClients';
@@ -43,6 +53,8 @@ import {
 } from '../../hooks/useMonthlyDeliverables';
 import MonthlyDeliverablesSection from '../projects/MonthlyDeliverablesSection';
 import { toast } from 'sonner';
+import api from '../../api';
+import DuplicateConfirmDialog from './DuplicateConfirmDialog';
 
 const DRAFT_KEY = 'draft:project-modal';
 
@@ -164,6 +176,14 @@ export const AddProjectModal = ({ open, onOpenChange, project = null, defaultCli
     },
   });
 
+  const navigate = useNavigate();
+
+  const isDevOrSoftwareCategory = (cat) =>
+    ['web_development', 'web_design', 'saas_product', 'saas', 'internal_tool', 'internal_product', 'mobile_app', 'e_commerce'].includes(cat);
+
+  const isContentCategory = (cat) =>
+    ['social_media', 'video_content', 'video', 'content', 'graphic_design', 'branding', 'paid_ads'].includes(cat);
+
   const selectedClientId = form.watch('client');
   const selectedCategory = form.watch('category');
   const isInternalValue = form.watch('isInternal');
@@ -171,8 +191,223 @@ export const AddProjectModal = ({ open, onOpenChange, project = null, defaultCli
     isInternalValue ||
     ['saas_product', 'saas', 'internal_tool', 'internal_product'].includes(selectedCategory);
 
-  const { data: acceptedProposals = [] } = useAcceptedProposals(selectedClientId);
+  const isDevCategory = isDevOrSoftwareCategory(selectedCategory);
+
   const { data: clients = [] } = useClients();
+  const { data: allProposals = [] } = useProposals();
+  const { data: clientProposals = [] } = useClientProposals(
+    selectedClientId && selectedClientId !== 'none' ? selectedClientId : null
+  );
+
+  // Derive proposals for current client selection or show all if no client selected yet
+  const availableProposals = useMemo(() => {
+    let list = [];
+    if (selectedClientId && selectedClientId !== 'none') {
+      if (clientProposals && clientProposals.length > 0) {
+        list = [...clientProposals];
+      } else {
+        list = (allProposals || []).filter((p) => {
+          const cId = p.client?._id || (typeof p.client === 'string' ? p.client : '');
+          return cId === selectedClientId;
+        });
+      }
+    } else {
+      list = [...(allProposals || [])];
+    }
+
+    const statusPriority = { accepted: 1, sent: 2, viewed: 3, draft: 4 };
+    return list.sort((a, b) => {
+      const pA = statusPriority[a.status?.toLowerCase()] || 99;
+      const pB = statusPriority[b.status?.toLowerCase()] || 99;
+      if (pA !== pB) return pA - pB;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+  }, [selectedClientId, clientProposals, allProposals]);
+
+  const proposalOptions = useMemo(() => {
+    const list = availableProposals.map((p) => {
+      const pNum = p.proposalNumber ? `${p.proposalNumber} — ` : '';
+      const sym = p.currency === 'USD' ? '$' : p.currency === 'EUR' ? '€' : p.currency === 'GBP' ? '£' : '₹';
+      const amountStr = p.amount ? `${sym}${Number(p.amount).toLocaleString('en-IN')}` : 'No budget set';
+      const statusStr = (p.status || 'SENT').toUpperCase();
+      const clientName = p.client?.name || p.client?.company ? ` • Client: ${p.client?.name || p.client?.company}` : '';
+
+      return {
+        value: p._id,
+        label: `${pNum}${p.title || 'Untitled Proposal'}`,
+        subLabel: `${amountStr} • Status: ${statusStr}${!selectedClientId || selectedClientId === 'none' ? clientName : ''}`,
+      };
+    });
+
+    const defaultOption = {
+      value: '',
+      label: 'None / No Proposal (Custom Project)',
+      subLabel: selectedClientId && selectedClientId !== 'none'
+        ? 'Create project without linking proposals for this client'
+        : 'Create project without linking any proposal',
+    };
+
+    return [defaultOption, ...list];
+  }, [availableProposals, selectedClientId]);
+
+  // Selected proposal object for card display
+  const selectedProposalId = form.watch('acceptedProposalId');
+  const selectedProposal = useMemo(() => {
+    if (!selectedProposalId) return null;
+    return (
+      availableProposals.find((p) => p._id === selectedProposalId) ||
+      allProposals.find((p) => p._id === selectedProposalId) ||
+      (project?.acceptedProposalId && typeof project.acceptedProposalId === 'object' && project.acceptedProposalId._id === selectedProposalId
+        ? project.acceptedProposalId
+        : null)
+    );
+  }, [selectedProposalId, availableProposals, allProposals, project]);
+
+  // When selected client changes, if currently linked proposal does not belong to this client, unlink it
+  useEffect(() => {
+    const currentProposalId = form.getValues('acceptedProposalId');
+    if (currentProposalId && selectedClientId && selectedClientId !== 'none') {
+      const match = (allProposals || []).find((p) => p._id === currentProposalId);
+      if (match) {
+        const pClientId = match.client?._id || (typeof match.client === 'string' ? match.client : '');
+        if (pClientId && pClientId !== selectedClientId) {
+          form.setValue('acceptedProposalId', '');
+        }
+      }
+    }
+  }, [selectedClientId, allProposals, form]);
+
+  const handleProposalSelect = (proposalId) => {
+    form.setValue('acceptedProposalId', proposalId);
+
+    if (!proposalId) return;
+
+    const proposal =
+      availableProposals.find((p) => p._id === proposalId) ||
+      allProposals.find((p) => p._id === proposalId);
+
+    if (!proposal) return;
+
+    // 1. Auto-select client if not yet selected
+    const proposalClientId = proposal.client?._id || (typeof proposal.client === 'string' ? proposal.client : '');
+    if (proposalClientId && (!form.getValues('client') || form.getValues('client') === 'none')) {
+      form.setValue('client', proposalClientId);
+    }
+
+    // 2. Autofill project name if empty
+    const currentName = form.getValues('name');
+    if (!currentName || currentName.trim() === '') {
+      form.setValue('name', proposal.title || '');
+    }
+
+    // 3. Autofill budget & quoted amount
+    if (proposal.amount) {
+      const currentBudget = form.getValues('budget');
+      if (!currentBudget || Number(currentBudget) === 0) {
+        form.setValue('budget', proposal.amount);
+        form.setValue('quotedAmount', proposal.amount);
+        form.setValue('totalBudget', proposal.amount);
+      }
+    }
+
+    // 4. Autofill currency
+    if (proposal.currency) {
+      form.setValue('currency', proposal.currency);
+    }
+
+    // 5. Autofill project description
+    const currentDesc = form.getValues('description');
+    if (!currentDesc || currentDesc.trim() === '') {
+      form.setValue(
+        'description',
+        proposal.description || proposal.scopeOfWork || proposal.deliverables || ''
+      );
+    }
+
+    // 6. Map service category to project category if empty
+    const currentCategory = form.getValues('category');
+    if (!currentCategory && proposal.serviceCategory) {
+      const categoryMapping = {
+        website: 'web_development',
+        social_media: 'social_media',
+        branding: 'branding',
+        seo: 'seo',
+        ads: 'paid_ads',
+        video_editing: 'video_content',
+        content_creation: 'content',
+        custom: 'other',
+      };
+      const mapped = categoryMapping[proposal.serviceCategory] || 'other';
+      form.setValue('category', mapped);
+    }
+
+    // 7. Dates if available
+    if (proposal.startDate && !form.getValues('startDate')) {
+      form.setValue('startDate', toDateInputValue(proposal.startDate));
+    }
+    if (proposal.endDate && !form.getValues('endDate')) {
+      form.setValue('endDate', toDateInputValue(proposal.endDate));
+    }
+
+    toast.success(`Proposal linked: "${proposal.title}"`);
+  };
+
+  const clientOptions = useMemo(() => {
+    const list = (clients || []).map((c) => ({
+      value: c._id,
+      label: `${c.name || 'Unnamed'} - ${c.company || 'Company'}`,
+      subLabel: c.email || c.phone || '',
+    }));
+    if (isSaasOrInternal) {
+      return [{ value: 'none', label: 'None (Internal SaaS Product)', subLabel: 'No external client needed' }, ...list];
+    }
+    return list;
+  }, [clients, isSaasOrInternal]);
+
+  const categoryOptions = useMemo(() => [
+    { value: 'saas_product', label: 'SaaS Product / Platform (No Client)', subLabel: 'Internal or commercial SaaS software' },
+    { value: 'internal_tool', label: 'Internal Software / Tool (No Client)', subLabel: 'Agency internal automation or dashboard' },
+    { value: 'web_development', label: 'Website / Web Development', subLabel: 'Full-stack, frontend, backend sites' },
+    { value: 'web_design', label: 'Web Design / UI-UX', subLabel: 'Figma, prototyping & wireframes' },
+    { value: 'social_media', label: 'Social Media Marketing', subLabel: 'Instagram, YouTube, LinkedIn retainers' },
+    { value: 'seo', label: 'Search Engine Optimization (SEO)', subLabel: 'Keyword ranking & organic growth' },
+    { value: 'paid_ads', label: 'Paid Ads & Performance Marketing', subLabel: 'Meta, Google, LinkedIn campaign ads' },
+    { value: 'branding', label: 'Branding & Identity', subLabel: 'Logos, brand guidelines & stationery' },
+    { value: 'graphic_design', label: 'Graphic Design & Creatives', subLabel: 'Posters, flyers, banners, social assets' },
+    { value: 'video_content', label: 'Video Production & Content', subLabel: 'Reels, shorts, corporate shoots, editing' },
+    { value: 'mobile_app', label: 'Mobile App Development', subLabel: 'iOS, Android or cross-platform apps' },
+    { value: 'e_commerce', label: 'E-Commerce Solutions', subLabel: 'Shopify, WooCommerce, online stores' },
+    { value: 'content', label: 'Content Creation & Copywriting', subLabel: 'Blogs, scripts, ad copy' },
+    { value: 'other', label: 'Other Services', subLabel: 'Custom project scope' },
+  ], []);
+
+  const statusOptions = useMemo(() => [
+    { value: 'Planning', label: 'Planning' },
+    { value: 'In Progress', label: 'In Progress' },
+    { value: 'On Hold', label: 'On Hold' },
+    { value: 'Completed', label: 'Completed' },
+    { value: 'Cancelled', label: 'Cancelled' },
+  ], []);
+
+  const priorityOptions = useMemo(() => [
+    { value: 'Low', label: 'Low' },
+    { value: 'Medium', label: 'Medium' },
+    { value: 'High', label: 'High' },
+    { value: 'Critical', label: 'Critical' },
+  ], []);
+
+  const currencyOptions = useMemo(() => [
+    { value: 'INR', label: 'INR (₹)' },
+    { value: 'USD', label: 'USD ($)' },
+    { value: 'EUR', label: 'EUR (€)' },
+    { value: 'GBP', label: 'GBP (£)' },
+  ], []);
+
+  const paymentStatusOptions = useMemo(() => [
+    { value: 'pending', label: 'Pending' },
+    { value: 'partial', label: 'Partial' },
+    { value: 'paid', label: 'Paid' },
+  ], []);
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();
   const batchSaveDeliverables = useBatchSaveProjectMonthlyDeliverables();
@@ -181,6 +416,16 @@ export const AddProjectModal = ({ open, onOpenChange, project = null, defaultCli
   const [deliverableMonth, setDeliverableMonth] = useState(new Date().getMonth() + 1);
   const [deliverableYear, setDeliverableYear] = useState(new Date().getFullYear());
   const [monthlyDeliverables, setMonthlyDeliverables] = useState([]);
+  const [includeMonthlyDeliverables, setIncludeMonthlyDeliverables] = useState(false);
+  const [hasUserToggledDeliverables, setHasUserToggledDeliverables] = useState(false);
+  const [moveToDevelopment, setMoveToDevelopment] = useState(false);
+  const [duplicateDialog, setDuplicateDialog] = useState({
+    open: false,
+    title: 'Duplicate Project Detected',
+    message: '',
+    existingRecord: null,
+    onConfirm: null,
+  });
 
   const { data: existingDeliverablesData } = useProjectMonthlyDeliverables(
     project?._id,
@@ -188,8 +433,25 @@ export const AddProjectModal = ({ open, onOpenChange, project = null, defaultCli
     deliverableYear
   );
 
+  // Sync deliverables toggle when project category changes (for new projects)
   useEffect(() => {
-    if (existingDeliverablesData?.deliverables) {
+    if (!project && selectedCategory) {
+      if (isDevOrSoftwareCategory(selectedCategory)) {
+        if (!hasUserToggledDeliverables) {
+          setIncludeMonthlyDeliverables(false);
+        }
+        setMoveToDevelopment(true);
+      } else if (isContentCategory(selectedCategory)) {
+        if (!hasUserToggledDeliverables) {
+          setIncludeMonthlyDeliverables(true);
+        }
+        setMoveToDevelopment(false);
+      }
+    }
+  }, [selectedCategory, project, hasUserToggledDeliverables]);
+
+  useEffect(() => {
+    if (existingDeliverablesData?.deliverables && existingDeliverablesData.deliverables.length > 0) {
       setMonthlyDeliverables(
         existingDeliverablesData.deliverables.map((d) => ({
           _id: d._id,
@@ -197,6 +459,7 @@ export const AddProjectModal = ({ open, onOpenChange, project = null, defaultCli
           targetQuantity: d.targetQuantity,
         }))
       );
+      setIncludeMonthlyDeliverables(true);
     } else if (!project) {
       setMonthlyDeliverables([]);
     }
@@ -355,31 +618,62 @@ export const AddProjectModal = ({ open, onOpenChange, project = null, defaultCli
       delete payload.paymentStatus;
       delete payload.budgetNotes;
 
-      let savedProject;
-      if (project) {
-        savedProject = await updateProject.mutateAsync({ id: project._id, data: payload });
-      } else {
-        savedProject = await createProject.mutateAsync(payload);
-      }
-
-      const targetProjectId = project?._id || savedProject?._id || savedProject?.project?._id;
-      if (targetProjectId && monthlyDeliverables !== undefined) {
-        try {
-          await batchSaveDeliverables.mutateAsync({
-            projectId: targetProjectId,
-            month: deliverableMonth,
-            year: deliverableYear,
-            deliverables: monthlyDeliverables,
-          });
-        } catch (err) {
-          console.error('Failed to save monthly deliverables in project modal', err);
+      const executeSaveProject = async () => {
+        let savedProject;
+        if (project) {
+          savedProject = await updateProject.mutateAsync({ id: project._id, data: payload });
+        } else {
+          if (moveToDevelopment && payload.status === 'planning') {
+            payload.status = 'active';
+          }
+          savedProject = await createProject.mutateAsync(payload);
         }
+
+        const targetProjectId = project?._id || savedProject?._id || savedProject?.project?._id || savedProject?.data?._id;
+        if (includeMonthlyDeliverables && targetProjectId && monthlyDeliverables && monthlyDeliverables.length > 0) {
+          try {
+            await batchSaveDeliverables.mutateAsync({
+              projectId: targetProjectId,
+              month: deliverableMonth,
+              year: deliverableYear,
+              deliverables: monthlyDeliverables,
+            });
+          } catch (err) {
+            console.error('Failed to save monthly deliverables in project modal', err);
+          }
+        }
+
+        form.reset();
+        setMonthlyDeliverables([]);
+        localStorage.removeItem(DRAFT_KEY);
+        onOpenChange(false);
+
+        if (!project && moveToDevelopment && targetProjectId) {
+          toast.success('Project created and moved directly to Development Board.');
+          navigate(`/development/board?project=${targetProjectId}`);
+        }
+      };
+
+      if (!project) {
+        try {
+          const res = await api.post('/check-duplicate', {
+            type: 'project',
+            data: { name: payload.name, client: payload.client },
+          });
+          if (res.data?.isDuplicate) {
+            setDuplicateDialog({
+              open: true,
+              title: 'Duplicate Project Detected',
+              message: res.data.message,
+              existingRecord: res.data.existingRecord,
+              onConfirm: executeSaveProject,
+            });
+            return;
+          }
+        } catch (e) {}
       }
 
-      form.reset();
-      setMonthlyDeliverables([]);
-      localStorage.removeItem(DRAFT_KEY);
-      onOpenChange(false);
+      await executeSaveProject();
     } catch (err) {
       console.error('Failed to save project:', err);
       toast.error(err.response?.data?.message || err.message || 'Failed to save project');
@@ -402,48 +696,77 @@ export const AddProjectModal = ({ open, onOpenChange, project = null, defaultCli
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="xl" noPadding className="flex flex-col min-h-0 p-0 overflow-hidden bg-card border-l border-border shadow-2xl">
-        <DialogHeader className="px-6 py-4.5 border-b border-border bg-card shrink-0 pr-24 select-none">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
-              <Briefcase size={16} />
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="lg" noPadding hideCloseButton className="flex flex-col min-h-0 p-0 overflow-hidden bg-background ">
+        <DialogHeader className="px-4 py-3 sm:px-6 sm:py-4 bg-background shrink-0 select-none flex flex-row items-center justify-between gap-3 m-0 pr-4 sm:pr-6 space-y-0">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0 ">
+              <Briefcase size={20} />
             </div>
-            <div>
-              <DialogTitle className="text-base sm:text-lg font-bold text-foreground">{project ? 'Edit Project' : 'Create New Project'}</DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+            <div className="min-w-0">
+              <DialogTitle className="text-lg sm:text-xl font-bold text-foreground leading-tight truncate">
+                {project ? 'Edit Project' : 'Create New Project'}
+              </DialogTitle>
+              <DialogDescription className="sr-only">
                 {project ? 'Update project scope, deliverables, budget, and timeline' : 'Create a new project pipeline for client deliverables and milestones'}
               </DialogDescription>
             </div>
           </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <kbd className="hidden sm:inline-flex items-center justify-center h-6 px-2 rounded-md bg-secondary/80 text-[10px] font-mono font-medium text-muted-foreground select-none">
+              ESC
+            </kbd>
+            <DialogClose className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all hover:scale-105 active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20">
+              <X size={16} className="stroke-[2.5]" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
+          </div>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit, onFormError)} className="space-y-5 p-5 sm:p-6 overflow-y-auto flex-1 min-h-0 custom-scrollbar overscroll-contain">
-            <div className="grid gap-3.5 sm:gap-4 md:grid-cols-2">
+          <form
+            onSubmit={form.handleSubmit(onSubmit, onFormError)}
+            className="flex flex-col flex-1 min-h-0 overflow-hidden"
+          >
+            {/* Scrollable Form Body */}
+            <div className="space-y-6 p-6 sm:p-7 overflow-y-auto flex-1 min-h-0 custom-scrollbar overscroll-contain">
+              {/* Linear One-by-One Field Flow (Google Form Style) */}
+              <div className="space-y-6">
+              {/* Field 1: Project Name */}
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
-                  <FormItem className="md:col-span-1">
-                    <FormLabel className="text-xs font-semibold text-foreground/90">Project Name *</FormLabel>
+                  <FormItem>
+                    <FormLabel className="text-sm font-semibold text-foreground">
+                      Project Name <span className="text-foreground">*</span>
+                    </FormLabel>
                     <FormControl>
-                      <Input className="h-9 rounded-xl border-border bg-background px-3 text-xs focus:ring-2 focus:ring-primary/20" placeholder="e.g. Website Redesign & SEO" {...field} />
+                      <Input
+                        className="h-11 rounded-xl bg-secondary/75 px-4 text-sm focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60 "
+                        placeholder="e.g. Website Redesign & SEO"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Project Type / Category Selection */}
+              {/* Field 2: Project Type / Category Selection */}
               <FormField
                 control={form.control}
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold text-foreground/90">Project Type *</FormLabel>
-                    <Select
-                      onValueChange={(val) => {
+                    <FormLabel className="text-sm font-semibold text-foreground">
+                      Project Type <span className="text-foreground">*</span>
+                    </FormLabel>
+                    <SelectDropdown
+                      value={field.value || ''}
+                      onChange={(val) => {
                         field.onChange(val);
                         if (['saas_product', 'saas', 'internal_tool', 'internal_product'].includes(val)) {
                           form.setValue('isInternal', true);
@@ -452,78 +775,45 @@ export const AddProjectModal = ({ open, onOpenChange, project = null, defaultCli
                           }
                         }
                       }}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-9 rounded-xl border-border bg-background text-xs focus:ring-2 focus:ring-primary/20">
-                          <SelectValue placeholder="Select project type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="saas_product" className="font-semibold text-primary">
-                          🚀 SaaS Product / Platform (No Client)
-                        </SelectItem>
-                        <SelectItem value="internal_tool" className="font-semibold text-indigo-500">
-                          🛠️ Internal Software / Tool (No Client)
-                        </SelectItem>
-                        <SelectItem value="web_development">🌐 Website / Web Development</SelectItem>
-                        <SelectItem value="web_design">💻 Web Design / UI-UX</SelectItem>
-                        <SelectItem value="social_media">📱 Social Media Marketing</SelectItem>
-                        <SelectItem value="seo">🔍 Search Engine Optimization (SEO)</SelectItem>
-                        <SelectItem value="paid_ads">🎯 Paid Ads & Performance Marketing</SelectItem>
-                        <SelectItem value="branding">🎨 Branding & Identity</SelectItem>
-                        <SelectItem value="graphic_design">🖌️ Graphic Design & Creatives</SelectItem>
-                        <SelectItem value="video_content">🎬 Video Production & Content</SelectItem>
-                        <SelectItem value="mobile_app">📲 Mobile App Development</SelectItem>
-                        <SelectItem value="e_commerce">🛒 E-Commerce Solutions</SelectItem>
-                        <SelectItem value="content">✍️ Content Creation & Copywriting</SelectItem>
-                        <SelectItem value="other">📁 Other Services</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      options={categoryOptions}
+                      placeholder="Select project type"
+                      searchPlaceholder="Search project types..."
+                      allowCustom={false}
+                      allowDeselect={false}
+                      buttonClassName="h-11 bg-secondary/75 text-sm font-normal rounded-xl border-none"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Client Selection (Optional for SaaS / Internal Projects) */}
+              {/* Field 3: Client Selection (Optional for SaaS / Internal Projects) */}
               <FormField
                 control={form.control}
                 name="client"
                 render={({ field }) => (
                   <FormItem>
                     <div className="flex items-center justify-between">
-                      <FormLabel className="text-xs font-semibold text-foreground/90">
+                      <FormLabel className="text-sm font-semibold text-foreground">
                         Client {isSaasOrInternal ? (
-                          <span className="text-[11px] font-bold text-emerald-500 ml-1">(Optional for SaaS)</span>
+                          <span className="text-xs font-semibold text-muted-foreground ml-1.5">(Optional for SaaS)</span>
                         ) : (
-                          <span className="text-destructive">*</span>
+                          <span className="text-foreground">*</span>
                         )}
                       </FormLabel>
                     </div>
-                    <Select
-                      onValueChange={(val) => {
+                    <SelectDropdown
+                      value={field.value || (isSaasOrInternal ? 'none' : '')}
+                      onChange={(val) => {
                         field.onChange(val === 'none' ? '' : val);
                       }}
-                      value={field.value || (isSaasOrInternal ? 'none' : '')}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-9 rounded-xl border-border bg-background text-xs focus:ring-2 focus:ring-primary/20">
-                          <SelectValue placeholder={isSaasOrInternal ? 'None (Internal SaaS Product)' : 'Select client'} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {isSaasOrInternal && (
-                          <SelectItem value="none" className="text-muted-foreground font-medium">
-                            🏢 None (Internal SaaS Product)
-                          </SelectItem>
-                        )}
-                        {clients.map((client) => (
-                          <SelectItem key={client._id} value={client._id}>
-                            {client.name} - {client.company}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      options={clientOptions}
+                      placeholder={isSaasOrInternal ? 'None (Internal SaaS Product)' : 'Select client'}
+                      searchPlaceholder="Search clients by name, company..."
+                      allowCustom={false}
+                      allowDeselect={!isSaasOrInternal}
+                      buttonClassName="h-11 bg-secondary/75 text-sm font-normal rounded-xl border-none"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -531,75 +821,209 @@ export const AddProjectModal = ({ open, onOpenChange, project = null, defaultCli
 
               {/* SaaS Mode Helpful Notice */}
               {isSaasOrInternal && (
-                <div className="md:col-span-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2 animate-in fade-in duration-200">
-                  <span>🚀</span>
+                <div className="p-3.5 rounded-xl bg-secondary text-xs sm:text-sm text-foreground flex items-center gap-2.5">
+                  <Rocket size={16} className="shrink-0" />
                   <span className="font-semibold">
                     SaaS Product Mode Active: You can create and build this SaaS platform without adding an external client.
                   </span>
                 </div>
               )}
 
+              {/* Field 3.5: Proposal Selection (Link proposal sent to client or choose valid proposal) */}
+              {!isSaasOrInternal && (
+                <FormField
+                  control={form.control}
+                  name="acceptedProposalId"
+                  render={({ field }) => {
+                    const clientObj = clients.find((c) => c._id === selectedClientId);
+                    const clientName = clientObj?.name || clientObj?.company;
+                    const proposalsCount = availableProposals.length;
+
+                    return (
+                      <FormItem className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                            <FileText size={15} className="text-primary" />
+                            <span>Linked Client Proposal</span>
+                            <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+                          </FormLabel>
+                          {selectedClientId && selectedClientId !== 'none' && (
+                            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-secondary text-muted-foreground">
+                              {proposalsCount} {proposalsCount === 1 ? 'proposal' : 'proposals'} {clientName ? `for ${clientName}` : 'available'}
+                            </span>
+                          )}
+                        </div>
+
+                        <SelectDropdown
+                          value={field.value || ''}
+                          onChange={handleProposalSelect}
+                          options={proposalOptions}
+                          placeholder={
+                            selectedClientId && selectedClientId !== 'none'
+                              ? `Select proposal sent to ${clientName || 'this client'}...`
+                              : 'Select from all client proposals...'
+                          }
+                          searchPlaceholder="Search proposals by title, PROP #, amount..."
+                          allowCustom={false}
+                          allowDeselect={true}
+                          buttonClassName="h-11 bg-secondary/75 text-sm font-normal rounded-xl border-none"
+                        />
+
+                        <p className="text-xs text-muted-foreground">
+                          {selectedClientId && selectedClientId !== 'none'
+                            ? `Select any proposal sent to this client to auto-fill agreed budget, milestones, scope, and timeline.`
+                            : `Choose a proposal to automatically set client, budget, timeline, and scope.`}
+                        </p>
+
+                        {/* Linked Proposal Highlight Card */}
+                        {selectedProposal && (
+                          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3 transition-all mt-2.5">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                                  <FileText size={18} />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs font-mono font-bold text-primary">
+                                      {selectedProposal.proposalNumber || 'PROP'}
+                                    </span>
+                                    <span
+                                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize ${
+                                        selectedProposal.status === 'accepted'
+                                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                          : selectedProposal.status === 'sent'
+                                          ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'
+                                          : selectedProposal.status === 'viewed'
+                                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                                          : 'bg-secondary text-muted-foreground'
+                                      }`}
+                                    >
+                                      {selectedProposal.status || 'Draft'}
+                                    </span>
+                                  </div>
+                                  <h4 className="text-sm font-bold text-foreground mt-0.5 leading-snug">
+                                    {selectedProposal.title}
+                                  </h4>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  form.setValue('acceptedProposalId', '');
+                                  toast.info('Proposal unlinked');
+                                }}
+                                className="text-xs text-muted-foreground hover:text-foreground font-semibold px-2 py-1 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
+                                title="Unlink proposal"
+                              >
+                                Unlink
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1 text-xs">
+                              <div className="rounded-xl bg-background/80 p-2.5">
+                                <span className="text-[11px] text-muted-foreground block font-medium">Proposed Value</span>
+                                <span className="font-bold text-foreground text-sm">
+                                  {selectedProposal.currency === 'USD' ? '$' : selectedProposal.currency === 'EUR' ? '€' : selectedProposal.currency === 'GBP' ? '£' : '₹'}
+                                  {Number(selectedProposal.amount || 0).toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                              {selectedProposal.serviceCategory && (
+                                <div className="rounded-xl bg-background/80 p-2.5">
+                                  <span className="text-[11px] text-muted-foreground block font-medium">Service</span>
+                                  <span className="font-bold text-foreground capitalize truncate block">
+                                    {selectedProposal.serviceCategory.replace('_', ' ')}
+                                  </span>
+                                </div>
+                              )}
+                              {(selectedProposal.acceptedAt || selectedProposal.createdAt) && (
+                                <div className="rounded-xl bg-background/80 p-2.5 col-span-2 sm:col-span-1">
+                                  <span className="text-[11px] text-muted-foreground block font-medium">
+                                    {selectedProposal.acceptedAt ? 'Accepted Date' : 'Created Date'}
+                                  </span>
+                                  <span className="font-bold text-foreground">
+                                    {new Date(selectedProposal.acceptedAt || selectedProposal.createdAt).toLocaleDateString('en-IN', {
+                                      day: 'numeric',
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {selectedProposal.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2 italic">
+                                &ldquo;{selectedProposal.description}&rdquo;
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              )}
+
+              {/* Field 4: Status */}
               <FormField
                 control={form.control}
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold text-foreground/90">Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-9 rounded-xl border-border bg-background text-xs focus:ring-2 focus:ring-primary/20">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Planning">Planning</SelectItem>
-                        <SelectItem value="In Progress">In Progress</SelectItem>
-                        <SelectItem value="On Hold">On Hold</SelectItem>
-                        <SelectItem value="Completed">Completed</SelectItem>
-                        <SelectItem value="Cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel className="text-sm font-semibold text-foreground">Status</FormLabel>
+                    <SelectDropdown
+                      value={field.value || 'Planning'}
+                      onChange={field.onChange}
+                      options={statusOptions}
+                      allowCustom={false}
+                      allowDeselect={false}
+                      buttonClassName="h-11 bg-secondary/75 text-sm font-normal rounded-xl border-none"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
+              {/* Field 5: Priority */}
               <FormField
                 control={form.control}
                 name="priority"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold text-foreground/90">Priority</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-9 rounded-xl border-border bg-background text-xs focus:ring-2 focus:ring-primary/20">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Low">Low</SelectItem>
-                        <SelectItem value="Medium">Medium</SelectItem>
-                        <SelectItem value="High">High</SelectItem>
-                        <SelectItem value="Critical">Critical</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel className="text-sm font-semibold text-foreground">Priority</FormLabel>
+                    <SelectDropdown
+                      value={field.value || 'Medium'}
+                      onChange={field.onChange}
+                      options={priorityOptions}
+                      allowCustom={false}
+                      allowDeselect={false}
+                      buttonClassName="h-11 bg-secondary/75 text-sm font-normal rounded-xl border-none"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
+              {/* Field 6: Start Date */}
               <FormField
                 control={form.control}
                 name="startDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold text-foreground/90">
-                      Start Date <span className="text-muted-foreground font-normal">(Optional)</span>
+                    <FormLabel className="text-sm font-semibold text-foreground">
+                      Start Date <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
                     </FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                        <Input type="date" className="h-9 rounded-xl border-border bg-background pl-9 text-xs focus:ring-2 focus:ring-primary/20" {...field} />
+                        <CalendarDays className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          type="date"
+                          className="h-11 rounded-xl bg-secondary/75 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 "
+                          {...field}
+                        />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -607,18 +1031,23 @@ export const AddProjectModal = ({ open, onOpenChange, project = null, defaultCli
                 )}
               />
 
+              {/* Field 7: End Date */}
               <FormField
                 control={form.control}
                 name="endDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold text-foreground/90">
-                      End Date <span className="text-muted-foreground font-normal">(Optional)</span>
+                    <FormLabel className="text-sm font-semibold text-foreground">
+                      End Date <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
                     </FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                        <Input type="date" className="h-9 rounded-xl border-border bg-background pl-9 text-xs focus:ring-2 focus:ring-primary/20" {...field} />
+                        <CalendarDays className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          type="date"
+                          className="h-11 rounded-xl bg-secondary/75 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 "
+                          {...field}
+                        />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -626,21 +1055,22 @@ export const AddProjectModal = ({ open, onOpenChange, project = null, defaultCli
                 )}
               />
 
+              {/* Field 8: Budget (₹ INR) */}
               <FormField
                 control={form.control}
                 name="budget"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold text-foreground/90">
-                      Budget (₹ INR) <span className="text-muted-foreground font-normal">(Optional)</span>
+                    <FormLabel className="text-sm font-semibold text-foreground">
+                      Budget (₹ INR) <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
                     </FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <IndianRupee className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <IndianRupee className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           type="number"
                           placeholder="e.g. 50000 (optional)"
-                          className="h-9 rounded-xl border-border bg-background pl-9 text-xs focus:ring-2 focus:ring-primary/20"
+                          className="h-11 rounded-xl bg-secondary/75 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 "
                           {...field}
                           value={field.value ?? ''}
                           onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
@@ -651,58 +1081,164 @@ export const AddProjectModal = ({ open, onOpenChange, project = null, defaultCli
                   </FormItem>
                 )}
               />
+
+              {/* Field 9: Project Description */}
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-semibold text-foreground">Project Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        className="min-h-[105px] rounded-xl bg-secondary/75 p-3.5 text-sm leading-relaxed focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
+                        placeholder="Brief summary of goals, milestones, and deliverables..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-semibold text-foreground/90">Project Description</FormLabel>
-                  <FormControl>
-                    <Textarea className="min-h-[75px] rounded-xl border-border bg-background px-3 py-2 text-xs focus:ring-2 focus:ring-primary/20" placeholder="Brief summary of goals and deliverables..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            {/* Field 10: Monthly Deliverables & Targets Toggle Section */}
+            <div className="rounded-2xl bg-secondary/20 p-5 space-y-3.5 transition-all ">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all ${
+                      includeMonthlyDeliverables
+                        ? 'bg-primary/10 text-primary '
+                        : 'bg-muted/60 text-muted-foreground '
+                    }`}
+                  >
+                    <Target size={17} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm font-bold text-foreground">
+                        Monthly Deliverables & Content Quotas
+                      </h3>
+                      {isDevCategory && (
+                        <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-secondary text-foreground ">
+                          Non-content (Optional)
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {includeMonthlyDeliverables
+                        ? 'Set monthly deliverable quotas (videos, reels, designs) to track quotas & overages'
+                        : isDevCategory
+                        ? 'Websites & Software projects do not require monthly quotas. Tasks move directly to development sprints.'
+                        : 'Optional quotas for monthly retainer tracking. Enable if recurring quotas are needed.'}
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 text-xs font-bold text-foreground cursor-pointer select-none">
+                  <span className={includeMonthlyDeliverables ? 'text-primary' : 'text-muted-foreground'}>
+                    {includeMonthlyDeliverables ? 'Quotas Enabled' : 'Quotas Disabled'}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={includeMonthlyDeliverables}
+                    onChange={(e) => {
+                      setHasUserToggledDeliverables(true);
+                      setIncludeMonthlyDeliverables(e.target.checked);
+                    }}
+                    className="h-4 w-4 rounded text-primary focus:ring-primary/20 cursor-pointer"
+                  />
+                </label>
+              </div>
+
+              {includeMonthlyDeliverables ? (
+                <div className="pt-2 ">
+                  <MonthlyDeliverablesSection
+                    deliverables={monthlyDeliverables}
+                    onChange={setMonthlyDeliverables}
+                    month={deliverableMonth}
+                    year={deliverableYear}
+                    onMonthChange={setDeliverableMonth}
+                    onYearChange={setDeliverableYear}
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-2 p-3.5 rounded-xl bg-secondary/75/70 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-foreground shrink-0" />
+                    <span>
+                      {isDevCategory
+                        ? 'No monthly deliverables needed for website/software projects. Tasks will route directly to development milestones.'
+                        : 'Monthly quota tracking disabled. You can manage tasks freely without quota tracking.'}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHasUserToggledDeliverables(true);
+                      setIncludeMonthlyDeliverables(true);
+                    }}
+                    className="text-xs font-bold text-primary hover:underline shrink-0 cursor-pointer"
+                  >
+                    Add Quotas
+                  </button>
+                </div>
               )}
-            />
+            </div>
 
-            {/* Monthly Deliverables & Targets Section */}
-            <MonthlyDeliverablesSection
-              deliverables={monthlyDeliverables}
-              onChange={setMonthlyDeliverables}
-              month={deliverableMonth}
-              year={deliverableYear}
-              onMonthChange={setDeliverableMonth}
-              onYearChange={setDeliverableYear}
-            />
+            {/* Field 11: Direct Move to Development Pipeline Toggle (for Dev / Software / Web projects) */}
+            {isDevCategory && !project && (
+              <div className="rounded-2xl bg-secondary/40 p-4 sm:p-4.5 flex items-center justify-between gap-3 ">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-foreground shrink-0">
+                    <Rocket size={17} className="shrink-0" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <span>Directly Move to Development Board</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-secondary text-foreground ">
+                        Dev Workflow
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Sets status to Active and automatically routes directly to the Development Kanban Pipeline upon creation
+                    </p>
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 text-xs sm:text-sm font-bold text-foreground cursor-pointer select-none shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={moveToDevelopment}
+                    onChange={(e) => setMoveToDevelopment(e.target.checked)}
+                    className="h-4 w-4 rounded accent-primary cursor-pointer"
+                  />
+                  <span>Move to Dev</span>
+                </label>
+              </div>
+            )}
 
-            {/* Budget & Payment Section */}
-            <div className="rounded-2xl border border-border/80 bg-secondary/25 p-4 space-y-3">
-              <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                <IndianRupee className="h-3.5 w-3.5 text-primary" /> Budget & Payment Workflow
+            {/* Field 12: Budget & Payment Section (Linear Single Column) */}
+            <div className="rounded-2xl bg-secondary/20 p-5 space-y-4 ">
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <IndianRupee className="h-4 w-4 text-primary" /> Budget & Payment Workflow
               </h3>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-4">
                 <FormField
                   control={form.control}
                   name="currency"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-semibold text-foreground/90">Currency</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-9 rounded-xl border-border bg-background text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="INR">INR (₹)</SelectItem>
-                          <SelectItem value="USD">USD ($)</SelectItem>
-                          <SelectItem value="EUR">EUR (€)</SelectItem>
-                          <SelectItem value="GBP">GBP (£)</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormLabel className="text-sm font-semibold text-foreground">Currency</FormLabel>
+                      <SelectDropdown
+                        value={field.value || 'INR'}
+                        onChange={field.onChange}
+                        options={currencyOptions}
+                        allowCustom={false}
+                        allowDeselect={false}
+                        buttonClassName="h-11 bg-secondary/75 text-sm font-normal rounded-xl border-none"
+                      />
                     </FormItem>
                   )}
                 />
@@ -712,55 +1248,108 @@ export const AddProjectModal = ({ open, onOpenChange, project = null, defaultCli
                   name="paymentStatus"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-semibold text-foreground/90">Payment Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-9 rounded-xl border-border bg-background text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="partial">Partial</SelectItem>
-                          <SelectItem value="paid">Paid</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormLabel className="text-sm font-semibold text-foreground">Payment Status</FormLabel>
+                      <SelectDropdown
+                        value={field.value || 'pending'}
+                        onChange={field.onChange}
+                        options={paymentStatusOptions}
+                        allowCustom={false}
+                        allowDeselect={false}
+                        buttonClassName="h-11 bg-secondary/75 text-sm font-normal rounded-xl border-none"
+                      />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="budgetNotes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-foreground">Budget Notes</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          className="min-h-[85px] rounded-xl bg-secondary/75 p-3.5 text-sm focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
+                          placeholder="Payment schedule, milestone terms, invoice notes..."
+                          {...field}
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />
               </div>
-
-              <FormField
-                control={form.control}
-                name="budgetNotes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-semibold text-foreground/90">Budget Notes</FormLabel>
-                    <FormControl>
-                      <Textarea className="min-h-[60px] rounded-xl border-border bg-background px-3 py-2 text-xs" placeholder="Payment schedule, milestone terms..." {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
             </div>
 
-            <div className="flex justify-end gap-2 border-t border-border pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isLoading}
-                className="h-9 rounded-xl text-xs font-semibold"
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading} className="h-9 rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90">
-                {isLoading ? 'Saving...' : project ? 'Update Project' : 'Create Project'}
-              </Button>
+            </div>
+
+            {/* Modern Pinned Bottom Action Footer */}
+            <div className="shrink-0 bg-background px-4 py-3 sm:px-6 sm:py-4 flex flex-wrap items-center justify-between gap-2 sm:gap-3 z-10 select-none">
+              <div className="flex items-center gap-2">
+                {isDevCategory && !project ? (
+                  <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-secondary text-foreground inline-flex items-center gap-1.5 ">
+                    <Code2 size={14} className="shrink-0" />
+                    <span>Website &amp; Software Workflow</span>
+                  </span>
+                ) : (
+                  <span className="text-xs text-muted-foreground/80 hidden sm:inline-flex items-center gap-1.5">
+                    <span>Press</span>
+                    <kbd className="px-1.5 py-0.5 rounded-md bg-secondary text-[10px] font-mono font-medium text-foreground">
+                      ESC
+                    </kbd>
+                    <span>to close</span>
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 ml-auto">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleClose}
+                  disabled={isLoading}
+                  className="h-11 px-5 rounded-xl text-sm font-semibold cursor-pointer"
+                >
+                  Cancel
+                </Button>
+
+                {isDevCategory && !project && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={isLoading}
+                    onClick={() => {
+                      setMoveToDevelopment(true);
+                      form.handleSubmit(onSubmit, onFormError)();
+                    }}
+                    className="h-11 px-5 rounded-xl text-sm font-bold gap-2 cursor-pointer transition-all"
+                  >
+                    <Rocket size={15} className="shrink-0" />
+                    <span>Create &amp; Move to Dev</span>
+                  </Button>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="h-11 px-6 rounded-xl bg-primary hover:bg-primary/95 text-sm font-bold text-primary-foreground cursor-pointer transition-all"
+                >
+                  {isLoading ? 'Saving...' : project ? 'Update Project' : 'Create Project'}
+                </Button>
+              </div>
             </div>
           </form>
         </Form>
       </DialogContent>
     </Dialog>
+
+      <DuplicateConfirmDialog
+        open={duplicateDialog.open}
+        onOpenChange={(isOpen) => setDuplicateDialog((prev) => ({ ...prev, open: isOpen }))}
+        title={duplicateDialog.title}
+        message={duplicateDialog.message}
+        existingRecord={duplicateDialog.existingRecord}
+        onConfirm={duplicateDialog.onConfirm}
+      />
+    </>
   );
 };

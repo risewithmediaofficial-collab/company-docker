@@ -1,41 +1,48 @@
-import React, { Fragment, useEffect, useMemo, useState, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useState, useDeferredValue, useCallback } from 'react';
 import { useSelector } from 'react-redux';
+import { useDebounce } from '../../hooks/useDebounce';
 import {
   CheckCircle2,
   Clock,
-  ListChecks,
   Plus,
-  TimerReset,
   CheckSquare,
   AlertTriangle,
   ArrowRight,
-  Filter,
-  Users,
-  User,
-  Video,
-  Scissors,
   FileEdit,
   Share2,
   X,
   Calendar,
-  ArrowUpDown,
   RotateCcw,
   Sparkles,
   Globe,
   Palette,
   Film,
   Megaphone,
+  Kanban,
+  Video,
+  Trash2,
   Edit2,
   Code2,
-  Kanban,
-  GitPullRequest,
-  ShieldAlert,
-} from 'lucide-react';
-import { Link } from 'react-router-dom';
+  Layers,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  User,
+  Mic,
+  Scissors,
+  Smartphone,
+  ShieldCheck,
+  Search,
+  Laptop,
+  FileText,
+  ListChecks,
+  Maximize2,
+  Minimize2,
+  SlidersHorizontal,
+  Filter,
+} from '@/components/ui/muiIcons';
+import { Link, useSearchParams } from 'react-router-dom';
 import { getPersonColor, extractTaskAssignees, PersonAssigneeBadge } from '../../utils/personColors';
-import { CollapsibleFilterBar } from '../../components/ui/CollapsibleFilterBar';
-import { AddTaskModal } from '../../components/modals/AddTaskModal';
 import { TaskDetailModal } from '../../components/ui/TaskDetailModal';
 import { DataTable } from '../../components/ui/DataTable';
 import { Button } from '../../components/ui/button';
@@ -43,8 +50,11 @@ import { StatusBadge } from '../../components/ui/page';
 import { WorkspacePage } from '../../components/ui/WorkspacePage';
 import { DatabaseView } from '../../components/ui/DatabaseView';
 import { SelectDropdown } from '../../components/ui/SelectDropdown';
-import { CategoryColorLegend, BOARD_CATEGORY_DEFINITIONS } from '../../components/ui/CategoryColorLegend';
-import { getCategoryTheme, isCategoryMatch } from '../../utils/categoryColors';
+import { isCategoryMatch } from '../../utils/categoryColors';
+import { TeamQuickAssignRoster } from '../../components/tasks/TeamQuickAssignRoster';
+import { KanbanCreateTaskModal } from '../../components/tasks/KanbanCreateTaskModal';
+import { TaskWorkflowDrawer } from '../../components/tasks/TaskWorkflowDrawer';
+import { TasksKanbanPipeline } from '../../components/tasks/TasksKanbanPipeline';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,20 +67,164 @@ import {
 import { useClients } from '../../hooks/useClients';
 import { useDeleteTask, useTasks, useUpdateTaskStatus } from '../../hooks/useTasks';
 import { useUsers } from '../../hooks/useUsers';
-import { useAutoScrollOnDrag } from '../../hooks/useAutoScrollOnDrag';
 import PortalTasks from '../portal/sections/PortalTasks';
 import { useDateFilter } from '../../context/DateFilterContext';
-import { DateRangePicker } from '../../components/ui/DateRangePicker';
 import {
-  CONTENT_TASK_TYPE_OPTIONS,
-  NON_CONTENT_TASK_TYPE_OPTIONS,
-  PRIORITY_OPTIONS,
   TASK_STATUS_OPTIONS,
   TEAM_STATUS_OPTIONS,
   formatTaskTypeLabel,
   normalizeTaskStatusLabel,
   isWebsiteTaskType,
 } from '../../utils/taskFields';
+
+export const isDevelopmentTask = (task) => {
+  if (!task) return false;
+  if (task.development?.isDevTask || task.isDevTask) return true;
+  if (task.department === 'Development' || task.department === 'Engineering') return true;
+
+  const type = String(task.taskType || '').toLowerCase();
+  if ([
+    'website_development',
+    'website_update',
+    'landing_page',
+    'domain_hosting',
+    'crm_update',
+    'development_task',
+    'bug_fix',
+    'seo_work',
+  ].includes(type)) {
+    return true;
+  }
+
+  const projCat = String(task.project?.category || task.projectCategory || task.category || '').toLowerCase();
+  if ([
+    'web_development',
+    'web_design',
+    'saas_product',
+    'saas',
+    'internal_tool',
+    'internal_product',
+    'mobile_app',
+    'e_commerce',
+  ].includes(projCat)) {
+    return true;
+  }
+
+  if (task.taskCategory === 'non_content') return true;
+
+  const title = String(task.taskTitle || task.title || '').toLowerCase();
+  if (
+    title.includes('website') ||
+    title.includes('web dev') ||
+    title.includes('landing page') ||
+    title.includes('frontend') ||
+    title.includes('backend') ||
+    title.includes('api') ||
+    title.includes('database') ||
+    title.includes('bug') ||
+    title.includes('code') ||
+    title.includes('software') ||
+    title.includes('deploy')
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
+export const isContentTask = (task) => {
+  if (!task) return false;
+  if (task.taskCategory === 'content') return true;
+
+  const dept = String(task.department || '').toLowerCase();
+  if (
+    dept.includes('content') ||
+    dept.includes('media') ||
+    dept.includes('creative') ||
+    dept.includes('design') ||
+    dept.includes('market') ||
+    dept.includes('smm')
+  ) {
+    return true;
+  }
+
+  const type = String(task.taskType || '').toLowerCase();
+  if ([
+    'reel',
+    'poster',
+    'social_media_post',
+    'blog',
+    'ad_creative',
+    'video_content',
+    'story',
+    'carousel_post',
+    'custom_content',
+    'video',
+  ].includes(type)) {
+    return true;
+  }
+
+  const projCat = String(task.project?.category || task.projectCategory || task.category || '').toLowerCase();
+  if ([
+    'social_media',
+    'video_content',
+    'video',
+    'graphic_design',
+    'branding',
+    'content',
+    'paid_ads',
+  ].includes(projCat)) {
+    return true;
+  }
+
+  if (
+    task.contentType ||
+    task.videoType ||
+    task.videographerAssigned ||
+    task.editorAssigned ||
+    task.publisherAssigned ||
+    task.rawFootageLink ||
+    (task.postingPlatforms && task.postingPlatforms.length > 0)
+  ) {
+    return true;
+  }
+
+  const title = String(task.taskTitle || task.title || '').toLowerCase();
+  if (
+    title.includes('reel') ||
+    title.includes('poster') ||
+    title.includes('video') ||
+    title.includes('shoot') ||
+    title.includes('post') ||
+    title.includes('thumbnail') ||
+    title.includes('script') ||
+    title.includes('caption') ||
+    title.includes('creative')
+  ) {
+    return true;
+  }
+
+  return !isDevelopmentTask(task);
+};
+
+export const DEV_CATEGORY_PILLS = [
+  { key: 'all', label: 'All Dev Deliverables', icon: CheckSquare },
+  { key: 'web_development', label: 'Website / Web Dev', icon: Globe },
+  { key: 'saas_product', label: 'SaaS / Software', icon: Sparkles },
+  { key: 'web_design', label: 'Web Design / UI-UX', icon: Palette },
+  { key: 'seo', label: 'SEO & Search', icon: Sparkles },
+];
+
+export const CONTENT_CATEGORY_PILLS = [
+  { key: 'all', label: 'All Content Deliverables', icon: CheckSquare },
+  { key: 'social_media', label: 'Social Media / SMM', icon: Share2 },
+  { key: 'reel', label: 'Reels / Shorts', icon: Film },
+  { key: 'video_content', label: 'Video Production', icon: Video },
+  { key: 'branding', label: 'Branding & Design', icon: Palette },
+  { key: 'poster', label: 'Graphic / Poster', icon: Palette },
+  { key: 'content', label: 'Content / Script', icon: FileEdit },
+  { key: 'paid_ads', label: 'Paid Ads', icon: Megaphone },
+];
 
 export const TASK_CATEGORY_PILLS = [
   { key: 'all', label: 'All Deliverables', icon: CheckSquare },
@@ -87,26 +241,30 @@ export const TASK_CATEGORY_PILLS = [
 ];
 
 export const TASK_SORT_OPTIONS = [
-  { value: 'dueDate_asc', label: '📅 Due Date: Earliest First' },
-  { value: 'dueDate_desc', label: '📅 Due Date: Latest First' },
-  { value: 'priority_desc', label: '⚡ Priority: High to Low' },
-  { value: 'priority_asc', label: '⚡ Priority: Low to High' },
-  { value: 'client_asc', label: '🏢 Client: A to Z' },
-  { value: 'client_desc', label: '🏢 Client: Z to A' },
-  { value: 'category_asc', label: '📁 Category: A to Z' },
-  { value: 'newest', label: '🕒 Recently Created' },
-  { value: 'oldest', label: '🕒 Oldest Created' },
+  { value: 'dueDate_asc', label: 'Due Date: Earliest First' },
+  { value: 'dueDate_desc', label: 'Due Date: Latest First' },
+  { value: 'priority_desc', label: 'Priority: High to Low' },
+  { value: 'priority_asc', label: 'Priority: Low to High' },
+  { value: 'client_asc', label: 'Client: A to Z' },
+  { value: 'client_desc', label: 'Client: Z to A' },
+  { value: 'category_asc', label: 'Category: A to Z' },
+  { value: 'newest', label: 'Recently Created' },
+  { value: 'oldest', label: 'Oldest Created' },
 ];
 
-const statusTone = {
-  'To Do': 'neutral',
-  'On Process': 'info',
-  'Waiting for Client': 'warning',
-  Completed: 'success',
-  Rework: 'danger',
-  Approved: 'success',
-  'Rework Completed': 'info',
-  'Review Required': 'warning',
+const DEV_STAGE_SHORT_LABELS = {
+  backlog: 'Backlog',
+  analysis: 'Analysis',
+  ready_for_dev: 'Ready',
+  in_development: 'In Dev',
+  code_review: 'Review',
+  qa_testing: 'QA',
+  client_uat: 'UAT',
+  approved: 'Approved',
+  deployment: 'Deploy',
+  live: 'Live',
+  closed: 'Closed',
+  blocked: 'Blocked',
 };
 
 const priorityTone = {
@@ -116,51 +274,15 @@ const priorityTone = {
   Urgent: 'danger',
 };
 
-const DEV_STAGE_SHORT_LABELS = {
-  backlog: 'Backlog',
-  analysis: 'Analysis',
-  ready_for_dev: 'Ready for Dev',
-  in_development: 'In Dev',
-  code_review: 'Code Review',
-  qa_testing: 'QA / Testing',
-  client_uat: 'Client UAT',
-  approved: 'Approved',
-  deployment: 'Deploying',
-  live: 'Live',
-  closed: 'Closed',
-  blocked: 'Blocked',
-};
-
-const DEV_STAGE_TONES = {
-  backlog: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
-  analysis: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-  ready_for_dev: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
-  in_development: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-  code_review: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
-  qa_testing: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
-  client_uat: 'bg-teal-500/10 text-teal-600 border-teal-500/20',
-  approved: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-  deployment: 'bg-sky-500/10 text-sky-600 border-sky-500/20',
-  live: 'bg-green-500/10 text-green-600 border-green-500/20',
-  closed: 'bg-gray-500/10 text-gray-600 border-gray-500/20',
-  blocked: 'bg-rose-500/10 text-rose-600 border-rose-500/20',
-};
-
-const KANBAN_STATUSES = ['To Do', 'On Process', 'Waiting for Client', 'Review Required', 'Completed'];
-
 const Tasks = () => {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [showAddModal, setShowAddModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [showTaskDetail, setShowTaskDetail] = useState(false);
   const [deleteTaskId, setDeleteTaskId] = useState(null);
   const [currentView, setCurrentView] = useState('board'); // 'board' | 'table'
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [showTodayTray, setShowTodayTray] = useState(true);
   const [sortBy, setSortBy] = useState('dueDate_asc');
-  const [draggingTaskId, setDraggingTaskId] = useState(null);
-  const [dragOverColKey, setDragOverColKey] = useState(null);
-  const [dragOverTaskIndex, setDragOverTaskIndex] = useState(null);
   const [filters, setFilters] = useState({
     search: '',
     client: '',
@@ -171,21 +293,110 @@ const Tasks = () => {
     dueDate: '',
   });
 
+  const deferredSearch = useDeferredValue(filters.search);
+  const debouncedSearch = useDebounce(filters.search, 300);
+
+  const {
+    startDate: globalStartDate,
+    endDate: globalEndDate,
+    period: globalPeriod,
+    isDateInRange,
+    isFiltered: isGlobalDateFiltered,
+    resetDateFilter,
+  } = useDateFilter();
+
+  const queryFilters = useMemo(
+    () => ({
+      client: filters.client,
+      assignedTo: filters.assignedTo,
+      status: filters.status,
+      taskType: filters.taskType,
+      priority: filters.priority,
+      dueDate: filters.dueDate,
+      sortBy: sortBy,
+      search: debouncedSearch,
+      startDate: globalStartDate || undefined,
+      endDate: globalEndDate || undefined,
+      period: (globalStartDate || globalEndDate) ? 'custom' : (globalPeriod || undefined),
+      limit: 500,
+      parent: 'all',
+    }),
+    [
+      filters.client,
+      filters.assignedTo,
+      filters.status,
+      filters.taskType,
+      filters.priority,
+      filters.dueDate,
+      sortBy,
+      debouncedSearch,
+      globalStartDate,
+      globalEndDate,
+      globalPeriod,
+    ]
+  );
+
   const { user } = useSelector((state) => state.auth);
   const isEmployee = user?.role === 'employee';
   const isClient = user?.role === 'client';
   const isManager = user?.role === 'manager';
-  const { data: tasks = [], isLoading } = useTasks(filters);
+  const { data: tasks = [], isLoading, refetch } = useTasks(queryFilters);
   const { data: clients = [] } = useClients();
-  const { data: users = [] } = useUsers({ enabled: !isEmployee });
+  const { data: users = [] } = useUsers();
   const deleteTaskMutation = useDeleteTask();
   const updateStatusMutation = useUpdateTaskStatus();
-  const taskBoardRef = useRef(null);
 
-  // Smooth side auto-scroll while dragging tasks
-  useAutoScrollOnDrag(taskBoardRef, Boolean(draggingTaskId));
+  // Kanban Flow State
+  const [showKanbanCreateModal, setShowKanbanCreateModal] = useState(false);
+  const [preSelectedEmployee, setPreSelectedEmployee] = useState(null);
+  const [createTaskInitialValues, setCreateTaskInitialValues] = useState(null);
+  const [workflowTaskId, setWorkflowTaskId] = useState(null);
+  const [showWorkflowDrawer, setShowWorkflowDrawer] = useState(false);
+  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [expandedMobileTaskIds, setExpandedMobileTaskIds] = useState({});
 
-  const { startDate: globalStartDate, endDate: globalEndDate, isDateInRange, isFiltered: isGlobalDateFiltered, resetDateFilter } = useDateFilter();
+  const toggleMobileTaskExpand = (e, taskId) => {
+    e.stopPropagation();
+    setExpandedMobileTaskIds((prev) => ({ ...prev, [taskId]: !prev[taskId] }));
+  };
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab') || searchParams.get('team');
+    if (tabParam === 'content' || tabParam === 'smm') {
+      setDepartmentFilter('content');
+    } else if (tabParam === 'non_content' || tabParam === 'tech' || tabParam === 'development' || tabParam === 'dev') {
+      setDepartmentFilter('non_content');
+    } else if (tabParam === 'all') {
+      setDepartmentFilter('all');
+    }
+  }, [searchParams]);
+
+  const activeWorkflowTask = useMemo(() => {
+    if (!workflowTaskId) return null;
+    return tasks.find((t) => t._id === workflowTaskId) || null;
+  }, [tasks, workflowTaskId]);
+
+  const handleOpenWorkflowDrawer = (task) => {
+    setWorkflowTaskId(task._id);
+    setShowWorkflowDrawer(true);
+  };
+
+  const handleQuickAssignEmployee = (employee) => {
+    setPreSelectedEmployee(employee);
+    setCreateTaskInitialValues(null);
+    setShowKanbanCreateModal(true);
+  };
+
+  const handleOpenCreateGeneral = () => {
+    setPreSelectedEmployee(null);
+    setCreateTaskInitialValues(null);
+    setShowKanbanCreateModal(true);
+  };
+
+  const handleDepartmentFilterChange = (filterType) => {
+    setDepartmentFilter(filterType);
+    setCategoryFilter('all');
+  };
 
   const normalizedTasks = useMemo(
     () =>
@@ -196,35 +407,131 @@ const Tasks = () => {
     [tasks],
   );
 
+  // Today's Tasks filtered by role:
+  // Admin / SuperAdmin: Agency-wide all tasks due / scheduled today across team
+  // Employee: Only deliverables where they are assigned for today
+  const todayTasks = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    return normalizedTasks.filter((task) => {
+      const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+      const shootDate = task.shootDate ? new Date(task.shootDate) : null;
+      const postDate = task.postingScheduleDate ? new Date(task.postingScheduleDate) : null;
+      const editDueDate = task.editDueDate ? new Date(task.editDueDate) : null;
+      const createdDate = task.createdAt ? new Date(task.createdAt) : null;
+
+      const isScheduledToday = (
+        (dueDate && dueDate >= startOfToday && dueDate <= endOfToday) ||
+        (shootDate && shootDate >= startOfToday && shootDate <= endOfToday) ||
+        (postDate && postDate >= startOfToday && postDate <= endOfToday) ||
+        (editDueDate && editDueDate >= startOfToday && editDueDate <= endOfToday) ||
+        (createdDate && createdDate >= startOfToday && createdDate <= endOfToday)
+      );
+
+      if (!isScheduledToday) return false;
+
+      // Role isolation:
+      // For employee: only tasks assigned to them (primary assignee, scriptwriter, videographer, editor, designer, voice artist, publisher)
+      if (user?.role === 'employee') {
+        const userId = user._id ? user._id.toString() : '';
+        const assignees = extractTaskAssignees(task);
+        const isAssigned = (
+          assignees.some((p) => (p._id && p._id.toString() === userId) || p.name === user?.name) ||
+          (task.assignedTo && Array.isArray(task.assignedTo) && task.assignedTo.some((u) => (u?._id ? u._id.toString() : u?.toString()) === userId)) ||
+          (task.scriptWriterAssigned && (task.scriptWriterAssigned._id?.toString() === userId || task.scriptWriterAssigned.toString() === userId)) ||
+          (task.voiceArtistAssigned && (task.voiceArtistAssigned._id?.toString() === userId || task.voiceArtistAssigned.toString() === userId)) ||
+          (task.videographerAssigned && (task.videographerAssigned._id?.toString() === userId || task.videographerAssigned.toString() === userId)) ||
+          (task.editorAssigned && (task.editorAssigned._id?.toString() === userId || task.editorAssigned.toString() === userId)) ||
+          (task.publisherAssigned && (task.publisherAssigned._id?.toString() === userId || task.publisherAssigned.toString() === userId)) ||
+          (task.designerAssigned && (task.designerAssigned._id?.toString() === userId || task.designerAssigned.toString() === userId))
+        );
+        return isAssigned;
+      }
+
+      // For admin & superAdmin & manager: all tasks across the company for today
+      return true;
+    });
+  }, [normalizedTasks, user]);
+
   const isTaskOverdue = (task) => {
+    if (!task) return false;
+    const isDone = ['Completed', 'Approved', 'done', 'completed'].includes(task.status);
+    if (isDone) return false;
+    if (task.isOverdue) return true;
+
+    // Check completion timer expiry
+    if (task.timerExpiresAt) {
+      const exp = new Date(task.timerExpiresAt);
+      if (!Number.isNaN(exp.getTime()) && exp.getTime() < Date.now()) {
+        return true;
+      }
+    }
+
     if (!task.dueDate) return false;
     const due = new Date(task.dueDate);
     if (Number.isNaN(due.getTime())) return false;
-    const isDone = ['Completed', 'Approved', 'done', 'completed'].includes(task.status);
-    return due < new Date() && !isDone;
+    return due < new Date();
   };
+
+  const isTaskInDateRange = useCallback(
+    (task) => {
+      if (!task) return false;
+      if (!globalStartDate && !globalEndDate) return true;
+
+      // Operational schedule/deadline dates take precedence over createdAt
+      const operationalDates = [
+        task.dueDate,
+        task.postingScheduleDate,
+        task.shootDate,
+        task.editDueDate,
+        task.startDate,
+      ].filter(Boolean);
+
+      if (operationalDates.length > 0) {
+        return operationalDates.some((d) => isDateInRange(d));
+      }
+
+      // Only if no operational milestone exists at all, fall back to createdAt
+      return isDateInRange(task.createdAt);
+    },
+    [globalStartDate, globalEndDate, isDateInRange]
+  );
 
   const dateFilteredTasks = useMemo(() => {
-    if (isGlobalDateFiltered || globalStartDate || globalEndDate) {
-      return normalizedTasks.filter((task) =>
-        isDateInRange([
-          task.dueDate,
-          task.postingScheduleDate,
-          task.startDate,
-          task.createdAt,
-        ])
-      );
+    // Only filter by date if user has explicitly chosen an active date range
+    if (globalStartDate || globalEndDate) {
+      return normalizedTasks.filter(isTaskInDateRange);
     }
     return normalizedTasks;
-  }, [normalizedTasks, isGlobalDateFiltered, globalStartDate, globalEndDate, isDateInRange]);
+  }, [normalizedTasks, globalStartDate, globalEndDate, isTaskInDateRange]);
 
-  const taskMetrics = {
-    total: dateFilteredTasks.length,
-    inProgress: dateFilteredTasks.filter((task) => ['On Process', 'in_progress', 'on_process'].includes(task.status)).length,
-    done: dateFilteredTasks.filter((task) => ['Completed', 'Approved', 'done', 'completed'].includes(task.status)).length,
-    overdue: dateFilteredTasks.filter(isTaskOverdue).length,
-    overTarget: dateFilteredTasks.filter((task) => task.isOverTarget).length,
-  };
+  // Department partition counts across the entire current date-filtered set
+  const taskCountsByDepartment = useMemo(() => ({
+    all: dateFilteredTasks.length,
+    content: dateFilteredTasks.filter(isContentTask).length,
+    non_content: dateFilteredTasks.filter((t) => !isContentTask(t)).length,
+  }), [dateFilteredTasks]);
+
+  // Tasks filtered by high-level team department (All | Content | Non-Content)
+  const departmentFilteredTasks = useMemo(() => {
+    if (departmentFilter === 'content') {
+      return dateFilteredTasks.filter(isContentTask);
+    }
+    if (departmentFilter === 'non_content') {
+      return dateFilteredTasks.filter((t) => !isContentTask(t));
+    }
+    return dateFilteredTasks;
+  }, [dateFilteredTasks, departmentFilter]);
+
+  const taskMetrics = useMemo(() => ({
+    total: departmentFilteredTasks.length,
+    inProgress: departmentFilteredTasks.filter((task) => ['On Process', 'in_progress', 'on_process'].includes(task.status)).length,
+    done: departmentFilteredTasks.filter((task) => ['Completed', 'Approved', 'done', 'completed'].includes(task.status)).length,
+    overdue: departmentFilteredTasks.filter(isTaskOverdue).length,
+    overTarget: departmentFilteredTasks.filter((task) => task.isOverTarget).length,
+  }), [departmentFilteredTasks]);
 
   const [quickFilter, setQuickFilter] = useState('all'); // 'all' | 'inProgress' | 'done' | 'overdue' | 'overTarget'
 
@@ -232,30 +539,32 @@ const Tasks = () => {
     setQuickFilter((prev) => (prev === filterType ? 'all' : filterType));
   };
 
+  // Category pills adaptive to active department
+  const currentCategoryPills = useMemo(() => {
+    if (departmentFilter === 'content') return CONTENT_CATEGORY_PILLS;
+    if (departmentFilter === 'non_content') return DEV_CATEGORY_PILLS;
+    return TASK_CATEGORY_PILLS;
+  }, [departmentFilter]);
+
   // Category counts
   const categoryCounts = useMemo(() => {
-    const counts = { all: dateFilteredTasks.length };
-    dateFilteredTasks.forEach((t) => {
-      TASK_CATEGORY_PILLS.forEach((pill) => {
+    const counts = { all: departmentFilteredTasks.length };
+    departmentFilteredTasks.forEach((t) => {
+      currentCategoryPills.forEach((pill) => {
         if (pill.key !== 'all' && isCategoryMatch(t.taskType || t.taskCategory, pill.key, t.taskTitle || t.title)) {
           counts[pill.key] = (counts[pill.key] || 0) + 1;
         }
       });
-      BOARD_CATEGORY_DEFINITIONS.forEach((def) => {
-        if (counts[def.key] === undefined && isCategoryMatch(t.taskType || t.taskCategory, def.key, t.taskTitle || t.title)) {
-          counts[def.key] = (counts[def.key] || 0) + 1;
-        }
-      });
     });
     return counts;
-  }, [dateFilteredTasks]);
+  }, [departmentFilteredTasks, currentCategoryPills]);
 
   const activeCategoryPills = useMemo(() => {
-    return TASK_CATEGORY_PILLS.map((pill) => ({
+    return currentCategoryPills.map((pill) => ({
       ...pill,
-      count: pill.key === 'all' ? dateFilteredTasks.length : (categoryCounts[pill.key] || 0),
+      count: pill.key === 'all' ? departmentFilteredTasks.length : (categoryCounts[pill.key] || 0),
     }));
-  }, [dateFilteredTasks, categoryCounts]);
+  }, [departmentFilteredTasks, categoryCounts, currentCategoryPills]);
 
   const clientOptions = useMemo(() => {
     return clients.map((c) => ({
@@ -271,9 +580,23 @@ const Tasks = () => {
     }));
   }, [users]);
 
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+
+  // Active secondary filters counter (filters inside the collapsible section)
+  const secondaryFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filters.client) count++;
+    if (filters.status) count++;
+    if (filters.priority) count++;
+    if (filters.assignedTo) count++;
+    if (sortBy && sortBy !== 'dueDate_asc') count++;
+    return count;
+  }, [filters, sortBy]);
+
   // Active filters counter
   const activeFiltersCount = useMemo(() => {
     let count = 0;
+    if (departmentFilter !== 'all') count++;
     if (categoryFilter !== 'all') count++;
     if (filters.client) count++;
     if (filters.priority) count++;
@@ -283,9 +606,10 @@ const Tasks = () => {
     if (quickFilter !== 'all') count++;
     if (isGlobalDateFiltered || globalStartDate || globalEndDate) count++;
     return count;
-  }, [categoryFilter, filters, quickFilter, isGlobalDateFiltered, globalStartDate, globalEndDate]);
+  }, [departmentFilter, categoryFilter, filters, quickFilter, isGlobalDateFiltered, globalStartDate, globalEndDate]);
 
   const clearAllFilters = () => {
+    setDepartmentFilter('all');
     setCategoryFilter('all');
     setQuickFilter('all');
     setSortBy('dueDate_asc');
@@ -302,7 +626,7 @@ const Tasks = () => {
   };
 
   const displayedTasks = useMemo(() => {
-    let result = [...dateFilteredTasks];
+    let result = [...departmentFilteredTasks];
 
     // Category filter
     if (categoryFilter && categoryFilter !== 'all') {
@@ -332,8 +656,8 @@ const Tasks = () => {
       });
     }
 
-    // Status filter
-    if (filters.status) {
+    // Status filter - only filter in table view so Kanban board always shows tasks in all stages
+    if (filters.status && currentView === 'table') {
       result = result.filter((task) => task.status === filters.status);
     }
 
@@ -349,8 +673,8 @@ const Tasks = () => {
     }
 
     // Search query
-    if (filters.search?.trim()) {
-      const q = filters.search.toLowerCase().trim();
+    if (deferredSearch?.trim()) {
+      const q = deferredSearch.toLowerCase().trim();
       result = result.filter((task) =>
         (task.taskTitle || task.title || '').toLowerCase().includes(q) ||
         (task.client?.name || task.client?.company || task.clientName || '').toLowerCase().includes(q) ||
@@ -405,7 +729,7 @@ const Tasks = () => {
     });
 
     return result;
-  }, [dateFilteredTasks, categoryFilter, filters, quickFilter, sortBy]);
+  }, [departmentFilteredTasks, categoryFilter, filters, deferredSearch, quickFilter, sortBy, currentView]);
 
   const columns = [
     {
@@ -413,11 +737,12 @@ const Tasks = () => {
       label: 'Task Title',
       render: (row) => (
         <div className="min-w-0">
-          <div className="flex items-center gap-1.5 font-bold text-foreground text-xs hover:text-primary transition-colors">
-            <span>{row.taskTitle || row.title}</span>
+          <div className="flex items-center gap-1.5 font-bold text-foreground text-xs hover:text-foreground/80 transition-colors">
+            <span className="truncate">{row.taskTitle || row.title}</span>
             {row.isOverTarget && (
-              <span className="rounded bg-rose-500/15 border border-rose-500/30 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-rose-600 dark:text-rose-400 shrink-0">
-                🔴 Over Task
+              <span className="inline-flex items-center gap-1 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold uppercase text-primary-foreground shrink-0">
+                <AlertTriangle size={9} />
+                <span>Over Task</span>
               </span>
             )}
           </div>
@@ -458,8 +783,9 @@ const Tasks = () => {
                   const name = row.scriptWriterAssigned.name || row.scriptWriterName || 'Writer';
                   const c = getPersonColor(name);
                   return (
-                    <span className={`px-1.5 py-0.5 rounded-md border font-semibold flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
-                      ✍️ {name}
+                    <span className={`px-1.5 py-0.5 rounded-md font-semibold inline-flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
+                      <FileEdit size={10} />
+                      <span>{name}</span>
                     </span>
                   );
                 })()}
@@ -467,8 +793,9 @@ const Tasks = () => {
                   const name = row.voiceArtistAssigned.name || row.voiceArtistName || 'RJ / Voice';
                   const c = getPersonColor(name);
                   return (
-                    <span className={`px-1.5 py-0.5 rounded-md border font-semibold flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
-                      🎙️ {name}
+                    <span className={`px-1.5 py-0.5 rounded-md font-semibold inline-flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
+                      <Mic size={10} />
+                      <span>{name}</span>
                     </span>
                   );
                 })()}
@@ -476,8 +803,9 @@ const Tasks = () => {
                   const name = row.videographerAssigned.name || row.videographerName || 'Videographer';
                   const c = getPersonColor(name);
                   return (
-                    <span className={`px-1.5 py-0.5 rounded-md border font-semibold flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
-                      🎥 {name}
+                    <span className={`px-1.5 py-0.5 rounded-md font-semibold inline-flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
+                      <Video size={10} />
+                      <span>{name}</span>
                     </span>
                   );
                 })()}
@@ -485,8 +813,9 @@ const Tasks = () => {
                   const name = row.editorAssigned.name || row.editorName || 'Editor';
                   const c = getPersonColor(name);
                   return (
-                    <span className={`px-1.5 py-0.5 rounded-md border font-semibold flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
-                      ✂️ {name}
+                    <span className={`px-1.5 py-0.5 rounded-md font-semibold inline-flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
+                      <Scissors size={10} />
+                      <span>{name}</span>
                     </span>
                   );
                 })()}
@@ -494,8 +823,9 @@ const Tasks = () => {
                   const name = row.publisherAssigned.name || row.publisherName || 'Publisher';
                   const c = getPersonColor(name);
                   return (
-                    <span className={`px-1.5 py-0.5 rounded-md border font-semibold flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
-                      📱 {name}
+                    <span className={`px-1.5 py-0.5 rounded-md font-semibold inline-flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
+                      <Smartphone size={10} />
+                      <span>{name}</span>
                     </span>
                   );
                 })()}
@@ -509,18 +839,20 @@ const Tasks = () => {
       key: 'status',
       label: 'Status',
       render: (row) => (
-        <select
-          value={row.status}
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => updateStatusMutation.mutate({ id: row._id, status: e.target.value })}
-          className="rounded-xl border border-border bg-background px-2.5 py-1 text-xs font-semibold text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15 cursor-pointer"
-        >
-          {(isEmployee ? TEAM_STATUS_OPTIONS : TASK_STATUS_OPTIONS).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <div onClick={(e) => e.stopPropagation()} className="w-32">
+          <SelectDropdown
+            value={row.status}
+            onChange={(val) => val && updateStatusMutation.mutate({ id: row._id, status: val })}
+            options={(isEmployee ? TEAM_STATUS_OPTIONS : TASK_STATUS_OPTIONS).map((option) => ({
+              value: option,
+              label: option,
+            }))}
+            allowCustom={false}
+            allowDeselect={false}
+            className="w-32 text-xs"
+            buttonClassName="h-8 px-2.5 py-1 text-xs font-semibold rounded-xl bg-background border border-border/40"
+          />
+        </div>
       ),
     },
     {
@@ -538,14 +870,61 @@ const Tasks = () => {
       render: (row) => {
         const overdue = isTaskOverdue(row);
         return (
-          <div className="flex items-center gap-1.5">
-            <span className={`text-[11px] font-medium ${overdue ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-muted-foreground'}`}>
+          <div className="flex items-center gap-1.5 tabular-nums">
+            <span className={`text-[11px] font-medium ${overdue ? 'text-foreground font-bold' : 'text-muted-foreground'}`}>
               {row.dueDate ? new Date(row.dueDate).toLocaleDateString() : '—'}
             </span>
             {overdue && (
-              <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-[9px] font-extrabold text-rose-600 dark:text-rose-400 shrink-0">
+              <span className="px-1.5 py-0.5 rounded-md bg-primary text-[9px] font-bold text-primary-foreground shrink-0">
                 Overdue
               </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'timer',
+      label: 'Timer / Status',
+      render: (row) => {
+        const hasTimer = Boolean(
+          (row.allocatedHours && row.allocatedHours > 0) ||
+          (row.allocatedMinutes && row.allocatedMinutes > 0) ||
+          row.timerExpiresAt
+        );
+
+        if (!hasTimer && !row.completionReason) {
+          return <span className="text-[11px] text-muted-foreground">—</span>;
+        }
+
+        const overdue = isTaskOverdue(row);
+
+        return (
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {hasTimer && (
+                <span className="text-[11px] font-semibold text-foreground inline-flex items-center gap-1 tabular-nums">
+                  <Clock size={11} className="text-muted-foreground" />
+                  {row.allocatedHours || 0}h {row.allocatedMinutes || 0}m
+                </span>
+              )}
+              {row.isAccepted && (
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-secondary text-foreground ">
+                  Accepted
+                </span>
+              )}
+              {overdue && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-primary text-primary-foreground ">
+                  <AlertTriangle size={9} />
+                  <span>Overdue</span>
+                </span>
+              )}
+            </div>
+            {row.completionReason && (
+              <p className="text-[10px] text-muted-foreground truncate max-w-[150px] inline-flex items-center gap-1" title={row.completionReason}>
+                <FileText size={10} className="shrink-0" />
+                <span className="truncate">{row.completionReason}</span>
+              </p>
             )}
           </div>
         );
@@ -555,8 +934,8 @@ const Tasks = () => {
       key: 'createdAt',
       label: 'Created Date',
       render: (row) => (
-        <div className="flex items-center gap-1 text-[11px] text-muted-foreground whitespace-nowrap">
-          <Calendar size={11} className="text-muted-foreground/70" />
+        <div className="flex items-center gap-1 text-[11px] text-muted-foreground whitespace-nowrap tabular-nums">
+          <Calendar size={11} className="text-muted-foreground shrink-0" />
           <span>
             {row.createdAt
               ? new Date(row.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
@@ -580,17 +959,14 @@ const Tasks = () => {
   };
 
   const handleRowClick = (task) => {
-    if (isEmployee) {
-      openTaskDetail(task._id);
-      return;
-    }
-    navigate(`/tasks/${task._id}`);
+    handleOpenWorkflowDrawer(task);
   };
 
   useEffect(() => {
     const openTaskId = searchParams.get('open');
     if (!openTaskId) return;
-    openTaskDetail(openTaskId);
+    setWorkflowTaskId(openTaskId);
+    setShowWorkflowDrawer(true);
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete('open');
     setSearchParams(nextParams, { replace: true });
@@ -600,34 +976,25 @@ const Tasks = () => {
     return <PortalTasks />;
   }
 
-  const canCreate = ['superAdmin', 'admin', 'manager'].includes(user?.role);
+  const canCreate = !isEmployee && ['superAdmin', 'admin', 'manager', 'organizationOwner'].includes(user?.role);
+  const canDelete = ['superAdmin', 'admin', 'manager', 'organizationOwner'].includes(user?.role);
 
   return (
     <WorkspacePage
       title={isEmployee ? 'My Assigned Deliverables' : 'Tasks Database'}
-      subtitle="Universal multi-person production pipeline, multi-role assignees, and stages."
       icon={CheckSquare}
       breadcrumbs={[{ name: 'Delivery', path: '/tasks' }, { name: 'Tasks Database' }]}
       actions={
-        <div className="flex items-center gap-2">
-          <Link
-            to={isEmployee ? '/development/my-tasks' : '/development/board'}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all shadow-xs"
+        canCreate && (
+          <Button
+            size="sm"
+            onClick={handleOpenCreateGeneral}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground font-semibold text-xs rounded-xl transition-all hover:bg-primary/90 min-h-[38px] cursor-pointer"
           >
-            <Kanban size={13} />
-            <span>Dev Pipeline Board</span>
-          </Link>
-          {canCreate && (
-            <Button
-              size="sm"
-              onClick={() => setShowAddModal(true)}
-              className="bg-primary text-primary-foreground font-bold shadow-sm"
-            >
-              <Plus size={15} className="mr-1.5 stroke-[2.5]" />
-              New Task
-            </Button>
-          )}
-        </div>
+            <Plus size={15} className="mr-1 stroke-[2.5]" />
+            New Task
+          </Button>
+        )
       }
       properties={
         <div className="flex flex-wrap items-center gap-2">
@@ -635,13 +1002,13 @@ const Tasks = () => {
           <button
             type="button"
             onClick={() => handleQuickFilterChange('all')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer select-none ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer select-none tabular-nums ${
               quickFilter === 'all'
-                ? 'bg-primary text-primary-foreground border-primary shadow-xs ring-2 ring-primary/25'
-                : 'bg-card border-border/80 text-foreground hover:bg-secondary/80 hover:border-border'
+                ? 'bg-primary text-primary-foreground ring-2 ring-primary/20'
+                : 'bg-card text-foreground hover:bg-secondary/80'
             }`}
           >
-            <CheckSquare size={13} className={quickFilter === 'all' ? 'text-primary-foreground' : 'text-primary'} />
+            <CheckSquare size={13} />
             <span>Total Tasks: {taskMetrics.total}</span>
           </button>
 
@@ -649,10 +1016,10 @@ const Tasks = () => {
           <button
             type="button"
             onClick={() => handleQuickFilterChange('inProgress')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer select-none ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer select-none tabular-nums ${
               quickFilter === 'inProgress'
-                ? 'bg-blue-600 text-white border-blue-600 shadow-xs ring-2 ring-blue-500/25'
-                : 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20'
+                ? 'bg-primary text-primary-foreground ring-2 ring-primary/20'
+                : 'bg-card text-foreground hover:bg-secondary/80'
             }`}
           >
             <Clock size={13} />
@@ -663,10 +1030,10 @@ const Tasks = () => {
           <button
             type="button"
             onClick={() => handleQuickFilterChange('done')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer select-none ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer select-none tabular-nums ${
               quickFilter === 'done'
-                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs ring-2 ring-emerald-500/25'
-                : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+                ? 'bg-primary text-primary-foreground ring-2 ring-primary/20'
+                : 'bg-card text-foreground hover:bg-secondary/80'
             }`}
           >
             <CheckCircle2 size={13} />
@@ -677,15 +1044,15 @@ const Tasks = () => {
           <button
             type="button"
             onClick={() => handleQuickFilterChange('overdue')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer select-none ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer select-none tabular-nums ${
               quickFilter === 'overdue'
-                ? 'bg-rose-600 text-white border-rose-600 shadow-xs ring-2 ring-rose-500/25'
+                ? 'bg-primary text-primary-foreground ring-2 ring-primary/20'
                 : taskMetrics.overdue > 0
-                ? 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20'
-                : 'bg-card border-border/80 text-muted-foreground hover:bg-secondary/80'
+                ? 'bg-secondary text-foreground hover:bg-secondary/80'
+                : 'bg-card text-muted-foreground hover:bg-secondary/80'
             }`}
           >
-            <AlertTriangle size={13} className={taskMetrics.overdue > 0 || quickFilter === 'overdue' ? 'text-rose-500 dark:text-rose-400' : 'text-muted-foreground'} />
+            <AlertTriangle size={13} />
             <span>Overdue: {taskMetrics.overdue}</span>
           </button>
 
@@ -694,10 +1061,10 @@ const Tasks = () => {
             <button
               type="button"
               onClick={() => handleQuickFilterChange('overTarget')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer select-none ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer select-none tabular-nums ${
                 quickFilter === 'overTarget'
-                  ? 'bg-amber-600 text-white border-amber-600 shadow-xs ring-2 ring-amber-500/25'
-                  : 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20'
+                  ? 'bg-primary text-primary-foreground ring-2 ring-primary/20'
+                  : 'bg-secondary text-foreground hover:bg-secondary/80'
               }`}
             >
               <AlertTriangle size={13} />
@@ -710,7 +1077,7 @@ const Tasks = () => {
             <button
               type="button"
               onClick={() => setQuickFilter('all')}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground bg-secondary/80 hover:bg-secondary border border-border transition-all cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 transition-all cursor-pointer"
             >
               <X size={13} />
               <span>Clear Filter</span>
@@ -720,6 +1087,174 @@ const Tasks = () => {
       }
     >
       <div className="space-y-4">
+        {/* Team Quick Assign Roster categorized by Media / Developer / SMM / Management - for managers/admins */}
+        {canCreate && (
+          <TeamQuickAssignRoster
+            users={users}
+            tasks={tasks}
+            onQuickAssign={handleQuickAssignEmployee}
+            canCreate={canCreate}
+          />
+        )}
+
+        {/* ── TODAY'S DELIVERABLES OVERVIEW (Agency-Wide for Admin/SuperAdmin, Personal for Employee) ── */}
+        <div className="rounded-2xl bg-card p-4 sm:p-5 space-y-3.5 transition-all">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-foreground shrink-0">
+                <Calendar size={18} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm sm:text-base font-bold text-foreground tracking-tight">
+                    Today&apos;s Deliverables &amp; Action Items
+                  </h3>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-secondary text-foreground tabular-nums">
+                    {todayTasks.length} {todayTasks.length === 1 ? 'Task' : 'Tasks'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowTodayTray((prev) => !prev)}
+                className="p-1.5 rounded-xl bg-background hover:bg-secondary text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                title={showTodayTray ? 'Collapse overview' : 'Expand overview'}
+              >
+                {showTodayTray ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {showTodayTray && (
+            <>
+              {todayTasks.length === 0 ? (
+                <div className="p-5 text-center rounded-xl bg-secondary/40 text-xs text-muted-foreground">
+                  <p className="font-semibold text-foreground">No deliverables today</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {todayTasks.map((t) => {
+                    const assignees = extractTaskAssignees(t);
+                    const overdue = isTaskOverdue(t);
+                    return (
+                      <div
+                        key={t._id}
+                        className="p-3.5 rounded-xl bg-background transition-all flex flex-col justify-between space-y-3 relative group"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-1 flex-wrap">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-secondary text-foreground">
+                              {formatTaskTypeLabel(t.taskType) || 'Task'}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {overdue && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-primary text-primary-foreground ">
+                                  <AlertTriangle size={9} />
+                                  <span>Overdue</span>
+                                </span>
+                              )}
+                              <StatusBadge tone={priorityTone[t.priority] || 'neutral'}>
+                                {t.priority || 'Medium'}
+                              </StatusBadge>
+                            </div>
+                          </div>
+
+                          <h4
+                            onClick={() => handleOpenWorkflowDrawer(t)}
+                            className="font-bold text-foreground text-xs hover:text-foreground/80 transition-colors cursor-pointer line-clamp-2 leading-snug"
+                            title={t.taskTitle || t.title}
+                          >
+                            {t.taskTitle || t.title}
+                          </h4>
+
+                          <div className="text-[11px] text-muted-foreground truncate">
+                            {t.client?.name || t.client?.company || t.clientName || 'Internal Task'}
+                          </div>
+
+                          {/* Assignees and Role Badges */}
+                          <div className="flex flex-wrap items-center gap-1 pt-1">
+                            {assignees.length > 0 ? (
+                              assignees.map((person, idx) => (
+                                <PersonAssigneeBadge key={idx} person={person} size="sm" />
+                              ))
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground italic">Unassigned</span>
+                            )}
+                          </div>
+
+                          {/* Sub-roles indicator */}
+                          {(t.scriptWriterAssigned || t.videographerAssigned || t.editorAssigned) && (
+                            <div className="flex flex-wrap gap-1 text-[9px] pt-0.5">
+                              {t.scriptWriterAssigned && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-foreground font-semibold">
+                                  <FileEdit size={9} />
+                                  <span>{t.scriptWriterAssigned.name || 'Writer'}</span>
+                                </span>
+                              )}
+                              {t.videographerAssigned && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-foreground font-semibold">
+                                  <Video size={9} />
+                                  <span>{t.videographerAssigned.name || 'Videographer'}</span>
+                                </span>
+                              )}
+                              {t.editorAssigned && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-foreground font-semibold">
+                                  <Scissors size={9} />
+                                  <span>{t.editorAssigned.name || 'Editor'}</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Footer with status selector & FULL VIEW button */}
+                        <div className="pt-2 flex items-center justify-between gap-2">
+                          <div className="w-32">
+                            <SelectDropdown
+                              value={t.status}
+                              onChange={(val) => val && updateStatusMutation.mutate({ id: t._id, status: val })}
+                              options={(isEmployee ? TEAM_STATUS_OPTIONS : TASK_STATUS_OPTIONS).map((opt) => ({
+                                value: opt,
+                                label: opt,
+                              }))}
+                              allowCustom={false}
+                              allowDeselect={false}
+                              className="w-32 text-[11px]"
+                              buttonClassName="h-7 px-2 py-0.5 text-[11px] font-bold rounded-lg bg-card border border-border/40"
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenWorkflowDrawer(t)}
+                              className="px-2 py-1 rounded-lg bg-secondary hover:bg-secondary/80 text-[11px] font-bold text-foreground transition-all cursor-pointer"
+                              title="Quick Overview Drawer"
+                            >
+                              Quick View
+                            </button>
+                            <Link
+                              to={`/tasks/${t._id}`}
+                              className="px-2.5 py-1 rounded-lg bg-secondary hover:bg-primary text-foreground hover:text-primary-foreground text-[11px] font-bold transition-all inline-flex items-center gap-1 cursor-pointer"
+                              title="Open Full Page View"
+                            >
+                              <span>Full View</span>
+                              <ExternalLink size={10} />
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
         {/* Database View Engine (Table + Kanban Board) */}
         <DatabaseView
           activeView={currentView}
@@ -731,76 +1266,189 @@ const Tasks = () => {
             <div className="flex items-center justify-between gap-3 w-full flex-wrap">
               {/* Filter Dropdowns Group */}
               <div className="flex items-center gap-2 flex-wrap min-w-0">
-                {/* Category Filter Dropdown */}
+                {/* Team Department Segmented Switcher */}
+                <div className="flex items-center p-0.5 rounded-xl bg-secondary/40 shrink-0 gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => handleDepartmentFilterChange('all')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                      departmentFilter === 'all'
+                        ? 'bg-primary text-primary-foreground font-bold'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                    }`}
+                  >
+                    <CheckSquare size={13} />
+                    <span>All Tasks</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold tabular-nums ${
+                        departmentFilter === 'all'
+                          ? 'bg-primary-foreground/20 text-primary-foreground'
+                          : 'bg-background text-muted-foreground '
+                      }`}
+                    >
+                      {taskCountsByDepartment.all}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDepartmentFilterChange('content')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                      departmentFilter === 'content'
+                        ? 'bg-primary text-primary-foreground font-bold'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                    }`}
+                  >
+                    <Film size={13} />
+                    <span>Content</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold tabular-nums ${
+                        departmentFilter === 'content'
+                          ? 'bg-primary-foreground/20 text-primary-foreground'
+                          : 'bg-background text-muted-foreground '
+                      }`}
+                    >
+                      {taskCountsByDepartment.content}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDepartmentFilterChange('non_content')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                      departmentFilter === 'non_content'
+                        ? 'bg-primary text-primary-foreground font-bold'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                    }`}
+                  >
+                    <Laptop size={13} />
+                    <span>Non-Content</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold tabular-nums ${
+                        departmentFilter === 'non_content'
+                          ? 'bg-primary-foreground/20 text-primary-foreground'
+                          : 'bg-background text-muted-foreground '
+                      }`}
+                    >
+                      {taskCountsByDepartment.non_content}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Category Filter Dropdown (Adaptive to active department) */}
                 <SelectDropdown
-                  className="w-44 text-xs"
+                  className="w-full sm:w-44 text-xs"
+                  buttonClassName="h-9"
                   value={categoryFilter}
                   onChange={(val) => setCategoryFilter(val || 'all')}
-                  options={TASK_CATEGORY_PILLS.map((p) => ({ value: p.key, label: p.label }))}
-                  allOptionLabel="All Categories"
+                  options={currentCategoryPills.map((p) => ({ value: p.key, label: p.label }))}
+                  allOptionLabel={
+                    departmentFilter === 'non_content'
+                      ? 'All Non-Content'
+                      : departmentFilter === 'content'
+                      ? 'All Content'
+                      : 'All Categories'
+                  }
                 />
 
-                {/* Client Filter */}
-                <SelectDropdown
-                  className="w-48 text-xs"
-                  value={filters.client}
-                  onChange={(val) => setFilters((prev) => ({ ...prev, client: val }))}
-                  options={clientOptions}
-                  placeholder="Filter by Client"
-                  allOptionLabel="All Clients"
-                />
-
-                {/* Status Filter */}
-                <SelectDropdown
-                  className="w-40 text-xs"
-                  value={filters.status}
-                  onChange={(val) => setFilters((prev) => ({ ...prev, status: val }))}
-                  options={isEmployee ? TEAM_STATUS_OPTIONS : TASK_STATUS_OPTIONS}
-                  allOptionLabel="All Statuses"
-                />
-
-                {/* Priority Filter */}
-                <SelectDropdown
-                  className="w-36 text-xs"
-                  value={filters.priority}
-                  onChange={(val) => setFilters((prev) => ({ ...prev, priority: val }))}
-                  options={['Critical', 'High', 'Medium', 'Low']}
-                  allOptionLabel="All Priorities"
-                />
-
-                {/* Assignee Filter */}
-                {!isEmployee && (
-                  <SelectDropdown
-                    className="w-44 text-xs"
-                    value={filters.assignedTo}
-                    onChange={(val) => setFilters((prev) => ({ ...prev, assignedTo: val }))}
-                    options={userOptions}
-                    placeholder="Filter by Assignee"
-                    allOptionLabel="All Assignees"
+                {/* More Filters Collapse Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowMoreFilters((prev) => !prev)}
+                  className={`h-9 px-3 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+                    showMoreFilters || secondaryFiltersCount > 0
+                      ? 'bg-primary/10 text-primary border border-primary/30'
+                      : 'bg-card border border-border/50 text-foreground hover:bg-secondary/60'
+                  }`}
+                  title="Toggle additional dropdown filters"
+                >
+                  <SlidersHorizontal size={13} className="shrink-0" />
+                  <span>More Filters</span>
+                  {secondaryFiltersCount > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-primary text-primary-foreground tabular-nums">
+                      {secondaryFiltersCount}
+                    </span>
+                  )}
+                  <ChevronDown
+                    size={13}
+                    className={`text-muted-foreground transition-transform duration-200 ${showMoreFilters ? 'rotate-180' : ''}`}
                   />
-                )}
+                </button>
 
-                {/* Sorting Filter Dropdown */}
-                <SelectDropdown
-                  className="w-52 text-xs font-semibold"
-                  value={sortBy}
-                  onChange={(val) => setSortBy(val || 'dueDate_asc')}
-                  options={TASK_SORT_OPTIONS}
-                />
+                {/* Reset Button */}
+                {activeFiltersCount > 0 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={clearAllFilters}
+                    className="h-9 px-2.5 text-xs text-foreground bg-secondary hover:bg-secondary/80 inline-flex items-center gap-1 rounded-xl transition-all font-bold cursor-pointer tabular-nums"
+                    title="Clear all active filters"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Reset ({activeFiltersCount})</span>
+                  </Button>
+                )}
               </div>
 
-              {/* Reset Button */}
-              {activeFiltersCount > 0 && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={clearAllFilters}
-                  className="h-8 px-2.5 text-xs text-rose-600 hover:text-rose-700 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 flex items-center gap-1 rounded-xl transition-all font-bold cursor-pointer"
-                  title="Clear all active filters"
-                >
-                  <RotateCcw size={12} />
-                  <span>Reset ({activeFiltersCount})</span>
-                </Button>
+              {/* Collapsible Secondary Filters Row */}
+              {showMoreFilters && (
+                <div className="flex flex-wrap items-center gap-2.5 p-3 rounded-2xl bg-secondary/30 border border-border/40 animate-in fade-in slide-in-from-top-1 duration-150 w-full">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground shrink-0 mr-1">
+                    <Filter size={13} />
+                    <span className="text-[11px] uppercase tracking-wider font-bold">Filters</span>
+                  </div>
+
+                  {/* Client Filter */}
+                  <SelectDropdown
+                    className="w-full sm:w-44 text-xs"
+                    buttonClassName="h-8.5 bg-background text-xs"
+                    value={filters.client}
+                    onChange={(val) => setFilters((prev) => ({ ...prev, client: val }))}
+                    options={clientOptions}
+                    placeholder="Filter by Client"
+                    allOptionLabel="All Clients"
+                  />
+
+                  {/* Status Filter */}
+                  <SelectDropdown
+                    className="w-full sm:w-36 text-xs"
+                    buttonClassName="h-8.5 bg-background text-xs"
+                    value={filters.status}
+                    onChange={(val) => setFilters((prev) => ({ ...prev, status: val }))}
+                    options={isEmployee ? TEAM_STATUS_OPTIONS : TASK_STATUS_OPTIONS}
+                    allOptionLabel="All Statuses"
+                  />
+
+                  {/* Priority Filter */}
+                  <SelectDropdown
+                    className="w-full sm:w-32 text-xs"
+                    buttonClassName="h-8.5 bg-background text-xs"
+                    value={filters.priority}
+                    onChange={(val) => setFilters((prev) => ({ ...prev, priority: val }))}
+                    options={['Critical', 'High', 'Medium', 'Low']}
+                    allOptionLabel="All Priorities"
+                  />
+
+                  {/* Assignee Filter */}
+                  {!isEmployee && (
+                    <SelectDropdown
+                      className="w-full sm:w-40 text-xs"
+                      buttonClassName="h-8.5 bg-background text-xs"
+                      value={filters.assignedTo}
+                      onChange={(val) => setFilters((prev) => ({ ...prev, assignedTo: val }))}
+                      options={userOptions}
+                      placeholder="Filter by Assignee"
+                      allOptionLabel="All Assignees"
+                    />
+                  )}
+
+                  {/* Sorting Filter Dropdown */}
+                  <SelectDropdown
+                    className="w-full sm:w-48 text-xs font-semibold"
+                    buttonClassName="h-8.5 bg-background text-xs"
+                    value={sortBy}
+                    onChange={(val) => setSortBy(val || 'dueDate_asc')}
+                    options={TASK_SORT_OPTIONS}
+                  />
+                </div>
               )}
             </div>
           }
@@ -818,14 +1466,13 @@ const Tasks = () => {
                 onEdit={
                   canCreate
                     ? (task) => {
-                        setSelectedTaskId(task._id);
-                        setShowAddModal(true);
+                        openTaskDetail(task._id);
                       }
                     : undefined
                 }
-                onDelete={canCreate ? (id) => setDeleteTaskId(id) : undefined}
+                onDelete={canDelete ? (id) => setDeleteTaskId(id) : undefined}
                 emptyTitle="No tasks found"
-                emptyDescription="Create a task to assign scripting, filming, editing, or publishing deliverables."
+                emptyDescription=""
               />
             </div>
 
@@ -834,389 +1481,124 @@ const Tasks = () => {
               {isLoading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((n) => (
-                    <div key={n} className="h-28 rounded-2xl bg-card border border-border animate-pulse p-4" />
+                    <div key={n} className="h-28 rounded-2xl bg-card animate-pulse p-4" />
                   ))}
                 </div>
               ) : displayedTasks.length === 0 ? (
-                <div className="p-8 text-center bg-card rounded-2xl border border-border text-xs text-muted-foreground">
-                  No tasks found. Click "New Task" to create one.
+                <div className="p-8 text-center bg-card rounded-2xl text-xs text-muted-foreground">
+                  No tasks found
                 </div>
               ) : (
-                displayedTasks.map((task) => (
+                displayedTasks.map((task) => {
+                  const isExpanded = Boolean(expandedMobileTaskIds[task._id]);
+                  const checklist = Array.isArray(task.checklist) ? task.checklist : [];
+                  const completedChecklistCount = checklist.filter((i) => i.isCompleted).length;
+                  const categoryLabel = formatTaskTypeLabel(task.taskType) || task.taskType || (task.taskCategory === 'content' ? 'Content' : 'Task');
+
+                  return (
                   <div
                     key={task._id}
                     onClick={() => handleRowClick(task)}
-                    className="p-4 rounded-2xl border border-border bg-card shadow-xs hover:border-primary/50 transition-all space-y-3 cursor-pointer active:scale-[0.99]"
+                    className="p-4 rounded-2xl bg-card transition-all space-y-2.5 cursor-pointer active:scale-[0.99]"
                   >
+                    {/* Compact Initial Row 1: Name + Enlarge Button */}
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <h4 className="font-bold text-foreground text-sm leading-snug">
-                          {task.taskTitle || task.title}
-                        </h4>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                          {task.client?.company || task.client?.name || task.clientName || 'Internal Task'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <StatusBadge tone={priorityTone[task.priority] || 'neutral'}>
-                          {task.priority || 'Medium'}
-                        </StatusBadge>
-                        {canCreate && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedTaskId(task._id);
-                              setShowAddModal(true);
-                            }}
-                            className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-primary transition-colors"
-                            title="Edit Task"
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                        )}
-                      </div>
+                      <h4 className="font-bold text-foreground text-sm leading-snug flex-1 min-w-0 line-clamp-2">
+                        {task.taskTitle || task.title}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={(e) => toggleMobileTaskExpand(e, task._id)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/80 hover:bg-secondary text-foreground text-[10px] font-semibold shrink-0 transition-colors cursor-pointer"
+                        title={isExpanded ? 'Collapse card' : 'Enlarge card'}
+                        aria-label={isExpanded ? 'Collapse card' : 'Enlarge card'}
+                      >
+                        {isExpanded ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
+                        <span>{isExpanded ? 'Less' : 'Enlarge'}</span>
+                      </button>
                     </div>
 
-                    {/* Assignees & Sub-roles */}
-                    {(() => {
-                      const assignees = extractTaskAssignees(task);
-                      return (
-                        <div className="space-y-1.5 pt-1">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {assignees.length > 0 ? (
-                              assignees.map((person, pIdx) => (
-                                <PersonAssigneeBadge key={pIdx} person={person} size="sm" />
-                              ))
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium bg-secondary text-muted-foreground border border-border/80">
-                                <User size={10} /> Unassigned
-                              </span>
-                            )}
-                          </div>
+                    {/* Compact Initial Row 2: Category + Tasks */}
+                    <div className="flex items-center justify-between gap-2 flex-wrap tabular-nums">
+                      <span className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-bold bg-secondary text-foreground truncate max-w-[175px]">
+                        {task.taskCategory === 'content' ? <Video size={11} className="shrink-0" /> : <Code2 size={11} className="shrink-0" />}
+                        <span className="truncate">{categoryLabel}</span>
+                      </span>
 
-                          {(task.scriptWriterAssigned || task.voiceArtistAssigned || task.videographerAssigned || task.editorAssigned || task.publisherAssigned) && (
-                            <div className="flex flex-wrap gap-1 text-[10px]">
-                              {task.scriptWriterAssigned && (() => {
-                                const name = task.scriptWriterAssigned.name || task.scriptWriterName || 'Writer';
-                                const c = getPersonColor(name);
-                                return (
-                                  <span className={`px-2 py-0.5 rounded-md border font-semibold flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
-                                    ✍️ {name}
-                                  </span>
-                                );
-                              })()}
-                              {task.voiceArtistAssigned && (() => {
-                                const name = task.voiceArtistAssigned.name || task.voiceArtistName || 'RJ / Voice';
-                                const c = getPersonColor(name);
-                                return (
-                                  <span className={`px-2 py-0.5 rounded-md border font-semibold flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
-                                    🎙️ {name}
-                                  </span>
-                                );
-                              })()}
-                              {task.videographerAssigned && (() => {
-                                const name = task.videographerAssigned.name || task.videographerName || 'Videographer';
-                                const c = getPersonColor(name);
-                                return (
-                                  <span className={`px-2 py-0.5 rounded-md border font-semibold flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
-                                    🎥 {name}
-                                  </span>
-                                );
-                              })()}
-                              {task.editorAssigned && (() => {
-                                const name = task.editorAssigned.name || task.editorName || 'Editor';
-                                const c = getPersonColor(name);
-                                return (
-                                  <span className={`px-2 py-0.5 rounded-md border font-semibold flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
-                                    ✂️ {name}
-                                  </span>
-                                );
-                              })()}
-                              {task.publisherAssigned && (() => {
-                                const name = task.publisherAssigned.name || task.publisherName || 'Publisher';
-                                const c = getPersonColor(name);
-                                return (
-                                  <span className={`px-2 py-0.5 rounded-md border font-semibold flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
-                                    📱 {name}
-                                  </span>
-                                );
-                              })()}
-                            </div>
-                          )}
-
-                          {/* Development Pipeline Workflow in List/Table view */}
-                          {(task.department === 'Development' || task.development?.isDevTask || isWebsiteTaskType(task.taskType)) && (
-                            <div className="flex flex-wrap items-center gap-1.5 text-[10px] pt-1">
-                              <span className={`px-2 py-0.5 rounded-md border font-bold flex items-center gap-1 shadow-2xs ${
-                                task.development?.isBlocked
-                                  ? 'bg-rose-500/15 text-rose-600 border-rose-500/30'
-                                  : DEV_STAGE_TONES[task.development?.stage] || DEV_STAGE_TONES.in_development
-                              }`}>
-                                <Code2 size={11} />
-                                <span>Dev: {task.development?.isBlocked ? 'Blocked' : (DEV_STAGE_SHORT_LABELS[task.development?.stage] || 'In Dev')}</span>
-                              </span>
-                              {task.development?.reviewer && (
-                                <span className="px-2 py-0.5 rounded-md border font-semibold bg-purple-500/10 text-purple-600 border-purple-500/20">
-                                  🔍 Review: {task.development.reviewer.name || 'Reviewer'}
-                                </span>
-                              )}
-                              {task.development?.tester && (
-                                <span className="px-2 py-0.5 rounded-md border font-semibold bg-cyan-500/10 text-cyan-600 border-cyan-500/20">
-                                  🛡️ QA: {task.development.tester.name || 'Tester'}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })()}
-
-                    {/* Status Select & Due Date */}
-                    <div className="flex items-center justify-between pt-2.5 border-t border-border/60 gap-2">
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={task.status}
-                          onChange={(e) => updateStatusMutation.mutate({ id: task._id, status: e.target.value })}
-                          className="rounded-xl border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground outline-none transition-all focus:border-primary"
-                        >
-                          {(isEmployee ? TEAM_STATUS_OPTIONS : TASK_STATUS_OPTIONS).map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {task.createdAt && (
-                          <div className="text-[11px] flex items-center gap-1 text-muted-foreground">
-                            <Calendar size={11} className="text-primary/70 shrink-0" />
-                            <span>Created {new Date(task.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                          </div>
-                        )}
-                        {(() => {
-                          const overdue = isTaskOverdue(task);
-                          return (
-                            <div className={`text-[11px] flex items-center gap-1 font-medium ${overdue ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-muted-foreground'}`}>
-                              {overdue ? <AlertTriangle size={12} className="text-rose-500 shrink-0" /> : <Clock size={12} className="text-primary shrink-0" />}
-                              <span>{task.dueDate ? `${overdue ? 'Overdue: ' : 'Due '}${new Date(task.dueDate).toLocaleDateString()}` : 'No deadline'}</span>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Board View (Responsive Kanban by Task Status with Snap Scroll) */}
-        {(currentView === 'board' || currentView === 'kanban') && (
-          <div className="space-y-3.5 w-full">
-            {/* Category Color Definition Guide */}
-            <CategoryColorLegend
-              selectedCategory={categoryFilter}
-              onSelectCategory={setCategoryFilter}
-              title="Deliverable Color Code Index"
-              description="Card left-border accent identifies task category (click any color pill to filter)"
-            />
-
-            <div ref={taskBoardRef} className="w-full overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory">
-              <div className="grid w-max min-w-full auto-cols-[minmax(275px,85vw)] sm:auto-cols-[minmax(280px,320px)] grid-flow-col gap-3.5 sm:gap-4">
-              {[
-                { key: 'To Do', label: 'To Do', badge: 'bg-slate-500/10 text-slate-600 dark:text-slate-400', surface: 'border-border bg-card/60' },
-                { key: 'On Process', label: 'In Process', badge: 'bg-blue-500/10 text-blue-600 dark:text-blue-400', surface: 'border-blue-500/20 bg-blue-500/5' },
-                { key: 'Waiting for Client', label: 'Waiting for Client', badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', surface: 'border-amber-500/20 bg-amber-500/5' },
-                { key: 'Review Required', label: 'Review Required', badge: 'bg-purple-500/10 text-purple-600 dark:text-purple-400', surface: 'border-purple-500/20 bg-purple-500/5' },
-                { key: 'Completed', label: 'Completed', badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', surface: 'border-emerald-500/20 bg-emerald-500/5' },
-              ].map((column) => {
-                const columnTasks = displayedTasks.filter((t) => {
-                  const s = t.status || 'To Do';
-                  if (column.key === 'Completed') return ['Completed', 'Approved', 'done', 'completed'].includes(s);
-                  if (column.key === 'On Process') return ['On Process', 'in_progress', 'on_process'].includes(s);
-                  if (column.key === 'Waiting for Client') return ['Waiting for Client', 'waiting_for_client'].includes(s);
-                  if (column.key === 'Review Required') return ['Review Required', 'review_required', 'Rework', 'Rework Completed', 'rework'].includes(s);
-                  if (column.key === 'To Do') return ['To Do', 'todo', ''].includes(s) || (!['On Process', 'Waiting for Client', 'Review Required', 'Completed', 'Approved', 'Rework'].includes(s));
-                  return s === column.key;
-                });
-
-                const isColActive = dragOverColKey === column.key;
-
-                return (
-                  <div
-                    key={column.key}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = 'move';
-                      if (dragOverColKey !== column.key) setDragOverColKey(column.key);
-                    }}
-                    onDragLeave={(e) => {
-                      if (!e.currentTarget.contains(e.relatedTarget)) {
-                        if (dragOverColKey === column.key) setDragOverColKey(null);
-                      }
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const taskId = e.dataTransfer.getData('taskId');
-                      if (taskId) {
-                        updateStatusMutation.mutate({ id: taskId, status: column.key });
-                      }
-                      setDraggingTaskId(null);
-                      setDragOverColKey(null);
-                      setDragOverTaskIndex(null);
-                    }}
-                    className={`flex flex-col min-h-[440px] max-h-[calc(100vh-280px)] rounded-2xl border ${column.surface} p-3 space-y-3 transition-all snap-center sm:snap-align-none ${
-                      isColActive ? 'ring-2 ring-primary/40 border-primary bg-primary/5 shadow-md' : ''
-                    }`}
-                  >
-                    <div className="flex items-center justify-between px-1.5 py-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-foreground uppercase tracking-wider">{column.label}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${column.badge}`}>
-                          {columnTasks.length}
+                      <span className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold bg-secondary/70 text-foreground">
+                        <ListChecks size={12} className="shrink-0 text-muted-foreground" />
+                        <span>
+                          {checklist.length > 0 ? `${completedChecklistCount}/${checklist.length} tasks` : `${checklist.length} tasks`}
                         </span>
-                      </div>
-                      {canCreate && (
-                        <button
-                          onClick={() => setShowAddModal(true)}
-                          className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                          title={`Add task to ${column.label}`}
-                        >
-                          <Plus size={14} />
-                        </button>
-                      )}
+                      </span>
                     </div>
 
-                    <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[calc(100vh-340px)] pr-0.5 custom-scrollbar">
-                      {columnTasks.map((task, idx) => {
-                        const isBeingDragged = draggingTaskId === task._id;
-                        const showDropIndicatorBefore = isColActive && dragOverTaskIndex === idx && !isBeingDragged;
-                        const assignees = extractTaskAssignees(task);
-                        const primaryColor = assignees.length > 0 ? getPersonColor(assignees[0].name) : null;
-
-                        return (
-                          <React.Fragment key={task._id}>
-                            {showDropIndicatorBefore && (
-                              <div className="h-1.5 rounded-full bg-primary/70 animate-pulse my-1 shadow-xs" />
+                    {/* Remaining Details Revealed When Enlarged */}
+                    {isExpanded && (
+                      <div className="space-y-3 pt-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs text-muted-foreground truncate">
+                            {task.client?.company || task.client?.name || task.clientName || 'Internal Task'}
+                          </p>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <StatusBadge tone={priorityTone[task.priority] || 'neutral'}>
+                              {task.priority || 'Medium'}
+                            </StatusBadge>
+                            {canCreate && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openTaskDetail(task._id);
+                                }}
+                                className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                title="Open Task"
+                              >
+                                <Edit2 size={14} />
+                              </button>
                             )}
-                            <div
-                              draggable
-                              onDragStart={(e) => {
-                                setDraggingTaskId(task._id);
-                                e.dataTransfer.setData('taskId', task._id);
-                                e.dataTransfer.effectAllowed = 'move';
-                              }}
-                              onDragEnd={() => {
-                                setDraggingTaskId(null);
-                                setDragOverColKey(null);
-                                setDragOverTaskIndex(null);
-                              }}
-                              onDragOver={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                e.dataTransfer.dropEffect = 'move';
-                                setDragOverColKey(column.key);
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const midY = rect.top + rect.height / 2;
-                                setDragOverTaskIndex(e.clientY < midY ? idx : idx + 1);
-                              }}
-                              onDrop={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                e.dataTransfer.dropEffect = 'move';
-                                const taskId = e.dataTransfer.getData('taskId');
-                                if (taskId) {
-                                  updateStatusMutation.mutate({ id: taskId, status: column.key });
-                                }
-                                setDraggingTaskId(null);
-                                setDragOverColKey(null);
-                                setDragOverTaskIndex(null);
-                              }}
-                              onClick={() => handleRowClick(task)}
-                              className={`p-3.5 bg-card rounded-2xl border border-border hover:border-primary/50 transition-all cursor-grab active:cursor-grabbing space-y-2.5 group shadow-xs hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] border-l-[4px] ${
-                                getCategoryTheme(task.taskType || task.taskCategory).accentBorder
-                              } ${
-                                isBeingDragged ? 'opacity-30 scale-95 border-dashed border-primary ring-1 ring-primary/40' : ''
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="space-y-1 min-w-0">
-                                  {task.isOverTarget && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-rose-500/15 border border-rose-500/30 px-1.5 py-0.5 text-[8px] font-extrabold uppercase text-rose-600 dark:text-rose-400">
-                                      🔴 Over Task
-                                    </span>
-                                  )}
-                                  <h4 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2">
-                                    {task.taskTitle || task.title}
-                                  </h4>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase ${
-                                    task.priority === 'Urgent' || task.priority === 'High'
-                                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                                      : 'bg-secondary text-muted-foreground'
-                                  }`}>
-                                    {task.priority || 'Medium'}
-                                  </span>
-                                  {canCreate && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedTaskId(task._id);
-                                        setShowAddModal(true);
-                                      }}
-                                      className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-primary transition-colors"
-                                      title="Edit Task"
-                                    >
-                                      <Edit2 size={12} />
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
+                            {canDelete && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteTaskId(task._id);
+                                }}
+                                className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                title="Delete Task"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
 
-                              <div className="flex items-center justify-between text-[11px] text-muted-foreground gap-1.5">
-                                <span className="truncate max-w-[150px] font-medium text-foreground/80">
-                                  {task.client?.company || task.client?.name || task.clientName || 'RiseWithMedia'}
-                                </span>
-                                {(() => {
-                                  const catTheme = getCategoryTheme(task.taskType || task.taskCategory);
-                                  const Icon = catTheme.icon;
-                                  return (
-                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-bold border shrink-0 ${catTheme.badgeClass}`}>
-                                      <Icon size={10} className="shrink-0" />
-                                      <span className="truncate max-w-[110px]">{formatTaskTypeLabel(task.taskType)}</span>
-                                    </span>
-                                  );
-                                })()}
-                              </div>
-
-                              {/* Primary Assigned Person(s) with Individual Color Badges */}
-                              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        {/* Assignees & Sub-roles */}
+                        {(() => {
+                          const assignees = extractTaskAssignees(task);
+                          return (
+                            <div className="space-y-1.5">
+                              <div className="flex flex-wrap items-center gap-1.5">
                                 {assignees.length > 0 ? (
                                   assignees.map((person, pIdx) => (
                                     <PersonAssigneeBadge key={pIdx} person={person} size="sm" />
                                   ))
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium bg-secondary text-muted-foreground border border-border/80">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium bg-secondary text-muted-foreground ">
                                     <User size={10} /> Unassigned
                                   </span>
                                 )}
                               </div>
 
-                              {/* Pipeline production sub-assignees with names and colors */}
                               {(task.scriptWriterAssigned || task.voiceArtistAssigned || task.videographerAssigned || task.editorAssigned || task.publisherAssigned) && (
-                                <div className="flex flex-wrap gap-1 text-[9px] pt-1">
+                                <div className="flex flex-wrap gap-1 text-[10px]">
                                   {task.scriptWriterAssigned && (() => {
                                     const name = task.scriptWriterAssigned.name || task.scriptWriterName || 'Writer';
                                     const c = getPersonColor(name);
                                     return (
-                                      <span className={`px-1.5 py-0.5 rounded-md border font-semibold flex items-center gap-1 shadow-2xs ${c.bg} ${c.text} ${c.border}`}>
-                                        ✍️ Script: <span className="font-bold">{name}</span>
+                                      <span className={`px-2 py-0.5 rounded-md font-semibold inline-flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
+                                        <FileEdit size={10} />
+                                        <span>{name}</span>
                                       </span>
                                     );
                                   })()}
@@ -1224,8 +1606,9 @@ const Tasks = () => {
                                     const name = task.voiceArtistAssigned.name || task.voiceArtistName || 'RJ / Voice';
                                     const c = getPersonColor(name);
                                     return (
-                                      <span className={`px-1.5 py-0.5 rounded-md border font-semibold flex items-center gap-1 shadow-2xs ${c.bg} ${c.text} ${c.border}`}>
-                                        🎙️ RJ: <span className="font-bold">{name}</span>
+                                      <span className={`px-2 py-0.5 rounded-md font-semibold inline-flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
+                                        <Mic size={10} />
+                                        <span>{name}</span>
                                       </span>
                                     );
                                   })()}
@@ -1233,8 +1616,9 @@ const Tasks = () => {
                                     const name = task.videographerAssigned.name || task.videographerName || 'Videographer';
                                     const c = getPersonColor(name);
                                     return (
-                                      <span className={`px-1.5 py-0.5 rounded-md border font-semibold flex items-center gap-1 shadow-2xs ${c.bg} ${c.text} ${c.border}`}>
-                                        🎥 Shoot: <span className="font-bold">{name}</span>
+                                      <span className={`px-2 py-0.5 rounded-md font-semibold inline-flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
+                                        <Video size={10} />
+                                        <span>{name}</span>
                                       </span>
                                     );
                                   })()}
@@ -1242,8 +1626,9 @@ const Tasks = () => {
                                     const name = task.editorAssigned.name || task.editorName || 'Editor';
                                     const c = getPersonColor(name);
                                     return (
-                                      <span className={`px-1.5 py-0.5 rounded-md border font-semibold flex items-center gap-1 shadow-2xs ${c.bg} ${c.text} ${c.border}`}>
-                                        ✂️ Edit: <span className="font-bold">{name}</span>
+                                      <span className={`px-2 py-0.5 rounded-md font-semibold inline-flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
+                                        <Scissors size={10} />
+                                        <span>{name}</span>
                                       </span>
                                     );
                                   })()}
@@ -1251,116 +1636,103 @@ const Tasks = () => {
                                     const name = task.publisherAssigned.name || task.publisherName || 'Publisher';
                                     const c = getPersonColor(name);
                                     return (
-                                      <span className={`px-1.5 py-0.5 rounded-md border font-semibold flex items-center gap-1 shadow-2xs ${c.bg} ${c.text} ${c.border}`}>
-                                        📱 Post: <span className="font-bold">{name}</span>
+                                      <span className={`px-2 py-0.5 rounded-md font-semibold inline-flex items-center gap-1 ${c.bg} ${c.text} ${c.border}`}>
+                                        <Smartphone size={10} />
+                                        <span>{name}</span>
                                       </span>
                                     );
                                   })()}
                                 </div>
                               )}
 
-                              {/* Development Pipeline Workflow Badge & Sub-assignees */}
                               {(task.department === 'Development' || task.development?.isDevTask || isWebsiteTaskType(task.taskType)) && (
-                                <div className="flex flex-wrap items-center gap-1 text-[9px] pt-1 border-t border-border/40">
-                                  <span className={`px-1.5 py-0.5 rounded-md border font-bold flex items-center gap-1 shadow-2xs ${
+                                <div className="flex flex-wrap items-center gap-1.5 text-[10px] pt-1">
+                                  <span className={`px-2 py-0.5 rounded-md font-bold inline-flex items-center gap-1 ${
                                     task.development?.isBlocked
-                                      ? 'bg-rose-500/15 text-rose-600 border-rose-500/30'
-                                      : DEV_STAGE_TONES[task.development?.stage] || DEV_STAGE_TONES.in_development
+                                      ? 'bg-primary text-primary-foreground '
+                                      : 'bg-secondary text-foreground '
                                   }`}>
-                                    <Code2 size={10} />
+                                    <Code2 size={11} />
                                     <span>Dev: {task.development?.isBlocked ? 'Blocked' : (DEV_STAGE_SHORT_LABELS[task.development?.stage] || 'In Dev')}</span>
                                   </span>
-
-                                  {task.development?.reviewer && (() => {
-                                    const name = task.development.reviewer.name || 'Reviewer';
-                                    const c = getPersonColor(name);
-                                    return (
-                                      <span className={`px-1.5 py-0.5 rounded-md border font-semibold flex items-center gap-1 shadow-2xs ${c.bg} ${c.text} ${c.border}`}>
-                                        🔍 Review: <span className="font-bold">{name}</span>
-                                      </span>
-                                    );
-                                  })()}
-
-                                  {task.development?.tester && (() => {
-                                    const name = task.development.tester.name || 'Tester';
-                                    const c = getPersonColor(name);
-                                    return (
-                                      <span className={`px-1.5 py-0.5 rounded-md border font-semibold flex items-center gap-1 shadow-2xs ${c.bg} ${c.text} ${c.border}`}>
-                                        🛡️ QA: <span className="font-bold">{name}</span>
-                                      </span>
-                                    );
-                                  })()}
-
-                                  {task.development?.branch && (
-                                    <span className="px-1.5 py-0.5 rounded-md bg-secondary text-muted-foreground border border-border font-mono text-[8px] truncate max-w-[100px]">
-                                      🌿 {task.development.branch}
+                                  {task.development?.reviewer && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-semibold bg-secondary text-foreground ">
+                                      <Search size={10} />
+                                      <span>Review: {task.development.reviewer.name || 'Reviewer'}</span>
+                                    </span>
+                                  )}
+                                  {task.development?.tester && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-semibold bg-secondary text-foreground ">
+                                      <ShieldCheck size={10} />
+                                      <span>QA: {task.development.tester.name || 'Tester'}</span>
                                     </span>
                                   )}
                                 </div>
                               )}
-
-                              <div className="flex items-center justify-between pt-2 border-t border-border/50 text-[10px]">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  {task.createdAt && (
-                                    <span className="flex items-center gap-1 text-muted-foreground">
-                                      <Calendar size={10} className="text-primary/70 shrink-0" />
-                                      <span>Created {new Date(task.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                                    </span>
-                                  )}
-                                  {(() => {
-                                    const overdue = isTaskOverdue(task);
-                                    return (
-                                      <span className={`flex items-center gap-1 font-medium ${overdue ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-muted-foreground'}`}>
-                                        {overdue && <AlertTriangle size={11} className="shrink-0 text-rose-500 dark:text-rose-400" />}
-                                        <span>
-                                          {task.dueDate ? `• ${overdue ? 'Overdue: ' : 'Due '}${new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}
-                                        </span>
-                                      </span>
-                                    );
-                                  })()}
-                                </div>
-                                <span className="group-hover:text-primary font-semibold flex items-center gap-0.5 text-muted-foreground shrink-0">
-                                  Open <ArrowRight size={10} />
-                                </span>
-                              </div>
                             </div>
-                          </React.Fragment>
-                        );
-                      })}
+                          );
+                        })()}
 
-                      {/* Drop indicator at the bottom of the column */}
-                      {isColActive && dragOverTaskIndex >= columnTasks.length && (
-                        <div className="h-1.5 rounded-full bg-primary/70 animate-pulse my-1 shadow-xs" />
-                      )}
+                        {/* Status Select & Due Date */}
+                        <div className="flex items-center justify-between pt-2 gap-2">
+                          <div onClick={(e) => e.stopPropagation()} className="w-32">
+                            <SelectDropdown
+                              value={task.status}
+                              onChange={(val) => val && updateStatusMutation.mutate({ id: task._id, status: val })}
+                              options={(isEmployee ? TEAM_STATUS_OPTIONS : TASK_STATUS_OPTIONS).map((opt) => ({
+                                value: opt,
+                                label: opt,
+                              }))}
+                              allowCustom={false}
+                              allowDeselect={false}
+                              className="w-32 text-xs"
+                              buttonClassName="h-7.5 px-2.5 py-0.5 text-xs font-bold rounded-xl bg-background border border-border/40"
+                            />
+                          </div>
 
-                      {columnTasks.length === 0 && (
-                        <div className={`py-12 text-center text-xs border border-dashed rounded-xl transition-all ${
-                          isColActive ? 'border-primary bg-primary/10 text-primary font-semibold' : 'text-muted-foreground/60 border-border/70'
-                        }`}>
-                          {isColActive
-                            ? `Drop here to move to ${column.label}`
-                            : quickFilter === 'overdue'
-                            ? `No overdue tasks in ${column.label}`
-                            : quickFilter !== 'all'
-                            ? `No matching tasks in ${column.label}`
-                            : `No ${column.label} tasks`}
+                          <div className="flex items-center gap-2 flex-wrap tabular-nums">
+                            {task.createdAt && (
+                              <div className="text-[11px] inline-flex items-center gap-1 text-muted-foreground">
+                                <Calendar size={11} className="text-muted-foreground shrink-0" />
+                                <span>Created {new Date(task.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                              </div>
+                            )}
+                            {(() => {
+                              const overdue = isTaskOverdue(task);
+                              return (
+                                <div className={`text-[11px] inline-flex items-center gap-1 font-medium ${overdue ? 'text-foreground font-bold' : 'text-muted-foreground'}`}>
+                                  {overdue ? <AlertTriangle size={12} className="text-foreground shrink-0" /> : <Clock size={12} className="text-muted-foreground shrink-0" />}
+                                  <span>{task.dueDate ? `${overdue ? 'Overdue: ' : 'Due '}${new Date(task.dueDate).toLocaleDateString()}` : 'No deadline'}</span>
+                                </div>
+                              );
+                            })()}
+                          </div>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
+        )}
+
+        {/* Board View (Modern 7-Stage Kanban Workflow Pipeline) */}
+        {(currentView === 'board' || currentView === 'kanban') && (
+          <div className="space-y-3.5 w-full">
+            <TasksKanbanPipeline
+              tasks={displayedTasks}
+              onSelectTask={handleOpenWorkflowDrawer}
+              onOpenCreateGeneral={handleOpenCreateGeneral}
+              canCreate={canCreate}
+              canDelete={canDelete}
+              onDeleteTask={(task) => setDeleteTaskId(task._id)}
+            />
           </div>
         )}
       </DatabaseView>
       </div>
-
-      <AddTaskModal
-        open={showAddModal}
-        onOpenChange={setShowAddModal}
-      />
 
       <TaskDetailModal
         open={showTaskDetail}
@@ -1368,11 +1740,40 @@ const Tasks = () => {
         taskId={selectedTaskId}
       />
 
+      {/* Dynamic Kanban Task Creator */}
+      {showKanbanCreateModal && (
+        <KanbanCreateTaskModal
+          isOpen={showKanbanCreateModal}
+          onClose={() => {
+            setShowKanbanCreateModal(false);
+            setPreSelectedEmployee(null);
+            setCreateTaskInitialValues(null);
+          }}
+          initialUser={preSelectedEmployee}
+          initialValues={createTaskInitialValues}
+          onTaskCreated={refetch}
+        />
+      )}
+
+      {/* Interactive Workflow Drawer with live checklists and task notes */}
+      <TaskWorkflowDrawer
+        task={activeWorkflowTask}
+        isOpen={showWorkflowDrawer && !!activeWorkflowTask}
+        onClose={() => {
+          setShowWorkflowDrawer(false);
+          setWorkflowTaskId(null);
+        }}
+        onOpenTaskDetail={(taskId) => {
+          setShowWorkflowDrawer(false);
+          openTaskDetail(taskId);
+        }}
+      />
+
       <AlertDialog open={!!deleteTaskId} onOpenChange={(open) => !open && setDeleteTaskId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Task</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle>Delete Task?</AlertDialogTitle>
+            <AlertDialogDescription className="sr-only">
               Are you sure you want to delete this task? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

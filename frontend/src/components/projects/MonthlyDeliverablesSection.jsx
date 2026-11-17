@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Target, Video, Film, Image, BookOpen, Layers, Sparkles, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Target, Video, Film, Image, BookOpen, Layers, Sparkles, AlertCircle } from '@/components/ui/muiIcons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export const STANDARD_DELIVERABLE_TYPES = [
-  { value: 'Video', label: '🎬 Video', icon: Video },
-  { value: 'Reel', label: '📱 Reel / Short', icon: Film },
-  { value: 'Poster', label: '🖼️ Poster / Static Post', icon: Image },
-  { value: 'Story', label: '📖 Story', icon: BookOpen },
-  { value: 'Carousel Post', label: '📑 Carousel Post', icon: Layers },
-  { value: 'Social Media Post', label: '🌐 Social Media Post', icon: Sparkles },
-  { value: 'Blog', label: '✍️ Blog Article', icon: BookOpen },
-  { value: 'Ad Creative', label: '🎯 Ad Creative', icon: Target },
+  { value: 'Video', label: 'Video', icon: Video },
+  { value: 'Reel', label: 'Reel / Short', icon: Film },
+  { value: 'Poster', label: 'Poster / Static Post', icon: Image },
+  { value: 'Story', label: 'Story', icon: BookOpen },
+  { value: 'Carousel Post', label: 'Carousel Post', icon: Layers },
+  { value: 'Social Media Post', label: 'Social Media Post', icon: Sparkles },
+  { value: 'Blog', label: 'Blog Article', icon: BookOpen },
+  { value: 'Ad Creative', label: 'Ad Creative', icon: Target },
 ];
 
 export const MONTH_NAMES = [
@@ -31,7 +31,7 @@ export const MonthlyDeliverablesSection = ({
 }) => {
   const [selectedType, setSelectedType] = useState('Video');
   const [customType, setCustomType] = useState('');
-  const [targetQty, setTargetQty] = useState('8');
+  const [targetQty, setTargetQty] = useState('');
   const [error, setError] = useState('');
 
   const currentYear = new Date().getFullYear();
@@ -53,7 +53,7 @@ export const MonthlyDeliverablesSection = ({
 
     // Check duplicate
     const isDuplicate = deliverables.some(
-      (d) => d.contentType.trim().toLowerCase() === typeToAdd.toLowerCase()
+      (d) => (d.contentType || d.type || '').trim().toLowerCase() === typeToAdd.toLowerCase()
     );
 
     if (isDuplicate) {
@@ -87,9 +87,9 @@ export const MonthlyDeliverablesSection = ({
   };
 
   return (
-    <div className="space-y-4 rounded-2xl border border-border/80 bg-secondary/15 p-4 sm:p-5 transition-all">
+    <div className="space-y-4 rounded-2xl bg-secondary/15 p-4 sm:p-5 transition-all">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Target size={18} />
@@ -142,7 +142,7 @@ export const MonthlyDeliverablesSection = ({
 
       {/* Add New Target Row */}
       {!readOnly && (
-        <div className="space-y-2 rounded-xl border border-dashed border-border bg-card/60 p-3">
+        <div className="space-y-2 rounded-xl bg-card/60 p-3">
           <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Add Deliverable Target</div>
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
             <div className="sm:col-span-5 space-y-1">
@@ -158,7 +158,7 @@ export const MonthlyDeliverablesSection = ({
                     </SelectItem>
                   ))}
                   <SelectItem value="Custom" className="text-xs font-medium">
-                    ✨ Custom Deliverable...
+                    Custom Deliverable...
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -193,7 +193,7 @@ export const MonthlyDeliverablesSection = ({
                 type="button"
                 onClick={handleAdd}
                 size="sm"
-                className="h-9 w-full rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90"
+                className="h-9 w-full rounded-xl bg-primary text-xs font-bold text-primary-foreground hover:bg-primary/90"
               >
                 <Plus size={14} className="mr-1.5" /> Add Target
               </Button>
@@ -212,21 +212,22 @@ export const MonthlyDeliverablesSection = ({
       {/* Targets List */}
       <div className="space-y-2">
         {deliverables.length === 0 ? (
-          <div className="py-5 text-center text-xs text-muted-foreground border border-dashed border-border/60 rounded-xl">
+          <div className="py-5 text-center text-xs text-muted-foreground rounded-xl">
             No monthly deliverables configured yet for {MONTH_NAMES[(month || 1) - 1]} {year || currentYear}.
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {deliverables.map((item, index) => {
+              const itemTypeStr = (item.contentType || item.deliverableType || item.type || '').toLowerCase();
               const matchedType = STANDARD_DELIVERABLE_TYPES.find(
-                (t) => t.value.toLowerCase() === item.contentType.toLowerCase()
+                (t) => (t.value || '').toLowerCase() === itemTypeStr
               );
               const IconComponent = matchedType?.icon || Target;
 
               return (
                 <div
                   key={`${item.contentType}-${index}`}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-border/80 bg-card p-3 shadow-xs transition-all hover:border-border"
+                  className="flex items-center justify-between gap-3 rounded-xl bg-card p-3 transition-all "
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary/80 text-foreground font-semibold text-xs">
@@ -244,7 +245,7 @@ export const MonthlyDeliverablesSection = ({
                         <Input
                           type="number"
                           min="1"
-                          className="h-7 w-16 text-center text-xs font-bold rounded-lg"
+                          className="h-7 w-16 text-center text-xs font-bold rounded-lg tabular-nums"
                           value={item.targetQuantity}
                           onChange={(e) => handleQtyChange(index, e.target.value)}
                         />
@@ -258,7 +259,7 @@ export const MonthlyDeliverablesSection = ({
                         </button>
                       </div>
                     ) : (
-                      <span className="rounded-lg bg-secondary px-2 py-1 text-xs font-extrabold text-foreground">
+                      <span className="rounded-lg bg-secondary px-2 py-1 text-xs font-extrabold text-foreground tabular-nums">
                         {item.targetQuantity}
                       </span>
                     )}

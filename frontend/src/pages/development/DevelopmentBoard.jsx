@@ -1,10 +1,21 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../api';
 import { devApi } from '../../api/development';
 import { DevelopmentSubNav } from '../../components/development/DevelopmentSubNav';
 import { PageHeader } from '../../components/ui/page';
+import { SelectDropdown } from '../../components/ui/SelectDropdown';
+import { useDateFilter } from '../../context/DateFilterContext';
 import { TaskDetailModal } from '../../components/ui/TaskDetailModal';
-import { AddTaskModal } from '../../components/modals/AddTaskModal';
+import { CreateDevTaskModal } from '../../components/development/CreateDevTaskModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from '../../components/ui/dialog';
 import {
   Kanban,
   Search,
@@ -28,44 +39,54 @@ import {
   GripVertical,
   Zap,
   X,
-} from 'lucide-react';
-import { toast } from 'react-hot-toast';
+} from '@/components/ui/muiIcons';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 const PIPELINE_COLUMNS = [
-  { id: 'backlog', title: 'Backlog', color: 'border-slate-500/30 bg-slate-500/5' },
-  { id: 'analysis', title: 'Analysis', color: 'border-blue-500/30 bg-blue-500/5' },
-  { id: 'ready_for_dev', title: 'Ready for Dev', color: 'border-indigo-500/30 bg-indigo-500/5' },
-  { id: 'in_development', title: 'In Development', color: 'border-amber-500/30 bg-amber-500/5' },
-  { id: 'code_review', title: 'Code Review', color: 'border-purple-500/30 bg-purple-500/5' },
-  { id: 'qa_testing', title: 'QA / Testing', color: 'border-cyan-500/30 bg-cyan-500/5' },
-  { id: 'client_uat', title: 'Client / UAT', color: 'border-teal-500/30 bg-teal-500/5' },
-  { id: 'approved', title: 'Approved', color: 'border-emerald-500/30 bg-emerald-500/5' },
-  { id: 'deployment', title: 'Deployment', color: 'border-sky-500/30 bg-sky-500/5' },
-  { id: 'live', title: 'Live', color: 'border-green-500/30 bg-green-500/5' },
-  { id: 'closed', title: 'Closed', color: 'border-gray-500/30 bg-gray-500/5' },
+  { id: 'backlog', title: 'Backlog', color: ' bg-secondary/20' },
+  { id: 'analysis', title: 'Analysis', color: ' bg-secondary/30' },
+  { id: 'ready_for_dev', title: 'Ready for Dev', color: ' bg-secondary/35' },
+  { id: 'in_development', title: 'In Development', color: ' bg-secondary/50' },
+  { id: 'code_review', title: 'Code Review', color: ' bg-secondary/40' },
+  { id: 'qa_testing', title: 'QA / Testing', color: ' bg-secondary/40' },
+  { id: 'client_uat', title: 'Client / UAT', color: ' bg-secondary/35' },
+  { id: 'approved', title: 'Approved', color: ' bg-secondary/45' },
+  { id: 'deployment', title: 'Deployment', color: ' bg-secondary/35' },
+  { id: 'live', title: 'Live', color: ' bg-secondary/50' },
+  { id: 'closed', title: 'Closed', color: ' bg-muted/40' },
 ];
 
 const PRIORITY_BADGES = {
-  urgent: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/20',
-  high: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20',
-  medium: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/20',
-  low: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/20',
+  urgent: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-bold',
+  high: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold',
+  medium: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30 font-semibold',
+  low: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-semibold',
 };
 
 export default function DevelopmentBoard() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlProjectId = searchParams.get('project') || searchParams.get('projectId') || '';
+
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sprints, setSprints] = useState([]);
 
   // Filters
   const [filterSprint, setFilterSprint] = useState('');
-  const [filterProject, setFilterProject] = useState('');
+  const [filterProject, setFilterProject] = useState(urlProjectId);
   const [filterDeveloper, setFilterDeveloper] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
   const [filterBlockedOnly, setFilterBlockedOnly] = useState(false);
   const [filterBugOnly, setFilterBugOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const { isDateInRange, isFiltered: isGlobalDateFiltered, resetDateFilter } = useDateFilter();
+
+  useEffect(() => {
+    if (urlProjectId && urlProjectId !== filterProject) {
+      setFilterProject(urlProjectId);
+    }
+  }, [urlProjectId]);
 
   // Sprints, Projects, Developers lists
   const [projectsList, setProjectsList] = useState([]);
@@ -226,14 +247,18 @@ export default function DevelopmentBoard() {
     return Array.from(map.values());
   }, [sprints, discoveredSprints]);
 
-  // Filter tasks by priority locally if selected
+  // Filter tasks by priority and global date filter locally
   const displayedTasks = useMemo(() => {
-    if (!filterPriority) return tasks;
-    return tasks.filter((t) => t.priority?.toLowerCase() === filterPriority.toLowerCase());
-  }, [tasks, filterPriority]);
+    return tasks.filter((t) => {
+      if (filterPriority && t.priority?.toLowerCase() !== filterPriority.toLowerCase()) {
+        return false;
+      }
+      return isDateInRange(t.dueDate || t.createdAt);
+    });
+  }, [tasks, filterPriority, isDateInRange]);
 
   const hasActiveFilters = Boolean(
-    filterSprint || filterProject || filterDeveloper || filterPriority || filterBlockedOnly || filterBugOnly || searchQuery.trim()
+    filterSprint || filterProject || filterDeveloper || filterPriority || filterBlockedOnly || filterBugOnly || searchQuery.trim() || isGlobalDateFiltered
   );
 
   const clearAllFilters = () => {
@@ -244,6 +269,13 @@ export default function DevelopmentBoard() {
     setFilterBlockedOnly(false);
     setFilterBugOnly(false);
     setSearchQuery('');
+    if (isGlobalDateFiltered) resetDateFilter();
+    if (urlProjectId) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('project');
+      next.delete('projectId');
+      setSearchParams(next, { replace: true });
+    }
   };
 
   // Handle stage transition (with optimistic UI update)
@@ -332,28 +364,27 @@ export default function DevelopmentBoard() {
   }, [displayedTasks]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         title="Development Board"
-        subtitle="Track and transition existing CRM tasks across all stages of the development pipeline"
         actions={
           <div className="flex items-center gap-2">
             <button
               onClick={fetchData}
               disabled={loading}
-              className="flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-foreground font-semibold rounded-xl text-xs hover:bg-secondary/80 transition-all shadow-xs"
+              className="flex items-center gap-2 h-9 sm:h-10 px-3 sm:px-3.5 bg-secondary text-foreground font-semibold rounded-xl text-xs hover:bg-secondary/80 transition-all cursor-pointer"
             >
               <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} />
-              Refresh
+              <span>Refresh</span>
             </button>
             {/* ── RULE: Uses existing task creation modal ─────────── */}
             <button
               id="dev-create-task-btn"
               onClick={() => setShowAddTaskModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-bold rounded-xl text-xs shadow-md shadow-primary/25 hover:opacity-95 transition-all"
+              className="flex items-center gap-2 h-9 sm:h-10 px-3.5 sm:px-4 bg-primary text-primary-foreground font-bold rounded-xl text-xs hover:opacity-90 transition-colors cursor-pointer"
             >
               <PlusCircle size={14} />
-              Add Task
+              <span>Add Task</span>
             </button>
           </div>
         }
@@ -362,7 +393,7 @@ export default function DevelopmentBoard() {
       <DevelopmentSubNav />
 
       {/* ── Filter Bar ───────────────────────────────────────────────── */}
-      <div className="bg-card border border-border rounded-2xl p-4 shadow-xs space-y-3">
+      <div className="bg-card rounded-2xl p-3 sm:p-4 space-y-2.5 sm:space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2.5 items-center">
           {/* Search */}
           <div className="relative">
@@ -372,91 +403,75 @@ export default function DevelopmentBoard() {
               placeholder="Search title, branch, PR..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="app-input w-full pl-8 pr-3 text-xs h-9 py-1.5"
+              className="app-input w-full pl-8 pr-3 text-xs h-10"
             />
           </div>
 
           {/* Project Filter */}
-          <div className="relative">
-            <Briefcase size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <select
+          <div>
+            <SelectDropdown
               value={filterProject}
-              onChange={(e) => setFilterProject(e.target.value)}
-              className="app-select w-full pl-8 pr-8 text-xs h-9 py-1.5 font-medium truncate"
-              title="Filter by Project"
-            >
-              <option value="">All Projects ({allProjects.length})</option>
-              {allProjects.map((p) => (
-                <option key={p._id} value={p._id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setFilterProject(val || '')}
+              options={allProjects.map((p) => ({ value: p._id, label: p.name }))}
+              placeholder={`All Projects (${allProjects.length})`}
+              allOptionLabel={`All Projects (${allProjects.length})`}
+              className="w-full text-xs"
+              buttonClassName="h-10 text-xs font-medium bg-background border border-border/50 rounded-xl"
+            />
           </div>
 
           {/* Developer / Assignee Filter */}
-          <div className="relative">
-            <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <select
+          <div>
+            <SelectDropdown
               value={filterDeveloper}
-              onChange={(e) => setFilterDeveloper(e.target.value)}
-              className="app-select w-full pl-8 pr-8 text-xs h-9 py-1.5 font-medium truncate"
-              title="Filter by Developer"
-            >
-              <option value="">All Developers ({allDevelopers.length})</option>
-              {allDevelopers.map((d) => (
-                <option key={d._id} value={d._id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setFilterDeveloper(val || '')}
+              options={allDevelopers.map((d) => ({ value: d._id, label: d.name }))}
+              placeholder={`All Developers (${allDevelopers.length})`}
+              allOptionLabel={`All Developers (${allDevelopers.length})`}
+              className="w-full text-xs"
+              buttonClassName="h-10 text-xs font-medium bg-background border border-border/50 rounded-xl"
+            />
           </div>
 
           {/* Sprint Filter */}
-          <div className="relative">
-            <Zap size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <select
+          <div>
+            <SelectDropdown
               value={filterSprint}
-              onChange={(e) => setFilterSprint(e.target.value)}
-              className="app-select w-full pl-8 pr-8 text-xs h-9 py-1.5 font-medium truncate"
-              title="Filter by Sprint"
-            >
-              <option value="">
-                {allSprints.length === 0 ? 'All Sprints (No active sprints)' : `All Sprints (${allSprints.length})`}
-              </option>
-              {allSprints.map((s) => (
-                <option key={s._id} value={s._id}>
-                  {s.name} {s.status ? `(${s.status})` : ''}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setFilterSprint(val || '')}
+              options={allSprints.map((s) => ({ value: s._id, label: `${s.name}${s.status ? ` (${s.status})` : ''}` }))}
+              placeholder={allSprints.length === 0 ? 'All Sprints (No active sprints)' : `All Sprints (${allSprints.length})`}
+              allOptionLabel={allSprints.length === 0 ? 'All Sprints (No active sprints)' : `All Sprints (${allSprints.length})`}
+              className="w-full text-xs"
+              buttonClassName="h-10 text-xs font-medium bg-background border border-border/50 rounded-xl"
+            />
           </div>
 
           {/* Priority Filter */}
-          <div className="relative">
-            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <select
+          <div>
+            <SelectDropdown
               value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value)}
-              className="app-select w-full pl-8 pr-8 text-xs h-9 py-1.5 font-medium truncate"
-              title="Filter by Priority"
-            >
-              <option value="">All Priorities</option>
-              <option value="urgent">🔴 Urgent</option>
-              <option value="high">🟠 High</option>
-              <option value="medium">🔵 Medium</option>
-              <option value="low">⚪ Low</option>
-            </select>
+              onChange={(val) => setFilterPriority(val || '')}
+              options={[
+                { value: 'urgent', label: 'Urgent' },
+                { value: 'high', label: 'High' },
+                { value: 'medium', label: 'Medium' },
+                { value: 'low', label: 'Low' },
+              ]}
+              placeholder="All Priorities"
+              allOptionLabel="All Priorities"
+              className="w-full text-xs"
+              buttonClassName="h-10 text-xs font-medium bg-background border border-border/50 rounded-xl"
+            />
           </div>
 
           {/* Toggles & Reset */}
           <div className="flex items-center gap-1.5">
             {/* Blocked Only Toggle */}
             <label
-              className={`flex-1 flex items-center justify-center gap-1.5 cursor-pointer text-xs font-bold select-none h-9 px-2 rounded-xl border transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 cursor-pointer text-xs font-bold select-none h-10 px-2 rounded-xl transition-all ${
                 filterBlockedOnly
-                  ? 'bg-rose-500/15 border-rose-500/40 text-rose-600 dark:text-rose-400 shadow-xs'
-                  : 'bg-secondary/40 border-border text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground '
+                  : 'bg-secondary/40 text-muted-foreground hover:text-foreground'
               }`}
               title="Show only blocked tasks"
             >
@@ -466,16 +481,16 @@ export default function DevelopmentBoard() {
                 onChange={(e) => setFilterBlockedOnly(e.target.checked)}
                 className="sr-only"
               />
-              <ShieldAlert size={13} className={filterBlockedOnly ? 'text-rose-600 dark:text-rose-400' : ''} />
+              <ShieldAlert size={13} />
               <span className="text-[11px]">Blocked</span>
             </label>
 
             {/* Bug Only Toggle */}
             <label
-              className={`flex-1 flex items-center justify-center gap-1.5 cursor-pointer text-xs font-bold select-none h-9 px-2 rounded-xl border transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 cursor-pointer text-xs font-bold select-none h-10 px-2 rounded-xl transition-all ${
                 filterBugOnly
-                  ? 'bg-purple-500/15 border-purple-500/40 text-purple-600 dark:text-purple-400 shadow-xs'
-                  : 'bg-secondary/40 border-border text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground '
+                  : 'bg-secondary/40 text-muted-foreground hover:text-foreground'
               }`}
               title="Show only bug tasks"
             >
@@ -485,7 +500,7 @@ export default function DevelopmentBoard() {
                 onChange={(e) => setFilterBugOnly(e.target.checked)}
                 className="sr-only"
               />
-              <Bug size={13} className={filterBugOnly ? 'text-purple-600 dark:text-purple-400' : ''} />
+              <Bug size={13} />
               <span className="text-[11px]">Bugs</span>
             </label>
 
@@ -494,7 +509,7 @@ export default function DevelopmentBoard() {
               <button
                 type="button"
                 onClick={clearAllFilters}
-                className="flex items-center justify-center gap-1 h-9 px-2.5 text-[11px] font-bold text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-colors border border-border shrink-0"
+                className="flex items-center justify-center gap-1 h-10 px-2.5 text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary rounded-xl transition-colors shrink-0 cursor-pointer"
                 title="Reset all filters"
               >
                 <X size={12} />
@@ -506,7 +521,7 @@ export default function DevelopmentBoard() {
       </div>
 
       {/* ── Kanban Columns Horizon ───────────────────────────────────── */}
-      <div className="overflow-x-auto pb-4 custom-scrollbar">
+      <div className="responsive-table-container overflow-x-auto pb-4 custom-scrollbar">
         <div className="flex items-start gap-3 min-w-[2800px] pt-1">
           {PIPELINE_COLUMNS.map((column) => {
             const colTasks = groupedTasks[column.id] || [];
@@ -543,19 +558,19 @@ export default function DevelopmentBoard() {
                   setDraggingTaskId(null);
                   setDragOverColId(null);
                 }}
-                className={`w-[260px] rounded-2xl border p-3 flex flex-col shrink-0 h-[calc(100vh-270px)] min-h-[480px] max-h-[750px] transition-all duration-150 ${
+                className={`w-[260px] rounded-2xl p-3 flex flex-col shrink-0 h-[calc(100vh-270px)] min-h-[480px] max-h-[750px] transition-all duration-150 ${
                   isColumnDraggedOver
-                    ? 'ring-2 ring-primary ring-offset-2 bg-primary/10 border-primary shadow-lg scale-[1.01]'
+                    ? 'ring-2 ring-primary ring-offset-2 bg-primary/10 shadow-lg scale-[1.01]'
                     : column.color
                 }`}
               >
                 {/* Column Header */}
-                <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-border shrink-0">
+                <div className="flex items-center justify-between pb-2.5 mb-2.5 shrink-0">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-foreground text-xs uppercase tracking-wider">
                       {column.title}
                     </span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-card border border-border text-foreground font-mono">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-card text-foreground font-mono">
                       {colTasks.length}
                     </span>
                   </div>
@@ -581,10 +596,10 @@ export default function DevelopmentBoard() {
                   }}
                 >
                   {colTasks.length === 0 ? (
-                    <div className={`flex-1 flex items-center justify-center py-8 text-center text-[11px] italic border-2 border-dashed rounded-xl m-1 transition-all ${
+                    <div className={`flex-1 flex items-center justify-center py-8 text-center text-[11px] italic rounded-xl m-1 transition-all ${
                       isColumnDraggedOver
-                        ? 'border-primary/60 bg-primary/5 text-primary font-semibold'
-                        : 'border-border/40 text-muted-foreground/50'
+                        ? ' bg-primary/5 text-primary font-semibold'
+                        : ' text-muted-foreground/50'
                     }`}>
                       {isColumnDraggedOver ? 'Drop here to move' : 'No tasks in this stage'}
                     </div>
@@ -612,12 +627,12 @@ export default function DevelopmentBoard() {
                             setDraggingTaskId(null);
                             setDragOverColId(null);
                           }}
-                          className={`p-3 bg-card border rounded-xl shadow-xs space-y-2 hover:shadow-md transition-all group relative cursor-grab active:cursor-grabbing select-none ${
+                          className={`p-3 bg-card rounded-xl space-y-2 transition-all group relative cursor-grab active:cursor-grabbing select-none ${
                             isCardBeingDragged
-                              ? 'opacity-40 scale-95 border-dashed border-primary ring-2 ring-primary/40'
+                              ? 'opacity-40 scale-95 ring-2 ring-ring/40'
                               : isBlocked
-                              ? 'border-rose-500/50 bg-rose-500/5'
-                              : 'border-border hover:border-primary/40'
+                              ? ' bg-secondary/50'
+                              : ' '
                           }`}
                           onClick={() => {
                             if (isDraggingRef.current) return;
@@ -627,7 +642,7 @@ export default function DevelopmentBoard() {
                         >
                           {/* Blocked Alert Banner */}
                           {isBlocked && (
-                            <div className="px-2 py-1 rounded-md bg-rose-500/15 border border-rose-500/30 text-[10px] font-bold text-rose-600 dark:text-rose-400 flex items-center justify-between">
+                            <div className="px-2 py-1 rounded-md bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-between">
                               <span className="flex items-center gap-1">
                                 <ShieldAlert size={11} /> BLOCKED
                               </span>
@@ -644,12 +659,12 @@ export default function DevelopmentBoard() {
                             </span>
                             <div className="flex items-center gap-1">
                               {dev.isBug && (
-                                <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold flex items-center gap-0.5">
+                                <span className="px-1.5 py-0.5 rounded bg-secondary text-foreground text-[10px] font-bold flex items-center gap-0.5">
                                   <Bug size={9} /> Bug
                                 </span>
                               )}
                               <span
-                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                                   PRIORITY_BADGES[task.priority?.toLowerCase()] || PRIORITY_BADGES.medium
                                 }`}
                               >
@@ -660,7 +675,7 @@ export default function DevelopmentBoard() {
                           </div>
 
                           {/* Title */}
-                          <h4 className="font-bold text-foreground text-xs leading-snug line-clamp-2 hover:text-primary transition-colors">
+                          <h4 className="font-bold text-foreground text-xs leading-snug line-clamp-2 group-hover:underline">
                             {task.title}
                           </h4>
 
@@ -669,11 +684,11 @@ export default function DevelopmentBoard() {
                             <div className="flex items-center gap-1 flex-wrap pt-0.5">
                               {dev.branch && (
                                 <span className="text-[9px] font-mono px-1.5 py-0.5 bg-secondary text-muted-foreground rounded truncate max-w-[110px]">
-                                  🌿 {dev.branch}
+                                  {dev.branch}
                                 </span>
                               )}
                               {(dev.pullRequestNumber || dev.pullRequestUrl) && (
-                                <span className="text-[9px] font-mono px-1.5 py-0.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded flex items-center gap-0.5">
+                                <span className="text-[9px] font-mono px-1.5 py-0.5 bg-secondary text-foreground rounded flex items-center gap-0.5">
                                   <GitPullRequest size={9} /> #{dev.pullRequestNumber || 'PR'}
                                 </span>
                               )}
@@ -682,7 +697,7 @@ export default function DevelopmentBoard() {
 
                           {/* Card Footer: Assignee & Stage Move Dropdown */}
                           <div
-                            className="flex items-center justify-between gap-1 pt-1.5 border-t border-border text-[10px]"
+                            className="flex items-center justify-between gap-1 pt-1.5 text-[10px]"
                             onClick={(e) => e.stopPropagation()}
                             onMouseDown={(e) => e.stopPropagation()}
                           >
@@ -697,20 +712,16 @@ export default function DevelopmentBoard() {
                             </div>
 
                             {/* Quick Stage Move Dropdown */}
-                            <div className="relative shrink-0 max-w-[115px]">
-                              <select
+                            <div className="shrink-0 w-28">
+                              <SelectDropdown
                                 value={dev.stage || column.id}
-                                onChange={(e) => handleStageChange(task._id, e.target.value)}
-                                className="w-full appearance-none bg-secondary/80 hover:bg-secondary border border-border text-foreground rounded-lg text-[10px] font-bold py-1 pl-2 pr-5 outline-none cursor-pointer transition-colors truncate focus:border-primary focus:ring-1 focus:ring-primary/20"
-                                title="Move task to stage"
-                              >
-                                {PIPELINE_COLUMNS.map((c) => (
-                                  <option key={c.id} value={c.id} className="bg-card text-foreground font-semibold">
-                                    {c.title}
-                                  </option>
-                                ))}
-                              </select>
-                              <ChevronDown size={11} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                                onChange={(val) => val && handleStageChange(task._id, val)}
+                                options={PIPELINE_COLUMNS.map((c) => ({ value: c.id, label: c.title }))}
+                                allowCustom={false}
+                                allowDeselect={false}
+                                className="w-28 text-[10px]"
+                                buttonClassName="h-6.5 py-0 px-2 text-[10px] font-bold rounded-lg bg-secondary/80 hover:bg-secondary border-none"
+                              />
                             </div>
                           </div>
                         </div>
@@ -724,43 +735,72 @@ export default function DevelopmentBoard() {
         </div>
       </div>
 
-      {/* ── Block Reason Modal ───────────────────────────────────────── */}
-      {blockingTask && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl">
-            <div className="flex items-center gap-2 text-rose-500 font-bold">
-              <ShieldAlert size={18} />
-              <h3>Mark Task as Blocked</h3>
+      {/* ── Block Reason Side Drawer ──────────────────────────────────── */}
+      <Dialog open={!!blockingTask} onOpenChange={(open) => !open && setBlockingTask(null)}>
+        <DialogContent
+          variant="side"
+          size="sm"
+          noPadding
+          hideCloseButton
+          className="flex flex-col min-h-0 p-0 overflow-hidden bg-card "
+        >
+          <DialogHeader className="px-5 py-4 bg-card shrink-0 select-none flex flex-row items-center justify-between gap-3 m-0 space-y-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-foreground">
+                <ShieldAlert size={18} />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="text-base font-bold text-foreground truncate">
+                  Mark Task as Blocked
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                  Document why this task cannot progress
+                </DialogDescription>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Provide a reason why "{blockingTask.title}" is blocked (e.g. Waiting on third-party API keys, design review).
-            </p>
-            <textarea
-              rows={3}
-              placeholder="Enter blocked reason..."
-              value={blockedReasonInput}
-              onChange={(e) => setBlockedReasonInput(e.target.value)}
-              className="w-full p-2.5 bg-background border border-border rounded-xl text-xs outline-none focus:border-rose-500"
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setBlockingTask(null)}
-                className="app-button-secondary text-xs"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmBlock}
-                className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 shadow-md shadow-rose-600/20"
-              >
-                Confirm Block
-              </button>
+            <DialogClose
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all cursor-pointer shrink-0"
+            >
+              <X size={16} />
+              <span className="sr-only">Close</span>
+            </DialogClose>
+          </DialogHeader>
+
+          <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4 custom-scrollbar">
+            {blockingTask?.title && (
+              <p className="text-sm font-semibold text-foreground">{blockingTask.title}</p>
+            )}
+            <div>
+              <label className="text-xs font-semibold text-foreground block mb-1.5">Blocked Reason</label>
+              <textarea
+                rows={4}
+                placeholder="Enter blocked reason..."
+                value={blockedReasonInput}
+                onChange={(e) => setBlockedReasonInput(e.target.value)}
+                className="w-full p-3 bg-background rounded-xl text-xs text-foreground outline-none focus:ring-2 focus:ring-brand/40 "
+              />
             </div>
           </div>
-        </div>
-      )}
+
+          <div className="shrink-0 bg-card px-5 py-4 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setBlockingTask(null)}
+              className="app-button-secondary text-xs min-h-[38px] px-4"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmBlock}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:bg-primary/90 min-h-[38px] cursor-pointer"
+            >
+              Confirm Block
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Existing Task Detail Modal (Reused directly) ─────────────── */}
       {selectedTaskId && (
@@ -777,16 +817,19 @@ export default function DevelopmentBoard() {
         />
       )}
 
-      {/* ── Existing Task Creation Modal (Reused directly) ───────────── */}
+      {/* ── Task Creation Modal ───────────── */}
       {showAddTaskModal && (
-        <AddTaskModal
-          open={showAddTaskModal}
-          onOpenChange={(isOpen) => {
-            setShowAddTaskModal(isOpen);
-            if (!isOpen) {
-              fetchData();
-            }
+        <CreateDevTaskModal
+          isOpen={showAddTaskModal}
+          onClose={() => {
+            setShowAddTaskModal(false);
+            fetchData();
           }}
+          onTaskCreated={() => {
+            fetchData();
+          }}
+          defaultProject={filterProject}
+          defaultSprint={filterSprint}
         />
       )}
     </div>

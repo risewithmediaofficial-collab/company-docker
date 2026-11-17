@@ -1,9 +1,14 @@
 import { Outlet, useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import axios from 'axios';
-import { Building2 } from 'lucide-react';
+import { Sun, Moon, Building2 } from '@/components/ui/muiIcons';
+import { toggleDarkMode } from '../store/slices/uiSlice';
+import MobileAppInstallButton from '../components/ui/MobileAppInstallButton';
 
 const AuthLayout = () => {
+  const dispatch = useDispatch();
+  const darkMode = useSelector((state) => state.ui?.darkMode);
   const { companySlug } = useParams();
   const [portalOrg, setPortalOrg] = useState(null);
   const [portalLoading, setPortalLoading] = useState(Boolean(companySlug));
@@ -37,15 +42,25 @@ const AuthLayout = () => {
   }, [companySlug]);
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background relative overflow-hidden">
-      {/* Background Decorative Elements */}
-      <div className="absolute top-0 -left-4 w-48 sm:w-72 h-48 sm:h-72 bg-primary/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
-      <div className="absolute top-0 -right-4 w-48 sm:w-72 h-48 sm:h-72 bg-blue-400/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
-      <div className="absolute -bottom-8 left-20 w-48 sm:w-72 h-48 sm:h-72 bg-indigo-400/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
+    <div className="min-h-[100dvh] w-full flex items-center justify-center bg-background relative overflow-x-hidden p-3 sm:p-6 py-10 sm:py-12 transition-colors duration-300">
+      {/* Floating Theme Toggle (Top Right) */}
+      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
+        <button
+          type="button"
+          onClick={() => dispatch(toggleDarkMode())}
+          className="min-h-[40px] px-3 py-2 rounded-xl bg-card text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
+          title={darkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+          aria-label="Toggle dark mode"
+        >
+          {darkMode ? <Sun size={16} className="text-zinc-200" /> : <Moon size={16} className="text-zinc-700" />}
+          <span className="hidden sm:inline">{darkMode ? 'Light' : 'Dark'}</span>
+        </button>
+      </div>
 
-      <div className="w-full max-w-md p-6 sm:p-8 glass rounded-2xl shadow-2xl relative z-10 mx-4">
-        <div className="flex flex-col items-center mb-6">
-          <div className="mb-3 flex h-16 sm:h-20 w-16 sm:w-20 items-center justify-center rounded-2xl bg-white p-2 shadow-lg shadow-primary/20 overflow-hidden border border-border/80">
+      {/* Auth Card Container */}
+      <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-card relative z-10 transition-colors shadow-2xl">
+        <div className="flex flex-col items-center mb-8">
+          <div className="mb-4 flex h-16 sm:h-20 w-16 sm:w-20 items-center justify-center rounded-2xl bg-brand/10 ring-1 ring-brand/25 shadow-[0_8px_24px_-8px_hsl(var(--brand)/0.45)] p-2.5 transition-colors overflow-hidden">
             {portalOrg?.logo ? (
               <img
                 src={portalOrg.logo}
@@ -80,17 +95,19 @@ const AuthLayout = () => {
             </>
           ) : (
             <>
-              <h1 className="text-center text-xl sm:text-2xl font-bold tracking-tight">RISE WITH MEDIA</h1>
-              <p className="text-muted-foreground text-xs sm:text-sm">Welcome back to your workspace</p>
+              <h1 className="text-center text-xl sm:text-2xl font-black tracking-tight text-foreground">RISE WITH MEDIA</h1>
+              <p className="text-center text-muted-foreground text-xs sm:text-sm mt-1">Welcome back to your workspace</p>
             </>
           )}
         </div>
 
         <Outlet context={{ portalOrg, companySlug, portalLoading }} />
       </div>
+
+      {/* Floating PWA Download / Install App Button (Mobile Only) */}
+      <MobileAppInstallButton />
     </div>
   );
 };
 
 export default AuthLayout;
-

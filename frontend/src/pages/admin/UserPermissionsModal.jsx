@@ -5,8 +5,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogClose,
 } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
+import { ShieldCheck, X, Building2, Lock } from '@/components/ui/muiIcons';
 import api from '../../api';
 import { toast } from 'sonner';
 
@@ -68,63 +70,107 @@ export default function UserPermissionsModal({ user, onClose, onSave }) {
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent size="lg">
-        <DialogHeader>
-          <DialogTitle>Access Control & Permissions</DialogTitle>
-          <DialogDescription>
-            Configure granular role permissions and assigned workspaces for {user?.name}
-          </DialogDescription>
+      <DialogContent size="lg" noPadding hideCloseButton className="flex flex-col min-h-0 p-0 overflow-hidden bg-card w-[calc(100vw-24px)] max-w-2xl max-h-[90dvh]">
+        <DialogHeader className="px-6 py-4 sm:py-5 bg-card shrink-0 select-none flex flex-row items-center justify-between gap-4 m-0 space-y-0">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-foreground shrink-0 ">
+              <ShieldCheck size={20} />
+            </div>
+            <div className="min-w-0">
+              <DialogTitle className="text-lg sm:text-xl font-bold text-foreground leading-tight truncate">
+                Permissions — {user?.name || 'User'}
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                Role permissions
+              </DialogDescription>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <kbd className="hidden sm:inline-flex items-center justify-center h-6 px-2 rounded-md bg-secondary text-[10px] font-mono font-medium text-muted-foreground select-none">
+              ESC
+            </kbd>
+            <DialogClose className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-all active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20">
+              <X size={16} className="stroke-[2.5]" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-6 text-xs">
+        {/* Scrollable Form Body - Google Form Linear Stack */}
+        <div className="space-y-6 p-6 sm:p-7 overflow-y-auto flex-1 min-h-0 custom-scrollbar overscroll-contain">
           <div>
-            <h3 className="text-xs font-bold text-foreground mb-3 flex items-center gap-1.5">
-              <span>🔒</span> Granular Permissions
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <label className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Lock size={15} className="text-foreground shrink-0" />
+              <span>Granular Permissions</span>
+            </label>
+            <div className="space-y-2.5">
               {PERMISSIONS.map(p => (
-                <label key={p.key} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-border bg-background hover:bg-secondary/40 cursor-pointer transition-colors">
+                <label key={p.key} className="flex items-center gap-3 p-3.5 rounded-xl bg-background hover:bg-secondary/40 cursor-pointer transition-colors ">
                   <input 
                     type="checkbox" 
                     checked={!!permissions[p.key]} 
                     onChange={() => handleTogglePermission(p.key)}
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+                    className="w-4 h-4 rounded accent-primary focus:ring-primary/20 cursor-pointer shrink-0"
                   />
-                  <span className="text-xs font-medium text-foreground">{p.label}</span>
+                  <span className="text-sm font-medium text-foreground">{p.label}</span>
                 </label>
               ))}
             </div>
           </div>
 
           <div>
-            <h3 className="text-xs font-bold text-foreground mb-3 flex items-center gap-1.5">
-              <span>🏢</span> Assigned Workspaces
-            </h3>
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+            <label className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Building2 size={15} className="text-foreground shrink-0" />
+              <span>Assigned Workspaces</span>
+            </label>
+            <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
               {allBrands.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">No workspaces available.</p>
+                <p className="text-sm text-muted-foreground italic p-3 bg-secondary/40 rounded-xl ">No workspaces available.</p>
               ) : (
                 allBrands.map(brand => (
-                  <label key={brand._id} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-border bg-background hover:bg-secondary/40 cursor-pointer transition-colors">
+                  <label key={brand._id} className="flex items-center gap-3 p-3.5 rounded-xl bg-background hover:bg-secondary/40 cursor-pointer transition-colors ">
                     <input 
                       type="checkbox" 
                       checked={assignedBrands.includes(brand._id)} 
                       onChange={() => handleToggleBrand(brand._id)}
-                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+                      className="w-4 h-4 rounded accent-primary focus:ring-primary/20 cursor-pointer shrink-0"
                     />
-                    <span className="text-xs font-medium flex-1 text-foreground">{brand.name}</span>
-                    <span className="text-[10px] text-muted-foreground px-2 py-0.5 bg-secondary rounded-full border border-border/60">{brand.status}</span>
+                    <span className="text-sm font-medium flex-1 text-foreground">{brand.name}</span>
+                    <span className="text-xs text-muted-foreground px-2.5 py-0.5 bg-secondary rounded-full ">{brand.status}</span>
                   </label>
                 ))
               )}
             </div>
           </div>
+        </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-border">
-            <Button variant="outline" onClick={onClose} disabled={loading} className="rounded-xl text-xs">
+        {/* Pinned Sticky Bottom Action Footer */}
+        <div className="shrink-0 bg-card px-6 py-4 flex items-center justify-between gap-3 z-10 select-none">
+          <span className="text-xs text-muted-foreground hidden sm:inline-flex items-center gap-1.5">
+            <span>Press</span>
+            <kbd className="px-1.5 py-0.5 rounded-md bg-secondary text-[10px] font-mono font-medium text-foreground">
+              ESC
+            </kbd>
+            <span>to close</span>
+          </span>
+
+          <div className="flex items-center gap-3 ml-auto">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+              disabled={loading}
+              className="h-11 px-5 rounded-xl text-sm font-semibold cursor-pointer"
+            >
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={loading} className="rounded-xl bg-primary text-primary-foreground font-bold text-xs">
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={loading}
+              className="h-11 px-6 rounded-xl bg-primary hover:opacity-90 text-sm font-bold text-primary-foreground cursor-pointer transition-all"
+            >
               {loading ? 'Saving...' : 'Save Permissions'}
             </Button>
           </div>

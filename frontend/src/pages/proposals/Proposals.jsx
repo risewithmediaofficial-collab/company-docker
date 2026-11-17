@@ -14,37 +14,62 @@ import {
   Send,
   XCircle,
   FileCheck,
-} from 'lucide-react';
+  Trash2,
+} from '@/components/ui/muiIcons';
 import { Button } from '../../components/ui/button';
 import { AddProposalModal } from '../../components/modals/AddProposalModal';
-import { useProposals, useUpdateProposal } from '../../hooks/useProposals';
+import { useProposals, useUpdateProposal, useDeleteProposal } from '../../hooks/useProposals';
 import WorkspacePage from '../../components/ui/WorkspacePage';
 import DatabaseView from '../../components/ui/DatabaseView';
+import { useDateFilter } from '../../context/DateFilterContext';
 import { formatINR } from '../../utils/currency';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const statusTone = {
-  draft: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
-  sent: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-  viewed: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
-  accepted: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-  rejected: 'bg-rose-500/10 text-rose-600 border-rose-500/20',
-  expired: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  draft: 'bg-secondary text-muted-foreground border border-border',
+  sent: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30',
+  viewed: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30',
+  accepted: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold',
+  rejected: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 line-through',
+  expired: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30',
 };
 
 const Proposals = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
+  const { isDateInRange } = useDateFilter();
   const canManage = ['superAdmin', 'admin', 'manager'].includes(user?.role);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState(null);
+  const [proposalToDelete, setProposalToDelete] = useState(null);
   const updateProposalMutation = useUpdateProposal();
+  const deleteProposalMutation = useDeleteProposal();
 
   const { data: proposals = [], isLoading } = useProposals(statusFilter !== 'all' ? { status: statusFilter } : {});
 
+  const handleDeleteProposal = async () => {
+    if (!proposalToDelete?._id) return;
+    try {
+      await deleteProposalMutation.mutateAsync(proposalToDelete._id);
+      setProposalToDelete(null);
+    } catch {
+      // toast is handled in useDeleteProposal mutation
+    }
+  };
+
   const filteredProposals = useMemo(() => {
     return proposals.filter((p) => {
+      if (!isDateInRange([p.validUntil, p.issueDate, p.createdAt])) return false;
       const q = search.toLowerCase();
       const title = (p.title || '').toLowerCase();
       const client = (p.client?.name || p.client?.company || '').toLowerCase();
@@ -53,13 +78,17 @@ const Proposals = () => {
       const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [proposals, search, statusFilter]);
+  }, [proposals, isDateInRange, search, statusFilter]);
 
   // Statistics
-  const total = proposals.length;
-  const acceptedCount = proposals.filter((p) => p.status === 'accepted').length;
-  const sentCount = proposals.filter((p) => p.status === 'sent' || p.status === 'viewed').length;
-  const totalValue = proposals.reduce((sum, p) => sum + (Number(p.totalAmount) || 0), 0);
+  const dateFilteredProposals = useMemo(
+    () => proposals.filter((p) => isDateInRange([p.validUntil, p.issueDate, p.createdAt])),
+    [proposals, isDateInRange]
+  );
+  const total = dateFilteredProposals.length;
+  const acceptedCount = dateFilteredProposals.filter((p) => p.status === 'accepted').length;
+  const sentCount = dateFilteredProposals.filter((p) => p.status === 'sent' || p.status === 'viewed').length;
+  const totalValue = dateFilteredProposals.reduce((sum, p) => sum + (Number(p.totalAmount) || 0), 0);
 
   // Table Columns
   const tableColumns = [
@@ -85,7 +114,7 @@ const Proposals = () => {
         if (row.recipientType === 'lead' || row.lead) {
           return (
             <div className="flex items-center gap-1.5">
-              <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 font-bold text-[10px]">Lead</span>
+              <span className="px-1.5 py-0.5 rounded bg-secondary text-foreground font-bold text-[10px]">Lead</span>
               <span className="font-semibold text-xs text-foreground">
                 {row.lead?.name || row.lead?.company || 'Lead Prospect'}
               </span>
@@ -94,7 +123,7 @@ const Proposals = () => {
         }
         return (
           <div className="flex items-center gap-1.5">
-            <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 font-bold text-[10px]">Client</span>
+            <span className="px-1.5 py-0.5 rounded bg-secondary text-foreground font-bold text-[10px]">Client</span>
             <span className="font-semibold text-xs text-foreground">
               {row.client?.company || row.client?.name || 'Client Account'}
             </span>
@@ -106,7 +135,7 @@ const Proposals = () => {
       key: 'totalAmount',
       label: 'Proposal Value',
       render: (row) => (
-        <span className="font-bold text-xs text-foreground">
+        <span className="font-bold text-xs text-foreground tabular-nums">
           {row.amount || row.totalAmount ? formatINR(row.amount || row.totalAmount) : '—'}
         </span>
       ),
@@ -115,7 +144,7 @@ const Proposals = () => {
       key: 'validUntil',
       label: 'Valid Until',
       render: (row) => (
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground tabular-nums">
           {row.validUntil || row.endDate ? new Date(row.validUntil || row.endDate).toLocaleDateString() : 'No expiry'}
         </span>
       ),
@@ -124,8 +153,8 @@ const Proposals = () => {
       key: 'createdAt',
       label: 'Created Date',
       render: (row) => (
-        <div className="flex items-center gap-1 text-[11px] text-muted-foreground whitespace-nowrap">
-          <Calendar size={11} className="text-muted-foreground/70" />
+        <div className="flex items-center gap-1 text-[11px] text-muted-foreground whitespace-nowrap tabular-nums">
+          <Calendar size={11} className="text-muted-foreground/70 shrink-0" />
           <span>
             {row.createdAt
               ? new Date(row.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
@@ -138,7 +167,7 @@ const Proposals = () => {
       key: 'status',
       label: 'Status',
       render: (row) => (
-        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border capitalize ${statusTone[row.status] || statusTone.draft}`}>
+        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold capitalize ${statusTone[row.status] || statusTone.draft}`}>
           {row.status || 'draft'}
         </span>
       ),
@@ -157,6 +186,20 @@ const Proposals = () => {
             <span>View Pitch</span>
             <ExternalLink size={12} />
           </Button>
+          {canManage && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                setProposalToDelete(row);
+              }}
+              title="Delete Proposal"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer"
+            >
+              <Trash2 size={13} />
+            </Button>
+          )}
         </div>
       ),
     },
@@ -166,29 +209,44 @@ const Proposals = () => {
   const renderKanbanCard = (row) => (
     <div
       onClick={() => navigate(`/proposals/${row._id}`)}
-      className="space-y-2.5 cursor-pointer"
+      className="group relative space-y-2.5 cursor-pointer"
     >
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-secondary font-mono">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-secondary font-mono tabular-nums">
           {row.proposalNumber || 'PROP'}
         </span>
-        <span className="text-xs font-bold text-emerald-600">
-          {row.amount || row.totalAmount ? formatINR(row.amount || row.totalAmount) : '—'}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-bold text-foreground tabular-nums">
+            {row.amount || row.totalAmount ? formatINR(row.amount || row.totalAmount) : '—'}
+          </span>
+          {canManage && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setProposalToDelete(row);
+              }}
+              title="Delete Proposal"
+              className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-all cursor-pointer"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div>
         <h4 className="font-bold text-sm text-foreground line-clamp-1">{row.title}</h4>
         <p className="text-xs text-muted-foreground mt-0.5">
           {row.recipientType === 'lead' || row.lead
-            ? `🎯 Lead: ${row.lead?.name || 'Lead'}${row.lead?.company ? ` (${row.lead.company})` : ''}`
-            : `🏢 Client: ${row.client?.company || row.client?.name || 'Client'}`}
+            ? `Lead: ${row.lead?.name || 'Lead'}${row.lead?.company ? ` (${row.lead.company})` : ''}`
+            : `Client: ${row.client?.company || row.client?.name || 'Client'}`}
         </p>
       </div>
 
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1.5 border-t border-border/40">
+      <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1.5 tabular-nums">
         <span className="flex items-center gap-1">
-          <Calendar size={11} className="text-muted-foreground/70" />
+          <Calendar size={11} className="text-muted-foreground/70 shrink-0" />
           <span>{row.createdAt ? `Created ${new Date(row.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}` : ''}</span>
         </span>
         {(row.validUntil || row.endDate) && (
@@ -210,20 +268,19 @@ const Proposals = () => {
     <WorkspacePage
       breadcrumbs={['RiseWithMedia', 'Growth & Sales', 'Proposals']}
       title="Client Proposals & Pitch Decks"
-      subtitle="Draft high-converting client proposals, send interactive pitches, and monitor client acceptance."
-      icon="📄"
+      icon={FileText}
       properties={[
         { label: 'Total Proposals', value: total, icon: FileText },
-        { label: 'Signed / Won', value: acceptedCount, tone: 'success', icon: FileCheck },
-        { label: 'Under Review', value: sentCount, tone: sentCount > 0 ? 'warning' : 'neutral', icon: Clock },
-        { label: 'Pipeline Value', value: formatINR(totalValue), tone: 'info', icon: IndianRupee },
+        { label: 'Signed / Won', value: acceptedCount, tone: 'neutral', icon: FileCheck },
+        { label: 'Under Review', value: sentCount, tone: 'neutral', icon: Clock },
+        { label: 'Pipeline Value', value: formatINR(totalValue), tone: 'neutral', icon: IndianRupee },
       ]}
       actions={
         canManage && (
           <Button
             size="sm"
             onClick={() => setShowCreateModal(true)}
-            className="rounded-xl text-xs font-bold gap-1.5 shadow-sm"
+            className="inline-flex items-center justify-center gap-1.5 h-10 px-4 bg-primary text-primary-foreground font-semibold text-xs rounded-xl transition-all hover:bg-primary/90 cursor-pointer"
           >
             <Plus size={14} className="stroke-[2.5]" />
             <span>Create Proposal</span>
@@ -232,15 +289,15 @@ const Proposals = () => {
       }
     >
       {/* Status Filter Tabs */}
-      <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-1">
+      <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1 custom-scrollbar">
         {['all', 'draft', 'sent', 'viewed', 'accepted', 'rejected'].map((st) => (
           <button
             key={st}
             onClick={() => setStatusFilter(st)}
-            className={`px-3.5 py-1 rounded-xl text-xs font-semibold capitalize transition-all whitespace-nowrap ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold capitalize transition-all whitespace-nowrap shrink-0 min-h-[36px] ${
               statusFilter === st
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary'
+                ? 'bg-primary text-primary-foreground '
+                : 'bg-card text-muted-foreground hover:text-foreground hover:bg-secondary'
             }`}
           >
             {st === 'all' ? 'All Proposals' : st}
@@ -268,6 +325,41 @@ const Proposals = () => {
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
       />
+
+      {/* Delete Confirmation Alert Dialog */}
+      <AlertDialog
+        open={Boolean(proposalToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setProposalToDelete(null);
+        }}
+      >
+        <AlertDialogContent className="rounded-2xl bg-card">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold text-foreground">
+              Delete Proposal "{proposalToDelete?.title}"?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="sr-only">
+              Are you sure you want to delete proposal "{proposalToDelete?.title}" ({proposalToDelete?.proposalNumber || 'Proposal'})? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <AlertDialogCancel
+              onClick={() => setProposalToDelete(null)}
+              disabled={deleteProposalMutation.isPending}
+              className="rounded-xl text-xs font-semibold"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteProposal}
+              disabled={deleteProposalMutation.isPending}
+              className="rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {deleteProposalMutation.isPending ? 'Deleting...' : 'Delete Proposal'}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </WorkspacePage>
   );
 };

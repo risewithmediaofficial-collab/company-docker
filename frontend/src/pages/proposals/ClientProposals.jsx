@@ -1,45 +1,337 @@
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText } from 'lucide-react';
-import { DataTable } from '../../components/ui/DataTable';
-import { PageHeader, StatusBadge } from '../../components/ui/page';
+import {
+  ArrowRight,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
+  FileText,
+  IndianRupee,
+  Layers,
+  Search,
+  Sparkles,
+  X,
+  XCircle,
+} from '@/components/ui/muiIcons';
 import { useProposals } from '../../hooks/useProposals';
+import { useDateFilter } from '../../context/DateFilterContext';
 import { formatINR } from '../../utils/currency';
+import { Button } from '../../components/ui/button';
 
-const ClientProposals = () => {
+export default function ClientProposals() {
   const navigate = useNavigate();
-  const { data: proposals = [], isLoading } = useProposals();
+  const { isDateInRange } = useDateFilter();
+  const { data: rawProposals = [], isLoading } = useProposals();
+  const proposals = useMemo(
+    () => rawProposals.filter((p) => isDateInRange([p.validUntil, p.issueDate, p.createdAt])),
+    [rawProposals, isDateInRange]
+  );
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'pending', 'accepted'
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const columns = [
-    { key: 'title', label: 'Proposal', render: (row) => row.title },
-    { key: 'amount', label: 'Amount', render: (row) => formatINR(row.amount) },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (row) => <StatusBadge tone={row.status === 'accepted' ? 'success' : 'info'}>{row.status}</StatusBadge>,
-    },
-    {
-      key: 'acceptedAt',
-      label: 'Accepted',
-      render: (row) => row.acceptedAt ? new Date(row.acceptedAt).toLocaleString() : '—',
-    },
-  ];
+  // Summary Metrics
+  const metrics = useMemo(() => {
+    const list = Array.isArray(proposals) ? proposals : [];
+    const total = list.length;
+    const accepted = list.filter((p) => p.status === 'accepted').length;
+    const pending = list.filter((p) => ['sent', 'viewed', 'draft', 'pending'].includes(p.status)).length;
+    const totalValue = list.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    return { total, accepted, pending, totalValue };
+  }, [proposals]);
+
+  // Filtered Proposals
+  const filteredProposals = useMemo(() => {
+    return proposals.filter((p) => {
+      const isAccepted = p.status === 'accepted';
+      const isPending = ['sent', 'viewed', 'draft', 'pending'].includes(p.status);
+
+      if (statusFilter === 'accepted' && !isAccepted) return false;
+      if (statusFilter === 'pending' && !isPending) return false;
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const title = (p.title || '').toLowerCase();
+        const num = (p.proposalNumber || '').toLowerCase();
+        const category = (p.serviceCategory || p.proposalType || '').toLowerCase();
+        return title.includes(q) || num.includes(q) || category.includes(q);
+      }
+
+      return true;
+    });
+  }, [proposals, statusFilter, searchQuery]);
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Your Proposals"
-        description="Review proposals sent to you and accept the one you want to proceed with."
-      />
-      <DataTable
-        data={proposals}
-        columns={columns}
-        loading={isLoading}
-        onRowClick={(row) => navigate(`/proposals/${row._id}`)}
-        emptyTitle="No proposals yet"
-        emptyDescription="Proposals from your agency will appear here."
-      />
+    <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          Proposals &amp; Agreements
+        </h1>
+      </div>
+
+      {/* KPI Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 tabular-nums">
+        {/* Total Proposals */}
+        <div
+          onClick={() => setStatusFilter('all')}
+          className={`cursor-pointer rounded-2xl p-4 transition-all duration-150 hover:-translate-y-0.5 ${
+            statusFilter === 'all'
+              ? ' bg-secondary/40 '
+              : ' bg-card '
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Total Proposals</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary text-foreground shrink-0">
+              <FileText size={16} />
+            </div>
+          </div>
+          <p className="mt-2 text-2xl font-black text-foreground">{metrics.total}</p>
+        </div>
+
+        {/* Accepted & Active */}
+        <div
+          onClick={() => setStatusFilter('accepted')}
+          className={`cursor-pointer rounded-2xl p-4 transition-all duration-150 hover:-translate-y-0.5 ${
+            statusFilter === 'accepted'
+              ? ' bg-secondary/40 '
+              : ' bg-card '
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Accepted & Active</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary text-foreground shrink-0">
+              <CheckCircle2 size={16} />
+            </div>
+          </div>
+          <p className="mt-2 text-2xl font-black text-foreground">{metrics.accepted}</p>
+        </div>
+
+        {/* Awaiting Decision */}
+        <div
+          onClick={() => setStatusFilter('pending')}
+          className={`cursor-pointer rounded-2xl p-4 transition-all duration-150 hover:-translate-y-0.5 ${
+            statusFilter === 'pending'
+              ? ' bg-secondary/40 '
+              : metrics.pending > 0
+              ? ' bg-card'
+              : ' bg-card '
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Awaiting Decision</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary text-foreground shrink-0">
+              <Clock size={16} />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <p className="text-2xl font-black text-foreground">{metrics.pending}</p>
+            {metrics.pending > 0 && (
+              <span className="rounded-full bg-foreground px-2 py-0.5 text-[10px] font-bold text-background">
+                Needs Sign-off
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Total Proposal Value */}
+        <div
+          className="rounded-2xl bg-card p-4 transition-transform duration-150 hover:-translate-y-0.5"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Agreement Value</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary text-foreground shrink-0">
+              <IndianRupee size={16} />
+            </div>
+          </div>
+          <p className="mt-2 text-2xl font-black text-foreground">{formatINR(metrics.totalValue)}</p>
+        </div>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col gap-3 rounded-2xl bg-card p-3 sm:flex-row sm:items-center sm:justify-between ">
+        {/* Status Filter Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 custom-scrollbar">
+          {[
+            { id: 'all', label: 'All Proposals', count: metrics.total },
+            { id: 'pending', label: 'Awaiting Decision', count: metrics.pending, alert: metrics.pending > 0 },
+            { id: 'accepted', label: 'Accepted', count: metrics.accepted },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id)}
+              className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all shrink-0 min-h-[36px] whitespace-nowrap cursor-pointer ${
+                statusFilter === tab.id
+                  ? 'bg-primary text-primary-foreground '
+                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span
+                className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold tabular-nums ${
+                  statusFilter === tab.id
+                    ? 'bg-primary-foreground/20 text-primary-foreground'
+                    : tab.alert
+                    ? 'bg-foreground text-background font-extrabold'
+                    : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Search Input */}
+        <div className="relative sm:w-64">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search proposals..."
+            className="w-full rounded-xl bg-background py-1.5 pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/20"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Proposals Grid / List */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="h-56 rounded-3xl bg-card" />
+          <div className="h-56 rounded-3xl bg-card" />
+        </div>
+      ) : filteredProposals.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-3xl bg-card py-16 px-6 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary text-foreground mb-4">
+            <FileText size={28} />
+          </div>
+          <h3 className="text-base font-bold text-foreground">No proposals found</h3>
+          {(searchQuery || statusFilter !== 'all') && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearchQuery('');
+                setStatusFilter('all');
+              }}
+              className="mt-4 rounded-xl text-xs font-semibold"
+            >
+              Reset Filters
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredProposals.map((prop) => {
+            const isAccepted = prop.status === 'accepted';
+            const isRejected = prop.status === 'rejected';
+
+            return (
+              <div
+                key={prop._id}
+                onClick={() => navigate(`/proposals/${prop._id}`)}
+                className={`cursor-pointer relative overflow-hidden rounded-3xl p-4 sm:p-6 transition-all duration-150 hover:-translate-y-0.5 bg-card flex flex-col justify-between gap-5 ${
+                  isAccepted
+                    ? ''
+                    : ' '
+                }`}
+              >
+                {/* Top status accent */}
+                <div
+                  className={`absolute top-0 left-0 right-0 h-1 ${
+                    isAccepted
+                      ? 'bg-foreground'
+                      : isRejected
+                      ? 'bg-muted-foreground/40'
+                      : 'bg-muted-foreground'
+                  }`}
+                />
+
+                <div>
+                  {/* Top line with Number and Status */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-bold text-muted-foreground tabular-nums">
+                      {prop.proposalNumber || 'PROP-OFFICIAL'}
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+                        isAccepted
+                          ? 'bg-primary text-primary-foreground '
+                          : isRejected
+                          ? 'bg-secondary text-muted-foreground line-through'
+                          : 'bg-secondary text-foreground '
+                      }`}
+                    >
+                      {isAccepted ? <CheckCircle2 size={12} className="shrink-0" /> : isRejected ? <XCircle size={12} className="shrink-0" /> : <Clock size={12} className="shrink-0" />}
+                      <span>{(prop.status || 'Draft').toUpperCase()}</span>
+                    </span>
+                  </div>
+
+                  {/* Proposal Title */}
+                  <h3 className="mt-3 text-lg font-bold text-foreground tracking-tight">
+                    {prop.title}
+                  </h3>
+
+                  {/* Service Category Tag */}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="rounded-lg bg-secondary px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      {(prop.serviceCategory || prop.proposalType || 'Custom Scope').replace(/_/g, ' ')}
+                    </span>
+                    {prop.timeline && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Calendar size={12} className="shrink-0" /> {prop.timeline}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Scope of Work Snippet if available */}
+                  {(prop.scopeOfWork || prop.description) && (
+                    <p className="mt-3 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                      {prop.scopeOfWork || prop.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Footer with Amount & Action Button */}
+                <div className="pt-4 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[10px] font-semibold uppercase text-muted-foreground block">
+                      Total Agreement
+                    </span>
+                    <p className="text-lg font-black text-foreground tabular-nums">
+                      {formatINR(prop.amount)}
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    className={`gap-1.5 rounded-xl font-bold text-xs h-9 px-4 ${
+                      isAccepted
+                        ? 'bg-secondary text-foreground hover:bg-secondary/80'
+                        : 'bg-primary hover:bg-primary/90 text-primary-foreground '
+                    }`}
+                  >
+                    <span>{isAccepted ? 'View Agreement' : 'Review & Sign'}</span>
+                    <ArrowRight size={13} />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
-};
-
-export default ClientProposals;
+}

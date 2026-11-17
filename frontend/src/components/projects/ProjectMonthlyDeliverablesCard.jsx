@@ -3,6 +3,8 @@ import {
   Target,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Plus,
   Edit2,
   Video,
@@ -14,7 +16,12 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-} from 'lucide-react';
+  X,
+  User,
+  ExternalLink,
+  ListFilter,
+  Calendar,
+} from '@/components/ui/muiIcons';
 import {
   useProjectMonthlyDeliverables,
   useBatchSaveProjectMonthlyDeliverables,
@@ -29,19 +36,150 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+
+export const getDeliverableColorStyle = (contentType) => {
+  const norm = (contentType || '').toLowerCase().trim();
+  if (norm.includes('reel') || norm.includes('short')) {
+    return {
+      surface: 'bg-rose-500/[0.04] dark:bg-rose-500/[0.08] border border-rose-500/20',
+      iconBox: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+      bar: 'bg-rose-500',
+      badge: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30',
+    };
+  }
+  if (norm.includes('story')) {
+    return {
+      surface: 'bg-cyan-500/[0.04] dark:bg-cyan-500/[0.08] border border-cyan-500/20',
+      iconBox: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400',
+      bar: 'bg-cyan-500',
+      badge: 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30',
+    };
+  }
+  if (norm.includes('poster') || norm.includes('graphic') || norm.includes('post')) {
+    return {
+      surface: 'bg-violet-500/[0.04] dark:bg-violet-500/[0.08] border border-violet-500/20',
+      iconBox: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
+      bar: 'bg-violet-500',
+      badge: 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30',
+    };
+  }
+  if (norm.includes('carousel')) {
+    return {
+      surface: 'bg-amber-500/[0.04] dark:bg-amber-500/[0.08] border border-amber-500/20',
+      iconBox: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+      bar: 'bg-amber-500',
+      badge: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+    };
+  }
+  if (norm.includes('video') || norm.includes('shoot') || norm.includes('youtube')) {
+    return {
+      surface: 'bg-red-500/[0.04] dark:bg-red-500/[0.08] border border-red-500/20',
+      iconBox: 'bg-red-500/15 text-red-600 dark:text-red-400',
+      bar: 'bg-red-500',
+      badge: 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30',
+    };
+  }
+  return {
+    surface: 'bg-primary/[0.04] dark:bg-primary/[0.08] border border-primary/20',
+    iconBox: 'bg-primary/15 text-primary',
+    bar: 'bg-primary',
+    badge: 'bg-primary/15 text-primary border border-primary/30',
+  };
+};
+
+export const getDeliverableDemoTitles = (contentType, targetQuantity = 10) => {
+  const norm = (contentType || '').toLowerCase().trim();
+  const count = Math.max(1, targetQuantity);
+
+  const reelThemes = [
+    'Hook & Brand Introduction',
+    'Trending Audio & Visuals',
+    'Product / Service Showcase',
+    'Problem & Solution Story',
+    'Behind the Scenes / Day in Life',
+    'Client Review & Social Proof',
+    'Quick How-To / Educational Tips',
+    'Industry Myth Buster & FAQs',
+    'Special Offer / Promotion Reel',
+    'Final Call To Action & Growth',
+  ];
+
+  const storyThemes = [
+    'Morning Check-in & Poll',
+    'Behind The Scenes Sneak Peek',
+    'Interactive Q&A / Ask Me Anything',
+    'Client Spotlight / Success Story',
+    'Quick Tip / Value Drop',
+    'Product Highlight & Feature',
+    'User Testimonial & Review',
+    'Countdown / Event Announcement',
+    'Interactive Quiz / Trivia',
+    'Direct Message (DM) Call to Action',
+    'Special Promo / Limited Deal',
+    'Link Sticker / Blog / Site Traffic',
+    'User-Generated Content Repost',
+    'Industry News & Trending Take',
+    'Weekend Wrap-up & Reflections',
+  ];
+
+  const posterThemes = [
+    'Brand Identity & Mission Creative',
+    'Core Service / Feature Poster',
+    'Client Case Study & Social Proof',
+    'Motivational Quote & Mindset',
+    'New Launch / Feature Announcement',
+    'Infographic / Key Industry Statistics',
+    'Before & After Comparison Graphic',
+    'Festive / Seasonal Greeting Creative',
+    'Exclusive Limited Time Offer Poster',
+    'Inquiry / Contact Us Call To Action',
+  ];
+
+  const carouselThemes = [
+    'Step-by-Step Guide: 5 Practical Tips',
+    'Mistakes to Avoid in Your Industry',
+    'Framework / Roadmap Deep Dive',
+    'Customer Journey Case Study',
+    'Tools & Resources Checklist',
+  ];
+
+  let themePool = reelThemes;
+  if (norm.includes('reel') || norm.includes('short')) themePool = reelThemes;
+  else if (norm.includes('story')) themePool = storyThemes;
+  else if (norm.includes('poster') || norm.includes('post') || norm.includes('graphic')) themePool = posterThemes;
+  else if (norm.includes('carousel')) themePool = carouselThemes;
+
+  const list = [];
+  for (let i = 0; i < count; i++) {
+    const theme = themePool[i % themePool.length];
+    list.push({
+      slotNumber: i + 1,
+      title: `${contentType} #${i + 1}: ${theme}`,
+      shortTitle: `${contentType} #${i + 1}`,
+      theme,
+    });
+  }
+  return list;
+};
 
 export const ProjectMonthlyDeliverablesCard = ({
   project,
   canManage = false,
   className = '',
+  onAssignTask,
+  onSelectTask,
 }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showManageModal, setShowManageModal] = useState(false);
   const [editingDeliverables, setEditingDeliverables] = useState([]);
+  const [activeListTarget, setActiveListTarget] = useState('all');
+  const [showSlotsList, setShowSlotsList] = useState(true);
 
   const {
     data: deliverablesData,
@@ -53,6 +191,56 @@ export const ProjectMonthlyDeliverablesCard = ({
 
   const deliverables = deliverablesData?.deliverables || [];
   const monthName = MONTH_NAMES[selectedMonth - 1] || '';
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Prepare slots for each deliverable target
+  const deliverableSlots = React.useMemo(() => {
+    return deliverables.flatMap((item) => {
+      const demoList = getDeliverableDemoTitles(item.contentType, Math.max(10, item.targetQuantity || 10));
+      const existingTasks = Array.isArray(item.tasks) ? item.tasks : [];
+
+      return demoList.map((demo, idx) => {
+        const assignedTask = existingTasks[idx] || null;
+        return {
+          id: `${item._id || item.contentType}-slot-${idx + 1}`,
+          deliverable: item,
+          slotNumber: idx + 1,
+          contentType: item.contentType,
+          suggestedTitle: demo.title,
+          theme: demo.theme,
+          task: assignedTask,
+          isAssigned: Boolean(assignedTask),
+        };
+      });
+    });
+  }, [deliverables]);
+
+  const filteredSlots = React.useMemo(() => {
+    if (activeListTarget === 'all') return deliverableSlots;
+    return deliverableSlots.filter(
+      (s) => (s.contentType || '').toLowerCase() === activeListTarget.toLowerCase()
+    );
+  }, [deliverableSlots, activeListTarget]);
+
+  const handleAssignSlot = (slot) => {
+    if (!canManage && !onAssignTask) return;
+    const projectTitlePrefix = project?.name ? ` - ${project.name}` : '';
+    const fullTitle = `${slot.suggestedTitle}${projectTitlePrefix}`;
+    onAssignTask?.({
+      deliverable: slot.deliverable,
+      slotNumber: slot.slotNumber,
+      title: fullTitle,
+      contentType: slot.contentType,
+    });
+  };
+
+  const gridColsClass = React.useMemo(() => {
+    const count = deliverables.length;
+    if (count <= 1) return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+    if (count === 2) return 'grid-cols-1 sm:grid-cols-2';
+    if (count === 3) return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+    return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
+  }, [deliverables.length]);
 
   const handlePrevMonth = () => {
     if (selectedMonth === 1) {
@@ -107,34 +295,48 @@ export const ProjectMonthlyDeliverablesCard = ({
   return (
     <>
       <div
-        className={`rounded-3xl border border-border bg-card p-5 sm:p-6 shadow-sm space-y-4 transition-all ${className}`}
+        className={`rounded-3xl bg-card p-4 sm:p-5 space-y-3 transition-all ${className}`}
       >
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shrink-0">
-              <Target size={20} />
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary shrink-0">
+              <Target size={18} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-foreground">Monthly Deliverables</h2>
+                <h2 className="text-sm sm:text-base font-bold text-foreground">Monthly Deliverables</h2>
                 <span className="rounded-full bg-secondary px-2.5 py-0.5 text-[11px] font-bold text-muted-foreground">
                   {monthName} {selectedYear}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Track content deliverables and over-task quotas for this project
-              </p>
+              {isCollapsed && deliverables.length > 0 ? (
+                <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                  {deliverables.map((d) => (
+                    <span
+                      key={d._id || d.contentType}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-secondary text-foreground tabular-nums"
+                    >
+                      <span className="font-semibold">{d.contentType}:</span>
+                      <span className="font-bold text-foreground">{d.currentCount}/{d.targetQuantity}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Track content deliverables and over-task quotas for this project
+                </p>
+              )}
             </div>
           </div>
 
           {/* Month controls & Actions */}
           <div className="flex items-center gap-2 self-end sm:self-auto">
-            <div className="flex items-center rounded-xl border border-border bg-secondary/30 p-0.5">
+            <div className="flex items-center rounded-xl bg-secondary/30 p-0.5">
               <button
                 type="button"
                 onClick={handlePrevMonth}
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-card hover:text-foreground transition-colors cursor-pointer"
                 title="Previous Month"
               >
                 <ChevronLeft size={14} />
@@ -145,7 +347,7 @@ export const ProjectMonthlyDeliverablesCard = ({
               <button
                 type="button"
                 onClick={handleNextMonth}
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-card hover:text-foreground transition-colors cursor-pointer"
                 title="Next Month"
               >
                 <ChevronRight size={14} />
@@ -158,105 +360,112 @@ export const ProjectMonthlyDeliverablesCard = ({
                 onClick={handleOpenManageModal}
                 size="sm"
                 variant="outline"
-                className="h-8 rounded-xl border-border text-xs font-bold hover:bg-secondary"
+                className="h-8 rounded-xl text-xs font-bold hover:bg-secondary cursor-pointer"
               >
                 <Edit2 size={13} className="mr-1.5" />
                 {deliverables.length === 0 ? 'Set Targets' : 'Manage Targets'}
               </Button>
             )}
+
+            {deliverables.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="h-8 w-8 rounded-xl bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors cursor-pointer"
+                title={isCollapsed ? 'Expand deliverables' : 'Collapse deliverables'}
+              >
+                {isCollapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Deliverables Grid */}
-        {isLoading ? (
-          <div className="py-8 text-center text-xs text-muted-foreground">
-            Loading monthly deliverables...
-          </div>
-        ) : deliverables.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-secondary/15 py-8 px-4 text-center">
-            <Target size={28} className="text-muted-foreground/50 mb-2" />
-            <p className="text-sm font-semibold text-foreground">No Deliverable Targets Set</p>
-            <p className="text-xs text-muted-foreground max-w-sm mt-0.5">
-              No monthly deliverables have been configured for {monthName} {selectedYear}.
-            </p>
-            {canManage && (
-              <Button
-                type="button"
-                onClick={handleOpenManageModal}
-                size="sm"
-                className="mt-3.5 h-8 rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90"
-              >
-                <Plus size={14} className="mr-1" /> Configure {monthName} Targets
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        {/* Deliverables Grid (Hidden when collapsed) */}
+        {!isCollapsed && (
+          <>
+            {isLoading ? (
+              <div className="py-6 text-center text-xs text-muted-foreground">
+                Loading monthly deliverables...
+              </div>
+            ) : deliverables.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-2xl bg-secondary/15 py-6 px-4 text-center">
+                <Target size={26} className="text-muted-foreground/50 mb-2" />
+                <p className="text-sm font-semibold text-foreground">No Deliverable Targets Set</p>
+                <p className="text-xs text-muted-foreground max-w-sm mt-0.5">
+                  No monthly deliverables have been configured for {monthName} {selectedYear}.
+                </p>
+                {canManage && (
+                  <Button
+                    type="button"
+                    onClick={handleOpenManageModal}
+                    size="sm"
+                    className="mt-3.5 h-8 rounded-xl bg-primary text-xs font-bold text-primary-foreground hover:bg-primary/90"
+                  >
+                    <Plus size={14} className="mr-1" /> Configure {monthName} Targets
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className={`grid ${gridColsClass} gap-3 pt-1`}>
             {deliverables.map((item) => {
+              const itemTypeStr = (item.contentType || item.deliverableType || item.type || '').toLowerCase();
               const matchedType = STANDARD_DELIVERABLE_TYPES.find(
-                (t) => t.value.toLowerCase() === item.contentType.toLowerCase()
+                (t) => (t.value || '').toLowerCase() === itemTypeStr
               );
               const IconComponent = matchedType?.icon || Target;
+              const colorStyle = getDeliverableColorStyle(itemTypeStr);
 
               const isOver = item.status === 'OVER_TASK';
               const isReached = item.status === 'TARGET_REACHED';
               const visualProgress = Math.min(100, item.progressPercentage || 0);
 
-              let badgeBg = 'bg-primary/10 text-primary border-primary/20';
+              let badgeBg = colorStyle.badge;
               let badgeText = `${item.remaining} Remaining`;
               let BadgeIcon = Clock;
 
               if (isReached) {
-                badgeBg = 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400';
+                badgeBg = 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30';
                 badgeText = 'Target Reached';
                 BadgeIcon = CheckCircle2;
               } else if (isOver) {
-                badgeBg = 'bg-rose-500/15 text-rose-600 border-rose-500/30 dark:text-rose-400 font-extrabold';
-                badgeText = `🔴 Over by ${item.overBy}`;
+                badgeBg = 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30';
+                badgeText = `Over by ${item.overBy}`;
                 BadgeIcon = AlertTriangle;
               }
 
               return (
                 <div
                   key={item._id || item.contentType}
-                  className={`relative flex flex-col justify-between rounded-2xl border p-4 transition-all duration-200 ${
-                    isOver
-                      ? 'border-rose-500/40 bg-rose-500/5 shadow-xs'
-                      : isReached
-                      ? 'border-emerald-500/30 bg-emerald-500/5'
-                      : 'border-border bg-secondary/15 hover:border-border/80'
-                  }`}
+                  className={`relative flex flex-col justify-between rounded-2xl p-4 transition-all duration-200 shadow-sm ${colorStyle.surface}`}
                 >
                   {/* Top: Icon & Status Badge */}
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2 min-w-0">
                       <div
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl font-bold text-xs ${
-                          isOver
-                            ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400'
-                            : isReached
-                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-primary/10 text-primary'
+                          isOver || isReached
+                            ? 'bg-primary text-primary-foreground'
+                            : colorStyle.iconBox
                         }`}
                       >
                         <IconComponent size={16} />
                       </div>
-                      <h4 className="text-sm font-bold text-foreground truncate">{item.contentType}</h4>
+                      <h4 className="text-sm font-bold text-foreground truncate">{item.contentType || item.deliverableType || item.type || matchedType?.label || 'Deliverable'}</h4>
                     </div>
 
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold shrink-0 ${badgeBg}`}
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold shrink-0 tabular-nums ${badgeBg}`}
                     >
-                      <BadgeIcon size={11} />
+                      <BadgeIcon size={11} className="shrink-0" />
                       <span>{badgeText}</span>
                     </span>
                   </div>
 
                   {/* Middle: Numbers */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 tabular-nums">
                     <div className="flex items-baseline justify-between">
                       <div className="flex items-baseline gap-1">
-                        <span className={`text-2xl font-extrabold tracking-tight ${isOver ? 'text-rose-600 dark:text-rose-400' : 'text-foreground'}`}>
+                        <span className="text-2xl font-extrabold tracking-tight text-foreground">
                           {item.currentCount}
                         </span>
                         <span className="text-xs font-semibold text-muted-foreground">
@@ -272,11 +481,9 @@ export const ProjectMonthlyDeliverablesCard = ({
                     <div className="h-2 w-full overflow-hidden rounded-full bg-secondary/80">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
-                          isOver
-                            ? 'bg-rose-500'
-                            : isReached
-                            ? 'bg-emerald-500'
-                            : 'bg-primary'
+                          isOver || isReached
+                            ? 'bg-brand'
+                            : colorStyle.bar
                         }`}
                         style={{ width: `${visualProgress}%` }}
                       />
@@ -287,29 +494,48 @@ export const ProjectMonthlyDeliverablesCard = ({
             })}
           </div>
         )}
-      </div>
+      </>
+    )}
+  </div>
 
       {/* Manage Targets Modal */}
       {showManageModal && (
         <Dialog open={showManageModal} onOpenChange={setShowManageModal}>
-          <DialogContent size="lg" className="rounded-3xl border border-border bg-card p-6 shadow-2xl">
-            <DialogHeader className="border-b border-border pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Target size={18} />
+          <DialogContent
+            size="lg"
+            noPadding
+            hideCloseButton
+            className="flex flex-col min-h-0 p-0 overflow-hidden bg-card max-w-2xl max-h-[90vh]"
+          >
+            {/* Pinned Sticky Header */}
+            <DialogHeader className="px-6 py-5 bg-card shrink-0 select-none">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                    <Target size={20} />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-lg sm:text-xl font-bold text-foreground">
+                      Manage Monthly Deliverables
+                    </DialogTitle>
+                    <DialogDescription className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                      Configure targets for {project?.name} ({monthName} {selectedYear})
+                    </DialogDescription>
+                  </div>
                 </div>
-                <div>
-                  <DialogTitle className="text-base font-bold text-foreground">
-                    Manage Monthly Deliverables
-                  </DialogTitle>
-                  <p className="text-xs text-muted-foreground">
-                    Configure targets for {project?.name} ({monthName} {selectedYear})
-                  </p>
+                <div className="flex items-center gap-2">
+                  <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-[10px] font-medium text-muted-foreground bg-muted rounded-md">
+                    ESC
+                  </span>
+                  <DialogClose className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer">
+                    <X className="h-4 w-4" />
+                  </DialogClose>
                 </div>
               </div>
             </DialogHeader>
 
-            <div className="py-3">
+            {/* Scrollable Body */}
+            <div className="space-y-6 p-6 sm:p-7 overflow-y-auto flex-1 min-h-0 custom-scrollbar overscroll-contain">
               <MonthlyDeliverablesSection
                 deliverables={editingDeliverables}
                 onChange={setEditingDeliverables}
@@ -320,23 +546,27 @@ export const ProjectMonthlyDeliverablesCard = ({
               />
             </div>
 
-            <div className="flex justify-end gap-2 border-t border-border pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowManageModal(false)}
-                className="h-9 rounded-xl text-xs font-semibold"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                onClick={handleSaveModal}
-                disabled={batchSave.isPending}
-                className="h-9 rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90"
-              >
-                {batchSave.isPending ? 'Saving...' : 'Save Targets'}
-              </Button>
+            {/* Pinned Sticky Footer */}
+            <div className="shrink-0 bg-card px-6 py-4 flex items-center justify-between gap-3 z-10 select-none">
+              <span className="text-xs text-muted-foreground hidden sm:inline">Press ESC to exit</span>
+              <div className="flex items-center gap-2.5 ml-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowManageModal(false)}
+                  className="h-11 px-5 rounded-xl font-semibold text-sm"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSaveModal}
+                  disabled={batchSave.isPending}
+                  className="h-11 px-6 rounded-xl bg-primary font-bold text-sm text-primary-foreground hover:bg-primary/90"
+                >
+                  {batchSave.isPending ? 'Saving...' : 'Save Targets'}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>

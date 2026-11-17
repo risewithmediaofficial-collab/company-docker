@@ -1,18 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Download, FileText, FolderOpen, Image as ImageIcon, Plus, Tag, Trash2, Upload, Video } from 'lucide-react';
+import { Download, FileText, FolderOpen, Image as ImageIcon, Plus, Tag, Trash2, Upload, Video, X } from '@/components/ui/muiIcons';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
+import { SelectDropdown } from '../ui/SelectDropdown';
 import { DataTable } from '../ui/DataTable';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose } from '../ui/dialog';
 import { MetricCard, MetricGrid, PageHeader, PageToolbar, SearchField, SectionCard, StatusBadge } from '../ui/page';
 import { useClients } from '../../hooks/useClients';
 import { useProjects } from '../../hooks/useProjects';
 import { useAssets, useCreateAsset, useDeleteAsset, useUpdateAsset } from '../../hooks/useAssets';
 import { uploadFiles } from '../../utils/taskFields';
 import { getAssetUrl } from '../../utils/assetUrl';
-import { useDateFilter } from '../../context/DateFilterContext';
-import { DateRangePicker } from '../ui/DateRangePicker';
 
 export const assetCategories = [
   { value: 'logo', label: 'Logo' },
@@ -84,99 +83,200 @@ const AssetFormDialog = ({ open, onOpenChange, asset, clients, projects, onSave,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Asset' : 'Upload Asset'}</DialogTitle>
-          <DialogDescription>Store client logos, guidelines, creatives, videos, and other brand files in one place.</DialogDescription>
+      <DialogContent
+        size="lg"
+        noPadding
+        hideCloseButton
+        className="flex flex-col min-h-0 p-0 overflow-hidden bg-card w-[calc(100vw-24px)] max-w-2xl max-h-[90dvh]"
+      >
+        {/* Pinned Sticky Header */}
+        <DialogHeader className="px-6 py-5 bg-card shrink-0 select-none">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                <FolderOpen size={20} />
+              </div>
+              <div>
+                <DialogTitle className="text-lg sm:text-xl font-bold text-foreground">
+                  {isEditing ? 'Edit Asset' : 'Upload Asset'}
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                  Store client logos, guidelines, creatives, videos, and brand files
+                </DialogDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-[10px] font-medium text-muted-foreground bg-muted rounded-md">
+                ESC
+              </span>
+              <DialogClose className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer">
+                <X className="h-4 w-4" />
+              </DialogClose>
+            </div>
+          </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-foreground">Asset Name *</span>
-            <Input value={form.name} onChange={(event) => updateField('name', event.target.value)} required placeholder="Primary logo pack" />
-          </label>
-
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-foreground">Category</span>
-            <select value={form.category} onChange={(event) => updateField('category', event.target.value)} className="app-input">
-              {assetCategories.map((item) => (
-                <option key={item.value} value={item.value}>{item.label}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-foreground">Client *</span>
-            <select value={form.client} onChange={(event) => updateField('client', event.target.value)} className="app-input" required>
-              <option value="">Select client</option>
-              {clients.map((client) => (
-                <option key={client._id} value={client._id}>{client.company || client.name}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-foreground">Project</span>
-            <select value={form.project} onChange={(event) => updateField('project', event.target.value)} className="app-input">
-              <option value="">No linked project</option>
-              {filteredProjects.map((project) => (
-                <option key={project._id} value={project._id}>{project.name}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="space-y-1.5 md:col-span-2">
-            <span className="text-sm font-medium text-foreground">Description</span>
-            <Textarea value={form.description} onChange={(event) => updateField('description', event.target.value)} placeholder="What does this asset contain and when should it be used?" />
-          </label>
-
-          <label className="space-y-1.5 md:col-span-2">
-            <span className="text-sm font-medium text-foreground">Tags</span>
-            <Input value={form.tags} onChange={(event) => updateField('tags', event.target.value)} placeholder="logo, approved, campaign, q3" />
-          </label>
-
-          <label className="space-y-1.5 md:col-span-2">
-            <span className="text-sm font-medium text-foreground">Files {!isEditing ? '*' : ''}</span>
-            <div className="rounded-2xl border border-dashed border-border bg-secondary/20 p-4">
-              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-                <Upload size={15} />
-                Upload asset files
-              </div>
-              <input type="file" multiple onChange={(event) => setFiles(Array.from(event.target.files || []))} className="w-full text-sm" />
-              {asset?.files?.length ? (
-                <div className="mt-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Existing files</p>
-                  <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                    {asset.files.map((file, index) => <li key={`${file.url}-${index}`}>{file.name}</li>)}
-                  </ul>
-                </div>
-              ) : null}
-              {files.length ? (
-                <div className="mt-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">New files</p>
-                  <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                    {files.map((file) => <li key={`${file.name}-${file.size}`}>{file.name}</li>)}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-          </label>
-
-          <label className="md:col-span-2 flex items-center gap-3 rounded-2xl border border-border bg-secondary/20 p-4">
-            <input
-              type="checkbox"
-              checked={Boolean(form.isClientVisible)}
-              onChange={(event) => updateField('isClientVisible', event.target.checked)}
-            />
+        {/* Form with Scrollable Body and Pinned Footer */}
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1 overflow-hidden">
+          <div className="space-y-6 p-6 sm:p-7 overflow-y-auto flex-1 min-h-0 custom-scrollbar overscroll-contain">
+            {/* Asset Name */}
             <div>
-              <p className="text-sm font-medium text-foreground">Visible to client</p>
-              <p className="text-xs text-muted-foreground">Allow the client to see and download this asset in their portal.</p>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                Asset Name *
+              </label>
+              <Input
+                value={form.name}
+                onChange={(event) => updateField('name', event.target.value)}
+                required
+                placeholder="Primary logo pack"
+                className="h-11 rounded-xl text-sm bg-background px-4 text-foreground focus:ring-2 focus:ring-primary/20 "
+              />
             </div>
-          </label>
 
-          <div className="flex justify-end gap-3 md:col-span-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving}>{saving ? 'Saving...' : isEditing ? 'Update Asset' : 'Upload Asset'}</Button>
+            {/* Category */}
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                Category
+              </label>
+              <SelectDropdown
+                value={form.category}
+                onChange={(val) => updateField('category', val || 'logo')}
+                options={assetCategories}
+                allowCustom={false}
+                allowDeselect={false}
+                className="w-full"
+                buttonClassName="h-11 rounded-xl bg-background text-sm font-medium"
+              />
+            </div>
+
+            {/* Client */}
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                Client *
+              </label>
+              <SelectDropdown
+                value={form.client}
+                onChange={(val) => updateField('client', val || '')}
+                options={clients.map((client) => ({ value: client._id, label: client.company || client.name }))}
+                placeholder="Select client"
+                allowCustom={false}
+                className="w-full"
+                buttonClassName="h-11 rounded-xl bg-background text-sm font-medium"
+              />
+            </div>
+
+            {/* Project */}
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                Project
+              </label>
+              <SelectDropdown
+                value={form.project}
+                onChange={(val) => updateField('project', val || '')}
+                options={filteredProjects.map((project) => ({ value: project._id, label: project.name }))}
+                placeholder="No linked project"
+                allOptionLabel="No linked project"
+                allowCustom={false}
+                className="w-full"
+                buttonClassName="h-11 rounded-xl bg-background text-sm font-medium"
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                Description
+              </label>
+              <Textarea
+                value={form.description}
+                onChange={(event) => updateField('description', event.target.value)}
+                placeholder="What does this asset contain and when should it be used?"
+                className="rounded-xl text-sm bg-background p-4 text-foreground focus:ring-2 focus:ring-primary/20 min-h-[90px]"
+              />
+            </div>
+
+            {/* Tags */}
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                Tags
+              </label>
+              <Input
+                value={form.tags}
+                onChange={(event) => updateField('tags', event.target.value)}
+                placeholder="logo, approved, campaign, q3"
+                className="h-11 rounded-xl text-sm bg-background px-4 text-foreground focus:ring-2 focus:ring-primary/20 "
+              />
+            </div>
+
+            {/* Files */}
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                Files {!isEditing ? '*' : ''}
+              </label>
+              <div className="rounded-2xl bg-secondary/20 p-5">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <Upload size={16} className="text-primary" />
+                  Upload asset files
+                </div>
+                <input
+                  type="file"
+                  multiple
+                  onChange={(event) => setFiles(Array.from(event.target.files || []))}
+                  className="w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                />
+                {asset?.files?.length ? (
+                  <div className="mt-4 pt-3 ">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Existing files</p>
+                    <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
+                      {asset.files.map((file, index) => <li key={`${file.url}-${index}`} className="flex items-center gap-2"><span>•</span> {file.name}</li>)}
+                    </ul>
+                  </div>
+                ) : null}
+                {files.length ? (
+                  <div className="mt-4 pt-3 ">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">New files to upload</p>
+                    <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
+                      {files.map((file) => <li key={`${file.name}-${file.size}`} className="flex items-center gap-2 text-primary font-medium"><span>•</span> {file.name}</li>)}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Visible to client */}
+            <label className="flex items-center gap-3.5 rounded-2xl bg-secondary/20 p-4 cursor-pointer hover:bg-secondary/30 transition-colors">
+              <input
+                type="checkbox"
+                checked={Boolean(form.isClientVisible)}
+                onChange={(event) => updateField('isClientVisible', event.target.checked)}
+                className="h-4 w-4 rounded text-primary focus:ring-primary/20"
+              />
+              <div>
+                <p className="text-sm font-semibold text-foreground">Visible to client</p>
+              </div>
+            </label>
+          </div>
+
+          {/* Pinned Sticky Footer */}
+          <div className="shrink-0 bg-card px-6 py-4 flex items-center justify-between gap-3 z-10 select-none">
+            <span className="text-xs text-muted-foreground hidden sm:inline">Press ESC to exit</span>
+            <div className="flex items-center gap-2.5 ml-auto">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="h-11 px-5 rounded-xl font-semibold text-sm"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={saving}
+                className="h-11 px-6 rounded-xl font-bold text-sm "
+              >
+                {saving ? 'Saving...' : isEditing ? 'Update Asset' : 'Upload Asset'}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>
@@ -199,14 +299,13 @@ export const AssetLibraryWorkspace = ({
   const [formOpen, setFormOpen] = useState(false);
 
   const { data: clients = [] } = useClients({}, { enabled: canManage });
-  const { isDateInRange } = useDateFilter();
   const { data: projects = [] } = useProjects({}, { enabled: canManage });
   const { data: rawAssets = [], isLoading } = useAssets({
     search,
     client: clientFilter || undefined,
     category: categoryFilter || undefined,
   });
-  const assets = useMemo(() => rawAssets.filter((a) => isDateInRange(a.createdAt)), [rawAssets, isDateInRange]);
+  const assets = rawAssets;
 
   const createAsset = useCreateAsset();
   const updateAsset = useUpdateAsset();
@@ -238,17 +337,17 @@ export const AssetLibraryWorkspace = ({
     {
       key: 'category',
       label: 'Category',
-      render: (row) => <StatusBadge tone="info">{categoryLabelMap[row.category] || 'Other'}</StatusBadge>,
+      render: (row) => <StatusBadge tone="neutral">{categoryLabelMap[row.category] || 'Other'}</StatusBadge>,
     },
     {
       key: 'files',
       label: 'Files',
-      render: (row) => `${fileCount(row)} file${fileCount(row) === 1 ? '' : 's'}`,
+      render: (row) => <span className="tabular-nums">{fileCount(row)} file{fileCount(row) === 1 ? '' : 's'}</span>,
     },
     {
       key: 'visibility',
       label: 'Visibility',
-      render: (row) => <StatusBadge tone={row.isClientVisible ? 'success' : 'warning'}>{row.isClientVisible ? 'Client Visible' : 'Internal'}</StatusBadge>,
+      render: (row) => <StatusBadge tone="neutral">{row.isClientVisible ? 'Client Visible' : 'Internal'}</StatusBadge>,
     },
     {
       key: 'uploadedBy',
@@ -269,39 +368,49 @@ export const AssetLibraryWorkspace = ({
     <div className="space-y-6">
       <PageHeader
         title={portalMode ? 'Client Assets' : 'Asset Library'}
-        description={description}
         actions={canManage ? (
-          <Button onClick={() => { setSelectedAsset(null); setFormOpen(true); }}>
+          <Button className="h-10 rounded-xl" onClick={() => { setSelectedAsset(null); setFormOpen(true); }}>
             <Plus size={16} className="mr-2" />
             Upload Asset
           </Button>
         ) : null}
       >
         <MetricGrid>
-          <MetricCard label="Assets" value={metrics.total} helper="Records in this view" icon={FolderOpen} tone="info" />
-          <MetricCard label="Client Visible" value={metrics.visible} helper="Available in the client portal" icon={ImageIcon} tone="success" />
-          <MetricCard label="Files" value={metrics.files} helper="Files stored across all assets" icon={FileText} tone="warning" />
-          <MetricCard label="Categories" value={metrics.categories} helper="Asset types represented here" icon={Tag} tone="neutral" />
+          <MetricCard label="Assets" value={metrics.total} icon={FolderOpen} tone="neutral" />
+          <MetricCard label="Client Visible" value={metrics.visible} icon={ImageIcon} tone="neutral" />
+          <MetricCard label="Files" value={metrics.files} icon={FileText} tone="neutral" />
+          <MetricCard label="Categories" value={metrics.categories} icon={Tag} tone="neutral" />
         </MetricGrid>
       </PageHeader>
 
       <PageToolbar>
         <SearchField value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search assets, descriptions, or tags..." />
         {!portalMode ? (
-          <select value={clientFilter} onChange={(event) => setClientFilter(event.target.value)} className="app-input lg:w-56">
-            <option value="">All clients</option>
-            {clients.map((client) => <option key={client._id} value={client._id}>{client.company || client.name}</option>)}
-          </select>
+          <SelectDropdown
+            value={clientFilter}
+            onChange={(val) => setClientFilter(val || '')}
+            options={clients.map((client) => ({ value: client._id, label: client.company || client.name }))}
+            placeholder="All clients"
+            allOptionLabel="All clients"
+            allowCustom={false}
+            className="w-full sm:w-auto lg:w-56"
+            buttonClassName="h-10 text-xs sm:text-sm font-medium bg-background border border-border/50 rounded-xl"
+          />
         ) : null}
-        <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="app-input lg:w-52">
-          <option value="">All categories</option>
-          {assetCategories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-        </select>
+        <SelectDropdown
+          value={categoryFilter}
+          onChange={(val) => setCategoryFilter(val || '')}
+          options={assetCategories}
+          placeholder="All categories"
+          allOptionLabel="All categories"
+          allowCustom={false}
+          className="w-full sm:w-auto lg:w-52"
+          buttonClassName="h-10 text-xs sm:text-sm font-medium bg-background border border-border/50 rounded-xl"
+        />
       </PageToolbar>
 
       <SectionCard
         title={portalMode ? 'Shared Brand Assets' : 'Stored Client Assets'}
-        description={portalMode ? 'Download the latest brand assets and supporting files shared with you.' : 'Manage brand files, logo packs, guidelines, and delivery-ready resources.'}
         action={<span className="app-pill">{assets.length} records</span>}
       >
         <DataTable
@@ -312,26 +421,26 @@ export const AssetLibraryWorkspace = ({
           onEdit={canManage ? (asset) => { setSelectedAsset(asset); setFormOpen(true); } : null}
           onDelete={canManage ? (id) => { if (window.confirm('Delete this asset from the library?')) deleteAsset.mutate(id); } : null}
           emptyTitle="No assets found"
-          emptyDescription={portalMode ? 'No assets have been shared with you yet.' : 'Upload the first asset to start your library.'}
+          emptyDescription=""
           emptyAction={canManage ? <Button onClick={() => setFormOpen(true)}><Plus size={16} className="mr-2" />Upload First Asset</Button> : null}
         />
       </SectionCard>
 
       {selectedAsset ? (
         <Dialog open={Boolean(selectedAsset)} onOpenChange={(open) => !open && setSelectedAsset(null)}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="w-[calc(100vw-24px)] max-w-3xl max-h-[90dvh] overflow-y-auto custom-scrollbar">
             <DialogHeader>
               <DialogTitle>{selectedAsset.name}</DialogTitle>
-              <DialogDescription>{selectedAsset.client?.company || selectedAsset.client?.name || 'Client asset'} • {categoryLabelMap[selectedAsset.category] || 'Other'}</DialogDescription>
+              <DialogDescription className="sr-only">{selectedAsset.client?.company || selectedAsset.client?.name || 'Client asset'} • {categoryLabelMap[selectedAsset.category] || 'Other'}</DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-border bg-card p-4">
+                <div className="rounded-2xl bg-card p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Description</p>
                   <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{selectedAsset.description || 'No description added.'}</p>
                 </div>
-                <div className="rounded-2xl border border-border bg-card p-4">
+                <div className="rounded-2xl bg-card p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Tags</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {(selectedAsset.tags || []).length
@@ -341,7 +450,7 @@ export const AssetLibraryWorkspace = ({
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border bg-card p-4">
+              <div className="rounded-2xl bg-card p-4">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Files</p>
                 <div className="space-y-3">
                   {(selectedAsset.files || []).map((file, index) => {
@@ -355,14 +464,14 @@ export const AssetLibraryWorkspace = ({
                         href={fileUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-background px-4 py-3 transition-colors hover:bg-secondary/40"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-background p-3 sm:px-4 sm:py-3 transition-colors hover:bg-secondary/40"
                       >
                         <div className="flex min-w-0 items-center gap-3">
                           {isImage ? (
                             <img
                               src={fileUrl}
                               alt={file.name || 'Asset preview'}
-                              className="h-14 w-14 shrink-0 rounded-xl border border-border object-cover"
+                              className="h-14 w-14 shrink-0 rounded-xl object-cover"
                               loading="lazy"
                             />
                           ) : (

@@ -16,7 +16,10 @@ import Task from '../models/task.model.js';
 import { createNotification } from '../utils/notification.js';
 import { sendEmail } from '../utils/email.js';
 import { createActivityLog } from '../utils/activity.js';
+import { moveToRecycleBin } from '../utils/recycleBin.js';
 import { withWorkspaceScope } from '../middleware/auth.middleware.js';
+import { parsePagination } from '../utils/pagination.js';
+import { emitLiveEvent } from '../utils/socketEmitter.js';
 
 const invoiceStatusMap = {
   Draft: 'draft',
@@ -347,7 +350,7 @@ const recordPayment = async ({
   notes: notes || '',
 });
 
-const maybeCreateReferralEarning = async ({ invoice, io }) => {
+const maybeCreateReferralEarning = async ({ invoice, amount, io }) => {
   const referral = await Referral.findOne({
     client: invoice.client,
     status: { $in: ['qualified', 'converted', 'approved'] },
@@ -356,16 +359,17 @@ const maybeCreateReferralEarning = async ({ invoice, io }) => {
   if (!referral) return null;
 
   let earnedAmount = 0;
+  const paymentChunk = amount !== undefined && Number(amount) > 0 ? Number(amount) : Number(invoice.paidAmount || invoice.total || 0);
 
   if (referral.commissionType === 'monthly') {
     earnedAmount = Number(referral.monthlyAmount || 0);
     referral.commissionAmount = Number(referral.commissionAmount || 0) + earnedAmount;
   } else {
-    earnedAmount = Number(invoice.paidAmount || invoice.total || 0) * (Number(referral.commissionRate || 0) / 100);
+    earnedAmount = paymentChunk * (Number(referral.commissionRate || 0) / 100);
     referral.commissionAmount = Number(referral.commissionAmount || 0) + earnedAmount;
   }
 
-  referral.dealValue = Number(referral.dealValue || 0) + Number(invoice.paidAmount || invoice.total || 0);
+  referral.dealValue = Number(referral.dealValue || 0) + paymentChunk;
   referral.status = 'approved';
   await referral.save();
 
@@ -488,6 +492,8 @@ export const createFinanceRecord = async (req, res) => {
       .populate('projectId', 'name')
       .populate('createdBy', 'name');
 
+    emitLiveEvent('financeUpdated', { id: record._id, type: 'finance_record' });
+
     res.status(201).json({ success: true, record: serializeFinanceRecord(populated) });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -524,6 +530,8 @@ export const updateFinanceRecord = async (req, res) => {
       metadata: { fields: Object.keys(req.body || {}) },
     });
 
+    emitLiveEvent('financeUpdated', { id: current._id, type: 'finance_record' });
+
     res.json({ success: true, record: serializeFinanceRecord(populated) });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -547,6 +555,8 @@ export const deleteFinanceRecord = async (req, res) => {
       relatedClient: record.clientId,
       relatedProject: record.projectId,
     });
+
+    emitLiveEvent('financeUpdated', { id: record._id, type: 'finance_record', deleted: true });
 
     res.json({ success: true, message: 'Finance record deleted' });
   } catch (error) {
@@ -695,7 +705,8 @@ export const getOverdueFinanceRecords = async (req, res) => {
 
 export const getFinanceEntries = async (req, res) => {
   try {
-    const { search, type, status, page = 1, limit = 50 } = req.query;
+    const { search, type, status } = req.query;
+    const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 25, maxLimit: 100 });
     const filter = {};
 
     if (type) filter.type = type;
@@ -709,18 +720,21 @@ export const getFinanceEntries = async (req, res) => {
       ];
     }
 
-    const total = await FinanceEntry.countDocuments(filter);
-    const entries = await FinanceEntry.find(filter)
-      .populate('createdBy', 'name email')
-      .populate('client', 'name company')
-      .populate('project', 'name')
-      .sort({ date: -1, createdAt: -1 })
-      .skip((Number(page) - 1) * Number(limit))
-      .limit(Number(limit));
+    const [total, entries] = await Promise.all([
+      FinanceEntry.countDocuments(filter),
+      FinanceEntry.find(filter)
+        .populate('createdBy', 'name email')
+        .populate('client', 'name company')
+        .populate('project', 'name')
+        .sort({ date: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
 
-    res.json({ success: true, total, entries });
+    res.json({ success: true, total, page, pages: Math.ceil(total / limit), entries });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(error.statusCode || 500).json({ success: false, message: error.message });
   }
 };
 
@@ -757,6 +771,8 @@ export const createFinanceEntry = async (req, res) => {
       .populate('createdBy', 'name email')
       .populate('client', 'name company')
       .populate('project', 'name');
+
+    emitLiveEvent('financeUpdated', { id: entry._id, type: 'finance_entry' });
 
     res.status(201).json({ success: true, entry: populated });
   } catch (error) {
@@ -800,6 +816,8 @@ export const updateFinanceEntry = async (req, res) => {
       metadata: { fields: Object.keys(req.body || {}) },
     });
 
+    emitLiveEvent('financeUpdated', { id: entry._id, type: 'finance_entry' });
+
     res.json({ success: true, entry });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -823,6 +841,8 @@ export const deleteFinanceEntry = async (req, res) => {
       metadata: { amount: entry.amount },
     });
 
+    emitLiveEvent('financeUpdated', { id: entry._id, type: 'finance_entry', deleted: true });
+
     res.json({ success: true, message: 'Finance entry deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -833,11 +853,13 @@ export const deleteFinanceEntry = async (req, res) => {
 
 export const getInvoices = async (req, res) => {
   try {
-    const { status, client, search, page = 1, limit = 20 } = req.query;
+    const { status, client, search } = req.query;
+    const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 25, maxLimit: 100 });
     let filter = {};
 
     if (status) filter.status = normalizeStatus(status);
     if (client) filter.client = client;
+    if (req.query.project) filter.project = req.query.project;
     if (search) {
       filter.$or = [
         { invoiceNumber: { $regex: search, $options: 'i' } },
@@ -847,18 +869,27 @@ export const getInvoices = async (req, res) => {
 
     filter = await applyClientInvoiceScope(req, filter);
 
-    const total = await Invoice.countDocuments(filter);
-    const invoices = await Invoice.find(filter)
-      .populate('client', 'name email company')
-      .populate('project', 'name')
-      .populate('issuedBy', 'name')
-      .sort({ createdAt: -1 })
-      .skip((Number(page) - 1) * Number(limit))
-      .limit(Number(limit));
+    const [total, invoices] = await Promise.all([
+      Invoice.countDocuments(filter),
+      Invoice.find(filter)
+        .populate('client', 'name email company')
+        .populate('project', 'name')
+        .populate('issuedBy', 'name')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
 
-    res.json({ success: true, total, invoices: invoices.map(serializeInvoice) });
+    res.json({
+      success: true,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      invoices: invoices.map(serializeInvoice),
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(error.statusCode || 500).json({ success: false, message: error.message });
   }
 };
 
@@ -977,6 +1008,8 @@ export const createInvoice = async (req, res) => {
       .populate('project', 'name')
       .populate('issuedBy', 'name');
 
+    emitLiveEvent('financeUpdated', { id: invoice._id, type: 'invoice' });
+
     res.status(201).json({ success: true, invoice: serializeInvoice(populated) });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -1019,6 +1052,8 @@ export const updateInvoice = async (req, res) => {
       .populate('client', 'name email company')
       .populate('project', 'name')
       .populate('issuedBy', 'name');
+
+    emitLiveEvent('financeUpdated', { id: invoice._id, type: 'invoice' });
 
     res.json({ success: true, invoice: serializeInvoice(populated) });
   } catch (error) {
@@ -1095,26 +1130,45 @@ export const markInvoicePaid = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invoice is already marked as paid' });
     }
 
-    const paidAmount = Number(req.body.paidAmount || invoice.total || 0);
-    invoice.status = 'paid';
-    invoice.paidDate = new Date();
-    invoice.paidAmount = paidAmount;
-    invoice.balanceAmount = Math.max(Number(invoice.totalAmount || invoice.total || 0) - paidAmount, 0);
+    const currentPaid = Number(invoice.paidAmount || 0);
+    const invoiceTotal = Number(invoice.totalAmount || invoice.total || 0);
+    const remainingBalance = Math.max(0, invoiceTotal - currentPaid);
+
+    // If caller specified an amount, use it (capped at remaining balance); otherwise settle remaining balance
+    const paymentAmount = req.body.paidAmount !== undefined && Number(req.body.paidAmount) > 0
+      ? Math.min(Number(req.body.paidAmount), remainingBalance)
+      : remainingBalance;
+
+    const newTotalPaid = currentPaid + paymentAmount;
+    invoice.paidAmount = newTotalPaid;
+    invoice.balanceAmount = Math.max(0, invoiceTotal - newTotalPaid);
+    invoice.status = invoice.balanceAmount === 0 ? 'paid' : 'partially_paid';
+    invoice.paidDate = req.body.paidDate ? new Date(req.body.paidDate) : new Date();
     invoice.paymentMethod = req.body.paymentMethod || invoice.paymentMethod || 'manual';
     invoice.paymentReference = req.body.paymentReference || invoice.paymentReference || '';
+
+    invoice.payments = invoice.payments || [];
+    invoice.payments.push({
+      amount: paymentAmount,
+      method: invoice.paymentMethod,
+      reference: invoice.paymentReference,
+      notes: req.body.notes || 'Full settlement',
+      paidAt: invoice.paidDate,
+    });
+
     await invoice.save();
 
     await Promise.all([
       recordPayment({
         invoice,
-        amount: paidAmount,
+        amount: paymentAmount,
         method: invoice.paymentMethod,
         reference: invoice.paymentReference,
         notes: req.body.notes,
         recordedBy: req.user._id,
       }),
-      Client.findByIdAndUpdate(invoice.client?._id || invoice.client, { $inc: { totalRevenue: paidAmount } }),
-      maybeCreateReferralEarning({ invoice, io: req.app.get('io') }),
+      Client.findByIdAndUpdate(invoice.client?._id || invoice.client, { $inc: { totalRevenue: paymentAmount } }),
+      maybeCreateReferralEarning({ invoice, amount: paymentAmount, io: req.app.get('io') }),
     ]);
 
     const finance = await Finance.findOne(withWorkspaceScope(req, { clientId: invoice.client?._id || invoice.client, projectId: invoice.project }));
@@ -1150,6 +1204,9 @@ export const markInvoicePaid = async (req, res) => {
       },
     });
 
+    emitLiveEvent('financeUpdated', { id: invoice._id, type: 'invoice', status: 'paid' });
+    emitLiveEvent('invoicePaid', { id: invoice._id, paidAmount });
+
     res.json({ success: true, message: 'Invoice marked as paid', invoice: serializeInvoice(invoice) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -1175,16 +1232,29 @@ export const addPartialPaymentToInvoice = async (req, res) => {
     invoice.paidDate = req.body.paymentDate || new Date();
     invoice.status = invoice.balanceAmount === 0 ? 'paid' : 'partially_paid';
     if (invoice.status === 'paid') invoice.viewedByClient = true;
-    await invoice.save();
-
-    await recordPayment({
-      invoice,
+    invoice.payments = invoice.payments || [];
+    invoice.payments.push({
       amount,
       method: invoice.paymentMethod,
       reference: invoice.paymentReference,
       notes: req.body.notes || 'Partial payment',
-      recordedBy: req.user._id,
+      paidAt: invoice.paidDate,
     });
+
+    await invoice.save();
+
+    await Promise.all([
+      recordPayment({
+        invoice,
+        amount,
+        method: invoice.paymentMethod,
+        reference: invoice.paymentReference,
+        notes: req.body.notes || 'Partial payment',
+        recordedBy: req.user._id,
+      }),
+      Client.findByIdAndUpdate(invoice.client?._id || invoice.client, { $inc: { totalRevenue: amount } }),
+      maybeCreateReferralEarning({ invoice, amount, io: req.app.get('io') }),
+    ]);
 
     const finance = await Finance.findOne(withWorkspaceScope(req, { clientId: invoice.client?._id || invoice.client, projectId: invoice.project }));
     if (finance) {
@@ -1203,6 +1273,8 @@ export const addPartialPaymentToInvoice = async (req, res) => {
         metadata: { invoiceId: invoice._id, amountPaid: amount },
       }, req.app.get('io'));
     }
+
+    emitLiveEvent('financeUpdated', { id: invoice._id, type: 'invoice', status: invoice.status });
 
     res.json({ success: true, invoice: serializeInvoice(invoice) });
   } catch (error) {
@@ -1236,6 +1308,8 @@ export const markInvoiceViewed = async (req, res) => {
       metadata: { invoiceId: invoice._id },
     }, req.app.get('io'))));
 
+    emitLiveEvent('financeUpdated', { id: invoice._id, type: 'invoice', status: invoice.status });
+
     res.json({ success: true, invoice: serializeInvoice(invoice) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -1258,11 +1332,24 @@ export const getInvoiceByPublicLink = async (req, res) => {
 
 export const deleteInvoice = async (req, res) => {
   try {
-    const invoice = await Invoice.findByIdAndDelete(req.params.id);
+    const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found' });
 
+    await moveToRecycleBin({
+      entityType: 'invoice',
+      originalId: invoice._id,
+      title: `Invoice ${invoice.invoiceNumber || ''}`,
+      subtitle: `Total: ₹${(invoice.total || 0).toLocaleString('en-IN')}`,
+      originalLocation: 'Finance > Invoices',
+      modelName: 'Invoice',
+      documentData: invoice,
+      user: req.user,
+    });
+
+    await Invoice.findByIdAndDelete(req.params.id);
+
     await Payment.deleteMany({ invoice: invoice._id });
-    if (invoice.status === 'paid' && Number(invoice.paidAmount || 0) > 0) {
+    if (Number(invoice.paidAmount || 0) > 0 && invoice.client) {
       await Client.findByIdAndUpdate(invoice.client, { $inc: { totalRevenue: -Number(invoice.paidAmount || 0) } });
     }
 
@@ -1277,6 +1364,8 @@ export const deleteInvoice = async (req, res) => {
       relatedProject: invoice.project,
       metadata: { total: invoice.total },
     });
+
+    emitLiveEvent('financeUpdated', { id: invoice._id, type: 'invoice', deleted: true });
 
     res.json({ success: true, message: 'Invoice deleted' });
   } catch (error) {
@@ -1596,6 +1685,8 @@ export const createExpense = async (req, res) => {
       metadata: { amount: expense.amount, status: expense.status, transactionType: expense.transactionType },
     });
 
+    emitLiveEvent('financeUpdated', { id: expense._id, type: 'expense' });
+
     res.status(201).json({ success: true, expense });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -1648,6 +1739,8 @@ export const updateExpense = async (req, res) => {
       metadata: { amount: expense.amount, status: expense.status },
     });
 
+    emitLiveEvent('financeUpdated', { id: expense._id, type: 'expense' });
+
     res.json({ success: true, expense: updatedExpense });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -1664,6 +1757,17 @@ export const deleteExpense = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to delete this expense' });
     }
 
+    await moveToRecycleBin({
+      entityType: 'expense',
+      originalId: expense._id,
+      title: expense.title,
+      subtitle: `₹${(expense.amount || 0).toLocaleString('en-IN')} • ${expense.category || ''}`,
+      originalLocation: 'Finance > Expenses',
+      modelName: 'Expense',
+      documentData: expense,
+      user: req.user,
+    });
+
     await expense.deleteOne();
 
     await createActivityLog({
@@ -1674,6 +1778,8 @@ export const deleteExpense = async (req, res) => {
       title: 'Expense deleted',
       description: `${expense.title} was deleted.`,
     });
+
+    emitLiveEvent('financeUpdated', { id: req.params.id, type: 'expense', deleted: true });
 
     res.json({ success: true, message: 'Expense deleted successfully' });
   } catch (error) {
@@ -1694,6 +1800,11 @@ export const approveExpense = async (req, res) => {
     expense.status = action === 'approve' ? 'approved' : 'rejected';
     expense.approvedBy = req.user._id;
     await expense.save();
+
+    emitLiveEvent('financeUpdated', { id: expense._id, type: 'expense', status: expense.status });
+    if (action === 'approve') {
+      emitLiveEvent('expenseApproved', { id: expense._id, amount: expense.amount });
+    }
 
     if (expense.submittedBy?._id) {
       await createNotification({
@@ -1735,7 +1846,13 @@ export const getMonthlyExpenseReport = async (req, res) => {
 
     const [monthlyInvoices, monthlyExpensesData] = await Promise.all([
       Invoice.aggregate([
-        { $match: { status: 'paid', paidDate: { $gte: startOfMonth, $lte: endOfMonth } } },
+        {
+          $match: {
+            status: { $nin: ['draft', 'void', 'cancelled'] },
+            paidAmount: { $gt: 0 },
+            paidDate: { $gte: startOfMonth, $lte: endOfMonth },
+          },
+        },
         { $group: { _id: null, totalRevenue: { $sum: '$paidAmount' } } },
       ]),
       Expense.find({
@@ -1812,11 +1929,27 @@ export const getFinanceSummary = async (req, res) => {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const [totalRevenue, monthRevenue, totalExpenses, overdueInvoices, pendingInvoices] = await Promise.all([
-      Invoice.aggregate([{ $match: { status: 'paid' } }, { $group: { _id: null, total: { $sum: '$paidAmount' } } }]),
-      Invoice.aggregate([{ $match: { status: 'paid', paidDate: { $gte: startOfMonth } } }, { $group: { _id: null, total: { $sum: '$paidAmount' } } }]),
-      Expense.aggregate([{ $match: { status: 'approved', transactionType: { $ne: 'Profit' } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
-      Invoice.countDocuments({ status: 'overdue' }),
-      Invoice.countDocuments({ status: { $in: ['draft', 'sent'] } }),
+      Invoice.aggregate([
+        { $match: { status: { $nin: ['draft', 'void', 'cancelled'] }, paidAmount: { $gt: 0 } } },
+        { $group: { _id: null, total: { $sum: '$paidAmount' } } },
+      ]),
+      Invoice.aggregate([
+        { $match: { status: { $nin: ['draft', 'void', 'cancelled'] }, paidAmount: { $gt: 0 }, paidDate: { $gte: startOfMonth } } },
+        { $group: { _id: null, total: { $sum: '$paidAmount' } } },
+      ]),
+      Expense.aggregate([
+        { $match: { status: 'approved', transactionType: { $ne: 'Profit' }, category: { $ne: 'salary' } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]),
+      Invoice.countDocuments({
+        status: { $nin: ['paid', 'draft', 'void', 'cancelled'] },
+        dueDate: { $lt: now },
+        balanceAmount: { $gt: 0 },
+      }),
+      Invoice.countDocuments({
+        status: { $in: ['unpaid', 'sent', 'viewed', 'partially_paid'] },
+        balanceAmount: { $gt: 0 },
+      }),
     ]);
 
     const revenueValue = totalRevenue[0]?.total || 0;

@@ -7,9 +7,12 @@ import Project from '../models/project.model.js';
 import Task from '../models/task.model.js';
 import Client from '../models/client.model.js';
 import ActivityLog from '../models/activityLog.model.js';
+import Proposal from '../models/proposal.model.js';
 import { createNotification } from '../utils/notification.js';
 import { createActivityLog } from '../utils/activity.js';
+import { moveToRecycleBin } from '../utils/recycleBin.js';
 import { withWorkspaceScope } from '../middleware/auth.middleware.js';
+import { emitLiveEvent } from '../utils/socketEmitter.js';
 
 const projectStatusMap = {
   Planning: 'planning',
@@ -233,7 +236,10 @@ const assertProjectAccess = async (req, project) => {
   if (req.user.role === 'employee' && project.team?.some((member) => member.toString() === req.user._id.toString())) return { allowed: true };
   if (req.user.role === 'client') {
     const client = await Client.findOne({ userId: req.user._id }).select('_id');
-    if (client && project.client?.toString() === client._id.toString()) return { allowed: true };
+    const userClientId = client?._id?.toString() || req.user.clientId?.toString();
+    const projectClientId = project.client?._id ? project.client._id.toString() : project.client?.toString();
+    if (userClientId && projectClientId === userClientId) return { allowed: true };
+    return { allowed: false, status: 403, message: 'Access denied: this project belongs to another client' };
   }
   return { allowed: false, status: 403, message: 'Access denied' };
 };
@@ -248,6 +254,11 @@ export const getProjects = async (req, res) => {
       manager,
       isInternal,
       search,
+      period,
+      startDate,
+      endDate,
+      sortBy,
+      sortOrder,
       startDateFrom,
       startDateTo,
       endDateFrom,
@@ -294,6 +305,79 @@ export const getProjects = async (req, res) => {
       if (createdFrom) filter.createdAt.$gte = new Date(createdFrom);
       if (createdTo) filter.createdAt.$lte = new Date(`${createdTo}T23:59:59.999Z`);
     }
+
+    const andConditions = [];
+
+    // Date range & period handling (This Month, Previous Month, Yearly, Custom)
+    let pRangeStart = null;
+    let pRangeEnd = null;
+
+    if (startDate || endDate) {
+      if (startDate) {
+        const [y, m, d] = String(startDate).split('-').map(Number);
+        pRangeStart = !Number.isNaN(y) && !Number.isNaN(m) && !Number.isNaN(d)
+          ? new Date(y, m - 1, d, 0, 0, 0, 0)
+          : new Date(startDate);
+      }
+      if (endDate) {
+        const [y, m, d] = String(endDate).split('-').map(Number);
+        pRangeEnd = !Number.isNaN(y) && !Number.isNaN(m) && !Number.isNaN(d)
+          ? new Date(y, m - 1, d, 23, 59, 59, 999)
+          : new Date(endDate);
+      }
+    } else if (period) {
+      const now = new Date();
+      if (period === 'today') {
+        pRangeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        pRangeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      } else if (period === 'weekly' || period === 'this_week') {
+        const day = now.getDay();
+        const diffToMonday = day === 0 ? -6 : 1 - day;
+        pRangeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday, 0, 0, 0, 0);
+        pRangeEnd = new Date(pRangeStart.getFullYear(), pRangeStart.getMonth(), pRangeStart.getDate() + 6, 23, 59, 59, 999);
+      } else if (period === 'this_month' || period === 'monthly') {
+        pRangeStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        pRangeEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      } else if (period === 'previous_month' || period === 'lastMonth') {
+        pRangeStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+        pRangeEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      } else if (period === 'yearly' || period === 'this_year') {
+        pRangeStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+        pRangeEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+      } else if (period === 'overdue') {
+        andConditions.push({
+          dueDate: { $lt: now },
+          status: { $nin: ['completed', 'Completed', 'cancelled', 'Cancelled'] },
+        });
+      }
+    }
+
+    if (pRangeStart || pRangeEnd) {
+      const start = pRangeStart || new Date(0);
+      const end = pRangeEnd || new Date(8640000000000000);
+      andConditions.push({
+        $or: [
+          { dueDate: { $gte: start, $lte: end } },
+          { endDate: { $gte: start, $lte: end } },
+          { startDate: { $gte: start, $lte: end } },
+          {
+            $and: [
+              { startDate: { $lte: end } },
+              { $or: [{ endDate: { $gte: start } }, { dueDate: { $gte: start } }] },
+            ],
+          },
+          {
+            $and: [
+              { $or: [{ startDate: null }, { startDate: { $exists: false } }] },
+              { $or: [{ dueDate: null }, { dueDate: { $exists: false } }] },
+              { $or: [{ endDate: null }, { endDate: { $exists: false } }] },
+              { createdAt: { $gte: start, $lte: end } },
+            ],
+          },
+        ],
+      });
+    }
+
     if (search) {
       const matchingClients = await Client.find({
         $or: [
@@ -301,19 +385,49 @@ export const getProjects = async (req, res) => {
           { company: { $regex: search, $options: 'i' } },
         ],
       }).select('_id');
-      filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { category: { $regex: search, $options: 'i' } },
-        { tags: { $regex: search, $options: 'i' } },
-        { client: { $in: matchingClients.map((item) => item._id) } },
-      ];
+      andConditions.push({
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+          { category: { $regex: search, $options: 'i' } },
+          { tags: { $regex: search, $options: 'i' } },
+          { client: { $in: matchingClients.map((item) => item._id) } },
+        ],
+      });
+    }
+
+    if (andConditions.length > 0) {
+      if (filter.$and) {
+        filter.$and.push(...andConditions);
+      } else {
+        filter.$and = andConditions;
+      }
     }
     
     if (req.user.role === 'employee') filter.team = req.user._id;
     if (req.user.role === 'client') {
       const clientRecord = await Client.findOne({ userId: req.user._id }).select('_id');
-      if (clientRecord) filter.client = clientRecord._id;
+      const targetClientId = clientRecord?._id || req.user.clientId;
+      if (targetClientId) {
+        filter.client = targetClientId;
+      } else {
+        filter._id = null; // Fail closed
+      }
+    }
+
+    let sortOptions = { createdAt: -1 };
+    if (sortBy) {
+      const dir = sortOrder === 'desc' || sortOrder === '-1' ? -1 : 1;
+      if (sortBy === 'dueDate_asc' || sortBy === 'dueDate' || sortBy === 'endDate_asc') sortOptions = { dueDate: 1 };
+      else if (sortBy === 'dueDate_desc' || sortBy === 'endDate_desc') sortOptions = { dueDate: -1 };
+      else if (sortBy === 'priority_desc' || sortBy === 'priority') sortOptions = { priority: -1, dueDate: 1 };
+      else if (sortBy === 'priority_asc') sortOptions = { priority: 1, dueDate: 1 };
+      else if (sortBy === 'newest' || sortBy === 'createdAt') sortOptions = { createdAt: -1 };
+      else if (sortBy === 'oldest') sortOptions = { createdAt: 1 };
+      else if (sortBy === 'name' || sortBy === 'name_asc') sortOptions = { name: 1 };
+      else if (sortBy === 'name_desc') sortOptions = { name: -1 };
+      else if (sortBy === 'budget_desc') sortOptions = { budget: -1 };
+      else if (sortBy === 'budget_asc') sortOptions = { budget: 1 };
     }
 
     const scopedFilter = withWorkspaceScope(req, filter);
@@ -324,7 +438,7 @@ export const getProjects = async (req, res) => {
       .populate('acceptedProposalId', 'title amount acceptedAt proposalNumber status')
       .populate('manager', 'name avatar')
       .populate('team', 'name avatar')
-      .sort({ createdAt: -1 })
+      .sort(sortOptions)
       .skip((Number(page) - 1) * Number(limit))
       .limit(Number(limit));
 
@@ -344,6 +458,38 @@ export const getProjects = async (req, res) => {
               ],
             },
           },
+          ongoingTasks: {
+            $sum: {
+              $cond: [
+                {
+                  $in: [
+                    '$status',
+                    [
+                      'in_progress',
+                      'on_process',
+                      'review',
+                      'client_approval',
+                      'smm_team',
+                      'drive_uploaded',
+                      'rework',
+                      'rework_completed',
+                      'review_required',
+                      'waiting_for_client',
+                      'In Progress',
+                      'On Process',
+                      'In Review',
+                      'Rework',
+                      'Rework Completed',
+                      'Review Required',
+                      'Waiting for Client',
+                    ],
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
         },
       },
     ]);
@@ -356,11 +502,16 @@ export const getProjects = async (req, res) => {
     const serializedProjects = projects.map((project) => {
       const pObj = project.toObject ? project.toObject() : project;
       const stat = taskStatsMap[project._id.toString()];
+      const totalTasks = stat?.totalTasks || 0;
+      const doneTasks = stat?.doneTasks || 0;
+      const ongoingTasks = stat?.ongoingTasks || 0;
+      const pendingTasks = Math.max(0, totalTasks - doneTasks - ongoingTasks);
+
       let progress = 0;
       if (pObj.status === 'completed' || pObj.status === 'Completed') {
         progress = 100;
-      } else if (stat && stat.totalTasks > 0) {
-        progress = Math.round((stat.doneTasks / stat.totalTasks) * 100);
+      } else if (totalTasks > 0) {
+        progress = Math.round((doneTasks / totalTasks) * 100);
       } else if (pObj.progress) {
         progress = Number(pObj.progress);
       }
@@ -368,8 +519,11 @@ export const getProjects = async (req, res) => {
       return serializeProject({
         ...pObj,
         progress,
-        totalTasks: stat?.totalTasks || 0,
-        doneTasks: stat?.doneTasks || 0,
+        totalTasks,
+        doneTasks,
+        completedTasks: doneTasks,
+        ongoingTasks,
+        pendingTasks,
       });
     });
 
@@ -419,7 +573,7 @@ export const getProject = async (req, res) => {
 
     res.json({
       success: true,
-      project: serializeProject({ ...project.toObject(), progress }),
+      project: serializeProject({ ...project.toObject(), progress, totalTasks, doneTasks }),
       progress,
       recentActivity,
       recentTasks: recentTasks.map(serializeProjectTask),
@@ -452,6 +606,21 @@ export const createProject = async (req, res) => {
       }, req.app.get('io'));
     }
 
+    if (Array.isArray(project.team) && project.team.length > 0) {
+      const teamRecipients = project.team
+        .map((t) => t?._id || t)
+        .filter((t) => t && t.toString() !== req.user._id.toString() && t.toString() !== project.manager?.toString());
+
+      await Promise.all(teamRecipients.map((recipient) => createNotification({
+        recipient,
+        sender: req.user._id,
+        type: 'project_team_added',
+        title: 'Added to Project',
+        message: `You have been added to team for project: ${project.name}`,
+        link: `/projects/${project._id}`,
+      }, req.app.get('io')))).catch(() => {});
+    }
+
     if (project.client) {
       await Client.findByIdAndUpdate(project.client, {
         $set: {
@@ -459,6 +628,12 @@ export const createProject = async (req, res) => {
           lastActivityDate: new Date(),
         },
       });
+    }
+
+    if (project.acceptedProposalId) {
+      await Proposal.findByIdAndUpdate(project.acceptedProposalId, {
+        linkedProjectId: project._id,
+      }).catch((e) => console.warn('Failed to link proposal to project:', e.message));
     }
 
     await createActivityLog({
@@ -473,7 +648,9 @@ export const createProject = async (req, res) => {
       relatedUser: project.manager,
     });
 
-    res.status(201).json({ success: true, project: serializeProject(populated) });
+    const serialized = serializeProject(populated);
+    emitLiveEvent('projectCreated', serialized);
+    res.status(201).json({ success: true, project: serialized });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -513,7 +690,28 @@ export const updateProject = async (req, res) => {
       metadata: { fields: Object.keys(req.body || {}) },
     });
 
-    res.json({ success: true, project: serializeProject(project) });
+    if (req.body.status) {
+      const teamUserIds = (project.team || []).map((m) => m?._id || m).concat(project.manager?._id || project.manager).filter(Boolean);
+      const uniqueRecipients = [...new Set(teamUserIds.map((id) => id.toString()))].filter((id) => id !== req.user._id.toString());
+      await Promise.all(uniqueRecipients.map((recipient) => createNotification({
+        recipient,
+        sender: req.user._id,
+        type: 'project_status_updated',
+        title: `Project Status: ${project.status}`,
+        message: `${req.user.name} changed status of "${project.name}" to ${project.status}.`,
+        link: `/projects/${project._id}`,
+      }, io))).catch((e) => console.warn('Project status notification error:', e.message));
+    }
+
+    if (project.acceptedProposalId) {
+      await Proposal.findByIdAndUpdate(project.acceptedProposalId, {
+        linkedProjectId: project._id,
+      }).catch((e) => console.warn('Failed to link proposal to project:', e.message));
+    }
+
+    const serialized = serializeProject(project);
+    emitLiveEvent('projectUpdated', serialized);
+    res.json({ success: true, project: serialized });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -523,6 +721,21 @@ export const deleteProject = async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+
+    // Find and archive all associated tasks into metadata so they can be restored together
+    const associatedTasks = await Task.find({ project: project._id }).lean();
+
+    await moveToRecycleBin({
+      entityType: 'project',
+      originalId: project._id,
+      title: project.name,
+      subtitle: project.category ? `Category: ${project.category}` : '',
+      originalLocation: 'Projects',
+      modelName: 'Project',
+      documentData: project,
+      user: req.user,
+      metadata: { associatedTasks },
+    });
 
     await Task.deleteMany({ project: project._id });
     await project.deleteOne();
@@ -538,6 +751,7 @@ export const deleteProject = async (req, res) => {
       relatedProject: project._id,
     });
 
+    emitLiveEvent('projectDeleted', req.params.id);
     res.json({ success: true, message: 'Project and associated tasks deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
