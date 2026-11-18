@@ -464,8 +464,11 @@ const Landing = () => {
           <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/20 px-3.5 py-1 rounded-full">
             Start Running Your Agency Smarter
           </span>
-          <h2 className="font-display font-black text-3xl sm:text-5xl tracking-tight leading-tight">
-            Ready to Organize Your Entire Agency?
+          <h2 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight leading-tight">
+            Ready to Organize Your{' '}
+            <span className="bg-gradient-to-r from-[#12B7D4] via-[#38bdf8] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer">
+              Entire Agency?
+            </span>
           </h2>
           <p className="text-slate-300 text-sm sm:text-base font-medium max-w-xl mx-auto">
             Register your company in 2 minutes. Keep your clients happy, your team on track, and your bills on time.

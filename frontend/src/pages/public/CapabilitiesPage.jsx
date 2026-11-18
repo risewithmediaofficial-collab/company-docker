@@ -310,8 +310,11 @@ const CapabilitiesPage = () => {
       {/* ── BOTTOM CTA ── */}
       <section className="bg-slate-900 text-white py-16 sm:py-20 px-4 sm:px-8 border-t border-slate-800 text-left sm:text-center">
         <div className="max-w-3xl mx-auto space-y-6">
-          <h2 className="font-display font-black text-3xl sm:text-5xl tracking-tight leading-tight">
-            Ready to Try These Tools For Your Agency?
+          <h2 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight leading-tight">
+            Ready to Try These Tools For{' '}
+            <span className="bg-gradient-to-r from-[#12B7D4] via-[#38bdf8] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer">
+              Your Agency?
+            </span>
           </h2>
           <p className="text-slate-300 text-sm sm:text-base font-medium max-w-xl mx-auto">
             Takes less than 2 minutes to register. Start with zero clutter and pure efficiency.
