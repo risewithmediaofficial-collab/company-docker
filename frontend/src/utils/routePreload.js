@@ -37,6 +37,7 @@ const routeLoaders = {
   '/assets': () => import('../pages/assets/AssetsLibrary'),
   '/reports': () => import('../pages/reports/Reports'),
   '/settings': () => import('../pages/Settings'),
+  '/platform/analytics': () => import('../pages/platform/PlatformAnalytics'),
   '/portal/invoices': () => import('../pages/portal/sections/PortalInvoices'),
   '/portal/tasks': () => import('../pages/portal/sections/PortalTasks'),
   '/portal/tracker': () => import('../pages/portal/sections/PortalSMMTracker'),

@@ -63,6 +63,7 @@ const PlatformLayout = lazy(() => import('./pages/platform/PlatformLayout'));
 const PlatformDashboard = lazy(() => import('./pages/platform/PlatformDashboard'));
 const Companies = lazy(() => import('./pages/platform/Companies'));
 const CompanyDetail = lazy(() => import('./pages/platform/CompanyDetail'));
+const PlatformAnalytics = lazy(() => import('./pages/platform/PlatformAnalytics'));
 
 // Development Module Pages
 const DevelopmentDashboard = lazy(() => import('./pages/development/DevelopmentDashboard'));
@@ -191,6 +192,7 @@ const App = () => {
             <Route path="/platform/requests" element={<Companies defaultTab="requests" />} />
             <Route path="/platform/company-requests" element={<Companies defaultTab="requests" />} />
             <Route path="/platform/companies/:id" element={<CompanyDetail />} />
+            <Route path="/platform/analytics" element={<PlatformAnalytics />} />
           </Route>
 
           {/* ── Protected Shell ─────────────────────────────────────────── */}
