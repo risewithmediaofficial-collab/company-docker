@@ -343,6 +343,15 @@ const Login = () => {
             </Link>
           </>
         )}
+
+        <div className="pt-2">
+          <Link
+            to="/"
+            className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
+          >
+            ← Back to Home & Platform Overview
+          </Link>
+        </div>
       </div>
     </div>
   );
