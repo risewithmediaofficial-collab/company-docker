@@ -27,9 +27,9 @@ const PublicLayout = ({ children }) => {
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-[#12B7D4]/25 selection:text-slate-900 relative overflow-x-hidden antialiased flex flex-col justify-between">
       
-      {/* ── AMBIENT BLUE GRADIENT SIDE PATCHES ── */}
-      <div className="fixed top-1/4 -left-36 w-80 sm:w-96 h-[500px] bg-gradient-to-r from-[#12B7D4]/10 via-[#0ed2da]/5 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
-      <div className="fixed top-1/3 -right-36 w-80 sm:w-96 h-[500px] bg-gradient-to-l from-[#5f29c7]/8 via-[#12B7D4]/5 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
+      {/* ── AMBIENT LOGO BLUE SIDE GLOWS (Only #12B7D4) ── */}
+      <div className="fixed top-1/4 -left-36 w-80 sm:w-96 h-[500px] bg-gradient-to-r from-[#12B7D4]/12 via-[#12B7D4]/6 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
+      <div className="fixed top-1/3 -right-36 w-80 sm:w-96 h-[500px] bg-gradient-to-l from-[#12B7D4]/10 via-[#12B7D4]/5 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
 
       {/* ── FIXED TOP NAVIGATION BAR ── */}
       <header className="fixed top-0 inset-x-0 z-50 h-20 bg-white/95 backdrop-blur-md border-b border-slate-200/80 transition-all flex items-center shadow-xs">

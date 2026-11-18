@@ -64,13 +64,13 @@ const AboutPage = () => {
 
             <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-slate-950 tracking-tight leading-[1.1]">
               One Connected Hub.
-              <span className="bg-gradient-to-r from-[#12B7D4] via-sky-400 to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+              <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                 Zero Tool Sprawl.
               </span>
             </h2>
 
             <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
-              Replace messy WhatsApp chats, scattered Excel spreadsheets, and external accounting tools with one central dashboard for your entire team.
+              Replace scattered emails, messy spreadsheets, and external billing with one central agency command center.
             </p>
 
             <div className="space-y-2.5 pt-2">
@@ -78,7 +78,7 @@ const AboutPage = () => {
                 <div className="w-5 h-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
                   <Check size={13} strokeWidth={3} />
                 </div>
-                <span>Unified Inbound CRM & Campaign Pipeline</span>
+                <span>Lead Pipeline & Deal Stages Tracking</span>
               </div>
               <div className="flex items-center gap-2.5 text-sm font-semibold text-slate-800">
                 <div className="w-5 h-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
@@ -120,8 +120,8 @@ const AboutPage = () => {
                       <Users2 size={18} />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-white">Meta & WhatsApp Inbound</p>
-                      <p className="text-xs text-slate-400">Webhooks capture leads instantly</p>
+                      <p className="text-sm font-bold text-white">Lead Pipeline & Deals</p>
+                      <p className="text-xs text-slate-400">Track prospects through custom sales stages</p>
                     </div>
                   </div>
                   <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">Active</span>
@@ -370,9 +370,9 @@ const AboutPage = () => {
                 <span className="w-2.5 h-2.5 rounded-full bg-[#12B7D4]" />
                 <span className="text-xs font-black uppercase tracking-wider text-slate-400">Step 1</span>
               </div>
-              <h4 className="font-bold text-slate-950 text-base">Inbound Leads</h4>
+              <h4 className="font-bold text-slate-950 text-base">Lead Pipeline</h4>
               <p className="text-xs text-slate-600 font-medium mt-1">
-                Meta Ads and WhatsApp webhooks capture leads straight into CRM stages.
+                Track prospects through customizable deal stages to won clients.
               </p>
             </div>
 
