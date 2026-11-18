@@ -63,10 +63,10 @@ const PublicLayout = ({ children }) => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`px-3.5 py-1.5 rounded-full transition-all ${
+                  className={`px-3 py-1.5 transition-all text-sm ${
                     active
-                      ? 'text-[#12B7D4] bg-[#12B7D4]/10 font-black'
-                      : 'hover:text-slate-950 hover:bg-slate-100/80 text-slate-700'
+                      ? 'text-[#12B7D4] font-black'
+                      : 'hover:text-slate-950 text-slate-700 font-bold'
                   }`}
                 >
                   {item.label}
@@ -127,10 +127,10 @@ const PublicLayout = ({ children }) => {
                   key={item.path}
                   to={item.path}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`text-base font-bold px-3 py-2 rounded-lg transition-all ${
+                  className={`text-base font-bold px-3 py-2 transition-all ${
                     active
-                      ? 'text-[#12B7D4] bg-[#12B7D4]/10'
-                      : 'text-slate-800 hover:bg-slate-50'
+                      ? 'text-[#12B7D4] font-black'
+                      : 'text-slate-800 hover:text-slate-950'
                   }`}
                 >
                   {item.label}

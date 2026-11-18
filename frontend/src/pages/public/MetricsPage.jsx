@@ -1,16 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import {
-  ArrowRight,
-  ShieldCheck,
-  Zap,
-  Server,
-  Lock,
-  Check,
-  Clock,
-  Sparkles,
-  Smartphone
-} from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
 import HeroPattern from '../../components/public/HeroPattern';
 import ScrollReveal from '../../components/public/ScrollReveal';
@@ -23,12 +13,10 @@ const MetricsPage = () => {
         <HeroPattern />
 
         <div className="relative z-10 max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/90 border border-slate-200/90 mb-5 shadow-2xs self-start sm:self-auto">
-            <span className="w-2 h-2 rounded-full bg-[#12B7D4] animate-pulse" />
-            <span className="text-xs sm:text-sm font-bold text-slate-800 tracking-wide uppercase font-sans">
-              Fast & Reliable
-            </span>
-          </div>
+          {/* Plain Text Title (NO ROUNDED PILL) */}
+          <p className="text-xs sm:text-sm font-bold tracking-widest text-[#12B7D4] uppercase mb-4">
+            Fast & Reliable Infrastructure
+          </p>
 
           <h1 className="font-display font-extrabold text-4xl sm:text-6xl text-slate-950 tracking-tight leading-[1.08]">
             Fast Speed.
@@ -63,115 +51,101 @@ const MetricsPage = () => {
       <section className="bg-white py-8 px-4 sm:px-8 border-b border-slate-100">
         <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 text-left sm:text-center">
           <div>
-            <span className="font-display font-black text-3xl sm:text-4xl text-slate-950 block">99.9%</span>
+            <span className="font-display font-bold text-3xl sm:text-4xl text-slate-950 block">99.9%</span>
             <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1 block">Always Online</span>
           </div>
           <div>
-            <span className="font-display font-black text-3xl sm:text-4xl text-slate-950 block">10x</span>
+            <span className="font-display font-bold text-3xl sm:text-4xl text-slate-950 block">10x</span>
             <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1 block">Faster Approvals</span>
           </div>
           <div>
-            <span className="font-display font-black text-3xl sm:text-4xl text-slate-950 block">0</span>
+            <span className="font-display font-bold text-3xl sm:text-4xl text-slate-950 block">0</span>
             <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1 block">App Switching</span>
           </div>
           <div>
-            <span className="font-display font-black text-3xl sm:text-4xl text-slate-950 block">24/7</span>
+            <span className="font-display font-bold text-3xl sm:text-4xl text-slate-950 block">24/7</span>
             <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1 block">Client Access</span>
           </div>
         </div>
       </section>
 
-      {/* ── ZIG-ZAG SECTIONS (NO CARDS, REDUCED TEXT, BLACK & BLUE ANIMATION) ── */}
-      <div className="py-20 sm:py-28 px-4 sm:px-8 max-w-6xl mx-auto space-y-28 sm:space-y-36">
+      {/* ── CLEAN ZIG-ZAG SECTIONS (NO CARDS, PLAIN TEXT LABELS, HUMAN-MADE CSS) ── */}
+      <div className="py-20 sm:py-28 px-4 sm:px-8 max-w-6xl mx-auto space-y-24 sm:space-y-32">
 
-        {/* ── ZIG-ZAG 1: Data Isolation ── */}
+        {/* ── ZIG-ZAG 01: Complete Privacy ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-            <div className="lg:col-span-7 space-y-4 text-left">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
-                01 / Complete Privacy
-              </span>
-              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[44px] text-slate-950 tracking-tight leading-[1.15]">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start pb-16 border-b border-slate-100">
+            <div className="lg:col-span-5 space-y-4 text-left">
+              <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
+                01 — Complete Privacy
+              </p>
+              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
                 Your Data Stays
                 <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   100% Yours.
                 </span>
               </h2>
-              <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
+              <p className="text-base text-slate-600 font-medium leading-relaxed pt-1">
                 Every agency gets its own isolated company database. Other agencies can never see your clients, leads, or financial revenue.
               </p>
-              <div className="pt-2 space-y-2 text-sm font-bold text-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
-                    <Check size={12} strokeWidth={3} />
-                  </span>
-                  <span>Strict multi-company database separation</span>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
-                    <Check size={12} strokeWidth={3} />
-                  </span>
-                  <span>Daily automated backups ensure zero lost work</span>
-                </div>
-              </div>
             </div>
 
-            <div className="lg:col-span-5 bg-gradient-to-br from-slate-50 to-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm space-y-3">
-              <span className="text-xs font-black uppercase tracking-wider text-slate-400 block">Security Verification</span>
-              <div className="p-4 bg-white rounded-xl border border-slate-200 flex items-center gap-3 shadow-2xs">
-                <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                  <ShieldCheck size={20} />
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900 text-sm">Encrypted & Isolated</p>
-                  <p className="text-xs text-slate-500">Industry-standard safety protocols</p>
-                </div>
+            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-7 text-left pt-1">
+              <div className="border-l-2 border-[#12B7D4] pl-4 space-y-1">
+                <h3 className="font-bold text-slate-900 text-base">Multi-Tenant Separation</h3>
+                <p className="text-sm text-slate-600 font-medium leading-relaxed">Dedicated company database partition ensures complete confidentiality for every agency.</p>
+              </div>
+              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
+                <h3 className="font-bold text-slate-900 text-base">Automatic Backups</h3>
+                <p className="text-sm text-slate-600 font-medium leading-relaxed">Daily encrypted backups prevent data loss or project file corruption.</p>
+              </div>
+              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
+                <h3 className="font-bold text-slate-900 text-base">SSL Encrypted Traffic</h3>
+                <p className="text-sm text-slate-600 font-medium leading-relaxed">End-to-end HTTPS encryption protects client proposal details and invoicing files.</p>
+              </div>
+              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
+                <h3 className="font-bold text-slate-900 text-base">Strict Team Access</h3>
+                <p className="text-sm text-slate-600 font-medium leading-relaxed">Internal staff only view data matching their designated user permission role.</p>
               </div>
             </div>
           </div>
         </ScrollReveal>
 
-        {/* ── ZIG-ZAG 2: Fast Mobile Performance ── */}
+        {/* ── ZIG-ZAG 02: Fast Everywhere (Alternating) ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-            <div className="lg:col-span-5 order-2 lg:order-1 bg-gradient-to-br from-slate-50 to-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm space-y-3">
-              <span className="text-xs font-black uppercase tracking-wider text-slate-400 block">Load Speed</span>
-              <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-1.5 shadow-2xs">
-                <div className="flex justify-between items-center text-xs font-bold">
-                  <span className="text-slate-800">Page Load Time</span>
-                  <span className="text-emerald-600">Under 0.4s</span>
-                </div>
-                <p className="text-xs text-slate-500 font-medium">Instant navigation on 4G, 5G and Wi-Fi</p>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+            <div className="lg:col-span-7 order-2 lg:order-1 grid grid-cols-1 sm:grid-cols-2 gap-7 text-left pt-1">
+              <div className="border-l-2 border-[#12B7D4] pl-4 space-y-1">
+                <h3 className="font-bold text-slate-900 text-base">Under 0.4s Page Loads</h3>
+                <p className="text-sm text-slate-600 font-medium leading-relaxed">Lightweight frontend bundles load instantly on laptops, tablets, and 4G phones.</p>
+              </div>
+              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
+                <h3 className="font-bold text-slate-900 text-base">Mobile-Optimized Portal</h3>
+                <p className="text-sm text-slate-600 font-medium leading-relaxed">Clean responsive views allow clients to approve creative work anywhere on the move.</p>
+              </div>
+              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
+                <h3 className="font-bold text-slate-900 text-base">Real-Time Sync</h3>
+                <p className="text-sm text-slate-600 font-medium leading-relaxed">When a designer updates a deliverable, the client portal reflects it immediately.</p>
+              </div>
+              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
+                <h3 className="font-bold text-slate-900 text-base">Zero App Lag</h3>
+                <p className="text-sm text-slate-600 font-medium leading-relaxed">Fast navigation designed for daily high-volume agency operations without slowdowns.</p>
               </div>
             </div>
 
-            <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
-                02 / Fast Everywhere
-              </span>
-              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[44px] text-slate-950 tracking-tight leading-[1.15]">
+            <div className="lg:col-span-5 order-1 lg:order-2 space-y-4 text-left">
+              <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
+                02 — Fast Everywhere
+              </p>
+              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
                 Smooth on Any Phone,
                 <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   Laptop or Tablet.
                 </span>
               </h2>
-              <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
+              <p className="text-base text-slate-600 font-medium leading-relaxed pt-1">
                 Whether you're in the office on your laptop or on the go with your phone, the app responds instantly.
               </p>
-              <div className="pt-2 space-y-2 text-sm font-bold text-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
-                    <Check size={12} strokeWidth={3} />
-                  </span>
-                  <span>Instant page changes with zero lag</span>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
-                    <Check size={12} strokeWidth={3} />
-                  </span>
-                  <span>Responsive on mobile screens for staff on the move</span>
-                </div>
-              </div>
             </div>
           </div>
         </ScrollReveal>
@@ -181,6 +155,9 @@ const MetricsPage = () => {
       {/* ── BOTTOM CTA ── */}
       <section className="bg-slate-900 text-white py-16 sm:py-20 px-4 sm:px-8 border-t border-slate-800 text-left sm:text-center">
         <div className="max-w-3xl mx-auto space-y-6">
+          <p className="text-xs sm:text-sm font-bold tracking-widest text-[#12B7D4] uppercase">
+            Start Running Your Agency Smarter
+          </p>
           <h2 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight leading-tight">
             Reliable Infrastructure For{' '}
             <span className="bg-gradient-to-r from-[#12B7D4] via-[#38bdf8] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer">
