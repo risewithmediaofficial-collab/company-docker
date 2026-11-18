@@ -8,6 +8,7 @@ import MobileAppInstallButton from '../components/ui/MobileAppInstallButton';
 
 const RESERVED_SLUGS = new Set([
   'login', 'register', 'register-company', 'forgot-password', 'reset-password',
+  'about', 'home', 'features', 'landing',
   'platform', 'crm', 'sop', 'proposals', 'projects', 'clients', 'client-vault',
   'client-followups', 'tasks', 'manager-tasks', 'calendar', 'influencers',
   'daily-tasks', 'daily_tasks', 'finance', 'call-history', 'hr', 'reports',

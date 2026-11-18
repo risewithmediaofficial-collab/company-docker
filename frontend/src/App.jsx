@@ -12,6 +12,7 @@ import AuthLayout from './layouts/AuthLayout';
 
 // Route-Level Code Splitting (Lazy-loaded chunks)
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const RegisterCompany = lazy(() => import('./pages/auth/RegisterCompany'));
@@ -165,6 +166,13 @@ const App = () => {
       <BannerNotificationHost />
       <Suspense fallback={null}>
         <Routes>
+          {/* ── Public Landing & About Pages (gowap.in style) ───────────── */}
+          <Route path="/about" element={<Landing />} />
+          <Route path="/home" element={<Landing />} />
+          <Route path="/features" element={<Landing />} />
+          <Route path="/landing" element={<Landing />} />
+          {!isAuthenticated && <Route path="/" element={<Landing />} />}
+
           {/* ── Public Standalone SaaS Registration Page ──────────────── */}
           <Route path="/register-company" element={!isAuthenticated ? <RegisterCompany /> : <Navigate to="/" />} />
 
@@ -203,11 +211,13 @@ const App = () => {
               </ProtectedRoute>
             )}
           >
-          {/* Root */}
-          <Route
-            path="/"
-            element={user?.role === 'client' ? <PortalDashboard user={user} /> : <Dashboard />}
-          />
+          {/* Root (Authenticated Dashboard) */}
+          {isAuthenticated && (
+            <Route
+              path="/"
+              element={user?.role === 'client' ? <PortalDashboard user={user} /> : <Dashboard />}
+            />
+          )}
 
           {/* CRM */}
           <Route path="/crm/leads" element={
