@@ -216,31 +216,31 @@ const CompanyDetail = () => {
   }[org.planStatus] || 'text-slate-700 bg-slate-100 border-slate-200';
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto text-slate-900">
+    <div className="p-3.5 sm:p-5 lg:p-6 space-y-4 sm:space-y-6 w-full max-w-7xl mx-auto text-slate-900 min-w-0">
       {/* Back + Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <Link to="/platform/companies" className="p-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 shadow-xs transition-all">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <Link to="/platform/companies" className="p-2 sm:p-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 shadow-xs transition-all shrink-0">
             <ArrowLeft size={18} />
           </Link>
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-700 font-bold text-xl overflow-hidden border border-indigo-100 shadow-xs">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-700 font-bold text-lg sm:text-xl overflow-hidden border border-indigo-100 shadow-xs shrink-0">
             {org.logo ? (
               <img src={org.logo} alt={org.name} className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             ) : (
               org.name?.charAt(0)
             )}
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">{org.name} + RWM</h1>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">{org.name} + RWM</h1>
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusColor}`}>
               {org.planStatus}
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
           <button
             onClick={handleLiveViewCRM}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-all shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-all shadow-xs cursor-pointer"
             title="Live View Company CRM (Stealth Ghost Mode)"
           >
             <Radio size={13} className="animate-pulse text-emerald-600" />
@@ -260,24 +260,24 @@ const CompanyDetail = () => {
           className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs"
         >
           <div className="flex items-center gap-3">
-            <Clock size={20} className="text-amber-700 flex-shrink-0" />
+            <Clock size={20} className="text-amber-700 shrink-0" />
             <div>
               <p className="text-slate-900 font-bold text-sm">Awaiting Your Approval</p>
               <p className="text-slate-600 text-xs">Configure the plan & modules below, then approve or reject.</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               onClick={handleReject}
               disabled={saving}
-              className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-sm font-semibold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+              className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs sm:text-sm font-semibold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
             >
               <XCircle size={14} className="inline mr-1" /> Reject
             </button>
             <button
               onClick={handleApprove}
               disabled={saving}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+              className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold transition-all shadow-sm disabled:opacity-50 cursor-pointer"
             >
               <CheckCircle2 size={14} className="inline mr-1" /> Approve & Activate
             </button>
@@ -286,12 +286,12 @@ const CompanyDetail = () => {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit border border-slate-200/80">
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-fit border border-slate-200/80 overflow-x-auto no-scrollbar">
         {tabs.map((t) => (
           <button
             key={t}
             onClick={() => setActiveTab(t)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+            className={`whitespace-nowrap px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer ${
               activeTab === t ? 'bg-white text-indigo-700 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >

@@ -351,20 +351,20 @@ const Companies = ({ defaultTab }) => {
   const pendingCount = pendingRequests.length;
 
   return (
-    <div className="p-6 space-y-6 max-w-[1600px] mx-auto text-slate-900">
+    <div className="p-3.5 sm:p-5 lg:p-6 space-y-4 sm:space-y-6 w-full max-w-[1600px] mx-auto text-slate-900 min-w-0">
       {/* ── Top Header ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Companies & Requests</h1>
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Companies & Requests</h1>
             {pendingCount > 0 && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-xs animate-pulse">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-xs animate-pulse">
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
                 {pendingCount} Pending Request{pendingCount > 1 ? 's' : ''}
               </span>
             )}
           </div>
-          <p className="text-slate-500 text-sm mt-1">
+          <p className="text-slate-500 text-xs sm:text-sm mt-0.5 sm:mt-1">
             Manage registered tenant organizations, approve or reject incoming requests, and inspect company details.
           </p>
         </div>
@@ -372,10 +372,10 @@ const Companies = ({ defaultTab }) => {
         <button
           onClick={fetchData}
           disabled={loading}
-          className="self-start md:self-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-all text-sm font-semibold shadow-xs cursor-pointer"
+          className="self-start sm:self-auto flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-all text-xs sm:text-sm font-semibold shadow-xs cursor-pointer"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin text-indigo-600' : ''} />
-          Refresh
+          <span>Refresh</span>
         </button>
       </div>
 
@@ -384,10 +384,10 @@ const Companies = ({ defaultTab }) => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
+          className="p-3.5 sm:p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 shrink-0">
               <Clock size={20} />
             </div>
             <div>
@@ -401,7 +401,7 @@ const Companies = ({ defaultTab }) => {
           </div>
           <button
             onClick={() => handleTabChange('requests')}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-all shadow-sm flex-shrink-0 cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-all shadow-sm shrink-0 cursor-pointer"
           >
             Review Requests Now
             <ArrowUpRight size={14} />
@@ -410,10 +410,10 @@ const Companies = ({ defaultTab }) => {
       )}
 
       {/* ── Main Navigation Tabs ────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-px">
+      <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-200 pb-px overflow-x-auto no-scrollbar">
         <button
           onClick={() => handleTabChange('all')}
-          className={`flex items-center gap-2.5 px-5 py-3 rounded-t-xl text-sm font-semibold transition-all relative cursor-pointer ${
+          className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-t-xl text-xs sm:text-sm font-semibold transition-all relative cursor-pointer whitespace-nowrap ${
             activeTab === 'all'
               ? 'text-indigo-600 bg-white border-t-2 border-indigo-600 shadow-xs'
               : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/70'
@@ -421,14 +421,14 @@ const Companies = ({ defaultTab }) => {
         >
           <Building2 size={16} className={activeTab === 'all' ? 'text-indigo-600' : ''} />
           <span>All Companies</span>
-          <span className="ml-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+          <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
             {total}
           </span>
         </button>
 
         <button
           onClick={() => handleTabChange('requests')}
-          className={`flex items-center gap-2.5 px-5 py-3 rounded-t-xl text-sm font-semibold transition-all relative cursor-pointer ${
+          className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-t-xl text-xs sm:text-sm font-semibold transition-all relative cursor-pointer whitespace-nowrap ${
             activeTab === 'requests'
               ? 'text-amber-800 bg-white border-t-2 border-amber-500 shadow-xs'
               : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/70'
@@ -437,7 +437,7 @@ const Companies = ({ defaultTab }) => {
           <Clock size={16} className={activeTab === 'requests' ? 'text-amber-600' : ''} />
           <span>Company Requests</span>
           <span
-            className={`ml-1 px-2.5 py-0.5 rounded-full text-xs font-bold transition-all ${
+            className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold transition-all ${
               pendingCount > 0
                 ? 'bg-amber-100 text-amber-800 border border-amber-300 shadow-xs'
                 : 'bg-slate-100 text-slate-500'
@@ -652,9 +652,9 @@ const Companies = ({ defaultTab }) => {
       {activeTab === 'all' && (
         <div className="space-y-4">
           {/* Filters Bar */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             {/* Search */}
-            <div className="relative w-full md:w-80">
+            <div className="relative w-full sm:w-72 lg:w-80">
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
@@ -666,11 +666,11 @@ const Companies = ({ defaultTab }) => {
             </div>
 
             {/* Filter Dropdowns */}
-            <div className="flex items-center gap-2.5 w-full md:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <select
                 value={status}
                 onChange={(e) => setFilter('status', e.target.value)}
-                className="px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-indigo-500 shadow-xs transition-all flex-1 md:flex-none cursor-pointer"
+                className="px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs sm:text-sm focus:outline-none focus:border-indigo-500 shadow-xs transition-all flex-1 sm:flex-none cursor-pointer"
               >
                 <option value="">All Status</option>
                 <option value="pending">Pending Approval</option>
@@ -682,7 +682,7 @@ const Companies = ({ defaultTab }) => {
               <select
                 value={plan}
                 onChange={(e) => setFilter('plan', e.target.value)}
-                className="px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-indigo-500 shadow-xs transition-all flex-1 md:flex-none cursor-pointer"
+                className="px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs sm:text-sm focus:outline-none focus:border-indigo-500 shadow-xs transition-all flex-1 sm:flex-none cursor-pointer"
               >
                 <option value="">All Plans</option>
                 <option value="trial">Trial</option>
@@ -966,12 +966,12 @@ const Companies = ({ defaultTab }) => {
       {/* ── MODAL 1: QUICK APPROVE MODAL ────────────────────────────────────── */}
       <AnimatePresence>
         {approveOrgTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 p-6 shadow-2xl space-y-5 text-slate-900"
+              className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 text-slate-900 my-auto max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -1074,12 +1074,12 @@ const Companies = ({ defaultTab }) => {
       {/* ── MODAL 2: ALL DETAILS COMPREHENSIVE MODAL ──────────────────────────── */}
       <AnimatePresence>
         {detailsModalOpen && detailsOrg && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-3xl rounded-2xl bg-white border border-slate-200 p-6 shadow-2xl space-y-6 my-8 text-slate-900"
+              className="w-full max-w-3xl rounded-2xl bg-white border border-slate-200 p-4 sm:p-6 shadow-2xl space-y-5 sm:space-y-6 my-auto max-h-[92vh] overflow-y-auto text-slate-900"
             >
               {/* Modal Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
