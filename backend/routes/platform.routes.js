@@ -5,6 +5,12 @@
 import express from 'express';
 import { protect, authorize } from '../middleware/auth.middleware.js';
 import {
+  getBranches,
+  createBranch,
+  updateBranch,
+  deleteBranch,
+} from '../controllers/branch.controller.js';
+import {
   getPlatformStats,
   getAllOrganizations,
   getOrganizationDetail,
@@ -36,6 +42,12 @@ router.get('/stats', getPlatformStats);
 router.get('/organizations', getAllOrganizations);
 router.get('/organizations/:id', getOrganizationDetail);
 router.get('/organizations/:id/ghost-context', getGhostContext);
+
+// Branch Management per Company (Super Admin)
+router.get('/organizations/:id/branches', getBranches);
+router.post('/organizations/:id/branches', createBranch);
+router.put('/organizations/:id/branches/:branchId', updateBranch);
+router.delete('/organizations/:id/branches/:branchId', deleteBranch);
 
 // Actions
 router.put('/organizations/:id/approve', approveOrganization);

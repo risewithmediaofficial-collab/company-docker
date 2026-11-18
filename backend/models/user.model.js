@@ -35,6 +35,8 @@ const userSchema = new mongoose.Schema(
     avatar: { type: String, default: '' },
     phone: { type: String, default: '' },
     organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization' },
+    branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch' },
+    branch: { type: String, default: '' },
     departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
     assignedBrands: [{ type: mongoose.Schema.Types.ObjectId, ref: 'BrandWorkspace' }],
     department: { type: String, default: '' }, // legacy/string fallback

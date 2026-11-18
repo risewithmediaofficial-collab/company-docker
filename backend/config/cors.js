@@ -13,18 +13,32 @@ export const DEFAULT_ALLOWED_ORIGINS = [
   'http://company.risewithmedia.com',
   'https://risewithmedia.com',
   'http://risewithmedia.com',
+  'http://82.29.166.169:82',
+  'http://82.29.166.169',
+  'http://82.29.166.169:80',
+  'http://82.29.166.169:5001',
+  'http://82.29.166.169:5005',
+  'http://localhost',
+  'http://localhost:80',
+  'http://localhost:82',
+  'http://localhost:5173',
   'http://localhost:5175',
   'http://localhost:3000',
+  'http://localhost:5001',
   'http://localhost:5005',
   'http://localhost:4175',
+  'http://127.0.0.1:82',
+  'http://127.0.0.1:5173',
   'http://127.0.0.1:5175',
   'http://127.0.0.1:3000',
+  'http://127.0.0.1:5001',
   'http://127.0.0.1:5005',
   'http://127.0.0.1:4175',
 ];
 
 export const RISE_WITH_MEDIA_PATTERN = /^https?:\/\/([a-z0-9-]+\.)*risewithmedia\.com(:[0-9]+)?$/i;
 export const LOCALHOST_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1)(:[0-9]+)?$/i;
+export const IP_ORIGIN_PATTERN = /^https?:\/\/(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?::[0-9]+)?$/i;
 
 export const getAllowedOrigins = () => {
   const env = getEnv();
@@ -54,6 +68,11 @@ export const isOriginAllowed = (origin, req = null) => {
   const normalized = normalizeOrigin(origin);
   const allowedSet = getAllowedOrigins();
 
+  // If wildcards are explicitly allowed in env
+  if (process.env.ALLOWED_ORIGINS === '*' || allowedSet.has('*')) {
+    return true;
+  }
+
   // 1. Explicitly whitelisted origin
   if (allowedSet.has(normalized)) {
     return true;
@@ -64,29 +83,39 @@ export const isOriginAllowed = (origin, req = null) => {
     return true;
   }
 
-  // 3. Localhost matching in non-production
-  const env = getEnv();
-  if (!env.isProduction && LOCALHOST_PATTERN.test(normalized)) {
+  // 3. Localhost matching
+  if (LOCALHOST_PATTERN.test(normalized)) {
     return true;
   }
 
-  // 4. Same-origin matching based on request headers (Host or X-Forwarded-Host)
+  // 4. IP-based access (VPS direct IP access e.g., http://82.29.166.169:82)
+  if (IP_ORIGIN_PATTERN.test(normalized)) {
+    return true;
+  }
+
+  // 5. Same-origin / same-host matching based on request headers (Host or X-Forwarded-Host)
   if (req) {
     try {
       const originUrl = new URL(origin);
       const originHost = originUrl.host.toLowerCase();
+      const originHostname = originUrl.hostname.toLowerCase();
 
-      // Check Host header
+      // Check Host header (exact or hostname match)
       const hostHeader = (req.headers && req.headers.host) || (req.get ? req.get('host') : null);
-      if (hostHeader && originHost === hostHeader.toLowerCase()) {
-        return true;
+      if (hostHeader) {
+        const cleanHostHeader = hostHeader.toLowerCase();
+        const headerHostname = cleanHostHeader.split(':')[0];
+        if (originHost === cleanHostHeader || originHostname === headerHostname) {
+          return true;
+        }
       }
 
       // Check X-Forwarded-Host (reverse proxy / load balancer)
       const forwardedHost = req.headers && req.headers['x-forwarded-host'];
       if (forwardedHost) {
         const firstForwarded = forwardedHost.split(',')[0].trim().toLowerCase();
-        if (originHost === firstForwarded) {
+        const forwardedHostname = firstForwarded.split(':')[0];
+        if (originHost === firstForwarded || originHostname === forwardedHostname) {
           return true;
         }
       }

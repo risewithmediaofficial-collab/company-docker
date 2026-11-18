@@ -25,7 +25,9 @@ import {
   Clock,
   VolumeX,
   Volume2,
+  Building2,
 } from '@/components/ui/muiIcons';
+import BranchManager from '../components/branches/BranchManager';
 import { toast } from 'sonner';
 import { SelectDropdown } from '../components/ui/SelectDropdown';
 import { ProfileImageCropModal } from '../components/modals/ProfileImageCropModal';
@@ -53,6 +55,7 @@ import { sendTestPushNotification } from '../utils/webPush';
 const sections = [
   { id: 'profile', label: 'Profile Info', icon: User },
   { id: 'company', label: 'Company & GST Details', icon: Briefcase },
+  { id: 'branches', label: 'Branches & Locations', icon: Building2 },
   { id: 'security', label: 'Security', icon: Lock },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'appearance', label: 'Appearance', icon: Palette },
@@ -665,6 +668,18 @@ const Settings = () => {
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {activeSection === 'branches' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold">Company Branches & Regional Offices</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Manage your company's headquarters, regional branch offices, managers in-charge, and attendance geofencing.
+                  </p>
+                </div>
+                <BranchManager />
               </div>
             )}
 

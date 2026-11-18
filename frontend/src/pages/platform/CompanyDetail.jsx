@@ -11,6 +11,7 @@ import {
 import axios from 'axios';
 import { toast } from 'sonner';
 import { enterGhostMode } from '../../store/slices/authSlice';
+import BranchManager from '../../components/branches/BranchManager';
 
 // ── Module list for toggle grid
 const ALL_MODULES = [
@@ -39,7 +40,7 @@ const PLAN_PRESETS = {
   pro:     { maxUsers: 999, maxClients: 9999,modules: ['crm','clients','projects','tasks','finance','hr','attendance','smm','portal','sop','assets','proposals','reports','automations','influencers','ai'] },
 };
 
-const tabs = ['Overview', 'Plan & Modules', 'Users', 'Notes'];
+const tabs = ['Overview', 'Plan & Modules', 'Branches', 'Users', 'Notes'];
 
 const CompanyDetail = () => {
   const { id } = useParams();
@@ -479,6 +480,13 @@ const CompanyDetail = () => {
               <Save size={16} />
               {saving ? 'Saving...' : isPending ? 'Approve & Activate with These Settings' : 'Save Plan & Module Changes'}
             </button>
+          </motion.div>
+        )}
+
+        {/* ── Branches Tab ───────────────────────────────────────────────── */}
+        {activeTab === 'Branches' && (
+          <motion.div key="branches" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+            <BranchManager companyId={id} companyName={org.name} isSuperAdmin={true} />
           </motion.div>
         )}
 

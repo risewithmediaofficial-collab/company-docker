@@ -30,6 +30,7 @@ services:
       # MongoDB connection uses the service name "mongodb" as hostname
       MONGO_URI: mongodb://mongodb:27017/agency_crm
       CLIENT_URL: ${CLIENT_URL:-http://localhost}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
       JWT_SECRET: ${JWT_SECRET:-changeme_strong_jwt_secret_32chars}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-changeme_strong_refresh_secret}
       JWT_EXPIRE: ${JWT_EXPIRE:-15m}

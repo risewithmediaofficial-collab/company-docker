@@ -13,6 +13,7 @@ import {
 import axios from 'axios';
 import { toast } from 'sonner';
 import { enterGhostMode } from '../../store/slices/authSlice';
+import BranchManager from '../../components/branches/BranchManager';
 
 // ── Badge Styles ─────────────────────────────────────────────────────────────
 const planBadge = {
@@ -1062,6 +1063,7 @@ const Companies = ({ defaultTab }) => {
               <div className="flex items-center gap-1 border-b border-white/10 pb-2 text-xs font-medium">
                 {[
                   { key: 'overview', label: 'Company & Owner Profile' },
+                  { key: 'branches', label: 'Branches' },
                   { key: 'plan', label: 'Plan & Resource Quotas' },
                   { key: 'modules', label: 'Enabled Modules' },
                   { key: 'notes', label: 'Internal Notes' },
@@ -1169,6 +1171,17 @@ const Companies = ({ defaultTab }) => {
                       Copy URL
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* Details Content: BRANCHES */}
+              {detailsTab === 'branches' && (
+                <div className="py-2">
+                  <BranchManager
+                    companyId={detailsOrg._id}
+                    companyName={detailsOrg.name}
+                    isSuperAdmin={true}
+                  />
                 </div>
               )}
 

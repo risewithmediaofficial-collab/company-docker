@@ -76,6 +76,7 @@ import platformRoutes from './routes/platform.routes.js';
 import recycleBinRoutes from './routes/recycleBin.routes.js';
 import duplicateCheckRoutes from './routes/duplicateCheck.routes.js';
 import officeLocationRoutes from './routes/officeLocation.routes.js';
+import branchRoutes from './routes/branch.routes.js';
 import wfhRequestRoutes from './routes/wfhRequest.routes.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
 
@@ -303,6 +304,7 @@ app.use('/api/platform', platformRoutes);
 app.use('/api/recycle-bin', recycleBinRoutes);
 app.use('/api/check-duplicate', duplicateCheckRoutes);
 app.use('/api/office-locations', officeLocationRoutes);
+app.use('/api/branches', branchRoutes);
 app.use('/api/wfh-requests', wfhRequestRoutes);
 
 const __filename = fileURLToPath(import.meta.url);
