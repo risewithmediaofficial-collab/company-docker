@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
 import HeroPattern from '../../components/public/HeroPattern';
 import ScrollReveal from '../../components/public/ScrollReveal';
+import SectionShowcase from '../../components/public/SectionShowcase';
 
 const AboutPage = () => {
   return (
@@ -47,13 +48,14 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* ── CLEAN ZIG-ZAG SECTIONS (NO CARDS, PLAIN TEXT LABELS, HUMAN-MADE CSS) ── */}
+      {/* ── CLEAN ZIG-ZAG SECTIONS (ALIGNED WITH SMARTPHONE SHOWCASE & STICKERS) ── */}
       <div className="py-20 sm:py-28 px-4 sm:px-8 max-w-6xl mx-auto space-y-24 sm:space-y-32">
 
         {/* ── ZIG-ZAG 01: Why We Built This ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start pb-16 border-b border-slate-100">
-            <div className="lg:col-span-5 space-y-4 text-left">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center pb-20 border-b border-slate-100">
+            {/* Left Column: Heading, Summary & 4 Checkmarked Points */}
+            <div className="lg:col-span-7 space-y-4 text-left">
               <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
                 01 — Why We Built This
               </p>
@@ -66,52 +68,65 @@ const AboutPage = () => {
               <p className="text-base text-slate-600 font-medium leading-relaxed pt-1">
                 Most agencies lose hours each day switching between WhatsApp chats, Excel spreadsheets, email threads, and invoicing software. We put everything under one simple roof.
               </p>
+
+              {/* 4 Checkmark Bullet Points (Matching Reference Image) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">One Unified Login</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Access daily tasks, calendars, and clients from one place.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Zero Learning Curve</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Designed so any team member understands it in 5 minutes.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">No More Lost Notes</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Client briefs and deliverable notes stay attached permanently.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Always Accountable</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">See exactly who owns each graphic, reel, or invoice.</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-7 text-left pt-1">
-              <div className="border-l-2 border-[#12B7D4] pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">One Unified Login</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Your entire agency team accesses daily tasks, calendars, and clients from one place.</p>
-              </div>
-              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Zero Learning Curve</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Straightforward interface designed so any team member understands it in 5 minutes.</p>
-              </div>
-              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">No More Lost Notes</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">All client briefs, deliverables, and revision notes stay permanently attached to the project.</p>
-              </div>
-              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Always Accountable</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">See exactly who owns each graphic, reel, or invoice and when it is due.</p>
-              </div>
+            {/* Right Column: Visual Smartphone Showcase with Floating Stickers */}
+            <div className="lg:col-span-5 flex justify-center">
+              <SectionShowcase type="leads" />
             </div>
           </div>
         </ScrollReveal>
 
         {/* ── ZIG-ZAG 02: Built for Agency Rhythm (Alternating) ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start pb-16 border-b border-slate-100">
-            <div className="lg:col-span-7 order-2 lg:order-1 grid grid-cols-1 sm:grid-cols-2 gap-7 text-left pt-1">
-              <div className="border-l-2 border-[#12B7D4] pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Step 1 — Capture Lead</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Log client phone number, requirements, and budget quote in seconds.</p>
-              </div>
-              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Step 2 — Schedule Posts</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Stage graphics, reels, and captions directly on the agency monthly calendar.</p>
-              </div>
-              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Step 3 — 1-Tap Client Review</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Client approves the creative directly on their phone with zero password needed.</p>
-              </div>
-              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Step 4 — Send GST Invoice</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Generate 18% GST tax invoice PDF with bank details ready in 30 seconds.</p>
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center pb-20 border-b border-slate-100">
+            {/* Left Column: Visual Smartphone Showcase with Floating Stickers */}
+            <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
+              <SectionShowcase type="rhythm" />
             </div>
 
-            <div className="lg:col-span-5 order-1 lg:order-2 space-y-4 text-left">
+            {/* Right Column: Heading, Summary & 4 Checkmarked Points */}
+            <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
               <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
                 02 — Agency Rhythm
               </p>
@@ -124,14 +139,55 @@ const AboutPage = () => {
               <p className="text-base text-slate-600 font-medium leading-relaxed pt-1">
                 We didn't build software with 500 complicated settings you'll never use. We built the exact 4 things every marketing agency needs every morning.
               </p>
+
+              {/* 4 Checkmark Bullet Points */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Step 1 — Capture Lead</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Log client phone number, requirements, and budget quote.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Step 2 — Schedule Posts</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Stage graphics, reels, and captions on the monthly calendar.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Step 3 — 1-Tap Sign-off</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Client approves creatives directly with zero password needed.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Step 4 — Send GST Bill</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Generate 18% GST invoice PDF with bank details in 30 seconds.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </ScrollReveal>
 
         {/* ── ZIG-ZAG 03: 100% Privacy & Safety ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
-            <div className="lg:col-span-5 space-y-4 text-left">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+            {/* Left Column: Heading, Summary & 4 Checkmarked Points */}
+            <div className="lg:col-span-7 space-y-4 text-left">
               <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
                 03 — 100% Privacy & Safety
               </p>
@@ -144,25 +200,51 @@ const AboutPage = () => {
               <p className="text-base text-slate-600 font-medium leading-relaxed pt-1">
                 Your agency receives its own dedicated company workspace. Your staff, clients, rates, and projects are strictly isolated and protected.
               </p>
+
+              {/* 4 Checkmark Bullet Points */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Isolated Database</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Dedicated space; other agencies cannot view your records.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Staff Access Control</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Employees only see clients and tasks assigned to them.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Automated Daily Backups</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Continuous backups ensure deliverables are never lost.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Company Subdomain</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Custom agency workspace URL so clients recognize your brand.</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-7 text-left pt-1">
-              <div className="border-l-2 border-[#12B7D4] pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Isolated Database</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Every agency has dedicated space; other agencies cannot access your records.</p>
-              </div>
-              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Staff Access Control</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Employees only see clients and tasks assigned to them by their managers.</p>
-              </div>
-              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Automated Daily Backups</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Continuous database backups ensure your project deliverables are never lost.</p>
-              </div>
-              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Company Subdomain</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Custom agency workspace URL so your clients recognize your brand.</p>
-              </div>
+            {/* Right Column: Visual Smartphone Showcase with Floating Stickers */}
+            <div className="lg:col-span-5 flex justify-center">
+              <SectionShowcase type="privacy" />
             </div>
           </div>
         </ScrollReveal>

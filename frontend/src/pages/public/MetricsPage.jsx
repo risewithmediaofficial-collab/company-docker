@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
 import HeroPattern from '../../components/public/HeroPattern';
 import ScrollReveal from '../../components/public/ScrollReveal';
+import SectionShowcase from '../../components/public/SectionShowcase';
 
 const MetricsPage = () => {
   return (
@@ -69,13 +70,14 @@ const MetricsPage = () => {
         </div>
       </section>
 
-      {/* ── CLEAN ZIG-ZAG SECTIONS (NO CARDS, PLAIN TEXT LABELS, HUMAN-MADE CSS) ── */}
+      {/* ── CLEAN ZIG-ZAG SECTIONS (ALIGNED WITH SMARTPHONE SHOWCASE & STICKERS) ── */}
       <div className="py-20 sm:py-28 px-4 sm:px-8 max-w-6xl mx-auto space-y-24 sm:space-y-32">
 
         {/* ── ZIG-ZAG 01: Complete Privacy ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start pb-16 border-b border-slate-100">
-            <div className="lg:col-span-5 space-y-4 text-left">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center pb-20 border-b border-slate-100">
+            {/* Left Column: Heading, Summary & 4 Checkmarked Points */}
+            <div className="lg:col-span-7 space-y-4 text-left">
               <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
                 01 — Complete Privacy
               </p>
@@ -88,52 +90,65 @@ const MetricsPage = () => {
               <p className="text-base text-slate-600 font-medium leading-relaxed pt-1">
                 Every agency gets its own isolated company database. Other agencies can never see your clients, leads, or financial revenue.
               </p>
+
+              {/* 4 Checkmark Bullet Points */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Multi-Tenant Separation</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Dedicated company database partition ensures complete confidentiality.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Automatic Backups</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Daily encrypted backups prevent data loss or file corruption.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">SSL Encrypted Traffic</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">End-to-end HTTPS encryption protects client proposal details.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Strict Team Access</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Staff only view data matching their designated permission role.</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-7 text-left pt-1">
-              <div className="border-l-2 border-[#12B7D4] pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Multi-Tenant Separation</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Dedicated company database partition ensures complete confidentiality for every agency.</p>
-              </div>
-              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Automatic Backups</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Daily encrypted backups prevent data loss or project file corruption.</p>
-              </div>
-              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">SSL Encrypted Traffic</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">End-to-end HTTPS encryption protects client proposal details and invoicing files.</p>
-              </div>
-              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Strict Team Access</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Internal staff only view data matching their designated user permission role.</p>
-              </div>
+            {/* Right Column: Visual Smartphone Showcase with Floating Stickers */}
+            <div className="lg:col-span-5 flex justify-center">
+              <SectionShowcase type="privacy" />
             </div>
           </div>
         </ScrollReveal>
 
         {/* ── ZIG-ZAG 02: Fast Everywhere (Alternating) ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
-            <div className="lg:col-span-7 order-2 lg:order-1 grid grid-cols-1 sm:grid-cols-2 gap-7 text-left pt-1">
-              <div className="border-l-2 border-[#12B7D4] pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Under 0.4s Page Loads</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Lightweight frontend bundles load instantly on laptops, tablets, and 4G phones.</p>
-              </div>
-              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Mobile-Optimized Portal</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Clean responsive views allow clients to approve creative work anywhere on the move.</p>
-              </div>
-              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Real-Time Sync</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">When a designer updates a deliverable, the client portal reflects it immediately.</p>
-              </div>
-              <div className="border-l-2 border-slate-200 pl-4 space-y-1">
-                <h3 className="font-bold text-slate-900 text-base">Zero App Lag</h3>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">Fast navigation designed for daily high-volume agency operations without slowdowns.</p>
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+            {/* Left Column: Visual Smartphone Showcase with Floating Stickers */}
+            <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
+              <SectionShowcase type="speed" />
             </div>
 
-            <div className="lg:col-span-5 order-1 lg:order-2 space-y-4 text-left">
+            {/* Right Column: Heading, Summary & 4 Checkmarked Points */}
+            <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
               <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
                 02 — Fast Everywhere
               </p>
@@ -146,6 +161,46 @@ const MetricsPage = () => {
               <p className="text-base text-slate-600 font-medium leading-relaxed pt-1">
                 Whether you're in the office on your laptop or on the go with your phone, the app responds instantly.
               </p>
+
+              {/* 4 Checkmark Bullet Points */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Under 0.4s Page Loads</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Lightweight frontend bundles load instantly on 4G and WiFi.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Mobile-Optimized Portal</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Clean responsive views allow clients to approve work on the move.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Real-Time Sync</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">When a deliverable is updated, the portal reflects it immediately.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Zero App Lag</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Fast navigation designed for daily high-volume agency operations.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </ScrollReveal>
