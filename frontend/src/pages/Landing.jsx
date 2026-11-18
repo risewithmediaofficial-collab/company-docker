@@ -33,11 +33,11 @@ const Landing = () => {
             </span>
           </div>
 
-          {/* Big Crisp Titles */}
+          {/* Big Crisp Titles (Black & Blue with shimmer) */}
           <h1 className="font-display font-black text-5xl sm:text-7xl lg:text-8xl text-slate-950 tracking-tight leading-[1.04]">
             Digital Marketing
           </h1>
-          <h1 className="font-display font-black text-5xl sm:text-7xl lg:text-8xl text-[#12B7D4] tracking-tight leading-[1.04] mt-1 sm:mt-2">
+          <h1 className="font-display font-black text-5xl sm:text-7xl lg:text-8xl bg-gradient-to-r from-[#12B7D4] via-sky-400 to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer tracking-tight leading-[1.04] mt-1 sm:mt-2">
             End-to-End.
           </h1>
 
@@ -46,9 +46,9 @@ const Landing = () => {
             Campaigns. Clients. Conversions. Cashflow.
           </p>
 
-          {/* Description */}
-          <p className="mt-4 text-sm sm:text-base text-slate-600 font-medium max-w-2xl mx-auto leading-relaxed">
-            The all-in-one platform built for marketing agencies. Consolidate lead ingestion, social media workflows, client approvals, and GST billing into one clear workspace.
+          {/* Reduced Body Text */}
+          <p className="mt-4 text-sm sm:text-base text-slate-600 font-medium max-w-xl mx-auto leading-relaxed">
+            The agency operating system uniting lead ingestion, creative workflows, client sign-offs, and GST invoicing into one private workspace.
           </p>
 
           {/* Action Buttons (Cut-off point) */}
@@ -93,13 +93,16 @@ const Landing = () => {
       </section>
 
       {/* ── QUICK OVERVIEW CARDS (Linking to dedicated pages) ── */}
-      <section className="py-12 sm:py-16 max-w-5xl mx-auto px-4 sm:px-8">
+      <section className="py-14 sm:py-20 max-w-5xl mx-auto px-4 sm:px-8">
         <div className="text-left sm:text-center max-w-2xl mx-auto mb-10">
           <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#12B7D4] block mb-1">
             Platform Overview
           </span>
           <h2 className="font-display font-black text-3xl sm:text-4xl text-slate-950 tracking-tight">
-            Explore Dedicated Sections
+            Explore Dedicated
+            <span className="bg-gradient-to-r from-[#12B7D4] via-sky-400 to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
+              Platform Pages.
+            </span>
           </h2>
           <p className="text-sm sm:text-base text-slate-600 font-medium mt-1">
             Dive into details across our dedicated platform pages.

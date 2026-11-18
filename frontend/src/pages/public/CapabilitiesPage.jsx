@@ -32,11 +32,14 @@ const CapabilitiesPage = () => {
           </div>
 
           <h1 className="font-display font-black text-4xl sm:text-6xl text-slate-950 tracking-tight leading-tight">
-            Engineered Specifically For Digital Agencies.
+            Engineered Specifically
+            <span className="bg-gradient-to-r from-[#12B7D4] via-sky-400 to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+              For Digital Agencies.
+            </span>
           </h1>
 
-          <p className="mt-4 text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
-            Every core capability is designed to eliminate operational friction between agency founders, internal creators, and external paying clients.
+          <p className="mt-4 text-base sm:text-lg text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
+            Native tools designed to streamline client acquisition, creative production, and revenue management with zero external software subscriptions.
           </p>
         </div>
       </section>
