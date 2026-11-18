@@ -79,33 +79,39 @@ const PublicLayout = ({ children }) => {
           <div className="hidden sm:flex items-center gap-3">
             <Link
               to="/login"
-              className="text-sm font-bold text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-all px-4 py-2 rounded-full"
+              className="text-sm font-bold text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-all px-4 py-2 rounded-full border border-slate-200"
             >
-              Sign In
+              Login
             </Link>
             <Link
               to="/register-company"
               className="px-5 sm:px-6 py-2.5 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs sm:text-sm font-black shadow-md shadow-[#12B7D4]/25 transition-all flex items-center gap-2 cursor-pointer"
             >
-              <span>Get Started</span>
+              <span>Register</span>
               <ArrowRight size={14} />
             </Link>
           </div>
 
-          {/* Mobile Hamburger Button */}
+          {/* Mobile Action & Hamburger */}
           <div className="flex md:hidden items-center gap-2">
             <Link
               to="/login"
-              className="text-xs font-bold text-slate-800 bg-slate-100 px-3 py-1.5 rounded-full sm:hidden"
+              className="text-xs font-bold text-slate-800 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-full"
             >
-              Sign In
+              Login
+            </Link>
+            <Link
+              to="/register-company"
+              className="text-xs font-black text-white bg-[#12B7D4] px-3 py-1.5 rounded-full"
+            >
+              Register
             </Link>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-slate-700 hover:bg-slate-100 focus:outline-none"
+              className="p-1.5 rounded-lg text-slate-700 hover:bg-slate-100 focus:outline-none"
               aria-label="Toggle Menu"
             >
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
 
@@ -131,20 +137,20 @@ const PublicLayout = ({ children }) => {
                 </Link>
               );
             })}
-            <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
+            <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full py-2.5 text-center text-sm font-bold text-slate-800 bg-slate-100 rounded-lg"
+                className="py-2.5 text-center text-sm font-bold text-slate-800 bg-slate-100 rounded-lg border border-slate-200"
               >
-                Sign In
+                Login
               </Link>
               <Link
                 to="/register-company"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full py-2.5 text-center text-sm font-black text-white bg-[#12B7D4] rounded-lg shadow-sm flex items-center justify-center gap-1.5"
+                className="py-2.5 text-center text-sm font-black text-white bg-[#12B7D4] rounded-lg shadow-sm flex items-center justify-center gap-1.5"
               >
-                <span>Get Started</span>
+                <span>Register</span>
                 <ArrowRight size={14} />
               </Link>
             </div>
@@ -189,8 +195,8 @@ const PublicLayout = ({ children }) => {
             <Link to="/capabilities" className="hover:text-slate-950 transition-colors">Capabilities</Link>
             <Link to="/metrics" className="hover:text-slate-950 transition-colors">Metrics</Link>
             <span className="text-slate-300">|</span>
-            <Link to="/login" className="hover:text-slate-950 transition-colors">Sign In</Link>
-            <Link to="/register-company" className="hover:text-slate-950 transition-colors">Register Agency</Link>
+            <Link to="/login" className="hover:text-slate-950 transition-colors">Login</Link>
+            <Link to="/register-company" className="hover:text-slate-950 transition-colors">Register Company</Link>
             <Link to="/platform" className="hover:text-slate-950 transition-colors">Platform</Link>
           </div>
 

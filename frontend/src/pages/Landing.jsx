@@ -2,407 +2,489 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
-  Layers,
-  Sparkles,
-  BarChart3,
-  ShieldCheck,
-  CheckCircle2,
-  Users2,
-  Kanban,
-  Globe,
   Check,
+  Users2,
+  Calendar,
+  FileText,
+  ShieldCheck,
+  Clock,
+  Sparkles,
+  Smile,
+  Send,
   Lock,
-  CreditCard
+  ThumbsUp,
+  Receipt,
+  UserCheck
 } from 'lucide-react';
 import PublicLayout from '../components/public/PublicLayout';
 import HeroPattern from '../components/public/HeroPattern';
+import ScrollReveal from '../components/public/ScrollReveal';
 
 const Landing = () => {
   return (
     <PublicLayout>
       {/* ── HERO SECTION (Pattern cut off right below action buttons) ── */}
-      <section className="relative overflow-hidden border-b border-slate-200/80 pt-10 sm:pt-16 pb-12 sm:pb-14 px-4 sm:px-8 text-left sm:text-center">
-        {/* Pattern strictly bounded inside this Hero Section using ONLY Logo Blue #12B7D4 */}
+      <section className="relative overflow-hidden border-b border-slate-200/80 pt-12 sm:pt-20 pb-14 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
+        {/* Pattern strictly bounded inside Hero Section using ONLY Logo Blue #12B7D4 */}
         <HeroPattern />
 
         {/* Hero Content */}
-        <div className="relative z-10 max-w-5xl mx-auto">
-          {/* Apple Style Pill Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100/90 border border-slate-200/90 mb-6 self-start sm:self-auto shadow-2xs">
+        <div className="relative z-10 max-w-4xl mx-auto">
+          {/* Simple Everyday Pill Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/90 border border-slate-200/90 mb-6 self-start sm:self-auto shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-[#12B7D4] animate-pulse" />
             <span className="text-xs sm:text-sm font-bold text-slate-800 tracking-wide uppercase font-sans">
-              Agency & Enterprise Operating System
+              Simple Software for Marketing Agencies
             </span>
           </div>
 
-          {/* Big Crisp Titles (Black & Blue with Shimmer Animation) */}
+          {/* Big Clean Title (Black & Blue with Shimmer Animation) */}
           <h1 className="font-display font-black text-5xl sm:text-7xl lg:text-8xl text-slate-950 tracking-tight leading-[1.04]">
-            Digital Marketing
+            Manage Your Agency.
           </h1>
           <h1 className="font-display font-black text-5xl sm:text-7xl lg:text-8xl bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer tracking-tight leading-[1.04] mt-1 sm:mt-2">
-            End-to-End.
+            All in One Place.
           </h1>
 
-          {/* Punchy Tagline */}
-          <p className="mt-5 text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-800 tracking-tight">
-            Campaigns. Clients. Conversions. Cashflow.
+          {/* Simple Human Subtitle */}
+          <p className="mt-5 text-lg sm:text-2xl font-bold text-slate-800 tracking-tight">
+            Clients. Social Media. Fast Approvals. GST Bills.
           </p>
 
-          {/* Reduced Body Text */}
-          <p className="mt-4 text-sm sm:text-base text-slate-600 font-medium max-w-xl mx-auto leading-relaxed">
-            The agency operating system uniting lead pipelines, content calendar, client sign-offs, and GST invoicing into one private workspace.
+          <p className="mt-3 text-sm sm:text-base text-slate-600 font-medium max-w-xl mx-auto leading-relaxed">
+            Stop switching between scattered spreadsheets and endless chats. Everything your marketing agency needs in one clear, simple flow.
           </p>
 
-          {/* Action Buttons (Cut-off point) */}
+          {/* Registration & Login Buttons */}
           <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
             <Link
-              to="/login"
+              to="/register-company"
               className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-black text-sm sm:text-base shadow-lg shadow-[#12B7D4]/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Launch Workspace</span>
+              <span>Register Company</span>
               <ArrowRight size={16} />
             </Link>
             <Link
-              to="/register-company"
+              to="/login"
               className="px-7 sm:px-9 py-3.5 sm:py-4 rounded-full bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-bold text-sm sm:text-base transition-all flex items-center justify-center shadow-2xs"
             >
-              Register Agency
+              Login to Account
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ── HIGHLIGHTS STRIP (Clean White Background Below Hero) ── */}
-      <section className="bg-white py-10 px-4 sm:px-8 border-b border-slate-100">
-        <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-4 text-left sm:text-center">
-          <div className="p-3">
-            <span className="font-display font-black text-2xl sm:text-3xl text-slate-950 block">5-in-1</span>
-            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">Replaces Tool Sprawl</span>
+      {/* ── HIGHLIGHTS STRIP ── */}
+      <section className="bg-white py-8 px-4 sm:px-8 border-b border-slate-100">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 text-left sm:text-center">
+          <div>
+            <span className="font-display font-black text-2xl sm:text-3xl text-slate-950 block">All-in-One</span>
+            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">No More Scattered Apps</span>
           </div>
-          <div className="p-3">
-            <span className="font-display font-black text-2xl sm:text-3xl text-slate-950 block">Live Portal</span>
-            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">Zero Email Lag</span>
+          <div>
+            <span className="font-display font-black text-2xl sm:text-3xl text-slate-950 block">Fast Approvals</span>
+            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">Zero Confusing Emails</span>
           </div>
-          <div className="p-3">
+          <div>
+            <span className="font-display font-black text-2xl sm:text-3xl text-slate-950 block">GST Bills</span>
+            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">Ready in 1-Click</span>
+          </div>
+          <div>
             <span className="font-display font-black text-2xl sm:text-3xl text-slate-950 block">100% Private</span>
-            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">Isolated Database</span>
-          </div>
-          <div className="p-3">
-            <span className="font-display font-black text-2xl sm:text-3xl text-slate-950 block">GST Ready</span>
-            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">Instant Invoicing</span>
+            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">Safe for Your Team</span>
           </div>
         </div>
       </section>
 
-      {/* ── ZIG-ZAG SHOWCASE SECTIONS (No Row of Cards) ── */}
-      <div className="py-14 sm:py-24 px-4 sm:px-8 max-w-6xl mx-auto space-y-20 sm:space-y-28">
+      {/* ── ZIG-ZAG SECTIONS (NO CARDS, REDUCED TEXT, BLACK & BLUE ANIMATION, SMOOTH SCROLL) ── */}
+      <div className="py-20 sm:py-28 px-4 sm:px-8 max-w-6xl mx-auto space-y-28 sm:space-y-36">
 
-        {/* ── ZIG 1: Text Left, Visual Right (About Section) ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-          <div className="lg:col-span-6 space-y-4 text-left">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#12B7D4]/10 border border-[#12B7D4]/20 text-[#12B7D4] text-xs font-bold uppercase tracking-wider">
-              <span>About Software</span>
-              <span>•</span>
-              <span>Central Operating Hub</span>
-            </div>
-
-            <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-slate-950 tracking-tight leading-[1.1]">
-              Replace Tool Sprawl.
-              <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
-                One Unified Agency Hub.
+        {/* ── ZIG-ZAG 1: Client & Deal Tracker (Left: Text, Right: Visual Detail) ── */}
+        <ScrollReveal>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+            {/* Left Content */}
+            <div className="lg:col-span-7 space-y-4 text-left">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
+                01 / Client & Deal Tracker
               </span>
-            </h2>
-
-            <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
-              Consolidate client management, content calendars, deliverable approvals, and GST billing into one synchronized agency workspace.
-            </p>
-
-            <div className="space-y-2.5 pt-2">
-              <div className="flex items-center gap-2.5 text-sm font-semibold text-slate-800">
-                <div className="w-5 h-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
-                  <Check size={13} strokeWidth={3} />
-                </div>
-                <span>End-to-End Deal & Client Lifecycle</span>
-              </div>
-              <div className="flex items-center gap-2.5 text-sm font-semibold text-slate-800">
-                <div className="w-5 h-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
-                  <Check size={13} strokeWidth={3} />
-                </div>
-                <span>Real-Time Deliverable Status Tracking</span>
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <Link
-                to="/about"
-                className="inline-flex items-center gap-2 text-sm font-black text-[#12B7D4] hover:text-[#0ea5c6] transition-colors"
-              >
-                <span>Read About Software</span>
-                <ArrowRight size={15} />
-              </Link>
-            </div>
-          </div>
-
-          <div className="lg:col-span-6">
-            <div className="bg-slate-950 text-white rounded-2xl p-6 sm:p-7 shadow-xl border border-slate-800 relative overflow-hidden group hover:border-[#12B7D4]/50 transition-all">
-              <div className="flex items-center justify-between pb-4 border-b border-slate-800/80 mb-5">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-rose-500/80" />
-                  <span className="w-3 h-3 rounded-full bg-amber-500/80" />
-                  <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
-                  <span className="text-xs font-mono text-slate-400 ml-2">RiseWithMedia OS</span>
-                </div>
-                <span className="text-[11px] font-bold text-[#12B7D4] bg-[#12B7D4]/15 px-2.5 py-0.5 rounded-full">
-                  All Systems Active
+              <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-950 tracking-tight leading-tight">
+                Never Lose a Lead or
+                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
+                  Forget a Follow-up.
                 </span>
-              </div>
-
-              <div className="space-y-3">
-                <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center">
-                      <Users2 size={18} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">Lead Pipeline & Deals</p>
-                      <p className="text-xs text-slate-400">Track qualified deals through stages</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-[#12B7D4]">Qualified</span>
-                </div>
-
-                <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center">
-                      <Kanban size={18} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">Content Calendar & SMM</p>
-                      <p className="text-xs text-slate-400">Posts staged for 4 clients</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-emerald-400">Scheduled</span>
-                </div>
-
-                <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center">
-                      <CreditCard size={18} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">Automated GST Invoicing</p>
-                      <p className="text-xs text-slate-400">Tax invoices with payment status</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-amber-400">GST Ready</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── ZAG 2: Visual Left, Text Right (Capabilities Section) ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-          <div className="lg:col-span-6 order-2 lg:order-1">
-            <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-lg border border-slate-200/90 relative overflow-hidden group hover:border-[#12B7D4]/60 transition-all">
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-slate-300" />
-                  <span className="w-3 h-3 rounded-full bg-slate-300" />
-                  <span className="w-3 h-3 rounded-full bg-slate-300" />
-                  <span className="text-xs font-semibold text-slate-500 ml-2">portal.risewithmedia.com</span>
-                </div>
-                <span className="text-[11px] font-bold text-[#12B7D4] bg-[#12B7D4]/10 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#12B7D4] animate-pulse" />
-                  Client Connected
-                </span>
-              </div>
-
-              <div className="border border-slate-200/80 rounded-xl p-4 bg-slate-50/60 space-y-3.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-[#12B7D4] flex items-center justify-center text-white font-bold text-xs">
-                      RM
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">Q4 Launch Campaign Creative</p>
-                      <p className="text-[11px] text-slate-500">Staged for Friday, 6:00 PM</p>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
-                    Needs Sign-off
+              </h2>
+              <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
+                Keep all client phone numbers, requirements, and deal details organized so nobody forgets a follow-up.
+              </p>
+              <div className="pt-2 space-y-2.5 text-sm font-bold text-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
                   </span>
+                  <span>Save client phone numbers and notes in one place</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Know which deals are new, quoted, or closed</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Fast search by client name or service type</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Visual Highlight (Open Minimalist Display, No Fake Mockup) */}
+            <div className="lg:col-span-5 bg-gradient-to-br from-slate-50 to-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-400">Live Client Tracker</span>
+                <span className="text-xs font-bold text-[#12B7D4] bg-[#12B7D4]/10 px-2.5 py-0.5 rounded-full">Updated Today</span>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="p-3.5 bg-white rounded-xl border border-slate-200/70 flex items-center justify-between shadow-2xs">
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-slate-900 text-sm">Zenith Hospital Campaign</p>
+                    <p className="text-xs text-slate-500 font-medium">₹85,000 / Month • SMM & Ads</p>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">Signed Deal</span>
                 </div>
 
-                <div className="h-28 rounded-lg bg-gradient-to-r from-slate-100 to-slate-200 flex flex-col items-center justify-center text-slate-500 gap-1.5 border border-dashed border-slate-300">
-                  <Sparkles size={20} className="text-[#12B7D4]" />
-                  <span className="text-xs font-semibold text-slate-700">Client Ad Creative Preview</span>
+                <div className="p-3.5 bg-white rounded-xl border border-slate-200/70 flex items-center justify-between shadow-2xs">
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-slate-900 text-sm">Apex Real Estate Reels</p>
+                    <p className="text-xs text-slate-500 font-medium">₹45,000 / Month • Video Shoot</p>
+                  </div>
+                  <span className="text-xs font-bold text-[#12B7D4] bg-[#12B7D4]/10 px-2 py-1 rounded-md">Follow-up Today</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button className="py-2 rounded-lg bg-[#12B7D4] text-white font-bold text-xs shadow-xs hover:bg-[#0ea5c6] transition-colors flex items-center justify-center gap-1.5">
-                    <Check size={14} strokeWidth={3} />
-                    <span>Approve Post</span>
-                  </button>
-                  <button className="py-2 rounded-lg bg-white border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-100 transition-colors">
-                    Request Edit
-                  </button>
+                <div className="p-3.5 bg-white rounded-xl border border-slate-200/70 flex items-center justify-between shadow-2xs">
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-slate-900 text-sm">Sunrise Fitness Brand</p>
+                    <p className="text-xs text-slate-500 font-medium">₹30,000 / Month • SEO & Content</p>
+                  </div>
+                  <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-md">Proposal Sent</span>
                 </div>
               </div>
             </div>
           </div>
+        </ScrollReveal>
 
-          <div className="lg:col-span-6 space-y-4 text-left order-1 lg:order-2">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#12B7D4]/10 border border-[#12B7D4]/20 text-[#12B7D4] text-xs font-bold uppercase tracking-wider">
-              <span>Platform Capabilities</span>
-              <span>•</span>
-              <span>Client Collaboration</span>
-            </div>
-
-            <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-slate-950 tracking-tight leading-[1.1]">
-              Live Client Portal.
-              <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
-                Zero Email Back-and-Forth.
-              </span>
-            </h2>
-
-            <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
-              Clients review creative deliverables, approve social media posts, and download GST tax receipts instantly in their branded portal.
-            </p>
-
-            <div className="space-y-2.5 pt-2">
-              <div className="flex items-center gap-2.5 text-sm font-semibold text-slate-800">
-                <div className="w-5 h-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
-                  <Check size={13} strokeWidth={3} />
-                </div>
-                <span>1-Click Creative Sign-offs & Revision Notes</span>
-              </div>
-              <div className="flex items-center gap-2.5 text-sm font-semibold text-slate-800">
-                <div className="w-5 h-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
-                  <Check size={13} strokeWidth={3} />
-                </div>
-                <span>Self-Service GST Tax Invoices & Reports</span>
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <Link
-                to="/capabilities"
-                className="inline-flex items-center gap-2 text-sm font-black text-[#12B7D4] hover:text-[#0ea5c6] transition-colors"
-              >
-                <span>Explore All Capabilities</span>
-                <ArrowRight size={15} />
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* ── ZIG 3: Text Left, Visual Right (Metrics Section) ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-          <div className="lg:col-span-6 space-y-4 text-left">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#12B7D4]/10 border border-[#12B7D4]/20 text-[#12B7D4] text-xs font-bold uppercase tracking-wider">
-              <span>Scale & Reliability</span>
-              <span>•</span>
-              <span>Enterprise Privacy</span>
-            </div>
-
-            <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-slate-950 tracking-tight leading-[1.1]">
-              Dedicated Agency Space.
-              <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
-                Bank-Grade Isolation.
-              </span>
-            </h2>
-
-            <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
-              Every agency gets its own isolated company slug URL, dedicated database isolation, and fine-grained role permissions.
-            </p>
-
-            <div className="space-y-2.5 pt-2">
-              <div className="flex items-center gap-2.5 text-sm font-semibold text-slate-800">
-                <div className="w-5 h-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
-                  <Check size={13} strokeWidth={3} />
-                </div>
-                <span>Dedicated Slug: risewithmedia.com/your-agency</span>
-              </div>
-              <div className="flex items-center gap-2.5 text-sm font-semibold text-slate-800">
-                <div className="w-5 h-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
-                  <Check size={13} strokeWidth={3} />
-                </div>
-                <span>99.9% Uptime SLA & Automated Daily Backups</span>
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <Link
-                to="/metrics"
-                className="inline-flex items-center gap-2 text-sm font-black text-[#12B7D4] hover:text-[#0ea5c6] transition-colors"
-              >
-                <span>View Performance Metrics</span>
-                <ArrowRight size={15} />
-              </Link>
-            </div>
-          </div>
-
-          <div className="lg:col-span-6">
-            <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-6 sm:p-7 shadow-xl border border-slate-800 relative overflow-hidden group hover:border-[#12B7D4]/50 transition-all">
-              <div className="bg-slate-800/80 rounded-xl px-4 py-2.5 flex items-center gap-2 border border-slate-700/60 mb-5">
-                <Lock size={14} className="text-[#12B7D4]" />
-                <span className="text-xs font-mono text-slate-300">
-                  risewithmedia.com/<span className="text-[#12B7D4] font-bold">your-agency</span>
-                </span>
-                <span className="ml-auto text-[10px] font-bold text-[#12B7D4] bg-[#12B7D4]/20 px-2 py-0.5 rounded">
-                  SSL Encrypted
-                </span>
+        {/* ── ZIG-ZAG 2: Social Media Calendar (Left: Visual Detail, Right: Text) ── */}
+        <ScrollReveal>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+            {/* Left Visual Highlight (Open Minimalist Display) */}
+            <div className="lg:col-span-5 order-2 lg:order-1 bg-gradient-to-br from-slate-50 to-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-400">Monthly SMM Calendar</span>
+                <span className="text-xs font-bold text-slate-700">October 2026</span>
               </div>
 
               <div className="space-y-3">
-                <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3.5 flex items-center justify-between">
-                  <span className="text-sm font-bold text-white">Database Tenant Isolation</span>
-                  <span className="text-xs font-bold text-[#12B7D4]">Isolated</span>
+                <div className="p-3.5 bg-white rounded-xl border border-slate-200/70 space-y-1.5 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-[#12B7D4]">Tomorrow • 6:00 PM</span>
+                    <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Ready to Post</span>
+                  </div>
+                  <p className="font-bold text-slate-900 text-sm">Festive Offer Reel (Instagram)</p>
+                  <p className="text-xs text-slate-500">Designer: Sarah • Caption & Hashtags Ready</p>
                 </div>
-                <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3.5 flex items-center justify-between">
-                  <span className="text-sm font-bold text-white">Role-Based Access Control</span>
-                  <span className="text-xs font-bold text-[#12B7D4]">4 Roles</span>
+
+                <div className="p-3.5 bg-white rounded-xl border border-slate-200/70 space-y-1.5 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-slate-600">Friday • 11:00 AM</span>
+                    <span className="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">Design Pending</span>
+                  </div>
+                  <p className="font-bold text-slate-900 text-sm">Customer Testimonial Carousel</p>
+                  <p className="text-xs text-slate-500">Copy Approved • Raw Assets Attached</p>
                 </div>
-                <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3.5 flex items-center justify-between">
-                  <span className="text-sm font-bold text-white">Continuous Cloud Backups</span>
-                  <span className="text-xs font-bold text-[#12B7D4]">99.9%</span>
+              </div>
+            </div>
+
+            {/* Right Content */}
+            <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
+                02 / Social Media Calendar
+              </span>
+              <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-950 tracking-tight leading-tight">
+                Plan a Month of Posts
+                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
+                  in 10 Minutes.
+                </span>
+              </h2>
+              <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
+                Visual agency calendar for your designers and writers. Everyone knows what needs to be created, approved, and posted.
+              </p>
+              <div className="pt-2 space-y-2.5 text-sm font-bold text-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Visual monthly grid for posts, reels, and stories</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Writers and designers stay completely synced</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Zero missed deadlines or last-minute panics</span>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </ScrollReveal>
+
+        {/* ── ZIG-ZAG 3: Client Approvals (Left: Text, Right: Visual Detail) ── */}
+        <ScrollReveal>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+            {/* Left Content */}
+            <div className="lg:col-span-7 space-y-4 text-left">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
+                03 / 1-Tap Client Approvals
+              </span>
+              <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-950 tracking-tight leading-tight">
+                Clients Approve on Phone.
+                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
+                  Zero Confusion.
+                </span>
+              </h2>
+              <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
+                Give each client a private link to review creative designs. They tap to approve in seconds or request changes without endless calls.
+              </p>
+              <div className="pt-2 space-y-2.5 text-sm font-bold text-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Clients preview designs right on their smartphone</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Instant 1-tap sign-off with recorded timestamp</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>No password needed for clients to review work</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Visual Highlight (Open Minimalist Display) */}
+            <div className="lg:col-span-5 bg-gradient-to-br from-slate-50 to-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-400">Client Sign-Off Flow</span>
+                <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                  <ThumbsUp size={12} /> Approved
+                </span>
+              </div>
+
+              <div className="p-4 bg-white rounded-xl border border-slate-200/70 space-y-3 shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center font-black">
+                    RM
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900 text-sm">Campaign Creative Approval</p>
+                    <p className="text-xs text-slate-500">Approved by Rajesh Kumar (CEO)</p>
+                  </div>
+                </div>
+                <div className="bg-emerald-50 text-emerald-700 text-xs font-bold p-2.5 rounded-lg flex items-center gap-2">
+                  <Check size={14} />
+                  <span>Post approved for publishing tomorrow</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60 text-xs text-slate-600 font-medium flex items-center justify-between">
+                <span>Client Review Speed</span>
+                <span className="font-bold text-slate-900">Average 4 minutes</span>
+              </div>
+            </div>
+          </div>
+        </ScrollReveal>
+
+        {/* ── ZIG-ZAG 4: GST Billing (Left: Visual Detail, Right: Text) ── */}
+        <ScrollReveal>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+            {/* Left Visual Highlight (Open Minimalist Display) */}
+            <div className="lg:col-span-5 order-2 lg:order-1 bg-gradient-to-br from-slate-50 to-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-400">Instant GST Bill</span>
+                <span className="text-xs font-bold text-[#12B7D4]">Ready in 1-Click</span>
+              </div>
+
+              <div className="p-4 bg-white rounded-xl border border-slate-200/70 space-y-2.5 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-500">TAX INVOICE #RWM-2026-104</span>
+                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Paid</span>
+                </div>
+                <p className="font-black text-2xl text-slate-950">₹59,000</p>
+                <div className="text-xs text-slate-600 space-y-1 pt-1 border-t border-slate-100 font-medium">
+                  <div className="flex justify-between">
+                    <span>Base Retainer:</span>
+                    <span>₹50,000</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>18% GST (9% CGST + 9% SGST):</span>
+                    <span>₹9,000</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-[#12B7D4]/10 rounded-xl text-xs text-[#0e8fa6] font-bold flex items-center justify-between">
+                <span>Automatic GST Calculation</span>
+                <span>PDF Download Ready</span>
+              </div>
+            </div>
+
+            {/* Right Content */}
+            <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
+                04 / Fast GST Billing
+              </span>
+              <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-950 tracking-tight leading-tight">
+                Generate Clean Tax Invoices
+                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
+                  in 30 Seconds.
+                </span>
+              </h2>
+              <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
+                Create clean tax invoices in seconds with automatic GST calculation. Download PDF receipts immediately.
+              </p>
+              <div className="pt-2 space-y-2.5 text-sm font-bold text-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Automatic 18% GST and tax calculations</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Instant PDF invoice download for clients</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Track paid, partial, and pending payments</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ScrollReveal>
+
+        {/* ── ZIG-ZAG 5: Staff Attendance & Privacy (Left: Text, Right: Visual Detail) ── */}
+        <ScrollReveal>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+            {/* Left Content */}
+            <div className="lg:col-span-7 space-y-4 text-left">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
+                05 / Staff Attendance & Workspace
+              </span>
+              <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-950 tracking-tight leading-tight">
+                Safe, Private Workspace for
+                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
+                  Your Entire Team.
+                </span>
+              </h2>
+              <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
+                Simple selfie check-in for team attendance, role permissions so staff only see what they need, and your client data stays 100% private.
+              </p>
+              <div className="pt-2 space-y-2.5 text-sm font-bold text-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Quick selfie attendance check-in for staff</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Staff only see tasks and clients assigned to them</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-5 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Your company data stays completely separate and safe</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Visual Highlight (Open Minimalist Display) */}
+            <div className="lg:col-span-5 bg-gradient-to-br from-slate-50 to-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-400">Team Check-In Status</span>
+                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full">All Present</span>
+              </div>
+
+              <div className="p-4 bg-white rounded-xl border border-slate-200/70 space-y-2.5 shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center font-bold">
+                    <Smile size={20} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900 text-sm">Selfie Check-In: 9:28 AM</p>
+                    <p className="text-xs text-slate-500 font-medium">Verified on Mobile • On Time</p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-600 pt-1 border-t border-slate-100 font-medium">
+                  Monthly attendance and work hours calculated automatically.
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-xl text-xs text-slate-700 font-bold flex items-center justify-between">
+                <span>Private Company URL</span>
+                <span className="text-[#12B7D4]">yourcompany.risewithmedia.com</span>
+              </div>
+            </div>
+          </div>
+        </ScrollReveal>
 
       </div>
 
-      {/* ── BOTTOM CTA SECTION ── */}
-      <section className="pb-16 sm:pb-24 max-w-5xl mx-auto px-4 sm:px-8 text-left sm:text-center">
-        <div className="bg-slate-950 text-white rounded-2xl p-8 sm:p-14 relative overflow-hidden border border-slate-800 shadow-xl">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[220px] bg-[#12B7D4]/20 rounded-full blur-3xl pointer-events-none" />
+      {/* ── BOTTOM CTA SECTION (Distinct Register & Login Buttons) ── */}
+      <section className="bg-slate-900 text-white py-16 sm:py-20 px-4 sm:px-8 border-t border-slate-800 relative overflow-hidden">
+        <div className="max-w-4xl mx-auto text-left sm:text-center relative z-10 space-y-6">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/20 px-3.5 py-1 rounded-full">
+            Start Running Your Agency Smarter
+          </span>
+          <h2 className="font-display font-black text-3xl sm:text-5xl tracking-tight leading-tight">
+            Ready to Organize Your Entire Agency?
+          </h2>
+          <p className="text-slate-300 text-sm sm:text-base font-medium max-w-xl mx-auto">
+            Register your company in 2 minutes. Keep your clients happy, your team on track, and your bills on time.
+          </p>
 
-          <div className="relative z-10 space-y-4 max-w-2xl mx-auto">
-            <h3 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-white tracking-tight leading-tight">
-              Ready to Scale Your Agency?
-            </h3>
-            <p className="text-sm sm:text-base text-slate-400 font-medium">
-              Get started in seconds with your dedicated company portal and isolated workspace.
-            </p>
-
-            <div className="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
-              <Link
-                to="/login"
-                className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-black text-sm sm:text-base shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>Launch Workspace</span>
-                <ArrowRight size={16} />
-              </Link>
-              <Link
-                to="/register-company"
-                className="px-7 sm:px-9 py-3.5 sm:py-4 rounded-full bg-white/10 hover:bg-white/15 text-white border border-white/20 font-bold text-sm sm:text-base transition-all flex items-center justify-center"
-              >
-                Register Agency
-              </Link>
-            </div>
+          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
+            <Link
+              to="/register-company"
+              className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-black text-sm sm:text-base shadow-lg shadow-[#12B7D4]/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Register Company</span>
+              <ArrowRight size={16} />
+            </Link>
+            <Link
+              to="/login"
+              className="px-7 sm:px-9 py-3.5 sm:py-4 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 font-bold text-sm sm:text-base transition-all flex items-center justify-center"
+            >
+              Login to Account
+            </Link>
           </div>
         </div>
       </section>
