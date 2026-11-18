@@ -21,19 +21,19 @@ const Landing = () => {
           </p>
 
           {/* Big Clean Title (Black & Blue with Shimmer Animation) */}
-          <h1 className="font-display font-extrabold text-5xl sm:text-7xl lg:text-[76px] text-slate-950 tracking-tight leading-[1.06]">
+          <h1 className="font-extrabold text-4xl sm:text-6xl lg:text-[68px] text-slate-950 tracking-tight leading-[1.08]">
             Manage Your Agency.
-          </h1>
-          <h1 className="font-display font-extrabold text-5xl sm:text-7xl lg:text-[76px] bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer tracking-tight leading-[1.06] mt-1 sm:mt-2">
-            All in One Place.
+            <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1 sm:mt-2">
+              All in One Place.
+            </span>
           </h1>
 
           {/* Simple Human Subtitle */}
-          <p className="mt-5 text-lg sm:text-2xl font-bold text-slate-800 tracking-tight">
+          <p className="mt-5 text-lg sm:text-xl font-bold text-slate-800 tracking-tight">
             Clients. Social Media. Fast Approvals. GST Bills.
           </p>
 
-          <p className="mt-3 text-sm sm:text-base text-slate-600 font-medium max-w-xl mx-auto leading-relaxed">
+          <p className="mt-3 text-base text-slate-600 font-medium max-w-2xl mx-auto leading-relaxed">
             Stop switching between scattered spreadsheets and endless chats. Everything your marketing agency needs in one clear, simple flow.
           </p>
 
@@ -41,7 +41,7 @@ const Landing = () => {
           <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
             <Link
               to="/register-company"
-              className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-black text-sm sm:text-base shadow-lg shadow-[#12B7D4]/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#12B7D4]/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Register Company</span>
               <ArrowRight size={16} />
@@ -60,19 +60,19 @@ const Landing = () => {
       <section className="bg-white py-8 px-4 sm:px-8 border-b border-slate-100">
         <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 text-left sm:text-center">
           <div>
-            <span className="font-display font-bold text-2xl sm:text-3xl text-slate-950 block">All-in-One</span>
+            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">All-in-One</span>
             <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">No More Scattered Apps</span>
           </div>
           <div>
-            <span className="font-display font-bold text-2xl sm:text-3xl text-slate-950 block">Fast Approvals</span>
+            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">Fast Approvals</span>
             <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">Zero Confusing Emails</span>
           </div>
           <div>
-            <span className="font-display font-bold text-2xl sm:text-3xl text-slate-950 block">GST Bills</span>
+            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">GST Bills</span>
             <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">Ready in 1-Click</span>
           </div>
           <div>
-            <span className="font-display font-bold text-2xl sm:text-3xl text-slate-950 block">100% Private</span>
+            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">100% Private</span>
             <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">Safe for Your Team</span>
           </div>
         </div>
@@ -89,7 +89,7 @@ const Landing = () => {
               <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
                 01 — Client & Deal Tracker
               </p>
-              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
+              <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
                 Never Lose a Lead.
                 <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   Never Miss a Follow-up.
@@ -150,7 +150,7 @@ const Landing = () => {
               <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
                 02 — Social Media Planner
               </p>
-              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
+              <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
                 Plan a Month of Content.
                 <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   Ready in 10 Minutes.
@@ -171,7 +171,7 @@ const Landing = () => {
               <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
                 03 — 1-Tap Client Approvals
               </p>
-              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
+              <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
                 Clients Approve on Phone.
                 <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   Zero Endless Calls.
@@ -232,7 +232,7 @@ const Landing = () => {
               <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
                 04 — Fast GST Billing
               </p>
-              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
+              <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
                 Generate Clean Tax Invoices.
                 <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   Ready in 30 Seconds.
@@ -253,7 +253,7 @@ const Landing = () => {
               <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
                 05 — Staff Attendance & Workspace
               </p>
-              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
+              <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
                 Safe, Private Workspace.
                 <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   Built for Your Entire Team.
@@ -294,7 +294,7 @@ const Landing = () => {
           <p className="text-xs sm:text-sm font-bold tracking-widest text-[#12B7D4] uppercase">
             Start Running Your Agency Smarter
           </p>
-          <h2 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight leading-tight">
+          <h2 className="font-extrabold text-3xl sm:text-5xl text-white tracking-tight leading-tight">
             Ready to Organize Your{' '}
             <span className="bg-gradient-to-r from-[#12B7D4] via-[#38bdf8] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer">
               Entire Agency?
@@ -307,7 +307,7 @@ const Landing = () => {
           <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
             <Link
               to="/register-company"
-              className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-black text-sm sm:text-base shadow-lg shadow-[#12B7D4]/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#12B7D4]/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Register Company</span>
               <ArrowRight size={16} />

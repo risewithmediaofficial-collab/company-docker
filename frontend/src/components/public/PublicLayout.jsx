@@ -46,7 +46,7 @@ const PublicLayout = ({ children }) => {
               />
             </div>
             <div className="flex flex-col">
-              <span className="font-display font-extrabold text-xl sm:text-2xl text-slate-950 tracking-tight group-hover:text-[#12B7D4] transition-colors leading-tight">
+              <span className="font-extrabold text-xl sm:text-2xl text-slate-950 tracking-tight group-hover:text-[#12B7D4] transition-colors leading-tight">
                 RiseWithMedia
               </span>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden sm:block -mt-0.5">
@@ -85,7 +85,7 @@ const PublicLayout = ({ children }) => {
             </Link>
             <Link
               to="/register-company"
-              className="px-5 sm:px-6 py-2.5 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs sm:text-sm font-black shadow-md shadow-[#12B7D4]/25 transition-all flex items-center gap-2 cursor-pointer"
+              className="px-5 sm:px-6 py-2.5 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs sm:text-sm font-bold shadow-md shadow-[#12B7D4]/25 transition-all flex items-center gap-2 cursor-pointer"
             >
               <span>Register</span>
               <ArrowRight size={14} />
@@ -102,7 +102,7 @@ const PublicLayout = ({ children }) => {
             </Link>
             <Link
               to="/register-company"
-              className="text-xs font-black text-white bg-[#12B7D4] px-3 py-1.5 rounded-full"
+              className="text-xs font-bold text-white bg-[#12B7D4] px-3 py-1.5 rounded-full"
             >
               Register
             </Link>
@@ -148,7 +148,7 @@ const PublicLayout = ({ children }) => {
               <Link
                 to="/register-company"
                 onClick={() => setMobileMenuOpen(false)}
-                className="py-2.5 text-center text-sm font-black text-white bg-[#12B7D4] rounded-lg shadow-sm flex items-center justify-center gap-1.5"
+                className="py-2.5 text-center text-sm font-bold text-white bg-[#12B7D4] rounded-lg shadow-sm flex items-center justify-center gap-1.5"
               >
                 <span>Register</span>
                 <ArrowRight size={14} />
@@ -177,7 +177,7 @@ const PublicLayout = ({ children }) => {
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
               </div>
-              <span className="font-display font-extrabold text-slate-950 text-base">
+              <span className="font-extrabold text-slate-950 text-base">
                 RiseWithMedia
               </span>
               <span className="text-xs font-semibold text-slate-400">

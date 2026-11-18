@@ -18,28 +18,28 @@ const MetricsPage = () => {
             Fast & Reliable Infrastructure
           </p>
 
-          <h1 className="font-display font-extrabold text-4xl sm:text-6xl text-slate-950 tracking-tight leading-[1.08]">
+          <h1 className="font-extrabold text-4xl sm:text-6xl lg:text-[68px] text-slate-950 tracking-tight leading-[1.08]">
             Fast Speed.
-            <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+            <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1 sm:mt-2">
               Always Working.
             </span>
           </h1>
 
-          <p className="mt-4 text-base sm:text-lg text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
+          <p className="mt-4 sm:mt-5 text-base sm:text-lg text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
             Your agency workspace and client portal are always online, fast to load, and completely private for your team.
           </p>
 
-          <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3">
+          <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
             <Link
               to="/register-company"
-              className="px-8 py-3.5 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#12B7D4]/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Register Company</span>
               <ArrowRight size={16} />
             </Link>
             <Link
               to="/login"
-              className="px-7 py-3.5 rounded-full bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-bold text-sm transition-all flex items-center justify-center shadow-2xs"
+              className="px-7 sm:px-9 py-3.5 sm:py-4 rounded-full bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-bold text-sm sm:text-base transition-all flex items-center justify-center shadow-2xs"
             >
               Login to Workspace
             </Link>
@@ -51,19 +51,19 @@ const MetricsPage = () => {
       <section className="bg-white py-8 px-4 sm:px-8 border-b border-slate-100">
         <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 text-left sm:text-center">
           <div>
-            <span className="font-display font-bold text-3xl sm:text-4xl text-slate-950 block">99.9%</span>
+            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">99.9%</span>
             <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1 block">Always Online</span>
           </div>
           <div>
-            <span className="font-display font-bold text-3xl sm:text-4xl text-slate-950 block">10x</span>
+            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">10x</span>
             <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1 block">Faster Approvals</span>
           </div>
           <div>
-            <span className="font-display font-bold text-3xl sm:text-4xl text-slate-950 block">0</span>
+            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">0</span>
             <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1 block">App Switching</span>
           </div>
           <div>
-            <span className="font-display font-bold text-3xl sm:text-4xl text-slate-950 block">24/7</span>
+            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">24/7</span>
             <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1 block">Client Access</span>
           </div>
         </div>
@@ -79,7 +79,7 @@ const MetricsPage = () => {
               <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
                 01 — Complete Privacy
               </p>
-              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
+              <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
                 Your Data Stays
                 <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   100% Yours.
@@ -137,7 +137,7 @@ const MetricsPage = () => {
               <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
                 02 — Fast Everywhere
               </p>
-              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
+              <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
                 Smooth on Any Phone,
                 <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   Laptop or Tablet.
@@ -158,7 +158,7 @@ const MetricsPage = () => {
           <p className="text-xs sm:text-sm font-bold tracking-widest text-[#12B7D4] uppercase">
             Start Running Your Agency Smarter
           </p>
-          <h2 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight leading-tight">
+          <h2 className="font-extrabold text-3xl sm:text-5xl text-white tracking-tight leading-tight">
             Reliable Infrastructure For{' '}
             <span className="bg-gradient-to-r from-[#12B7D4] via-[#38bdf8] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer">
               Your Agency.
@@ -170,7 +170,7 @@ const MetricsPage = () => {
           <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
             <Link
               to="/register-company"
-              className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-black text-sm sm:text-base shadow-lg shadow-[#12B7D4]/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#12B7D4]/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Register Company</span>
               <ArrowRight size={16} />
