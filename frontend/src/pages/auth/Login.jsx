@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
-import { loginUser, clearError } from '../../store/slices/authSlice';
+import { loginUser, clearError, logout, enterGhostMode } from '../../store/slices/authSlice';
 import { Mail, Lock, Loader2, AlertCircle, Eye, EyeOff, Building2 } from '@/components/ui/muiIcons';
+import { Shield, CheckCircle2, ArrowRight, Radio } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Login = () => {
@@ -10,7 +11,7 @@ const Login = () => {
   const navigate = useNavigate();
   const outletCtx = useOutletContext() || {};
   const { portalOrg, companySlug } = outletCtx;
-  const { loading, error } = useSelector((state) => state.auth);
+  const { loading, error, isAuthenticated, user, organization: currentOrg } = useSelector((state) => state.auth);
 
   const [showPassword, setShowPassword] = useState(false);
   const [portalRedirect, setPortalRedirect] = useState(null);
@@ -47,6 +48,151 @@ const Login = () => {
       toast.error(errorMsg);
     }
   };
+
+  // ── Multi-Tab Active Session Switcher ──────────────────────────────────────
+  // If user is already authenticated in this or another tab and opens a company portal URL
+  if (isAuthenticated && user && companySlug) {
+    const isSuperAdmin = user.role === 'superAdmin';
+    const userOrgId = user.organizationId?._id || user.organizationId || currentOrg?._id;
+    const userOrgSlug = user.organizationId?.slug || currentOrg?.slug;
+    const userOrgName = user.organizationId?.name || currentOrg?.name || 'Your Current Company';
+
+    const targetSlug = String(companySlug || '').replace(/^\/+|\/+$/g, '').toLowerCase().trim();
+    const isSameCompany = portalOrg?._id && userOrgId && String(userOrgId) === String(portalOrg._id);
+    const isSameSlug = userOrgSlug && targetSlug && userOrgSlug.toLowerCase().trim() === targetSlug;
+
+    // Case A: Platform Super Admin
+    if (isSuperAdmin) {
+      return (
+        <div className="space-y-5 animate-in fade-in">
+          <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-950 space-y-2">
+            <div className="flex items-center gap-2 font-bold text-sm text-indigo-700">
+              <Shield size={18} />
+              <span>Platform Super Admin Active</span>
+            </div>
+            <p className="text-xs text-indigo-900 leading-relaxed">
+              You are signed in as Platform Super Admin (<strong>{user.email}</strong>).
+            </p>
+          </div>
+
+          <div className="space-y-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                const target = portalOrg || { name: companySlug, slug: companySlug };
+                dispatch(enterGhostMode(target));
+                toast.success(`Stealth Live View Activated for "${target.name}"`);
+                navigate('/');
+              }}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+            >
+              <Radio size={15} className="animate-pulse text-emerald-200" />
+              <span>Live View {portalOrg?.name || companySlug} CRM</span>
+              <ArrowRight size={15} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                dispatch(logout());
+                toast.info(`Switched to ${portalOrg?.name || companySlug} login`);
+              }}
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all cursor-pointer"
+            >
+              Sign In with Company Account
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/platform/companies')}
+              className="w-full py-2 px-4 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-800 transition-all cursor-pointer"
+            >
+              Back to Platform Admin Console
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Case B: Already in this company
+    if (isSameCompany || isSameSlug) {
+      return (
+        <div className="space-y-5 text-center animate-in fade-in">
+          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-2">
+            <div className="flex items-center justify-center gap-2 font-bold text-sm text-emerald-700">
+              <CheckCircle2 size={18} />
+              <span>Already Signed In</span>
+            </div>
+            <p className="text-xs text-emerald-800 leading-relaxed">
+              You are currently signed in to <strong>{portalOrg?.name || userOrgName}</strong> as <strong>{user.name}</strong> ({user.email}).
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold text-white bg-primary hover:bg-primary/90 transition-all cursor-pointer shadow-md"
+            >
+              <span>Go to CRM Dashboard</span>
+              <ArrowRight size={15} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                dispatch(logout());
+                toast.info('Signed out. Please enter credentials.');
+              }}
+              className="w-full py-2 px-4 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 transition-all cursor-pointer"
+            >
+              Switch Account / Sign Out
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Case C: Belongs to a different company tenant
+    return (
+      <div className="space-y-5 animate-in fade-in">
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 space-y-2">
+          <div className="flex items-center gap-2 font-bold text-sm text-amber-800">
+            <Building2 size={18} />
+            <span>Different Company Account Active</span>
+          </div>
+          <p className="text-xs text-amber-900 leading-relaxed">
+            You are signed in to <strong>{userOrgName}</strong> as <strong>{user.name}</strong> ({user.email}).
+          </p>
+          <p className="text-xs text-amber-700">
+            To enter <strong>{portalOrg?.name || companySlug}</strong>, sign in with your credentials for this company workspace.
+          </p>
+        </div>
+
+        <div className="space-y-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              dispatch(logout());
+              toast.info(`Switched to ${portalOrg?.name || companySlug} portal.`);
+            }}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold text-white bg-primary hover:bg-primary/90 transition-all cursor-pointer shadow-md"
+          >
+            <span>Sign In to {portalOrg?.name || companySlug}</span>
+            <ArrowRight size={15} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all cursor-pointer"
+          >
+            Stay in {userOrgName} Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

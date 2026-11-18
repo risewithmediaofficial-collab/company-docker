@@ -6,15 +6,27 @@ import { Sun, Moon, Building2 } from '@/components/ui/muiIcons';
 import { toggleDarkMode } from '../store/slices/uiSlice';
 import MobileAppInstallButton from '../components/ui/MobileAppInstallButton';
 
+const RESERVED_SLUGS = new Set([
+  'login', 'register', 'register-company', 'forgot-password', 'reset-password',
+  'platform', 'crm', 'sop', 'proposals', 'projects', 'clients', 'client-vault',
+  'client-followups', 'tasks', 'manager-tasks', 'calendar', 'influencers',
+  'daily-tasks', 'daily_tasks', 'finance', 'call-history', 'hr', 'reports',
+  'assets', 'domain-renewals', 'attendance', 'my-eod-reports', 'referral',
+  'admin', 'audit-logs', 'recycle-bin', 'settings', 'smm', 'development', 'portal', 'api'
+]);
+
 const AuthLayout = () => {
   const dispatch = useDispatch();
   const darkMode = useSelector((state) => state.ui?.darkMode);
   const { companySlug } = useParams();
+  const cleanSlug = companySlug ? companySlug.replace(/^\/+|\/+$/g, '').toLowerCase().trim() : '';
+  const isActualCompanySlug = cleanSlug && !RESERVED_SLUGS.has(cleanSlug);
+
   const [portalOrg, setPortalOrg] = useState(null);
-  const [portalLoading, setPortalLoading] = useState(Boolean(companySlug));
+  const [portalLoading, setPortalLoading] = useState(Boolean(isActualCompanySlug));
 
   useEffect(() => {
-    if (!companySlug) {
+    if (!isActualCompanySlug) {
       setPortalOrg(null);
       setPortalLoading(false);
       return;
@@ -23,7 +35,7 @@ const AuthLayout = () => {
     let isMounted = true;
     setPortalLoading(true);
     axios
-      .get(`/api/auth/company-portal/${companySlug}`)
+      .get(`/api/auth/company-portal/${cleanSlug}`)
       .then((res) => {
         if (isMounted && res.data?.company) {
           setPortalOrg(res.data.company);
@@ -39,7 +51,7 @@ const AuthLayout = () => {
     return () => {
       isMounted = false;
     };
-  }, [companySlug]);
+  }, [cleanSlug, isActualCompanySlug]);
 
   return (
     <div className="min-h-[100dvh] w-full flex items-center justify-center bg-background relative overflow-x-hidden p-3 sm:p-6 py-10 sm:py-12 transition-colors duration-300">

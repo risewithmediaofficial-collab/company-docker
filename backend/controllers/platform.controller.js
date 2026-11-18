@@ -106,10 +106,15 @@ export const getAllOrganizations = async (req, res) => {
     const countMap = {};
     userCounts.forEach(({ _id, count }) => { countMap[String(_id)] = count; });
 
-    const result = orgs.map((org) => ({
-      ...org.toObject(),
-      userCount: countMap[String(org._id)] || 0,
-    }));
+    const result = orgs.map((org) => {
+      const o = org.toObject();
+      const slug = o.slug || (o.name ? o.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '') || String(o._id);
+      return {
+        ...o,
+        slug,
+        userCount: countMap[String(org._id)] || 0,
+      };
+    });
 
     res.json({
       success: true,

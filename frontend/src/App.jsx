@@ -170,10 +170,10 @@ const App = () => {
 
           {/* ── Auth Routes ─────────────────────────────────────────────── */}
           <Route element={<AuthLayout />}>
-            <Route path="/login"                  element={!isAuthenticated ? <Login />          : <Navigate to="/" />} />
-            <Route path="/login/:companySlug"      element={!isAuthenticated ? <Login />          : <Navigate to="/" />} />
-            <Route path="/:companySlug/login"      element={!isAuthenticated ? <Login />          : <Navigate to="/" />} />
-            <Route path="/:companySlug"            element={!isAuthenticated ? <Login />          : <Navigate to="/" />} />
+            <Route path="/login"                  element={!isAuthenticated ? <Login />          : <Navigate to="/" replace />} />
+            <Route path="/login/:companySlug"      element={<Login />} />
+            <Route path="/:companySlug/login"      element={<Login />} />
+            <Route path="/:companySlug"            element={<Login />} />
             <Route path="/register"               element={!isAuthenticated ? <Register />       : <Navigate to="/" />} />
             <Route path="/forgot-password"        element={!isAuthenticated ? <ForgotPassword /> : <Navigate to="/" />} />
             <Route path="/reset-password/:token" element={!isAuthenticated ? <ResetPassword /> : <Navigate to="/" />} />
