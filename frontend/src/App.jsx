@@ -13,6 +13,9 @@ import AuthLayout from './layouts/AuthLayout';
 // Route-Level Code Splitting (Lazy-loaded chunks)
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Landing = lazy(() => import('./pages/Landing'));
+const AboutPage = lazy(() => import('./pages/public/AboutPage'));
+const CapabilitiesPage = lazy(() => import('./pages/public/CapabilitiesPage'));
+const MetricsPage = lazy(() => import('./pages/public/MetricsPage'));
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const RegisterCompany = lazy(() => import('./pages/auth/RegisterCompany'));
@@ -166,10 +169,13 @@ const App = () => {
       <BannerNotificationHost />
       <Suspense fallback={null}>
         <Routes>
-          {/* ── Public Landing & About Pages (gowap.in style) ───────────── */}
-          <Route path="/about" element={<Landing />} />
+          {/* ── Public Standalone Pages (gowap.in style) ────────────────── */}
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/capabilities" element={<CapabilitiesPage />} />
+          <Route path="/features" element={<CapabilitiesPage />} />
+          <Route path="/metrics" element={<MetricsPage />} />
+          <Route path="/overview" element={<MetricsPage />} />
           <Route path="/home" element={<Landing />} />
-          <Route path="/features" element={<Landing />} />
           <Route path="/landing" element={<Landing />} />
           {!isAuthenticated && <Route path="/" element={<Landing />} />}
 

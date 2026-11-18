@@ -346,7 +346,7 @@ const Login = () => {
 
         <div className="pt-2">
           <Link
-            to="/about"
+            to="/"
             className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
           >
             ← Back to Home & Platform Overview
