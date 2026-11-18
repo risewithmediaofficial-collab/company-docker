@@ -276,7 +276,6 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
             { name: 'Audit Logs', icon: ShieldCheck, path: '/audit-logs' },
             { name: 'Recycle Bin', icon: Trash2, path: '/recycle-bin' },
           ] : []),
-          { name: 'Settings', icon: Settings, path: '/settings' },
           ...(role === 'superAdmin' ? [
             { name: 'Platform Admin', icon: Shield, path: '/platform' },
           ] : []),

@@ -25,6 +25,46 @@ import {
 import axios from 'axios';
 import { toast } from 'sonner';
 
+// Helper: Convert 24-hour time ('09:30') to 12-hour format ('9:30 AM')
+const formatTo12Hour = (time24) => {
+  if (!time24) return '';
+  const [hStr, mStr] = time24.split(':');
+  let h = parseInt(hStr, 10);
+  const m = mStr || '00';
+  if (isNaN(h)) return '';
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${m} ${ampm}`;
+};
+
+// Helper: Parse 12-hour or arbitrary time string ('9:30 AM', '18:30') to 24-hour ('09:30')
+const parseTo24Hour = (timeStr) => {
+  if (!timeStr) return '';
+  const match = timeStr.trim().match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  if (!match) return '';
+  let h = parseInt(match[1], 10);
+  const m = match[2];
+  const ampm = match[3]?.toUpperCase();
+  if (ampm === 'PM' && h < 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return `${String(h).padStart(2, '0')}:${m}`;
+};
+
+// Helper: Parse operating hours range string into start and end 24h times
+const parseOperatingHoursRange = (rangeStr) => {
+  if (!rangeStr) return { start: '09:30', end: '18:30' };
+  if (/24\s*hours|24\/7/i.test(rangeStr)) {
+    return { start: '00:00', end: '23:59' };
+  }
+  const parts = rangeStr.split(/[-–—to]/i);
+  if (parts.length >= 2) {
+    const start = parseTo24Hour(parts[0]) || '09:30';
+    const end = parseTo24Hour(parts[1]) || '18:30';
+    return { start, end };
+  }
+  return { start: '09:30', end: '18:30' };
+};
+
 export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) => {
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +76,10 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
   const [editingBranch, setEditingBranch] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  // Clock Selection State
+  const [startTime, setStartTime] = useState('09:30');
+  const [endTime, setEndTime] = useState('18:30');
 
   // Form State
   const initialForm = {
@@ -93,14 +137,32 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
     fetchBranches();
   }, [companyId]);
 
+  // Sync clock time changes to formData.operatingHours
+  const updateTimes = (newStart, newEnd) => {
+    setStartTime(newStart);
+    setEndTime(newEnd);
+    if (newStart === '00:00' && (newEnd === '23:59' || newEnd === '00:00')) {
+      setFormData((prev) => ({ ...prev, operatingHours: '24 Hours' }));
+    } else {
+      const formatted = `${formatTo12Hour(newStart)} - ${formatTo12Hour(newEnd)}`;
+      setFormData((prev) => ({ ...prev, operatingHours: formatted }));
+    }
+  };
+
   const handleOpenAdd = () => {
     setEditingBranch(null);
     setFormData(initialForm);
+    setStartTime('09:30');
+    setEndTime('18:30');
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (branch) => {
     setEditingBranch(branch);
+    const parsedTimes = parseOperatingHoursRange(branch.operatingHours);
+    setStartTime(parsedTimes.start);
+    setEndTime(parsedTimes.end);
+
     setFormData({
       name: branch.name || '',
       code: branch.code || '',
@@ -248,38 +310,46 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
     <div className="space-y-6">
       {/* Top Stats Banner */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
-          <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase">
-            <Building2 size={14} className="text-indigo-400" />
+        <div className="bg-white border border-slate-200/80 shadow-sm rounded-2xl p-4">
+          <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wider">
+            <div className="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+              <Building2 size={14} />
+            </div>
             <span>Total Branches</span>
           </div>
-          <div className="text-2xl font-bold text-white mt-1">{stats.total}</div>
+          <div className="text-2xl font-bold text-slate-900 mt-2">{stats.total}</div>
         </div>
 
-        <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
-          <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase">
-            <CheckCircle2 size={14} className="text-emerald-400" />
+        <div className="bg-white border border-slate-200/80 shadow-sm rounded-2xl p-4">
+          <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wider">
+            <div className="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+              <CheckCircle2 size={14} />
+            </div>
             <span>Active Branches</span>
           </div>
-          <div className="text-2xl font-bold text-emerald-400 mt-1">{stats.active}</div>
+          <div className="text-2xl font-bold text-emerald-600 mt-2">{stats.active}</div>
         </div>
 
-        <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
-          <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase">
-            <Star size={14} className="text-amber-400" />
+        <div className="bg-white border border-slate-200/80 shadow-sm rounded-2xl p-4">
+          <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wider">
+            <div className="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+              <Star size={14} />
+            </div>
             <span>Headquarters</span>
           </div>
-          <div className="text-sm font-bold text-amber-300 mt-1 truncate" title={stats.hqName}>
+          <div className="text-sm font-bold text-amber-700 mt-2 truncate" title={stats.hqName}>
             {stats.hqName}
           </div>
         </div>
 
-        <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
-          <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase">
-            <Users2 size={14} className="text-cyan-400" />
+        <div className="bg-white border border-slate-200/80 shadow-sm rounded-2xl p-4">
+          <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wider">
+            <div className="w-6 h-6 rounded-lg bg-cyan-50 flex items-center justify-center text-cyan-600">
+              <Users2 size={14} />
+            </div>
             <span>Assigned Staff</span>
           </div>
-          <div className="text-2xl font-bold text-cyan-400 mt-1">{stats.totalEmployees}</div>
+          <div className="text-2xl font-bold text-cyan-700 mt-2">{stats.totalEmployees}</div>
         </div>
       </div>
 
@@ -293,23 +363,23 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
               placeholder="Search branches by name, city, code, manager..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white border border-slate-300 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 shadow-sm"
             />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:border-indigo-500"
+            className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-indigo-600 shadow-sm"
           >
-            <option value="all" className="bg-slate-900 text-white">All Status</option>
-            <option value="active" className="bg-slate-900 text-white">Active Only</option>
-            <option value="inactive" className="bg-slate-900 text-white">Inactive Only</option>
+            <option value="all">All Status</option>
+            <option value="active">Active Only</option>
+            <option value="inactive">Inactive Only</option>
           </select>
 
           <button
             onClick={fetchBranches}
-            className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+            className="p-2.5 rounded-xl bg-white border border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
             title="Refresh"
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
@@ -318,7 +388,7 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
 
         <button
           onClick={handleOpenAdd}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-sm transition-all shadow-md shadow-indigo-600/20"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-all shadow-md shadow-indigo-600/20"
         >
           <Plus size={16} />
           <span>Add New Branch</span>
@@ -329,14 +399,14 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-64 rounded-2xl bg-white/5 animate-pulse" />
+            <div key={i} className="h-64 rounded-2xl bg-slate-100 animate-pulse border border-slate-200" />
           ))}
         </div>
       ) : filteredBranches.length === 0 ? (
-        <div className="bg-white/5 border border-white/5 rounded-2xl p-12 text-center">
-          <Building2 size={42} className="mx-auto text-slate-600 mb-3" />
-          <h3 className="text-white font-semibold text-base">No Branches Found</h3>
-          <p className="text-slate-400 text-sm mt-1 max-w-md mx-auto">
+        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-12 text-center">
+          <Building2 size={42} className="mx-auto text-slate-400 mb-3" />
+          <h3 className="text-slate-900 font-semibold text-base">No Branches Found</h3>
+          <p className="text-slate-500 text-sm mt-1 max-w-md mx-auto">
             {search || statusFilter !== 'all'
               ? 'No branch locations match your filters.'
               : companyName
@@ -345,7 +415,7 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
           </p>
           <button
             onClick={handleOpenAdd}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all"
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all shadow-sm"
           >
             <Plus size={14} />
             <span>Create First Branch</span>
@@ -359,8 +429,10 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
               layout
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
-              className={`relative bg-white/5 border rounded-2xl p-5 flex flex-col justify-between transition-all hover:border-indigo-500/40 ${
-                branch.isHeadquarters ? 'border-amber-500/30 bg-amber-500/[0.02]' : 'border-white/5'
+              className={`relative bg-white border rounded-2xl p-5 flex flex-col justify-between transition-all hover:shadow-md ${
+                branch.isHeadquarters
+                  ? 'border-amber-300 bg-amber-50/20 shadow-amber-500/5'
+                  : 'border-slate-200/90 shadow-sm hover:border-indigo-300'
               }`}
             >
               <div>
@@ -368,9 +440,9 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="text-white font-bold text-base">{branch.name}</h4>
+                      <h4 className="text-slate-900 font-bold text-base">{branch.name}</h4>
                       {branch.code && (
-                        <span className="px-2 py-0.5 rounded-md bg-white/10 text-slate-300 text-xs font-mono font-semibold">
+                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-mono font-semibold border border-slate-200">
                           {branch.code}
                         </span>
                       )}
@@ -378,16 +450,16 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
 
                     <div className="flex items-center gap-2 flex-wrap">
                       {branch.isHeadquarters && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30">
-                          <Star size={11} className="fill-amber-400 text-amber-400" />
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                          <Star size={11} className="fill-amber-500 text-amber-500" />
                           Headquarters
                         </span>
                       )}
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
                           branch.isActive
-                            ? 'text-emerald-400 bg-emerald-400/10 border border-emerald-500/20'
-                            : 'text-slate-400 bg-slate-500/10 border border-slate-500/20'
+                            ? 'text-emerald-700 bg-emerald-50 border border-emerald-200'
+                            : 'text-slate-600 bg-slate-100 border border-slate-200'
                         }`}
                       >
                         {branch.isActive ? 'Active' : 'Inactive'}
@@ -399,14 +471,14 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleOpenEdit(branch)}
-                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all"
+                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-all"
                       title="Edit Branch"
                     >
                       <Edit2 size={14} />
                     </button>
                     <button
                       onClick={() => setDeleteConfirmId(branch._id)}
-                      className="p-1.5 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-all"
+                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-600 transition-all"
                       title="Delete Branch"
                     >
                       <Trash2 size={14} />
@@ -414,94 +486,87 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
                   </div>
                 </div>
 
-                {/* Details Section */}
-                <div className="mt-4 space-y-2.5 text-xs text-slate-300">
-                  {/* Address */}
-                  <div className="flex items-start gap-2">
-                    <MapPin size={14} className="text-indigo-400 shrink-0 mt-0.5" />
-                    <span className="text-slate-300 leading-relaxed">
+                {/* Address & City */}
+                <div className="mt-4 space-y-1.5">
+                  <div className="flex items-start gap-2 text-xs text-slate-600">
+                    <MapPin size={14} className="text-slate-400 mt-0.5 shrink-0" />
+                    <span>
                       {branch.address ? `${branch.address}, ` : ''}
-                      <span className="font-semibold text-white">{branch.city}</span>
+                      <strong>{branch.city}</strong>
                       {branch.state ? `, ${branch.state}` : ''}
                       {branch.postalCode ? ` - ${branch.postalCode}` : ''}
-                      {branch.country ? ` (${branch.country})` : ''}
+                      {branch.country ? `, ${branch.country}` : ''}
                     </span>
                   </div>
 
                   {/* Manager in-charge */}
                   {branch.managerName && (
-                    <div className="flex items-center gap-2">
-                      <User size={14} className="text-violet-400 shrink-0" />
+                    <div className="flex items-center gap-2 text-xs text-slate-600">
+                      <User size={14} className="text-indigo-500 shrink-0" />
                       <span>
-                        Manager:{' '}
-                        <span className="text-white font-medium">{branch.managerName}</span>
-                        {branch.managerPhone ? ` • ${branch.managerPhone}` : ''}
+                        Manager: <strong>{branch.managerName}</strong>
+                        {branch.managerPhone ? ` (${branch.managerPhone})` : ''}
                       </span>
                     </div>
                   )}
 
-                  {/* Contact info */}
-                  {(branch.phone || branch.email) && (
-                    <div className="flex items-center gap-3 text-slate-400">
-                      {branch.phone && (
-                        <span className="flex items-center gap-1">
-                          <Phone size={12} className="text-cyan-400" />
-                          <span>{branch.phone}</span>
-                        </span>
-                      )}
-                      {branch.email && (
-                        <span className="flex items-center gap-1 truncate">
-                          <Mail size={12} className="text-cyan-400" />
-                          <span className="truncate">{branch.email}</span>
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  {/* Contact Info */}
+                  <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-slate-500">
+                    {branch.phone && (
+                      <span className="flex items-center gap-1">
+                        <Phone size={12} className="text-slate-400" />
+                        {branch.phone}
+                      </span>
+                    )}
+                    {branch.email && (
+                      <span className="flex items-center gap-1">
+                        <Mail size={12} className="text-slate-400" />
+                        {branch.email}
+                      </span>
+                    )}
+                  </div>
 
                   {/* Operating Hours */}
                   {branch.operatingHours && (
-                    <div className="flex items-center gap-2 text-slate-400">
-                      <Clock size={12} className="text-amber-400 shrink-0" />
-                      <span>
-                        {branch.operatingHours} ({branch.workingDays || 'Mon - Sat'})
-                      </span>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600 pt-1">
+                      <Clock size={13} className="text-slate-400" />
+                      <span>{branch.operatingHours}</span>
+                      {branch.workingDays && (
+                        <span className="text-slate-400">({branch.workingDays})</span>
+                      )}
                     </div>
                   )}
 
-                  {/* Geofence Attendance Info */}
-                  {branch.latitude != null && branch.longitude != null && (
-                    <div className="flex items-center gap-1.5 pt-1">
-                      <Navigation size={12} className="text-emerald-400 shrink-0" />
-                      <span className="text-[11px] text-emerald-300/90 font-mono">
-                        GPS Geofenced ({branch.radiusKm || 0.5}km radius)
+                  {/* Geofence info */}
+                  {branch.latitude && branch.longitude && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 font-mono pt-1">
+                      <Navigation size={12} className="text-emerald-600 shrink-0" />
+                      <span>
+                        GPS: {Number(branch.latitude).toFixed(4)}, {Number(branch.longitude).toFixed(4)} (Radius: {branch.radiusKm || 0.5} km)
                       </span>
                     </div>
                   )}
 
                   {/* Notes */}
                   {branch.notes && (
-                    <p className="text-[11px] text-slate-400 italic pt-1 line-clamp-2">
-                      "{branch.notes}"
-                    </p>
+                    <p className="text-xs text-slate-500 italic pt-1 line-clamp-2">"{branch.notes}"</p>
                   )}
                 </div>
               </div>
 
-              {/* Card Footer: Staff count & toggle button */}
-              <div className="mt-5 pt-3 border-t border-white/5 flex items-center justify-between text-xs">
-                <span className="flex items-center gap-1.5 text-slate-400">
-                  <Users2 size={13} className="text-indigo-400" />
-                  <span>
-                    <strong className="text-white">{branch.employeeCount || 0}</strong> staff assigned
-                  </span>
-                </span>
+              {/* Card Footer: Employee count + status toggle */}
+              <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                  <Users2 size={14} className="text-slate-400" />
+                  <span>{branch.employeeCount || 0} Staff assigned</span>
+                </div>
 
                 <button
                   onClick={() => handleToggleStatus(branch)}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
                     branch.isActive
-                      ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                      : 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30'
+                      ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                   }`}
                 >
                   {branch.isActive ? 'Deactivate' : 'Activate'}
@@ -510,24 +575,24 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
 
               {/* Delete Confirmation Overlay */}
               {deleteConfirmId === branch._id && (
-                <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm rounded-2xl p-5 flex flex-col justify-center items-center text-center z-10 space-y-3">
-                  <AlertTriangle size={28} className="text-rose-400" />
+                <div className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-2xl p-5 flex flex-col justify-center items-center text-center z-10 space-y-3 border border-rose-200 shadow-lg">
+                  <AlertTriangle size={28} className="text-rose-600" />
                   <div>
-                    <h5 className="text-white font-bold text-sm">Delete Branch?</h5>
-                    <p className="text-slate-400 text-xs mt-1">
+                    <h5 className="text-slate-900 font-bold text-sm">Delete Branch?</h5>
+                    <p className="text-slate-500 text-xs mt-1">
                       Employees assigned to "{branch.name}" will be unassigned.
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setDeleteConfirmId(null)}
-                      className="px-3 py-1.5 rounded-lg bg-white/10 text-slate-300 text-xs hover:bg-white/20 transition-all"
+                      className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium hover:bg-slate-200 transition-all"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={() => handleDelete(branch._id)}
-                      className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-md"
+                      className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-md shadow-rose-600/20"
                     >
                       Confirm Delete
                     </button>
@@ -539,34 +604,34 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
         </div>
       )}
 
-      {/* ── CREATE / EDIT BRANCH MODAL ── */}
+      {/* ── CREATE / EDIT BRANCH MODAL (Normal / Light Colors) ── */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-2xl bg-slate-900 border border-white/10 rounded-3xl p-6 shadow-2xl text-white space-y-6 max-h-[90vh] overflow-y-auto"
+              className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-3xl p-6 shadow-2xl text-slate-900 space-y-6 max-h-[90vh] overflow-y-auto"
             >
               {/* Modal Header */}
-              <div className="flex items-start justify-between border-b border-white/10 pb-4">
+              <div className="flex items-start justify-between border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-600/20 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
                     <Building2 size={20} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-white">
+                    <h3 className="text-lg font-bold text-slate-900">
                       {editingBranch ? `Edit Branch: ${editingBranch.name}` : 'Add New Branch Location'}
                     </h3>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500">
                       {companyName ? `Assigning to ${companyName}` : 'Configure company branch, manager, and location'}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all"
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-all"
                 >
                   <X size={18} />
                 </button>
@@ -577,8 +642,8 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
                 {/* Basic Branch Info */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="sm:col-span-2 space-y-1">
-                    <label className="text-xs font-semibold text-slate-300">
-                      Branch Name <span className="text-rose-400">*</span>
+                    <label className="text-xs font-semibold text-slate-700">
+                      Branch Name <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -586,71 +651,71 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
                       placeholder="e.g. Hosur Corporate Office, Bangalore Tech Hub"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 shadow-sm"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-300">Branch Code</label>
+                    <label className="text-xs font-semibold text-slate-700">Branch Code</label>
                     <input
                       type="text"
                       placeholder="e.g. HSR-HQ, BLR-01"
                       value={formData.code}
                       onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 uppercase"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-sm text-slate-900 font-mono placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 uppercase shadow-sm"
                     />
                   </div>
                 </div>
 
                 {/* Headquarters Checkbox */}
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-center gap-3 p-3.5 rounded-xl bg-amber-50 border border-amber-200">
                   <input
                     type="checkbox"
                     id="isHeadquarters"
                     checked={formData.isHeadquarters}
                     onChange={(e) => setFormData({ ...formData, isHeadquarters: e.target.checked })}
-                    className="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-white/10 border-white/20"
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-0 border-slate-300"
                   />
-                  <label htmlFor="isHeadquarters" className="text-xs text-amber-200 cursor-pointer select-none">
-                    <strong className="text-amber-300">Set as Company Headquarters (HQ)</strong> — marks this as the primary registered office for the company.
+                  <label htmlFor="isHeadquarters" className="text-xs text-amber-900 cursor-pointer select-none">
+                    <strong className="text-amber-950">Set as Company Headquarters (HQ)</strong> — marks this as the primary registered office for the company.
                   </label>
                 </div>
 
                 {/* Manager In-Charge Info */}
-                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-3">
-                  <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                  <div className="text-xs font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1.5">
                     <User size={13} />
                     <span>Branch Manager In-Charge</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-400">Manager Name</label>
+                      <label className="text-xs text-slate-600 font-medium">Manager Name</label>
                       <input
                         type="text"
                         placeholder="e.g. Rajesh Kumar"
                         value={formData.managerName}
                         onChange={(e) => setFormData({ ...formData, managerName: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 shadow-sm"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-400">Manager Phone</label>
+                      <label className="text-xs text-slate-600 font-medium">Manager Phone</label>
                       <input
                         type="text"
                         placeholder="+91 98765 43210"
                         value={formData.managerPhone}
                         onChange={(e) => setFormData({ ...formData, managerPhone: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 shadow-sm"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-400">Manager Email</label>
+                      <label className="text-xs text-slate-600 font-medium">Manager Email</label>
                       <input
                         type="email"
                         placeholder="manager@company.com"
                         value={formData.managerEmail}
                         onChange={(e) => setFormData({ ...formData, managerEmail: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 shadow-sm"
                       />
                     </div>
                   </div>
@@ -659,20 +724,20 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
                 {/* Address Details */}
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-300">Street Address</label>
+                    <label className="text-xs font-semibold text-slate-700">Street Address</label>
                     <input
                       type="text"
                       placeholder="Suite #, Building, Tech Park, Street address..."
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 shadow-sm"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-300">
-                        City <span className="text-rose-400">*</span>
+                      <label className="text-xs font-semibold text-slate-700">
+                        City <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -680,87 +745,164 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
                         placeholder="e.g. Hosur"
                         value={formData.city}
                         onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 shadow-sm"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-300">State</label>
+                      <label className="text-xs font-semibold text-slate-700">State</label>
                       <input
                         type="text"
                         placeholder="e.g. Tamil Nadu"
                         value={formData.state}
                         onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 shadow-sm"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-300">Country</label>
+                      <label className="text-xs font-semibold text-slate-700">Country</label>
                       <input
                         type="text"
                         placeholder="India"
                         value={formData.country}
                         onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 shadow-sm"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-300">Postal / PIN Code</label>
+                      <label className="text-xs font-semibold text-slate-700">Postal / PIN Code</label>
                       <input
                         type="text"
                         placeholder="e.g. 635109"
                         value={formData.postalCode}
                         onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 shadow-sm"
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* Contact & Hours */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Contact Numbers */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-300">Branch Phone</label>
+                    <label className="text-xs font-semibold text-slate-700">Branch Phone</label>
                     <input
                       type="text"
                       placeholder="e.g. 04344-123456"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 shadow-sm"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-300">Branch Email</label>
+                    <label className="text-xs font-semibold text-slate-700">Branch Email</label>
                     <input
                       type="email"
                       placeholder="branch@company.com"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-300">Operating Hours</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 9:00 AM - 6:30 PM"
-                      value={formData.operatingHours}
-                      onChange={(e) => setFormData({ ...formData, operatingHours: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 shadow-sm"
                     />
                   </div>
                 </div>
 
-                {/* GPS Coordinates & Geofencing (Attendance) */}
-                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-3">
+                {/* ── Operating Hours via Clock Selection (No manual typing needed) ── */}
+                <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <Navigation size={13} />
+                    <div className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Clock size={14} className="text-indigo-600" />
+                      <span>Operating Hours (Select From Clock)</span>
+                    </div>
+                    {/* Active Formatted Badge */}
+                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold border border-indigo-200">
+                      {formData.operatingHours || '9:30 AM - 6:30 PM'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-600 font-medium flex items-center gap-1">
+                        <span>Opening Time (Clock)</span>
+                      </label>
+                      <input
+                        type="time"
+                        value={startTime}
+                        onChange={(e) => updateTimes(e.target.value, endTime)}
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-mono focus:outline-none focus:border-indigo-600 shadow-sm cursor-pointer"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-600 font-medium flex items-center gap-1">
+                        <span>Closing Time (Clock)</span>
+                      </label>
+                      <input
+                        type="time"
+                        value={endTime}
+                        onChange={(e) => updateTimes(startTime, e.target.value)}
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-mono focus:outline-none focus:border-indigo-600 shadow-sm cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick Preset Buttons */}
+                  <div className="flex items-center gap-2 flex-wrap pt-1">
+                    <span className="text-[11px] text-slate-500 font-medium">Quick Presets:</span>
+                    <button
+                      type="button"
+                      onClick={() => updateTimes('09:00', '18:00')}
+                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 text-slate-700 text-[11px] font-medium transition-all shadow-2xs"
+                    >
+                      9:00 AM - 6:00 PM
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateTimes('09:30', '18:30')}
+                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 text-slate-700 text-[11px] font-medium transition-all shadow-2xs"
+                    >
+                      9:30 AM - 6:30 PM
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateTimes('10:00', '19:00')}
+                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 text-slate-700 text-[11px] font-medium transition-all shadow-2xs"
+                    >
+                      10:00 AM - 7:00 PM
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateTimes('00:00', '23:59')}
+                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 text-slate-700 text-[11px] font-medium transition-all shadow-2xs"
+                    >
+                      24 Hours
+                    </button>
+                  </div>
+                </div>
+
+                {/* Working Days */}
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700">Working Days</label>
+                  <select
+                    value={formData.workingDays}
+                    onChange={(e) => setFormData({ ...formData, workingDays: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-600 shadow-sm"
+                  >
+                    <option value="Monday - Saturday">Monday - Saturday (Standard)</option>
+                    <option value="Monday - Friday">Monday - Friday (5 Days)</option>
+                    <option value="All 7 Days">All 7 Days (Continuous)</option>
+                    <option value="Monday - Friday + Alt Saturday">Monday - Friday + Alt Saturday</option>
+                  </select>
+                </div>
+
+                {/* GPS Coordinates & Geofencing (Attendance) */}
+                <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <Navigation size={13} className="text-emerald-600" />
                       <span>GPS Geofencing for Attendance Check-in (Optional)</span>
                     </div>
                     <button
                       type="button"
                       onClick={handleAutoGPS}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-semibold transition-all border border-emerald-500/20"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-100/70 text-emerald-700 text-xs font-semibold transition-all border border-emerald-300 shadow-xs"
                     >
                       <Compass size={12} />
                       <span>Capture My GPS</span>
@@ -768,29 +910,29 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-400">Latitude</label>
+                      <label className="text-xs text-slate-600 font-medium">Latitude</label>
                       <input
                         type="number"
                         step="any"
                         placeholder="e.g. 12.7409"
                         value={formData.latitude}
                         onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 font-mono"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 font-mono shadow-sm"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-400">Longitude</label>
+                      <label className="text-xs text-slate-600 font-medium">Longitude</label>
                       <input
                         type="number"
                         step="any"
                         placeholder="e.g. 77.8253"
                         value={formData.longitude}
                         onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 font-mono"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 font-mono shadow-sm"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-400">Radius (Kilometers)</label>
+                      <label className="text-xs text-slate-600 font-medium">Radius (Kilometers)</label>
                       <input
                         type="number"
                         step="0.1"
@@ -799,7 +941,7 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
                         placeholder="0.5"
                         value={formData.radiusKm}
                         onChange={(e) => setFormData({ ...formData, radiusKm: Number(e.target.value) })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 shadow-sm"
                       />
                     </div>
                   </div>
@@ -807,29 +949,29 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
 
                 {/* Notes */}
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Internal Notes</label>
+                  <label className="text-xs font-semibold text-slate-700">Internal Notes</label>
                   <textarea
                     rows={2}
                     placeholder="Specific branch notes, floor details, key contacts..."
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 resize-none"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 resize-none shadow-sm"
                   />
                 </div>
 
                 {/* Submit Actions */}
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-sm font-semibold transition-all"
+                    className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-all"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-sm transition-all disabled:opacity-50 shadow-md shadow-indigo-600/30"
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition-all disabled:opacity-50 shadow-md shadow-indigo-600/20"
                   >
                     <Building2 size={16} />
                     <span>{submitting ? 'Saving...' : editingBranch ? 'Update Branch' : 'Create Branch'}</span>
