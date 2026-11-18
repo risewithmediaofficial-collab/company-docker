@@ -9,13 +9,9 @@ import {
   CreditCard,
   Shield,
   ChevronRight,
-  CheckCircle2,
   Building2,
   Sparkles,
-  Layers,
-  Zap,
-  Lock,
-  Clock
+  Layers
 } from 'lucide-react';
 
 // Reusable Wave Accent Card conforming strictly to user's specified design
@@ -23,7 +19,7 @@ const FeatureCard = ({ title, subText, icon: Icon, badge, linkTo = "/login", wav
   return (
     <Link
       to={linkTo}
-      className="group relative overflow-hidden bg-white border border-slate-200/80 rounded-xl p-3.5 sm:p-4 flex items-center justify-between gap-3 transition-all duration-200 hover:border-[#12B7D4]/60 hover:shadow-md cursor-pointer"
+      className="group relative overflow-hidden bg-white border border-slate-200/90 rounded-xl p-4 sm:p-5 flex items-center justify-between gap-3.5 transition-all duration-200 hover:border-[#12B7D4] hover:shadow-md cursor-pointer"
       style={{
         boxShadow: 'rgba(149, 157, 165, 0.08) 0px 4px 16px',
       }}
@@ -37,7 +33,7 @@ const FeatureCard = ({ title, subText, icon: Icon, badge, linkTo = "/login", wav
           transform: 'rotate(90deg)',
           left: '-32px',
           top: '32px',
-          width: '84px',
+          width: '88px',
           fill: waveFill,
         }}
       >
@@ -48,28 +44,28 @@ const FeatureCard = ({ title, subText, icon: Icon, badge, linkTo = "/login", wav
       </svg>
 
       {/* Circular Icon Container */}
-      <div className="relative z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#12B7D4]/12 flex items-center justify-center text-[#12B7D4] shrink-0 group-hover:scale-105 transition-transform">
-        <Icon size={18} />
+      <div className="relative z-10 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#12B7D4]/12 flex items-center justify-center text-[#12B7D4] shrink-0 group-hover:scale-105 transition-transform">
+        <Icon size={20} />
       </div>
 
       {/* Message Text Container */}
       <div className="relative z-10 flex flex-col justify-center items-start flex-grow min-w-0">
-        <p className="font-display text-sm sm:text-base font-bold text-slate-900 group-hover:text-[#12B7D4] transition-colors truncate w-full">
+        <p className="font-display text-base sm:text-lg font-bold text-slate-900 group-hover:text-[#12B7D4] transition-colors truncate w-full">
           {title}
         </p>
-        <p className="text-xs text-slate-500 font-medium truncate w-full mt-0.5">
+        <p className="text-xs sm:text-sm text-slate-600 font-medium truncate w-full mt-0.5">
           {subText}
         </p>
       </div>
 
       {/* Right Badge / Arrow */}
-      <div className="relative z-10 flex items-center gap-1 shrink-0">
+      <div className="relative z-10 flex items-center gap-1.5 shrink-0">
         {badge && (
-          <span className="text-[10px] font-bold text-[#12B7D4] bg-[#12B7D4]/10 border border-[#12B7D4]/20 px-2 py-0.5 rounded-md hidden sm:inline-block">
+          <span className="text-xs font-bold text-[#12B7D4] bg-[#12B7D4]/10 border border-[#12B7D4]/20 px-2.5 py-1 rounded-md hidden sm:inline-block">
             {badge}
           </span>
         )}
-        <ChevronRight size={16} className="text-slate-400 group-hover:text-[#12B7D4] group-hover:translate-x-0.5 transition-all" />
+        <ChevronRight size={18} className="text-slate-400 group-hover:text-[#12B7D4] group-hover:translate-x-0.5 transition-all" />
       </div>
     </Link>
   );
@@ -80,7 +76,7 @@ const Landing = () => {
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-[#12B7D4]/25 selection:text-slate-900 relative overflow-x-hidden antialiased">
       
       {/* ── TOP PATTERN (Dual Gradient & Vertical Grid Mask) ── */}
-      <div className="absolute inset-x-0 top-0 h-[700px] sm:h-[840px] pointer-events-none overflow-hidden z-0">
+      <div className="absolute inset-x-0 top-0 h-[720px] sm:h-[860px] pointer-events-none overflow-hidden z-0">
         <div
           className="w-full h-full relative"
           style={{
@@ -159,42 +155,42 @@ const Landing = () => {
         </div>
       </header>
 
-      {/* ── HERO SECTION ── */}
-      <section className="relative z-10 pt-36 sm:pt-44 pb-12 sm:pb-16 px-4 sm:px-6 max-w-4xl mx-auto text-center">
+      {/* ── HERO SECTION (Mobile: Left-Aligned, Desktop: Center-Aligned) ── */}
+      <section className="relative z-10 pt-36 sm:pt-44 pb-14 sm:pb-20 px-5 sm:px-8 max-w-5xl mx-auto text-left sm:text-center">
         
         {/* Apple Style Pill Badge */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100/90 border border-slate-200/80 mb-5">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#12B7D4] animate-pulse" />
-          <span className="text-[11px] font-bold text-slate-700 tracking-wide uppercase font-sans">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100/90 border border-slate-200/80 mb-6 self-start sm:self-auto">
+          <span className="w-2 h-2 rounded-full bg-[#12B7D4] animate-pulse" />
+          <span className="text-xs sm:text-sm font-bold text-slate-800 tracking-wide uppercase font-sans">
             Agency & Enterprise Operating System
           </span>
         </div>
 
-        {/* Big Crisp Title (Digital Marketing End to End) */}
-        <h1 className="font-display font-black text-4xl sm:text-6xl text-slate-950 tracking-tight leading-[1.08]">
+        {/* Big Crisp Title (Enlarged for High Readability) */}
+        <h1 className="font-display font-black text-5xl sm:text-7xl lg:text-8xl text-slate-950 tracking-tight leading-[1.04]">
           Digital Marketing
         </h1>
-        <h1 className="font-display font-black text-4xl sm:text-6xl text-[#12B7D4] tracking-tight leading-[1.08] mt-1">
+        <h1 className="font-display font-black text-5xl sm:text-7xl lg:text-8xl text-[#12B7D4] tracking-tight leading-[1.04] mt-1 sm:mt-2">
           End-to-End.
         </h1>
 
-        {/* Tagline - Crisp & Direct */}
-        <p className="mt-4 text-base sm:text-xl font-bold text-slate-700 tracking-tight">
+        {/* Tagline - Enlarged, Crisp & Direct */}
+        <p className="mt-5 text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-800 tracking-tight">
           Campaigns. Clients. Conversions. Cashflow.
         </p>
 
-        {/* Action Buttons */}
-        <div className="mt-7 flex flex-row items-center justify-center gap-3">
+        {/* Action Buttons (Mobile: Left/Full width, Desktop: Center) */}
+        <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
           <Link
             to="/login"
-            className="px-6 sm:px-7 py-2.5 sm:py-3 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#12B7D4]/25 transition-all flex items-center gap-1.5 cursor-pointer"
+            className="px-7 sm:px-9 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-black text-sm sm:text-base shadow-lg shadow-[#12B7D4]/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <span>Launch Workspace</span>
-            <ArrowRight size={14} />
+            <ArrowRight size={16} />
           </Link>
           <Link
             to="/register-company"
-            className="px-5 sm:px-6 py-2.5 sm:py-3 rounded-full bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold text-xs sm:text-sm transition-all"
+            className="px-6 sm:px-8 py-3.5 sm:py-4 rounded-full bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold text-sm sm:text-base transition-all flex items-center justify-center"
           >
             Register Agency
           </Link>
@@ -202,66 +198,66 @@ const Landing = () => {
 
       </section>
 
-      {/* ── HIGHLIGHT ABOUT SOFTWARE (Minimal, Crisp, Ultra-Easy to Understand) ── */}
-      <section id="about" className="relative z-10 py-8 sm:py-12 max-w-4xl mx-auto px-4 sm:px-6">
+      {/* ── HIGHLIGHT ABOUT SOFTWARE (Mobile: Left-Aligned, Desktop: Center-Aligned) ── */}
+      <section id="about" className="relative z-10 py-10 sm:py-16 max-w-5xl mx-auto px-5 sm:px-8">
         
         {/* Header */}
-        <div className="text-center max-w-xl mx-auto space-y-1.5 mb-8">
-          <span className="text-[11px] font-black uppercase tracking-wider text-[#12B7D4] block">
+        <div className="text-left sm:text-center max-w-2xl mx-auto space-y-2 mb-9">
+          <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#12B7D4] block">
             What is RiseWithMedia?
           </span>
-          <h2 className="font-display font-black text-2xl sm:text-3xl text-slate-950 tracking-tight">
+          <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-slate-950 tracking-tight leading-tight">
             One Hub Replacing 5 Fragmented Tools.
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium">
+          <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
             Everything your agency needs in one clear, understandable flow.
           </p>
         </div>
 
         {/* 3 Crisp Highlight Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
           
-          <div className="bg-white/95 border border-slate-200/90 rounded-xl p-4 space-y-2 shadow-xs hover:border-[#12B7D4]/50 transition-all">
-            <div className="w-8 h-8 rounded-lg bg-[#12B7D4]/10 text-[#12B7D4] flex items-center justify-center font-bold text-xs">
+          <div className="bg-white/95 border border-slate-200/90 rounded-xl p-5 space-y-2.5 shadow-xs hover:border-[#12B7D4]/50 transition-all">
+            <div className="w-9 h-9 rounded-lg bg-[#12B7D4]/10 text-[#12B7D4] flex items-center justify-center font-black text-sm">
               01
             </div>
-            <h4 className="font-display font-bold text-sm sm:text-base text-slate-950">
+            <h4 className="font-display font-bold text-base sm:text-lg text-slate-950">
               No More Tool Sprawl
             </h4>
-            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+            <p className="text-sm text-slate-600 font-medium leading-relaxed">
               Replace messy WhatsApp chats, scattered Excel files, and external billing with one central agency dashboard.
             </p>
-            <span className="inline-block text-[10px] font-bold text-[#12B7D4] bg-[#12B7D4]/10 px-2 py-0.5 rounded">
+            <span className="inline-block text-xs font-bold text-[#12B7D4] bg-[#12B7D4]/10 px-2.5 py-1 rounded">
               5-in-1 Platform
             </span>
           </div>
 
-          <div className="bg-white/95 border border-slate-200/90 rounded-xl p-4 space-y-2 shadow-xs hover:border-[#12B7D4]/50 transition-all">
-            <div className="w-8 h-8 rounded-lg bg-[#12B7D4]/10 text-[#12B7D4] flex items-center justify-center font-bold text-xs">
+          <div className="bg-white/95 border border-slate-200/90 rounded-xl p-5 space-y-2.5 shadow-xs hover:border-[#12B7D4]/50 transition-all">
+            <div className="w-9 h-9 rounded-lg bg-[#12B7D4]/10 text-[#12B7D4] flex items-center justify-center font-black text-sm">
               02
             </div>
-            <h4 className="font-display font-bold text-sm sm:text-base text-slate-950">
+            <h4 className="font-display font-bold text-base sm:text-lg text-slate-950">
               Live Client Portal
             </h4>
-            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+            <p className="text-sm text-slate-600 font-medium leading-relaxed">
               Clients review creative deliverables, approve posts, and download GST invoices in real time with zero email lag.
             </p>
-            <span className="inline-block text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+            <span className="inline-block text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded">
               Zero Email Clutter
             </span>
           </div>
 
-          <div className="bg-white/95 border border-slate-200/90 rounded-xl p-4 space-y-2 shadow-xs hover:border-[#12B7D4]/50 transition-all">
-            <div className="w-8 h-8 rounded-lg bg-[#12B7D4]/10 text-[#12B7D4] flex items-center justify-center font-bold text-xs">
+          <div className="bg-white/95 border border-slate-200/90 rounded-xl p-5 space-y-2.5 shadow-xs hover:border-[#12B7D4]/50 transition-all">
+            <div className="w-9 h-9 rounded-lg bg-[#12B7D4]/10 text-[#12B7D4] flex items-center justify-center font-black text-sm">
               03
             </div>
-            <h4 className="font-display font-bold text-sm sm:text-base text-slate-950">
+            <h4 className="font-display font-bold text-base sm:text-lg text-slate-950">
               100% Private Workspace
             </h4>
-            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+            <p className="text-sm text-slate-600 font-medium leading-relaxed">
               Every agency gets its own isolated database space, custom company slug URL, and strict role permissions.
             </p>
-            <span className="inline-block text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+            <span className="inline-block text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded">
               Enterprise Secure
             </span>
           </div>
@@ -269,24 +265,24 @@ const Landing = () => {
         </div>
 
         {/* 1-Line Lifecycle Strip */}
-        <div className="mt-5 p-3 rounded-xl bg-slate-50/90 border border-slate-200/80 flex flex-wrap items-center justify-around gap-2 text-xs font-bold text-slate-700 text-center">
+        <div className="mt-6 p-4 rounded-xl bg-slate-50/90 border border-slate-200/80 flex flex-wrap items-center justify-around gap-2 text-xs sm:text-sm font-extrabold text-slate-800 text-center">
           <span className="flex items-center gap-1.5 text-slate-900">
-            <span className="w-2 h-2 rounded-full bg-[#12B7D4]" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#12B7D4]" />
             Inbound Leads
           </span>
           <span className="text-slate-400">→</span>
           <span className="flex items-center gap-1.5 text-slate-900">
-            <span className="w-2 h-2 rounded-full bg-sky-500" />
+            <span className="w-2.5 h-2.5 rounded-full bg-sky-500" />
             Deliverables & Sprints
           </span>
           <span className="text-slate-400">→</span>
           <span className="flex items-center gap-1.5 text-slate-900">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
             Client Sign-off
           </span>
           <span className="text-slate-400">→</span>
           <span className="flex items-center gap-1.5 text-slate-900">
-            <span className="w-2 h-2 rounded-full bg-amber-500" />
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
             GST Invoicing
           </span>
         </div>
@@ -294,25 +290,25 @@ const Landing = () => {
       </section>
 
       {/* ── CORE CAPABILITIES (Cards styled strictly with user's design) ── */}
-      <section id="capabilities" className="relative z-10 py-8 sm:py-12 max-w-4xl mx-auto px-4 sm:px-6">
+      <section id="capabilities" className="relative z-10 py-10 sm:py-14 max-w-5xl mx-auto px-5 sm:px-8">
         
-        <div className="flex items-center justify-between border-b border-slate-200/80 pb-3 mb-6">
-          <div>
-            <h3 className="font-display font-black text-lg sm:text-xl text-slate-950 tracking-tight">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200/80 pb-4 mb-7 gap-2">
+          <div className="text-left">
+            <h3 className="font-display font-black text-2xl sm:text-3xl text-slate-950 tracking-tight">
               Core Modules
             </h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
+            <p className="text-sm text-slate-600 font-medium mt-0.5">
               Click any module to launch workspace
             </p>
           </div>
-          <Link to="/login" className="text-xs font-bold text-[#12B7D4] hover:underline flex items-center gap-1">
+          <Link to="/login" className="self-start sm:self-auto text-sm font-bold text-[#12B7D4] hover:underline flex items-center gap-1">
             <span>View All</span>
-            <ChevronRight size={14} />
+            <ChevronRight size={16} />
           </Link>
         </div>
 
         {/* The 6 Feature Cards using the User's Wave Card Design */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
           <FeatureCard
             title="Meta & WhatsApp Inbound"
             subText="Zero lead dropoff. Automated routing."
@@ -365,28 +361,28 @@ const Landing = () => {
       </section>
 
       {/* ── METRICS STRIP ── */}
-      <section id="metrics" className="relative z-10 py-10 sm:py-14 max-w-4xl mx-auto px-4 sm:px-6">
-        <div className="bg-white border border-slate-200/80 rounded-xl p-5 sm:p-7 shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+      <section id="metrics" className="relative z-10 py-10 sm:py-16 max-w-5xl mx-auto px-5 sm:px-8">
+        <div className="bg-white border border-slate-200/80 rounded-xl p-6 sm:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-left sm:text-center divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
             
-            <div className="py-2">
-              <span className="font-display font-black text-2xl sm:text-3xl text-slate-950 block">100%</span>
-              <p className="text-[11px] font-bold text-[#12B7D4] uppercase tracking-wider mt-1">Tenant Isolation</p>
+            <div className="py-2 sm:px-4">
+              <span className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-slate-950 block">100%</span>
+              <p className="text-xs sm:text-sm font-bold text-[#12B7D4] uppercase tracking-wider mt-1.5">Tenant Isolation</p>
             </div>
 
-            <div className="py-2">
-              <span className="font-display font-black text-2xl sm:text-3xl text-slate-950 block">4.8x</span>
-              <p className="text-[11px] font-bold text-[#12B7D4] uppercase tracking-wider mt-1">Pipeline Velocity</p>
+            <div className="py-2 sm:px-4">
+              <span className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-slate-950 block">4.8x</span>
+              <p className="text-xs sm:text-sm font-bold text-[#12B7D4] uppercase tracking-wider mt-1.5">Pipeline Velocity</p>
             </div>
 
-            <div className="py-2">
-              <span className="font-display font-black text-2xl sm:text-3xl text-slate-950 block">5-in-1</span>
-              <p className="text-[11px] font-bold text-[#12B7D4] uppercase tracking-wider mt-1">Consolidated Suite</p>
+            <div className="py-2 sm:px-4">
+              <span className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-slate-950 block">5-in-1</span>
+              <p className="text-xs sm:text-sm font-bold text-[#12B7D4] uppercase tracking-wider mt-1.5">Consolidated Suite</p>
             </div>
 
-            <div className="py-2">
-              <span className="font-display font-black text-2xl sm:text-3xl text-slate-950 block">24/7</span>
-              <p className="text-[11px] font-bold text-[#12B7D4] uppercase tracking-wider mt-1">Live Client Sync</p>
+            <div className="py-2 sm:px-4">
+              <span className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-slate-950 block">24/7</span>
+              <p className="text-xs sm:text-sm font-bold text-[#12B7D4] uppercase tracking-wider mt-1.5">Live Client Sync</p>
             </div>
 
           </div>
@@ -394,29 +390,29 @@ const Landing = () => {
       </section>
 
       {/* ── BOTTOM CTA SECTION ── */}
-      <section className="relative z-10 pb-16 sm:pb-24 max-w-4xl mx-auto px-4 sm:px-6 text-center">
-        <div className="bg-slate-950 text-white rounded-2xl p-6 sm:p-10 relative overflow-hidden border border-slate-800 shadow-xl">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[200px] bg-[#12B7D4]/20 rounded-full blur-3xl pointer-events-none" />
+      <section className="relative z-10 pb-16 sm:pb-24 max-w-5xl mx-auto px-5 sm:px-8 text-left sm:text-center">
+        <div className="bg-slate-950 text-white rounded-2xl p-7 sm:p-12 relative overflow-hidden border border-slate-800 shadow-xl">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[220px] bg-[#12B7D4]/20 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 space-y-3">
-            <h3 className="font-display font-black text-2xl sm:text-3xl text-white tracking-tight">
+          <div className="relative z-10 space-y-3.5 max-w-2xl mx-auto">
+            <h3 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-white tracking-tight leading-tight">
               Ready to Scale Your Agency?
             </h3>
-            <p className="text-xs sm:text-sm text-slate-400 font-medium max-w-md mx-auto">
+            <p className="text-sm sm:text-base text-slate-400 font-medium">
               Get started in seconds with your dedicated company portal and isolated workspace.
             </p>
 
-            <div className="pt-3 flex flex-row items-center justify-center gap-3">
+            <div className="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
               <Link
                 to="/login"
-                className="px-6 py-2.5 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-1.5"
+                className="px-7 sm:px-9 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-black text-sm sm:text-base shadow-md transition-all flex items-center justify-center gap-2"
               >
                 <span>Login to Workspace</span>
-                <ArrowRight size={14} />
+                <ArrowRight size={16} />
               </Link>
               <Link
                 to="/register-company"
-                className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/15 text-white border border-white/20 font-bold text-xs sm:text-sm transition-all"
+                className="px-6 sm:px-8 py-3.5 sm:py-4 rounded-full bg-white/10 hover:bg-white/15 text-white border border-white/20 font-bold text-sm sm:text-base transition-all flex items-center justify-center"
               >
                 Register Company
               </Link>
@@ -426,14 +422,14 @@ const Landing = () => {
       </section>
 
       {/* ── MINIMAL APPLE FOOTER ── */}
-      <footer className="relative z-10 bg-white border-t border-slate-200/70 py-6">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-          <div className="flex items-center gap-2">
-            <span className="font-display font-bold text-slate-900">RiseWithMedia</span>
+      <footer className="relative z-10 bg-white border-t border-slate-200/70 py-7">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs sm:text-sm text-slate-500">
+          <div className="flex items-center gap-2.5">
+            <span className="font-display font-bold text-slate-900 text-sm sm:text-base">RiseWithMedia</span>
             <span>• Digital Marketing OS</span>
           </div>
 
-          <div className="flex items-center gap-4 font-semibold text-slate-600">
+          <div className="flex items-center gap-5 font-semibold text-slate-600">
             <Link to="/login" className="hover:text-slate-900 transition-colors">Sign In</Link>
             <Link to="/register-company" className="hover:text-slate-900 transition-colors">Register</Link>
             <Link to="/platform" className="hover:text-slate-900 transition-colors">Platform Admin</Link>
