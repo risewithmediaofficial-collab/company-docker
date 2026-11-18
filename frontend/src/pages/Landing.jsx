@@ -11,8 +11,11 @@ import {
   ChevronRight,
   CheckCircle2,
   Building2,
-  Radio,
-  Sparkles
+  Sparkles,
+  Layers,
+  Zap,
+  Lock,
+  Clock
 } from 'lucide-react';
 
 // Reusable Wave Accent Card conforming strictly to user's specified design
@@ -76,7 +79,7 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-[#12B7D4]/25 selection:text-slate-900 relative overflow-x-hidden antialiased">
       
-      {/* ── BACKGROUND PATTERN (Gradient & Vertical Grid with Mask) ── */}
+      {/* ── TOP PATTERN (Dual Gradient & Vertical Grid Mask) ── */}
       <div className="absolute inset-x-0 top-0 h-[700px] sm:h-[840px] pointer-events-none overflow-hidden z-0">
         <div
           className="w-full h-full relative"
@@ -99,7 +102,13 @@ const Landing = () => {
         </div>
       </div>
 
-      {/* ── FIXED NAVIGATION BAR (Enlarged, Spacious & Premium) ── */}
+      {/* ── AMBIENT BLUE GRADIENT SIDE PATCHES (Minimalist framing glows) ── */}
+      <div className="fixed top-1/4 -left-40 w-80 sm:w-96 h-[600px] bg-gradient-to-r from-[#12B7D4]/20 via-[#0ed2da]/10 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
+      <div className="fixed top-1/3 -right-40 w-80 sm:w-96 h-[600px] bg-gradient-to-l from-[#5f29c7]/18 via-[#12B7D4]/12 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
+      <div className="fixed top-2/3 -left-32 w-72 h-[450px] bg-gradient-to-r from-[#0284c7]/14 via-[#12B7D4]/8 to-transparent rounded-full blur-[90px] pointer-events-none z-0" />
+      <div className="fixed top-3/4 -right-32 w-72 h-[450px] bg-gradient-to-l from-[#12B7D4]/15 via-sky-400/8 to-transparent rounded-full blur-[90px] pointer-events-none z-0" />
+
+      {/* ── FIXED NAVIGATION BAR (Spacious & Minimal) ── */}
       <header className="fixed top-0 inset-x-0 z-50 h-20 sm:h-22 bg-white/90 backdrop-blur-md border-b border-slate-200/80 transition-all flex items-center shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full flex items-center justify-between">
           
@@ -123,11 +132,11 @@ const Landing = () => {
             </div>
           </Link>
 
-          {/* Minimal Navigation Links */}
+          {/* Minimal Navigation Links (All anchor directly on this single page) */}
           <nav className="hidden md:flex items-center gap-9 text-sm font-bold text-slate-600">
-            <a href="#features" className="hover:text-slate-950 transition-colors">Overview</a>
+            <a href="#about" className="hover:text-slate-950 transition-colors">About</a>
             <a href="#capabilities" className="hover:text-slate-950 transition-colors">Capabilities</a>
-            <a href="#architecture" className="hover:text-slate-950 transition-colors">Architecture</a>
+            <a href="#metrics" className="hover:text-slate-950 transition-colors">Metrics</a>
           </nav>
 
           {/* Action Links */}
@@ -151,7 +160,7 @@ const Landing = () => {
       </header>
 
       {/* ── HERO SECTION ── */}
-      <section className="relative z-10 pt-36 sm:pt-44 pb-14 sm:pb-20 px-4 sm:px-6 max-w-4xl mx-auto text-center">
+      <section className="relative z-10 pt-36 sm:pt-44 pb-12 sm:pb-16 px-4 sm:px-6 max-w-4xl mx-auto text-center">
         
         {/* Apple Style Pill Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100/90 border border-slate-200/80 mb-5">
@@ -193,7 +202,98 @@ const Landing = () => {
 
       </section>
 
-      {/* ── CAPABILITIES (Cards styled strictly with user's design) ── */}
+      {/* ── HIGHLIGHT ABOUT SOFTWARE (Minimal, Crisp, Ultra-Easy to Understand) ── */}
+      <section id="about" className="relative z-10 py-8 sm:py-12 max-w-4xl mx-auto px-4 sm:px-6">
+        
+        {/* Header */}
+        <div className="text-center max-w-xl mx-auto space-y-1.5 mb-8">
+          <span className="text-[11px] font-black uppercase tracking-wider text-[#12B7D4] block">
+            What is RiseWithMedia?
+          </span>
+          <h2 className="font-display font-black text-2xl sm:text-3xl text-slate-950 tracking-tight">
+            One Hub Replacing 5 Fragmented Tools.
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium">
+            Everything your agency needs in one clear, understandable flow.
+          </p>
+        </div>
+
+        {/* 3 Crisp Highlight Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+          
+          <div className="bg-white/95 border border-slate-200/90 rounded-xl p-4 space-y-2 shadow-xs hover:border-[#12B7D4]/50 transition-all">
+            <div className="w-8 h-8 rounded-lg bg-[#12B7D4]/10 text-[#12B7D4] flex items-center justify-center font-bold text-xs">
+              01
+            </div>
+            <h4 className="font-display font-bold text-sm sm:text-base text-slate-950">
+              No More Tool Sprawl
+            </h4>
+            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+              Replace messy WhatsApp chats, scattered Excel files, and external billing with one central agency dashboard.
+            </p>
+            <span className="inline-block text-[10px] font-bold text-[#12B7D4] bg-[#12B7D4]/10 px-2 py-0.5 rounded">
+              5-in-1 Platform
+            </span>
+          </div>
+
+          <div className="bg-white/95 border border-slate-200/90 rounded-xl p-4 space-y-2 shadow-xs hover:border-[#12B7D4]/50 transition-all">
+            <div className="w-8 h-8 rounded-lg bg-[#12B7D4]/10 text-[#12B7D4] flex items-center justify-center font-bold text-xs">
+              02
+            </div>
+            <h4 className="font-display font-bold text-sm sm:text-base text-slate-950">
+              Live Client Portal
+            </h4>
+            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+              Clients review creative deliverables, approve posts, and download GST invoices in real time with zero email lag.
+            </p>
+            <span className="inline-block text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+              Zero Email Clutter
+            </span>
+          </div>
+
+          <div className="bg-white/95 border border-slate-200/90 rounded-xl p-4 space-y-2 shadow-xs hover:border-[#12B7D4]/50 transition-all">
+            <div className="w-8 h-8 rounded-lg bg-[#12B7D4]/10 text-[#12B7D4] flex items-center justify-center font-bold text-xs">
+              03
+            </div>
+            <h4 className="font-display font-bold text-sm sm:text-base text-slate-950">
+              100% Private Workspace
+            </h4>
+            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+              Every agency gets its own isolated database space, custom company slug URL, and strict role permissions.
+            </p>
+            <span className="inline-block text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+              Enterprise Secure
+            </span>
+          </div>
+
+        </div>
+
+        {/* 1-Line Lifecycle Strip */}
+        <div className="mt-5 p-3 rounded-xl bg-slate-50/90 border border-slate-200/80 flex flex-wrap items-center justify-around gap-2 text-xs font-bold text-slate-700 text-center">
+          <span className="flex items-center gap-1.5 text-slate-900">
+            <span className="w-2 h-2 rounded-full bg-[#12B7D4]" />
+            Inbound Leads
+          </span>
+          <span className="text-slate-400">→</span>
+          <span className="flex items-center gap-1.5 text-slate-900">
+            <span className="w-2 h-2 rounded-full bg-sky-500" />
+            Deliverables & Sprints
+          </span>
+          <span className="text-slate-400">→</span>
+          <span className="flex items-center gap-1.5 text-slate-900">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            Client Sign-off
+          </span>
+          <span className="text-slate-400">→</span>
+          <span className="flex items-center gap-1.5 text-slate-900">
+            <span className="w-2 h-2 rounded-full bg-amber-500" />
+            GST Invoicing
+          </span>
+        </div>
+
+      </section>
+
+      {/* ── CORE CAPABILITIES (Cards styled strictly with user's design) ── */}
       <section id="capabilities" className="relative z-10 py-8 sm:py-12 max-w-4xl mx-auto px-4 sm:px-6">
         
         <div className="flex items-center justify-between border-b border-slate-200/80 pb-3 mb-6">
@@ -265,7 +365,7 @@ const Landing = () => {
       </section>
 
       {/* ── METRICS STRIP ── */}
-      <section id="architecture" className="relative z-10 py-10 sm:py-14 max-w-4xl mx-auto px-4 sm:px-6">
+      <section id="metrics" className="relative z-10 py-10 sm:py-14 max-w-4xl mx-auto px-4 sm:px-6">
         <div className="bg-white border border-slate-200/80 rounded-xl p-5 sm:p-7 shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
             
