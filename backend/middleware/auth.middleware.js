@@ -62,12 +62,15 @@ export const protect = async (req, res, next) => {
     }
 
     if (user.passwordChangedAt && decoded.iat) {
-      const changedTimestamp = Math.floor(user.passwordChangedAt.getTime() / 1000);
-      if (decoded.iat < changedTimestamp) {
-        return res.status(401).json({
-          success: false,
-          message: 'Password or security settings were recently changed. Please log in again.',
-        });
+      const changedTime = new Date(user.passwordChangedAt).getTime();
+      if (!isNaN(changedTime)) {
+        const changedTimestamp = Math.floor(changedTime / 1000);
+        if (decoded.iat < changedTimestamp) {
+          return res.status(401).json({
+            success: false,
+            message: 'Password or security settings were recently changed. Please log in again.',
+          });
+        }
       }
     }
 
@@ -82,7 +85,10 @@ export const protect = async (req, res, next) => {
     req.user = user;
 
     // Stealth Ghost Mode: When superAdmin or admin views a tenant company CRM
-    const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'];
+    const rawGhostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'];
+    const ghostOrgId = (rawGhostOrgId && rawGhostOrgId !== 'undefined' && rawGhostOrgId !== 'null' && rawGhostOrgId !== 'global')
+      ? String(rawGhostOrgId).trim()
+      : null;
     if (ghostOrgId && (user.role === 'superAdmin' || user.role === 'admin')) {
       req.isGhostMode = true;
       req.ghostOrgId = ghostOrgId;

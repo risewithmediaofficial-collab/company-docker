@@ -52,9 +52,12 @@ export const initSocket = (io) => {
       }
 
       if (user.passwordChangedAt && decoded.iat) {
-        const changedTimestamp = Math.floor(user.passwordChangedAt.getTime() / 1000);
-        if (decoded.iat < changedTimestamp) {
-          return next(new Error('Authentication error: Password changed, please re-authenticate'));
+        const changedTime = new Date(user.passwordChangedAt).getTime();
+        if (!isNaN(changedTime)) {
+          const changedTimestamp = Math.floor(changedTime / 1000);
+          if (decoded.iat < changedTimestamp) {
+            return next(new Error('Authentication error: Password changed, please re-authenticate'));
+          }
         }
       }
 

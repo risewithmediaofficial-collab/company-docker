@@ -310,23 +310,32 @@ export const logout = async (req, res) => {
 // @access  Private
 export const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).populate('clientId');
+    const userId = req.user?._id || req.user?.id;
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(401).json({ success: false, message: 'Not authorized, invalid user session' });
+    }
+
+    const user = await User.findById(userId).populate('clientId');
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
     let organization = null;
-    const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
+    const rawGhostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
+    const ghostOrgId = (rawGhostOrgId && rawGhostOrgId !== 'undefined' && rawGhostOrgId !== 'null' && rawGhostOrgId !== 'global')
+      ? String(rawGhostOrgId).trim()
+      : null;
     const targetOrgId = ((user.role === 'superAdmin' || user.role === 'admin') && ghostOrgId)
       ? ghostOrgId
       : user.organizationId;
 
-    if (targetOrgId) {
+    if (targetOrgId && mongoose.Types.ObjectId.isValid(targetOrgId)) {
       organization = await Organization.findById(targetOrgId).select(
         'name slug logo industry website phone plan planStatus enabledModules maxUsers maxClients trialEndsAt settings'
       );
     }
     res.json({ success: true, user, organization, isGhostMode: Boolean(ghostOrgId) });
   } catch (error) {
+    console.error('getMe error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -80,7 +80,10 @@ export const fetchMe = createAsyncThunk(
         }
       }
 
-      const ghostOrgId = localStorage.getItem('rwm_ghost_org_id');
+      const rawGhostOrgId = localStorage.getItem('rwm_ghost_org_id');
+      const ghostOrgId = (rawGhostOrgId && rawGhostOrgId !== 'undefined' && rawGhostOrgId !== 'null')
+        ? rawGhostOrgId.trim()
+        : null;
       const reqHeaders = { Authorization: `Bearer ${activeToken}` };
       if (ghostOrgId) {
         reqHeaders['x-impersonate-org-id'] = ghostOrgId;
@@ -121,7 +124,11 @@ const authSlice = createSlice({
     })(),
     accessToken: localStorage.getItem('accessToken') || null,
     activeWorkspace: localStorage.getItem('activeWorkspace') || null,
-    ghostMode: Boolean(localStorage.getItem('rwm_ghost_org_id')),
+    ghostMode: Boolean(
+      localStorage.getItem('rwm_ghost_org_id') &&
+      localStorage.getItem('rwm_ghost_org_id') !== 'undefined' &&
+      localStorage.getItem('rwm_ghost_org_id') !== 'null'
+    ),
     ghostOrg: (() => {
       try {
         const d = localStorage.getItem('rwm_ghost_org_data');
@@ -161,10 +168,11 @@ const authSlice = createSlice({
     },
     enterGhostMode: (state, action) => {
       const org = action.payload;
+      if (!org?._id) return;
       state.ghostMode = true;
       state.ghostOrg = org;
       state.organization = org;
-      localStorage.setItem('rwm_ghost_org_id', org._id);
+      localStorage.setItem('rwm_ghost_org_id', String(org._id));
       localStorage.setItem('rwm_ghost_org_data', JSON.stringify(org));
     },
     exitGhostMode: (state) => {

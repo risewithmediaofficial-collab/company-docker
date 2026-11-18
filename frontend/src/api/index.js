@@ -35,10 +35,10 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    if (workspaceId && workspaceId !== 'global') {
+    if (workspaceId && workspaceId !== 'global' && workspaceId !== 'undefined' && workspaceId !== 'null') {
       config.headers['x-workspace-id'] = workspaceId;
     }
-    if (ghostOrgId) {
+    if (ghostOrgId && ghostOrgId !== 'undefined' && ghostOrgId !== 'null' && ghostOrgId !== 'global') {
       config.headers['x-impersonate-org-id'] = ghostOrgId;
       config.headers['x-ghost-org-id'] = ghostOrgId;
     }
