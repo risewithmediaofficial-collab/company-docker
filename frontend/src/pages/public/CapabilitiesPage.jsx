@@ -33,7 +33,7 @@ const CapabilitiesPage = () => {
             </span>
           </div>
 
-          <h1 className="font-display font-black text-4xl sm:text-6xl text-slate-950 tracking-tight leading-tight">
+          <h1 className="font-display font-extrabold text-4xl sm:text-6xl text-slate-950 tracking-tight leading-[1.08]">
             Simple Features Made For
             <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
               Your Daily Agency Work.
@@ -72,10 +72,10 @@ const CapabilitiesPage = () => {
               <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
                 01 / Client & Deal Tracker
               </span>
-              <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-950 tracking-tight leading-tight">
+              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[44px] text-slate-950 tracking-tight leading-[1.15]">
                 Manage Every Client and Deal
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
-                  Without Spreadsheet Mess.
+                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+                  Without Spreadsheet Clutter.
                 </span>
               </h2>
               <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
@@ -140,9 +140,9 @@ const CapabilitiesPage = () => {
               <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
                 02 / Social Media Calendar
               </span>
-              <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-950 tracking-tight leading-tight">
+              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[44px] text-slate-950 tracking-tight leading-[1.15]">
                 Visual Agency Schedule for
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
+                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   Posts and Reels.
                 </span>
               </h2>
@@ -174,10 +174,10 @@ const CapabilitiesPage = () => {
               <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
                 03 / 1-Tap Client Approvals
               </span>
-              <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-950 tracking-tight leading-tight">
+              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[44px] text-slate-950 tracking-tight leading-[1.15]">
                 Clients Review on Their Phone
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
-                  With One Tap.
+                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+                  With 1-Tap Approval.
                 </span>
               </h2>
               <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
@@ -233,9 +233,9 @@ const CapabilitiesPage = () => {
               <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
                 04 / Fast GST Invoicing
               </span>
-              <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-950 tracking-tight leading-tight">
+              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[44px] text-slate-950 tracking-tight leading-[1.15]">
                 Tax Invoices Created in Seconds
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
+                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   With 1-Click PDF.
                 </span>
               </h2>
@@ -267,9 +267,9 @@ const CapabilitiesPage = () => {
               <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
                 05 / Staff Attendance & Workspace
               </span>
-              <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-950 tracking-tight leading-tight">
+              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[44px] text-slate-950 tracking-tight leading-[1.15]">
                 Selfie Attendance and
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
+                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   100% Private Workspaces.
                 </span>
               </h2>

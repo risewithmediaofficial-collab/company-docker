@@ -39,10 +39,10 @@ const Landing = () => {
           </div>
 
           {/* Big Clean Title (Black & Blue with Shimmer Animation) */}
-          <h1 className="font-display font-black text-5xl sm:text-7xl lg:text-8xl text-slate-950 tracking-tight leading-[1.04]">
+          <h1 className="font-display font-extrabold text-5xl sm:text-7xl lg:text-[76px] text-slate-950 tracking-tight leading-[1.06]">
             Manage Your Agency.
           </h1>
-          <h1 className="font-display font-black text-5xl sm:text-7xl lg:text-8xl bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer tracking-tight leading-[1.04] mt-1 sm:mt-2">
+          <h1 className="font-display font-extrabold text-5xl sm:text-7xl lg:text-[76px] bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer tracking-tight leading-[1.06] mt-1 sm:mt-2">
             All in One Place.
           </h1>
 
@@ -107,10 +107,10 @@ const Landing = () => {
               <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
                 01 / Client & Deal Tracker
               </span>
-              <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-950 tracking-tight leading-tight">
-                Never Lose a Lead or
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
-                  Forget a Follow-up.
+              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[44px] text-slate-950 tracking-tight leading-[1.15]">
+                Never Lose a Lead.
+                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+                  Never Miss a Follow-up.
                 </span>
               </h2>
               <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
@@ -210,10 +210,10 @@ const Landing = () => {
               <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
                 02 / Social Media Calendar
               </span>
-              <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-950 tracking-tight leading-tight">
-                Plan a Month of Posts
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
-                  in 10 Minutes.
+              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[44px] text-slate-950 tracking-tight leading-[1.15]">
+                Plan a Month of Content.
+                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+                  Ready in 10 Minutes.
                 </span>
               </h2>
               <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
@@ -251,10 +251,10 @@ const Landing = () => {
               <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
                 03 / 1-Tap Client Approvals
               </span>
-              <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-950 tracking-tight leading-tight">
+              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[44px] text-slate-950 tracking-tight leading-[1.15]">
                 Clients Approve on Phone.
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
-                  Zero Confusion.
+                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+                  Zero Endless Calls.
                 </span>
               </h2>
               <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
@@ -354,10 +354,10 @@ const Landing = () => {
               <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
                 04 / Fast GST Billing
               </span>
-              <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-950 tracking-tight leading-tight">
-                Generate Clean Tax Invoices
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
-                  in 30 Seconds.
+              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[44px] text-slate-950 tracking-tight leading-[1.15]">
+                Generate Clean Tax Invoices.
+                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+                  Ready in 30 Seconds.
                 </span>
               </h2>
               <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
@@ -395,10 +395,10 @@ const Landing = () => {
               <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#12B7D4] bg-[#12B7D4]/10 px-3.5 py-1 rounded-full">
                 05 / Staff Attendance & Workspace
               </span>
-              <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-950 tracking-tight leading-tight">
-                Safe, Private Workspace for
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block sm:inline-block sm:ml-2">
-                  Your Entire Team.
+              <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[44px] text-slate-950 tracking-tight leading-[1.15]">
+                Safe, Private Workspace.
+                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+                  Built for Your Entire Team.
                 </span>
               </h2>
               <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
