@@ -17,17 +17,17 @@ import BranchManager from '../../components/branches/BranchManager';
 
 // ── Badge Styles ─────────────────────────────────────────────────────────────
 const planBadge = {
-  trial:   'text-slate-300 bg-slate-800/80 border-slate-700/60',
-  starter: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
-  growth:  'text-violet-400 bg-violet-500/10 border-violet-500/30',
-  pro:     'text-amber-400 bg-amber-500/10 border-amber-500/30',
+  trial:   'text-slate-700 bg-slate-100 border-slate-200',
+  starter: 'text-blue-700 bg-blue-50 border-blue-200',
+  growth:  'text-violet-700 bg-violet-50 border-violet-200',
+  pro:     'text-amber-800 bg-amber-50 border-amber-200',
 };
 
 const statusBadge = {
-  pending:   'text-amber-400 bg-amber-500/10 border-amber-500/30',
-  active:    'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
-  suspended: 'text-rose-400 bg-rose-500/10 border-rose-500/30',
-  expired:   'text-slate-400 bg-slate-500/10 border-slate-500/30',
+  pending:   'text-amber-800 bg-amber-50 border-amber-200',
+  active:    'text-emerald-700 bg-emerald-50 border-emerald-200',
+  suspended: 'text-rose-700 bg-rose-50 border-rose-200',
+  expired:   'text-slate-600 bg-slate-100 border-slate-200',
 };
 
 const statusIcons = {
@@ -106,6 +106,7 @@ const Companies = ({ defaultTab }) => {
   const [modalModules, setModalModules] = useState({});
   const [modalAdminNotes, setModalAdminNotes] = useState('');
   const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
 
   const getHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
@@ -332,30 +333,38 @@ const Companies = ({ defaultTab }) => {
     }
   };
 
-  // Helper to copy text to clipboard
-  const copyToClipboard = (text, label) => {
-    navigator.clipboard.writeText(text);
+  // Helper to copy text to clipboard with interactive feedback
+  const handleCopyUrl = (url, id, label = 'Portal URL') => {
+    navigator.clipboard.writeText(url);
+    setCopiedId(id);
     toast.success(`${label} copied to clipboard!`);
+    setTimeout(() => {
+      setCopiedId((curr) => (curr === id ? null : curr));
+    }, 2500);
+  };
+
+  const copyToClipboard = (text, label) => {
+    handleCopyUrl(text, text, label);
   };
 
   // Pending count
   const pendingCount = pendingRequests.length;
 
   return (
-    <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
+    <div className="p-6 space-y-6 max-w-[1600px] mx-auto text-slate-900">
       {/* ── Top Header ──────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-white tracking-tight">Companies & Requests</h1>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Companies & Requests</h1>
             {pendingCount > 0 && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-xs animate-pulse">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
                 {pendingCount} Pending Request{pendingCount > 1 ? 's' : ''}
               </span>
             )}
           </div>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-slate-500 text-sm mt-1">
             Manage registered tenant organizations, approve or reject incoming requests, and inspect company details.
           </p>
         </div>
@@ -363,9 +372,9 @@ const Companies = ({ defaultTab }) => {
         <button
           onClick={fetchData}
           disabled={loading}
-          className="self-start md:self-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white transition-all text-sm font-medium shadow-sm"
+          className="self-start md:self-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-all text-sm font-semibold shadow-xs cursor-pointer"
         >
-          <RefreshCw size={14} className={loading ? 'animate-spin text-indigo-400' : ''} />
+          <RefreshCw size={14} className={loading ? 'animate-spin text-indigo-600' : ''} />
           Refresh
         </button>
       </div>
@@ -375,24 +384,24 @@ const Companies = ({ defaultTab }) => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg shadow-amber-500/5"
+          className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 flex-shrink-0">
               <Clock size={20} />
             </div>
             <div>
-              <p className="text-white font-semibold text-sm">
+              <p className="text-slate-900 font-bold text-sm">
                 {pendingCount} Company Registration Request{pendingCount > 1 ? 's' : ''} Awaiting Review
               </p>
-              <p className="text-slate-400 text-xs mt-0.5">
+              <p className="text-slate-600 text-xs mt-0.5">
                 New businesses have requested a workspace. Review their details and choose to Accept or Reject.
               </p>
             </div>
           </div>
           <button
             onClick={() => handleTabChange('requests')}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-all shadow-md shadow-amber-500/20 flex-shrink-0"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-all shadow-sm flex-shrink-0 cursor-pointer"
           >
             Review Requests Now
             <ArrowUpRight size={14} />
@@ -401,37 +410,37 @@ const Companies = ({ defaultTab }) => {
       )}
 
       {/* ── Main Navigation Tabs ────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 border-b border-white/10 pb-px">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-px">
         <button
           onClick={() => handleTabChange('all')}
-          className={`flex items-center gap-2.5 px-5 py-3 rounded-t-xl text-sm font-medium transition-all relative ${
+          className={`flex items-center gap-2.5 px-5 py-3 rounded-t-xl text-sm font-semibold transition-all relative cursor-pointer ${
             activeTab === 'all'
-              ? 'text-white bg-white/5 border-t-2 border-indigo-500'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.02]'
+              ? 'text-indigo-600 bg-white border-t-2 border-indigo-600 shadow-xs'
+              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/70'
           }`}
         >
-          <Building2 size={16} className={activeTab === 'all' ? 'text-indigo-400' : ''} />
+          <Building2 size={16} className={activeTab === 'all' ? 'text-indigo-600' : ''} />
           <span>All Companies</span>
-          <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-white/10 text-slate-300">
+          <span className="ml-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
             {total}
           </span>
         </button>
 
         <button
           onClick={() => handleTabChange('requests')}
-          className={`flex items-center gap-2.5 px-5 py-3 rounded-t-xl text-sm font-medium transition-all relative ${
+          className={`flex items-center gap-2.5 px-5 py-3 rounded-t-xl text-sm font-semibold transition-all relative cursor-pointer ${
             activeTab === 'requests'
-              ? 'text-white bg-white/5 border-t-2 border-amber-500'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.02]'
+              ? 'text-amber-800 bg-white border-t-2 border-amber-500 shadow-xs'
+              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/70'
           }`}
         >
-          <Clock size={16} className={activeTab === 'requests' ? 'text-amber-400' : ''} />
+          <Clock size={16} className={activeTab === 'requests' ? 'text-amber-600' : ''} />
           <span>Company Requests</span>
           <span
-            className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold transition-all ${
+            className={`ml-1 px-2.5 py-0.5 rounded-full text-xs font-bold transition-all ${
               pendingCount > 0
-                ? 'bg-amber-500 text-black font-bold shadow-md shadow-amber-500/30'
-                : 'bg-white/10 text-slate-400'
+                ? 'bg-amber-100 text-amber-800 border border-amber-300 shadow-xs'
+                : 'bg-slate-100 text-slate-500'
             }`}
           >
             {pendingCount}
@@ -442,37 +451,37 @@ const Companies = ({ defaultTab }) => {
       {/* ── TAB 1: COMPANY REQUESTS (PENDING APPROVALS) ──────────────────────── */}
       {activeTab === 'requests' && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm text-slate-400">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm text-slate-600">
             <div>
-              <p className="font-semibold text-white">Pending Tenant Registration Requests</p>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="font-bold text-slate-900 text-base">Pending Tenant Registration Requests</p>
+              <p className="text-xs text-slate-500 mt-0.5">
                 Each company registers with a domain URL. When accepted, their owner account is activated.
               </p>
             </div>
-            <div className="text-xs bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-slate-300">
+            <div className="text-xs bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-slate-600 shadow-xs font-medium">
               Showing {pendingRequests.length} pending request{pendingRequests.length !== 1 ? 's' : ''}
             </div>
           </div>
 
           {loading ? (
-            <div className="h-64 flex flex-col items-center justify-center gap-3 text-slate-400">
-              <RefreshCw size={24} className="animate-spin text-indigo-400" />
+            <div className="h-64 flex flex-col items-center justify-center gap-3 text-slate-500 bg-white rounded-2xl border border-slate-200">
+              <RefreshCw size={24} className="animate-spin text-indigo-600" />
               <p className="text-sm">Loading pending company requests...</p>
             </div>
           ) : pendingRequests.length === 0 ? (
-            <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-12 text-center space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+            <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center space-y-4 shadow-xs">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
                 <CheckCircle2 size={32} />
               </div>
               <div className="space-y-1">
-                <p className="text-white font-semibold text-base">All Caught Up!</p>
-                <p className="text-slate-400 text-xs max-w-md mx-auto">
+                <p className="text-slate-900 font-bold text-base">All Caught Up!</p>
+                <p className="text-slate-500 text-xs max-w-md mx-auto">
                   There are no pending company registration requests at this time. New registrations from the public portal will appear here automatically.
                 </p>
               </div>
               <button
                 onClick={() => handleTabChange('all')}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all shadow-lg shadow-indigo-600/20"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all shadow-sm cursor-pointer"
               >
                 <Building2 size={14} />
                 View All Companies
@@ -483,7 +492,8 @@ const Companies = ({ defaultTab }) => {
               {pendingRequests.map((org) => {
                 const owner = org.ownerId || {};
                 const isLoadingThis = actionLoadingId === org._id;
-                const portalLoginUrl = `${window.location.origin}/${org.slug}`;
+                const orgSlugSafe = org.slug || (org.name ? org.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '') || String(org._id);
+                const portalLoginUrl = `${window.location.origin}/login/${orgSlugSafe}`;
 
                 return (
                   <motion.div
@@ -491,41 +501,41 @@ const Companies = ({ defaultTab }) => {
                     layout
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-5 rounded-2xl bg-gradient-to-b from-[#111422] to-[#0c0e18] border border-amber-500/20 hover:border-amber-500/40 transition-all shadow-xl shadow-black/40 space-y-4"
+                    className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-amber-300 transition-all shadow-xs space-y-4"
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                       {/* Company Info */}
                       <div className="flex items-start gap-4 min-w-0">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300 font-bold text-lg flex-shrink-0">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 font-bold text-lg flex-shrink-0">
                           {org.name?.charAt(0)?.toUpperCase() || 'C'}
                         </div>
                         <div className="space-y-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-white font-bold text-base tracking-tight truncate">
+                            <h3 className="text-slate-900 font-bold text-base tracking-tight truncate">
                               {org.name}
                             </h3>
-                            <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-                              /{org.slug}
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              /{orgSlugSafe}
                             </span>
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300">
                               Pending Approval
                             </span>
                           </div>
 
-                          <p className="text-slate-400 text-xs flex flex-wrap items-center gap-3">
-                            {org.industry && <span>Industry: <strong className="text-slate-300">{org.industry}</strong></span>}
+                          <p className="text-slate-500 text-xs flex flex-wrap items-center gap-3">
+                            {org.industry && <span>Industry: <strong className="text-slate-700">{org.industry}</strong></span>}
                             {org.website && (
                               <a
                                 href={org.website.startsWith('http') ? org.website : `https://${org.website}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-indigo-400 hover:underline flex items-center gap-1"
+                                className="text-indigo-600 hover:underline flex items-center gap-1 font-medium"
                               >
                                 <Globe size={11} />
                                 {org.website}
                               </a>
                             )}
-                            <span className="text-slate-500">
+                            <span className="text-slate-400">
                               Requested {new Date(org.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </span>
                           </p>
@@ -538,10 +548,10 @@ const Companies = ({ defaultTab }) => {
                         <button
                           onClick={() => handleOpenDetails(org)}
                           disabled={isLoadingThis}
-                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 text-xs font-semibold transition-all hover:border-white/20"
+                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-all shadow-xs cursor-pointer"
                           title="View all details, contact info, configure plan and modules"
                         >
-                          <Sliders size={14} className="text-indigo-400" />
+                          <Sliders size={14} className="text-indigo-600" />
                           All Details
                         </button>
 
@@ -549,7 +559,7 @@ const Companies = ({ defaultTab }) => {
                         <button
                           onClick={() => handleReject(org._id, org.name)}
                           disabled={isLoadingThis}
-                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-semibold transition-all shadow-sm"
+                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-all shadow-xs cursor-pointer"
                           title="Reject and delete this registration request"
                         >
                           <X size={14} />
@@ -563,7 +573,7 @@ const Companies = ({ defaultTab }) => {
                             setSelectedPlanForApproval('trial');
                           }}
                           disabled={isLoadingThis}
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-600/25 border border-emerald-400/30"
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
                           title="Accept and activate company workspace"
                         >
                           {isLoadingThis ? (
@@ -577,41 +587,56 @@ const Companies = ({ defaultTab }) => {
                     </div>
 
                     {/* Requester & Workspace Preview Subpanel */}
-                    <div className="pt-3 border-t border-white/5 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                       {/* Owner info */}
-                      <div className="p-2.5 rounded-xl bg-black/30 border border-white/5 flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold">
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
                           {owner.name?.charAt(0) || 'U'}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-white font-medium truncate">{owner.name || 'No owner name'}</p>
-                          <p className="text-slate-400 truncate">{owner.email || 'No email'}</p>
+                          <p className="text-slate-900 font-semibold truncate">{owner.name || 'No owner name'}</p>
+                          <p className="text-slate-500 truncate">{owner.email || 'No email'}</p>
                         </div>
                       </div>
 
                       {/* Phone / Contact */}
-                      <div className="p-2.5 rounded-xl bg-black/30 border border-white/5 flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 flex items-center justify-center">
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
                           <Phone size={14} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-slate-400 text-[10px] uppercase font-semibold">Phone Contact</p>
-                          <p className="text-slate-200 truncate">{owner.phone || org.phone || 'Not provided'}</p>
+                          <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Phone Contact</p>
+                          <p className="text-slate-800 font-medium truncate">{owner.phone || org.phone || 'Not provided'}</p>
                         </div>
                       </div>
 
-                      {/* Login URL */}
-                      <div className="p-2.5 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between gap-2">
+                      {/* Login URL with Copied Feedback */}
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="text-slate-400 text-[10px] uppercase font-semibold">Dedicated Login URL</p>
-                          <p className="text-indigo-400 font-mono truncate">/{org.slug}</p>
+                          <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Dedicated Login URL</p>
+                          <p className="text-indigo-600 font-mono font-semibold truncate">/login/{orgSlugSafe}</p>
                         </div>
                         <button
-                          onClick={() => copyToClipboard(portalLoginUrl, 'Login URL')}
-                          className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all flex-shrink-0"
+                          type="button"
+                          onClick={() => handleCopyUrl(portalLoginUrl, `pending-${org._id}`, 'Login URL')}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all flex-shrink-0 cursor-pointer ${
+                            copiedId === `pending-${org._id}`
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold'
+                              : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-xs'
+                          }`}
                           title="Copy Company Portal URL"
                         >
-                          <Copy size={13} />
+                          {copiedId === `pending-${org._id}` ? (
+                            <>
+                              <Check size={13} className="text-emerald-700 stroke-[3]" />
+                              <span>Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy size={13} />
+                              <span>Copy URL</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -630,13 +655,13 @@ const Companies = ({ defaultTab }) => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-3">
             {/* Search */}
             <div className="relative w-full md:w-80">
-              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search company or owner..."
                 value={search}
                 onChange={(e) => setFilter('search', e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-xs transition-all"
               />
             </div>
 
@@ -645,35 +670,35 @@ const Companies = ({ defaultTab }) => {
               <select
                 value={status}
                 onChange={(e) => setFilter('status', e.target.value)}
-                className="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm focus:outline-none focus:border-indigo-500 transition-all flex-1 md:flex-none"
+                className="px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-indigo-500 shadow-xs transition-all flex-1 md:flex-none cursor-pointer"
               >
-                <option value="" className="bg-[#111422] text-white">All Status</option>
-                <option value="pending" className="bg-[#111422] text-white">Pending Approval</option>
-                <option value="active" className="bg-[#111422] text-white">Active</option>
-                <option value="suspended" className="bg-[#111422] text-white">Suspended</option>
-                <option value="expired" className="bg-[#111422] text-white">Expired</option>
+                <option value="">All Status</option>
+                <option value="pending">Pending Approval</option>
+                <option value="active">Active</option>
+                <option value="suspended">Suspended</option>
+                <option value="expired">Expired</option>
               </select>
 
               <select
                 value={plan}
                 onChange={(e) => setFilter('plan', e.target.value)}
-                className="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm focus:outline-none focus:border-indigo-500 transition-all flex-1 md:flex-none"
+                className="px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-indigo-500 shadow-xs transition-all flex-1 md:flex-none cursor-pointer"
               >
-                <option value="" className="bg-[#111422] text-white">All Plans</option>
-                <option value="trial" className="bg-[#111422] text-white">Trial</option>
-                <option value="starter" className="bg-[#111422] text-white">Starter</option>
-                <option value="growth" className="bg-[#111422] text-white">Growth</option>
-                <option value="pro" className="bg-[#111422] text-white">Pro</option>
+                <option value="">All Plans</option>
+                <option value="trial">Trial</option>
+                <option value="starter">Starter</option>
+                <option value="growth">Growth</option>
+                <option value="pro">Pro</option>
               </select>
             </div>
           </div>
 
           {/* Table */}
-          <div className="rounded-2xl border border-white/10 overflow-hidden bg-black/20 backdrop-blur-sm">
+          <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-white/10 bg-white/[0.02] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                     <th className="px-6 py-3.5">Company</th>
                     <th className="px-6 py-3.5">Owner</th>
                     <th className="px-6 py-3.5">Status</th>
@@ -683,18 +708,18 @@ const Companies = ({ defaultTab }) => {
                     <th className="px-6 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5 text-sm">
+                <tbody className="divide-y divide-slate-100 text-sm">
                   {loading ? (
                     <tr>
                       <td colSpan={7} className="text-center py-16 text-slate-500">
-                        <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-indigo-400" />
+                        <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-indigo-600" />
                         Loading companies...
                       </td>
                     </tr>
                   ) : orgs.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="text-center py-16 text-slate-500">
-                        <Building2 size={32} className="mx-auto mb-2 opacity-40" />
+                        <Building2 size={32} className="mx-auto mb-2 opacity-40 text-slate-400" />
                         No companies found matching your criteria.
                       </td>
                     </tr>
@@ -706,28 +731,60 @@ const Companies = ({ defaultTab }) => {
                       const isActive = org.planStatus === 'active';
                       const isSuspended = org.planStatus === 'suspended';
                       const isLoadingThis = actionLoadingId === org._id;
+                      const orgSlugSafe = org.slug || (org.name ? org.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '') || String(org._id);
 
                       return (
                         <tr
                           key={org._id}
-                          className="hover:bg-white/[0.03] transition-colors group"
+                          className="hover:bg-slate-50/70 transition-colors group"
                         >
                           {/* Company Name & Slug */}
                           <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-xl bg-indigo-600/20 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-xs flex-shrink-0">
+                            <div className="flex items-start gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs flex-shrink-0 mt-0.5">
                                 {org.name?.charAt(0)?.toUpperCase()}
                               </div>
                               <div className="min-w-0">
-                                <p className="text-white font-semibold truncate flex items-center gap-1.5">
+                                <p className="text-slate-900 font-bold truncate">
                                   {org.name}
-                                  {org.slug && (
-                                    <span className="text-[10px] font-mono text-indigo-400 font-normal">
-                                      /{org.slug}
-                                    </span>
-                                  )}
                                 </p>
-                                <p className="text-slate-400 text-xs truncate">
+                                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                  <span className="text-[11px] font-mono text-indigo-700 bg-indigo-50/90 border border-indigo-200/80 px-1.5 py-0.5 rounded font-medium">
+                                    /{orgSlugSafe}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyUrl(`${window.location.origin}/login/${orgSlugSafe}`, org._id, 'Company Login URL')}
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                                      copiedId === org._id
+                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold'
+                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 shadow-2xs'
+                                    }`}
+                                    title="Copy Company Portal URL"
+                                  >
+                                    {copiedId === org._id ? (
+                                      <>
+                                        <Check size={11} className="text-emerald-700 stroke-[3]" />
+                                        <span>Copied!</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy size={11} />
+                                        <span>Copy URL</span>
+                                      </>
+                                    )}
+                                  </button>
+                                  <a
+                                    href={`/login/${orgSlugSafe}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[11px] text-indigo-600 hover:bg-indigo-50 hover:text-indigo-800 transition-all font-medium"
+                                    title="Open Portal in New Tab"
+                                  >
+                                    <ExternalLink size={11} />
+                                  </a>
+                                </div>
+                                <p className="text-slate-500 text-xs truncate mt-0.5">
                                   {org.industry || 'Business Workspace'}
                                 </p>
                               </div>
@@ -736,14 +793,14 @@ const Companies = ({ defaultTab }) => {
 
                           {/* Owner */}
                           <td className="px-6 py-4">
-                            <p className="text-slate-200 text-xs font-medium truncate">{owner.name || '—'}</p>
+                            <p className="text-slate-900 text-xs font-semibold truncate">{owner.name || '—'}</p>
                             <p className="text-slate-500 text-[11px] truncate">{owner.email || '—'}</p>
                           </td>
 
                           {/* Status */}
                           <td className="px-6 py-4">
                             <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
                                 statusBadge[org.planStatus] || statusBadge.pending
                               }`}
                             >
@@ -755,7 +812,7 @@ const Companies = ({ defaultTab }) => {
                           {/* Plan */}
                           <td className="px-6 py-4">
                             <span
-                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border capitalize ${
+                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border capitalize ${
                                 planBadge[org.plan] || planBadge.trial
                               }`}
                             >
@@ -765,15 +822,15 @@ const Companies = ({ defaultTab }) => {
 
                           {/* Users */}
                           <td className="px-6 py-4">
-                            <div className="flex items-center gap-1 text-slate-400 text-xs">
-                              <Users2 size={13} />
+                            <div className="flex items-center gap-1 text-slate-700 text-xs font-medium">
+                              <Users2 size={13} className="text-slate-400" />
                               <span>{org.userCount ?? 1}</span>
-                              <span className="text-slate-600">/ {org.maxUsers ?? 3}</span>
+                              <span className="text-slate-400 font-normal">/ {org.maxUsers ?? 3}</span>
                             </div>
                           </td>
 
                           {/* Registered */}
-                          <td className="px-6 py-4 text-slate-400 text-xs">
+                          <td className="px-6 py-4 text-slate-500 text-xs">
                             {new Date(org.createdAt).toLocaleDateString('en-GB', {
                               day: 'numeric',
                               month: 'short',
@@ -790,7 +847,7 @@ const Companies = ({ defaultTab }) => {
                                   <button
                                     onClick={() => handleOpenDetails(org)}
                                     disabled={isLoadingThis}
-                                    className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 text-xs font-medium transition-all"
+                                    className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold shadow-xs transition-all cursor-pointer"
                                     title="View all details"
                                   >
                                     All Details
@@ -798,7 +855,7 @@ const Companies = ({ defaultTab }) => {
                                   <button
                                     onClick={() => handleReject(org._id, org.name)}
                                     disabled={isLoadingThis}
-                                    className="px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-semibold transition-all"
+                                    className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
                                     title="Reject request"
                                   >
                                     <X size={13} />
@@ -809,7 +866,7 @@ const Companies = ({ defaultTab }) => {
                                       setSelectedPlanForApproval('trial');
                                     }}
                                     disabled={isLoadingThis}
-                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                                     title="Accept and activate"
                                   >
                                     <Check size={13} />
@@ -823,22 +880,22 @@ const Companies = ({ defaultTab }) => {
                                 <>
                                   <button
                                     onClick={() => handleLiveViewCRM(org)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-semibold transition-all hover:border-emerald-500/40"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-all cursor-pointer"
                                     title="Stealth Live View into Tenant's CRM"
                                   >
-                                    <Radio size={13} className="text-emerald-400 animate-pulse" />
+                                    <Radio size={13} className="text-emerald-600 animate-pulse" />
                                     Live View
                                   </button>
                                   <button
                                     onClick={() => handleOpenDetails(org)}
-                                    className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 text-xs font-medium transition-all"
+                                    className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold shadow-xs transition-all cursor-pointer"
                                     title="View details & configure quotas"
                                   >
                                     All Details
                                   </button>
                                   <button
                                     onClick={() => handleSuspend(org._id)}
-                                    className="px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs transition-all"
+                                    className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
                                     title="Suspend company"
                                   >
                                     Suspend
@@ -851,19 +908,20 @@ const Companies = ({ defaultTab }) => {
                                 <>
                                   <button
                                     onClick={() => handleReactivate(org._id)}
-                                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm"
+                                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                                   >
                                     Reactivate
                                   </button>
                                   <button
                                     onClick={() => handleOpenDetails(org)}
-                                    className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 text-xs"
+                                    className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold shadow-xs cursor-pointer"
                                   >
                                     All Details
                                   </button>
                                   <button
                                     onClick={() => handleLiveViewCRM(org)}
-                                    className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 text-xs"
+                                    className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs cursor-pointer"
+                                    title="Stealth Live View"
                                   >
                                     <Radio size={13} />
                                   </button>
@@ -881,20 +939,20 @@ const Companies = ({ defaultTab }) => {
 
             {/* Pagination */}
             {pages > 1 && (
-              <div className="flex items-center justify-between px-6 py-3.5 border-t border-white/10 text-xs text-slate-400">
+              <div className="flex items-center justify-between px-6 py-3.5 border-t border-slate-200 text-xs text-slate-500 bg-slate-50/50">
                 <span>Page {page} of {pages}</span>
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => setFilter('page', page - 1)}
                     disabled={page <= 1}
-                    className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                    className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer"
                   >
                     <ChevronLeft size={16} />
                   </button>
                   <button
                     onClick={() => setFilter('page', page + 1)}
                     disabled={page >= pages}
-                    className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                    className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer"
                   >
                     <ChevronRight size={16} />
                   </button>
@@ -908,28 +966,28 @@ const Companies = ({ defaultTab }) => {
       {/* ── MODAL 1: QUICK APPROVE MODAL ────────────────────────────────────── */}
       <AnimatePresence>
         {approveOrgTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg rounded-2xl bg-[#111422] border border-white/10 p-6 shadow-2xl space-y-5"
+              className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 p-6 shadow-2xl space-y-5 text-slate-900"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center">
                     <CheckCircle2 size={22} />
                   </div>
                   <div>
-                    <h3 className="text-white font-bold text-lg">Approve Company Request</h3>
-                    <p className="text-slate-400 text-xs mt-0.5">
-                      Activating workspace for <strong className="text-white">{approveOrgTarget.name}</strong>
+                    <h3 className="text-slate-900 font-bold text-lg">Approve Company Request</h3>
+                    <p className="text-slate-500 text-xs mt-0.5">
+                      Activating workspace for <strong className="text-slate-900">{approveOrgTarget.name}</strong>
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setApproveOrgTarget(null)}
-                  className="text-slate-400 hover:text-white p-1 rounded-lg"
+                  className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-all cursor-pointer"
                 >
                   <X size={18} />
                 </button>
@@ -937,7 +995,7 @@ const Companies = ({ defaultTab }) => {
 
               {/* Select Initial Plan Tier */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">
                   Select Initial SaaS Plan
                 </label>
                 <div className="grid grid-cols-2 gap-2.5">
@@ -953,16 +1011,16 @@ const Companies = ({ defaultTab }) => {
                         key={p.key}
                         type="button"
                         onClick={() => setSelectedPlanForApproval(p.key)}
-                        className={`p-3 rounded-xl border text-left transition-all ${
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                           active
-                            ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg shadow-indigo-600/15'
-                            : 'bg-white/[0.02] border-white/10 text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                            ? 'bg-indigo-50 border-indigo-500 text-indigo-900 shadow-xs ring-1 ring-indigo-500'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900'
                         }`}
                       >
-                        <p className={`text-xs font-bold ${active ? 'text-indigo-400' : 'text-slate-300'}`}>
+                        <p className={`text-xs font-bold ${active ? 'text-indigo-700' : 'text-slate-800'}`}>
                           {p.label}
                         </p>
-                        <p className="text-[11px] text-slate-400 mt-1 leading-tight">{p.desc}</p>
+                        <p className="text-[11px] text-slate-500 mt-1 leading-tight">{p.desc}</p>
                       </button>
                     );
                   })}
@@ -970,27 +1028,27 @@ const Companies = ({ defaultTab }) => {
               </div>
 
               {/* Login Info Summary */}
-              <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 text-xs space-y-1.5">
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Tenant Domain Slug:</span>
-                  <span className="text-indigo-400 font-mono font-bold">/{approveOrgTarget.slug}</span>
+                  <span className="text-slate-500">Tenant Domain Slug:</span>
+                  <span className="text-indigo-700 font-mono font-bold">/{approveOrgTarget.slug || approveOrgTarget._id}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Owner Email:</span>
-                  <span className="text-slate-200 font-medium">{approveOrgTarget.ownerId?.email || '—'}</span>
+                  <span className="text-slate-500">Owner Email:</span>
+                  <span className="text-slate-800 font-semibold">{approveOrgTarget.ownerId?.email || '—'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Owner Account:</span>
-                  <span className="text-emerald-400 font-semibold">Will be Activated Immediately</span>
+                  <span className="text-slate-500">Owner Account:</span>
+                  <span className="text-emerald-700 font-bold">Will be Activated Immediately</span>
                 </div>
               </div>
 
               {/* Modal Buttons */}
-              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-white/10">
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setApproveOrgTarget(null)}
-                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium transition-all"
+                  className="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold border border-slate-200 shadow-xs transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -998,7 +1056,7 @@ const Companies = ({ defaultTab }) => {
                   type="button"
                   onClick={() => handleApprove(approveOrgTarget._id, selectedPlanForApproval)}
                   disabled={actionLoadingId === approveOrgTarget._id}
-                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-600/25"
+                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
                 >
                   {actionLoadingId === approveOrgTarget._id ? (
                     <RefreshCw size={14} className="animate-spin" />
@@ -1016,27 +1074,27 @@ const Companies = ({ defaultTab }) => {
       {/* ── MODAL 2: ALL DETAILS COMPREHENSIVE MODAL ──────────────────────────── */}
       <AnimatePresence>
         {detailsModalOpen && detailsOrg && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-3xl rounded-2xl bg-[#0e111d] border border-white/10 p-6 shadow-2xl space-y-6 my-8"
+              className="w-full max-w-3xl rounded-2xl bg-white border border-slate-200 p-6 shadow-2xl space-y-6 my-8 text-slate-900"
             >
               {/* Modal Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold text-lg">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-lg">
                     {detailsOrg.name?.charAt(0)?.toUpperCase()}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h2 className="text-xl font-bold text-white tracking-tight">{detailsOrg.name}</h2>
+                      <h2 className="text-xl font-bold text-slate-900 tracking-tight">{detailsOrg.name}</h2>
                       <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border capitalize ${statusBadge[detailsOrg.planStatus] || statusBadge.pending}`}>
                         {detailsOrg.planStatus}
                       </span>
                     </div>
-                    <p className="text-slate-400 text-xs mt-0.5">
+                    <p className="text-slate-500 text-xs mt-0.5">
                       Registered on {new Date(detailsOrg.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
                   </div>
@@ -1045,14 +1103,14 @@ const Companies = ({ defaultTab }) => {
                 <div className="flex items-center gap-2">
                   <Link
                     to={`/platform/companies/${detailsOrg._id}`}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium transition-all"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold shadow-xs transition-all"
                   >
                     Full Page
                     <ExternalLink size={12} />
                   </Link>
                   <button
                     onClick={() => setDetailsModalOpen(false)}
-                    className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-white/5 transition-all"
+                    className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-all cursor-pointer"
                   >
                     <X size={18} />
                   </button>
@@ -1060,7 +1118,7 @@ const Companies = ({ defaultTab }) => {
               </div>
 
               {/* Sub-tabs in Details Modal */}
-              <div className="flex items-center gap-1 border-b border-white/10 pb-2 text-xs font-medium">
+              <div className="flex items-center gap-1 border-b border-slate-200 pb-2 text-xs font-semibold overflow-x-auto">
                 {[
                   { key: 'overview', label: 'Company & Owner Profile' },
                   { key: 'branches', label: 'Branches' },
@@ -1072,10 +1130,10 @@ const Companies = ({ defaultTab }) => {
                     key={t.key}
                     type="button"
                     onClick={() => setDetailsTab(t.key)}
-                    className={`px-3.5 py-1.5 rounded-lg transition-all ${
+                    className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                       detailsTab === t.key
-                        ? 'bg-indigo-600 text-white font-semibold'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                        ? 'bg-indigo-600 text-white font-bold shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                     }`}
                   >
                     {t.label}
@@ -1088,65 +1146,65 @@ const Companies = ({ defaultTab }) => {
                 <div className="space-y-4 text-xs">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Company details card */}
-                    <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-3">
-                      <p className="text-white font-semibold text-sm flex items-center gap-2">
-                        <Building2 size={16} className="text-indigo-400" />
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3">
+                      <p className="text-slate-900 font-bold text-sm flex items-center gap-2">
+                        <Building2 size={16} className="text-indigo-600" />
                         Company Details
                       </p>
-                      <div className="space-y-2 text-slate-300">
-                        <div className="flex justify-between py-1 border-b border-white/5">
+                      <div className="space-y-2 text-slate-700">
+                        <div className="flex justify-between py-1 border-b border-slate-200/70">
                           <span className="text-slate-500">Company Name:</span>
-                          <span className="font-medium text-white">{detailsOrg.name}</span>
+                          <span className="font-semibold text-slate-900">{detailsOrg.name}</span>
                         </div>
-                        <div className="flex justify-between py-1 border-b border-white/5">
+                        <div className="flex justify-between py-1 border-b border-slate-200/70">
                           <span className="text-slate-500">Domain URL Slug:</span>
-                          <span className="font-mono text-indigo-400">/{detailsOrg.slug}</span>
+                          <span className="font-mono text-indigo-700 font-semibold">/{detailsOrg.slug || detailsOrg._id}</span>
                         </div>
-                        <div className="flex justify-between py-1 border-b border-white/5">
+                        <div className="flex justify-between py-1 border-b border-slate-200/70">
                           <span className="text-slate-500">Industry:</span>
-                          <span>{detailsOrg.industry || 'General Business'}</span>
+                          <span className="font-medium text-slate-800">{detailsOrg.industry || 'General Business'}</span>
                         </div>
-                        <div className="flex justify-between py-1 border-b border-white/5">
+                        <div className="flex justify-between py-1 border-b border-slate-200/70">
                           <span className="text-slate-500">Website:</span>
-                          <span>{detailsOrg.website || 'Not provided'}</span>
+                          <span className="font-medium text-slate-800">{detailsOrg.website || 'Not provided'}</span>
                         </div>
-                        <div className="flex justify-between py-1 border-b border-white/5">
+                        <div className="flex justify-between py-1 border-b border-slate-200/70">
                           <span className="text-slate-500">Company Phone:</span>
-                          <span>{detailsOrg.phone || 'Not provided'}</span>
+                          <span className="font-medium text-slate-800">{detailsOrg.phone || 'Not provided'}</span>
                         </div>
                         <div className="flex justify-between py-1">
                           <span className="text-slate-500">Address:</span>
-                          <span className="text-right truncate max-w-[200px]">{detailsOrg.address || 'Not provided'}</span>
+                          <span className="text-right truncate max-w-[200px] font-medium text-slate-800">{detailsOrg.address || 'Not provided'}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Owner credentials & Contact card */}
-                    <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-3">
-                      <p className="text-white font-semibold text-sm flex items-center gap-2">
-                        <Shield size={16} className="text-emerald-400" />
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3">
+                      <p className="text-slate-900 font-bold text-sm flex items-center gap-2">
+                        <Shield size={16} className="text-emerald-600" />
                         Primary Owner & Admin
                       </p>
-                      <div className="space-y-2 text-slate-300">
-                        <div className="flex justify-between py-1 border-b border-white/5">
+                      <div className="space-y-2 text-slate-700">
+                        <div className="flex justify-between py-1 border-b border-slate-200/70">
                           <span className="text-slate-500">Owner Name:</span>
-                          <span className="font-medium text-white">{detailsOrg.ownerId?.name || '—'}</span>
+                          <span className="font-semibold text-slate-900">{detailsOrg.ownerId?.name || '—'}</span>
                         </div>
-                        <div className="flex justify-between py-1 border-b border-white/5">
+                        <div className="flex justify-between py-1 border-b border-slate-200/70">
                           <span className="text-slate-500">Owner Email:</span>
-                          <span className="text-slate-200 font-mono">{detailsOrg.ownerId?.email || '—'}</span>
+                          <span className="text-slate-900 font-mono font-medium">{detailsOrg.ownerId?.email || '—'}</span>
                         </div>
-                        <div className="flex justify-between py-1 border-b border-white/5">
+                        <div className="flex justify-between py-1 border-b border-slate-200/70">
                           <span className="text-slate-500">Owner Phone:</span>
-                          <span>{detailsOrg.ownerId?.phone || detailsOrg.phone || '—'}</span>
+                          <span className="font-medium text-slate-800">{detailsOrg.ownerId?.phone || detailsOrg.phone || '—'}</span>
                         </div>
-                        <div className="flex justify-between py-1 border-b border-white/5">
+                        <div className="flex justify-between py-1 border-b border-slate-200/70">
                           <span className="text-slate-500">Role Assigned:</span>
-                          <span className="text-indigo-300 font-semibold">organizationOwner</span>
+                          <span className="text-indigo-700 font-semibold bg-indigo-50 px-2 py-0.5 rounded">organizationOwner</span>
                         </div>
                         <div className="flex justify-between py-1">
                           <span className="text-slate-500">Account Status:</span>
-                          <span className={detailsOrg.planStatus === 'active' ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}>
+                          <span className={detailsOrg.planStatus === 'active' ? 'text-emerald-700 font-bold' : 'text-amber-800 font-bold'}>
                             {detailsOrg.planStatus === 'active' ? 'Active & Logged In' : 'Pending Activation'}
                           </span>
                         </div>
@@ -1154,21 +1212,34 @@ const Companies = ({ defaultTab }) => {
                     </div>
                   </div>
 
-                  {/* Direct Login Link preview */}
-                  <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-between gap-3">
+                  {/* Direct Login Link preview with Copied Feedback */}
+                  <div className="p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-200 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-white font-semibold text-xs">Dedicated Company Login Portal</p>
-                      <p className="text-slate-400 text-[11px]">
-                        Users in this tenant can sign in at: <strong className="text-indigo-300 font-mono">{window.location.origin}/{detailsOrg.slug}</strong>
+                      <p className="text-indigo-950 font-bold text-xs">Dedicated Company Login Portal</p>
+                      <p className="text-indigo-800 text-[11px] mt-0.5">
+                        Users in this tenant can sign in at: <strong className="text-indigo-950 font-mono font-bold">{window.location.origin}/login/{detailsOrg.slug || detailsOrg._id}</strong>
                       </p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => copyToClipboard(`${window.location.origin}/${detailsOrg.slug}`, 'Company Login URL')}
-                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md shadow-indigo-600/20"
+                      onClick={() => handleCopyUrl(`${window.location.origin}/login/${detailsOrg.slug || detailsOrg._id}`, `modal-${detailsOrg._id}`, 'Company Login URL')}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
+                        copiedId === `modal-${detailsOrg._id}`
+                          ? 'bg-emerald-600 text-white font-bold'
+                          : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                      }`}
                     >
-                      <Copy size={13} />
-                      Copy URL
+                      {copiedId === `modal-${detailsOrg._id}` ? (
+                        <>
+                          <Check size={13} className="stroke-[3]" />
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={13} />
+                          <span>Copy URL</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -1189,7 +1260,7 @@ const Companies = ({ defaultTab }) => {
               {detailsTab === 'plan' && (
                 <div className="space-y-4 text-xs">
                   <div className="space-y-2">
-                    <label className="text-slate-300 font-semibold">SaaS Plan Tier</label>
+                    <label className="text-slate-700 font-bold">SaaS Plan Tier</label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {['trial', 'starter', 'growth', 'pro'].map((p) => {
                         const active = modalPlan === p;
@@ -1198,10 +1269,10 @@ const Companies = ({ defaultTab }) => {
                             key={p}
                             type="button"
                             onClick={() => handlePresetSelect(p)}
-                            className={`p-3 rounded-xl border text-center transition-all uppercase font-bold text-xs ${
+                            className={`p-3 rounded-xl border text-center transition-all uppercase font-bold text-xs cursor-pointer ${
                               active
-                                ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/20'
-                                : 'bg-black/30 border-white/10 text-slate-400 hover:bg-white/5 hover:text-white'
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900'
                             }`}
                           >
                             {p}
@@ -1212,28 +1283,28 @@ const Companies = ({ defaultTab }) => {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-2">
-                      <label className="text-slate-300 font-semibold block">Max Users Allowed</label>
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                      <label className="text-slate-700 font-bold block">Max Users Allowed</label>
                       <input
                         type="number"
                         min="1"
                         max="9999"
                         value={modalMaxUsers}
                         onChange={(e) => setModalMaxUsers(Number(e.target.value))}
-                        className="w-full px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500"
+                        className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                       />
                       <p className="text-slate-500 text-[11px]">Maximum employees/managers allowed in this tenant</p>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-2">
-                      <label className="text-slate-300 font-semibold block">Max Clients Allowed</label>
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                      <label className="text-slate-700 font-bold block">Max Clients Allowed</label>
                       <input
                         type="number"
                         min="1"
                         max="9999"
                         value={modalMaxClients}
                         onChange={(e) => setModalMaxClients(Number(e.target.value))}
-                        className="w-full px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500"
+                        className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                       />
                       <p className="text-slate-500 text-[11px]">Maximum client accounts or brands they can create</p>
                     </div>
@@ -1244,7 +1315,7 @@ const Companies = ({ defaultTab }) => {
               {/* Details Content: MODULES CHECKLIST */}
               {detailsTab === 'modules' && (
                 <div className="space-y-3 text-xs">
-                  <p className="text-slate-400">
+                  <p className="text-slate-600">
                     Enable or disable specific features for this company. Core modules (CRM, Clients, Projects, Tasks) are always active.
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-h-64 overflow-y-auto pr-1">
@@ -1258,19 +1329,19 @@ const Companies = ({ defaultTab }) => {
                           }}
                           className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 select-none transition-all ${
                             m.always
-                              ? 'bg-indigo-600/10 border-indigo-500/20 text-slate-300 cursor-not-allowed'
+                              ? 'bg-indigo-50 border-indigo-200 text-indigo-900 cursor-not-allowed'
                               : enabled
-                              ? 'bg-emerald-600/10 border-emerald-500/30 text-white cursor-pointer hover:bg-emerald-600/20'
-                              : 'bg-black/30 border-white/5 text-slate-500 cursor-pointer hover:bg-white/5'
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-900 cursor-pointer hover:bg-emerald-100 font-semibold'
+                              : 'bg-slate-50 border-slate-200 text-slate-500 cursor-pointer hover:bg-slate-100'
                           }`}
                         >
                           <span className="font-medium truncate">{m.label}</span>
                           {m.always ? (
-                            <Lock size={12} className="text-indigo-400 flex-shrink-0" />
+                            <Lock size={12} className="text-indigo-600 flex-shrink-0" />
                           ) : enabled ? (
-                            <CheckSquare size={14} className="text-emerald-400 flex-shrink-0" />
+                            <CheckSquare size={14} className="text-emerald-600 flex-shrink-0" />
                           ) : (
-                            <Square size={14} className="text-slate-600 flex-shrink-0" />
+                            <Square size={14} className="text-slate-400 flex-shrink-0" />
                           )}
                         </div>
                       );
@@ -1282,7 +1353,7 @@ const Companies = ({ defaultTab }) => {
               {/* Details Content: INTERNAL NOTES */}
               {detailsTab === 'notes' && (
                 <div className="space-y-2 text-xs">
-                  <label className="text-slate-300 font-semibold block">
+                  <label className="text-slate-700 font-bold block">
                     Super Admin Internal Notes (Private to Platform Admin)
                   </label>
                   <textarea
@@ -1290,21 +1361,21 @@ const Companies = ({ defaultTab }) => {
                     value={modalAdminNotes}
                     onChange={(e) => setModalAdminNotes(e.target.value)}
                     placeholder="Add billing notes, special agreements, contact history..."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 transition-all resize-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all resize-none"
                   />
                 </div>
               )}
 
               {/* Modal Footer Actions */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-white/10">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-200">
                 <div className="flex items-center gap-2">
                   {detailsOrg.planStatus === 'active' && (
                     <button
                       type="button"
                       onClick={() => handleLiveViewCRM(detailsOrg)}
-                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-semibold transition-all"
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-all cursor-pointer"
                     >
-                      <Radio size={14} className="animate-pulse" />
+                      <Radio size={14} className="animate-pulse text-emerald-600" />
                       Stealth Live View
                     </button>
                   )}
@@ -1312,7 +1383,7 @@ const Companies = ({ defaultTab }) => {
                     <button
                       type="button"
                       onClick={() => handleSuspend(detailsOrg._id)}
-                      className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-medium transition-all"
+                      className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
                     >
                       Suspend Company
                     </button>
@@ -1323,7 +1394,7 @@ const Companies = ({ defaultTab }) => {
                   <button
                     type="button"
                     onClick={() => setDetailsModalOpen(false)}
-                    className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium transition-all"
+                    className="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold border border-slate-200 shadow-xs transition-all cursor-pointer"
                   >
                     Close
                   </button>
@@ -1334,7 +1405,7 @@ const Companies = ({ defaultTab }) => {
                       <button
                         type="button"
                         onClick={() => handleReject(detailsOrg._id, detailsOrg.name)}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-semibold transition-all"
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
                       >
                         <X size={14} />
                         Reject Request
@@ -1348,7 +1419,7 @@ const Companies = ({ defaultTab }) => {
                             modules: modalModules,
                           })
                         }
-                        className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-600/25"
+                        className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
                       >
                         <Check size={14} className="stroke-[3]" />
                         Accept & Activate
@@ -1360,7 +1431,7 @@ const Companies = ({ defaultTab }) => {
                       type="button"
                       onClick={handleSavePlanChanges}
                       disabled={isSavingDetails}
-                      className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/25"
+                      className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
                     >
                       {isSavingDetails ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
                       Save Changes

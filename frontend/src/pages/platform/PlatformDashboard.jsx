@@ -60,19 +60,19 @@ const PlatformDashboard = () => {
   ] : [];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto text-slate-900">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Platform Overview</h1>
-          <p className="text-slate-400 text-sm mt-1">Manage all registered companies and their access</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Platform Overview</h1>
+          <p className="text-slate-500 text-sm mt-1">Manage all registered companies and their access</p>
         </div>
         <button
           onClick={fetch}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-sm"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-all text-sm font-semibold shadow-xs cursor-pointer"
         >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          <RefreshCw size={14} className={loading ? 'animate-spin text-indigo-600' : ''} />
           Refresh
         </button>
       </div>
@@ -81,7 +81,7 @@ const PlatformDashboard = () => {
       {loading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-32 rounded-2xl bg-white/5 animate-pulse" />
+            <div key={i} className="h-32 rounded-2xl bg-white border border-slate-200 animate-pulse shadow-xs" />
           ))}
         </div>
       ) : (
@@ -92,17 +92,17 @@ const PlatformDashboard = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
-              className={`relative rounded-2xl bg-white/5 border ${card.urgent ? 'border-amber-500/30' : 'border-white/5'} p-5 overflow-hidden`}
+              className={`relative rounded-2xl bg-white border ${card.urgent ? 'border-amber-300 ring-2 ring-amber-400/20' : 'border-slate-200/90'} p-5 overflow-hidden shadow-xs`}
             >
               {card.urgent && (
-                <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                <div className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
               )}
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.color} flex items-center justify-center mb-3`}>
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.color} flex items-center justify-center mb-3 shadow-xs`}>
                 <card.icon size={18} className="text-white" />
               </div>
-              <p className="text-3xl font-bold text-white">{card.value}</p>
-              <p className="text-sm font-semibold text-white mt-0.5">{card.label}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{card.sub}</p>
+              <p className="text-3xl font-bold text-slate-900 tracking-tight">{card.value}</p>
+              <p className="text-sm font-bold text-slate-700 mt-0.5">{card.label}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{card.sub}</p>
             </motion.div>
           ))}
         </div>
@@ -110,9 +110,9 @@ const PlatformDashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Plan Distribution */}
-        <div className="bg-white/5 border border-white/5 rounded-2xl p-5">
-          <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-            <TrendingUp size={16} className="text-indigo-400" />
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+          <h3 className="text-slate-900 font-bold mb-4 flex items-center gap-2">
+            <TrendingUp size={16} className="text-indigo-600" />
             Plan Distribution
           </h3>
           <div className="space-y-3">
@@ -122,10 +122,10 @@ const PlatformDashboard = () => {
               return (
                 <div key={p.label}>
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="text-slate-400">{p.label}</span>
-                    <span className="text-white font-semibold">{p.count}</span>
+                    <span className="text-slate-500 font-medium">{p.label}</span>
+                    <span className="text-slate-900 font-bold">{p.count}</span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-white/5">
+                  <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
@@ -140,20 +140,20 @@ const PlatformDashboard = () => {
         </div>
 
         {/* Pending Companies */}
-        <div className="lg:col-span-2 bg-white/5 border border-white/5 rounded-2xl p-5">
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-white font-semibold flex items-center gap-2">
-              <Clock size={16} className="text-amber-400" />
+            <h3 className="text-slate-900 font-bold flex items-center gap-2">
+              <Clock size={16} className="text-amber-600" />
               Pending Approvals
               {(data?.recentPending?.length || 0) > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold">
                   {data.recentPending.length}
                 </span>
               )}
             </h3>
             <Link
-              to="/platform/companies?status=pending"
-              className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+              to="/platform/companies?tab=requests"
+              className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-1"
             >
               View all <ArrowRight size={12} />
             </Link>
@@ -161,25 +161,25 @@ const PlatformDashboard = () => {
 
           {!data?.recentPending?.length ? (
             <div className="text-center py-8">
-              <CheckCircle2 size={32} className="text-emerald-400 mx-auto mb-2" />
-              <p className="text-slate-400 text-sm">No pending approvals</p>
+              <CheckCircle2 size={32} className="text-emerald-500 mx-auto mb-2" />
+              <p className="text-slate-500 text-sm">No pending approvals</p>
             </div>
           ) : (
             <div className="space-y-3">
               {data.recentPending.map((org) => (
-                <div key={org._id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-amber-500/10">
+                <div key={org._id} className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-300 font-bold text-sm">
+                    <div className="w-9 h-9 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 font-bold text-sm">
                       {org.name?.charAt(0)}
                     </div>
                     <div>
-                      <p className="text-white text-sm font-semibold">{org.name}</p>
+                      <p className="text-slate-900 text-sm font-bold">{org.name}</p>
                       <p className="text-slate-500 text-xs">{org.ownerId?.email}</p>
                     </div>
                   </div>
                   <Link
                     to={`/platform/companies/${org._id}`}
-                    className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors"
+                    className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-colors"
                   >
                     Review
                   </Link>
@@ -191,26 +191,30 @@ const PlatformDashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-4">
         <Link
           to="/platform/companies"
-          className="flex-1 flex items-center justify-between p-4 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 hover:bg-indigo-600/20 transition-all group"
+          className="flex-1 flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-200 hover:border-indigo-300 shadow-xs transition-all group"
         >
           <div className="flex items-center gap-3">
-            <Building2 size={20} className="text-indigo-400" />
-            <span className="text-white font-semibold text-sm">Manage All Companies</span>
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+              <Building2 size={20} />
+            </div>
+            <span className="text-slate-900 font-bold text-sm">Manage All Companies</span>
           </div>
-          <ArrowRight size={16} className="text-indigo-400 group-hover:translate-x-1 transition-transform" />
+          <ArrowRight size={16} className="text-indigo-600 group-hover:translate-x-1 transition-transform" />
         </Link>
         <Link
-          to="/platform/companies?status=pending"
-          className="flex-1 flex items-center justify-between p-4 rounded-2xl bg-amber-600/10 border border-amber-500/20 hover:bg-amber-600/20 transition-all group"
+          to="/platform/companies?tab=requests"
+          className="flex-1 flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-200 hover:border-amber-300 shadow-xs transition-all group"
         >
           <div className="flex items-center gap-3">
-            <Clock size={20} className="text-amber-400" />
-            <span className="text-white font-semibold text-sm">Review Pending Registrations</span>
+            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+              <Clock size={20} />
+            </div>
+            <span className="text-slate-900 font-bold text-sm">Review Pending Registrations</span>
           </div>
-          <ArrowRight size={16} className="text-amber-400 group-hover:translate-x-1 transition-transform" />
+          <ArrowRight size={16} className="text-amber-600 group-hover:translate-x-1 transition-transform" />
         </Link>
       </div>
     </div>

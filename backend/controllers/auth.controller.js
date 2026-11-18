@@ -163,14 +163,21 @@ export const login = async (req, res) => {
       organization = await Organization.findById(user.organizationId).select(
         'name slug logo industry website phone plan planStatus enabledModules maxUsers maxClients trialEndsAt settings'
       );
+      if (organization && !organization.slug) {
+        organization.slug = organization.name
+          ? organization.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+          : String(organization._id);
+        await organization.save();
+      }
     }
 
     // If the user belongs to a company (tenant user) and is not platform superAdmin:
     if (user.role !== 'superAdmin' && user.organizationId) {
-      const orgSlug = organization?.slug || '';
+      const orgSlug = organization?.slug || (organization?.name ? organization.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '') || String(organization?._id || '');
+      const cleanCompanySlug = String(companySlug || '').replace(/^\/+|\/+$/g, '').toLowerCase().trim();
 
       // Rule 1: Cannot log in from general platform login (/login) without company URL
-      if (!companySlug) {
+      if (!cleanCompanySlug) {
         return res.status(403).json({
           success: false,
           requiresCompanyPortal: true,
@@ -182,7 +189,11 @@ export const login = async (req, res) => {
       }
 
       // Rule 2: Cannot log in to a different company's URL
-      if (orgSlug && companySlug.toLowerCase().trim() !== orgSlug.toLowerCase().trim()) {
+      const matchesSlug = orgSlug && cleanCompanySlug === orgSlug.toLowerCase().trim();
+      const matchesOrgId = organization && String(organization._id) === cleanCompanySlug;
+      const matchesOrgName = organization?.name && cleanCompanySlug === organization.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+      if (!matchesSlug && !matchesOrgId && !matchesOrgName) {
         return res.status(403).json({
           success: false,
           requiresCompanyPortal: true,
@@ -594,22 +605,27 @@ export const registerCompany = async (req, res) => {
 export const getCompanyPortal = async (req, res) => {
   try {
     const { slug } = req.params;
-    const cleanSlug = String(slug || '').toLowerCase().trim();
+    const cleanSlug = String(slug || '').replace(/^\/+|\/+$/g, '').toLowerCase().trim();
 
-    // Find by slug, or backfill if existing organization matches name
-    let org = await Organization.findOne({ slug: cleanSlug });
-    if (!org) {
-      // Try regex match on name or id
-      org = await Organization.findOne({
-        $or: [
-          { name: { $regex: new RegExp(`^${cleanSlug.replace(/-/g, '[ -]')}$`, 'i') } },
-          ...(mongoose.Types.ObjectId.isValid(cleanSlug) ? [{ _id: cleanSlug }] : []),
-        ],
-      });
-      if (org && !org.slug) {
-        org.slug = cleanSlug;
-        await org.save();
-      }
+    if (!cleanSlug) {
+      return res.status(400).json({ success: false, message: 'Invalid company portal slug' });
+    }
+
+    // Escape regex characters safely so syntax errors don't crash
+    const escaped = cleanSlug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/-/g, '[ -]');
+
+    // Find by slug, name regex or ObjectId
+    let org = await Organization.findOne({
+      $or: [
+        { slug: cleanSlug },
+        { name: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+        ...(mongoose.Types.ObjectId.isValid(cleanSlug) ? [{ _id: cleanSlug }] : []),
+      ],
+    });
+
+    if (org && !org.slug) {
+      org.slug = cleanSlug || (org.name ? org.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '') || String(org._id);
+      await org.save();
     }
 
     if (!org) {
