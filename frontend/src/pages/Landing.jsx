@@ -89,13 +89,13 @@ const Landing = () => {
         <div className="absolute top-[600px] -left-28 w-[450px] h-[450px] bg-[#12B7D4]/10 rounded-full blur-[100px]" />
       </div>
 
-      {/* ── APPLE STYLE FIXED NAVIGATION BAR ── */}
-      <header className="fixed top-0 inset-x-0 z-50 h-14 bg-white/80 backdrop-blur-md border-b border-slate-200/70 transition-all flex items-center">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 w-full flex items-center justify-between">
+      {/* ── FIXED NAVIGATION BAR (Enlarged, Spacious & Premium) ── */}
+      <header className="fixed top-0 inset-x-0 z-50 h-20 sm:h-22 bg-white/90 backdrop-blur-md border-b border-slate-200/80 transition-all flex items-center shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full flex items-center justify-between">
           
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="h-7 w-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center p-0.5 overflow-hidden">
+          <Link to="/" className="flex items-center gap-3.5 group">
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center p-1.5 overflow-hidden transition-transform group-hover:scale-105">
               <img
                 src="/branding/rise-with-media-logo.png"
                 alt="RiseWithMedia Logo"
@@ -103,32 +103,37 @@ const Landing = () => {
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
             </div>
-            <span className="font-display font-extrabold text-sm sm:text-base text-slate-950 tracking-tight group-hover:text-[#12B7D4] transition-colors">
-              RiseWithMedia
-            </span>
+            <div className="flex flex-col">
+              <span className="font-display font-extrabold text-lg sm:text-2xl text-slate-950 tracking-tight group-hover:text-[#12B7D4] transition-colors leading-tight">
+                RiseWithMedia
+              </span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden sm:block -mt-0.5">
+                Digital Marketing OS
+              </span>
+            </div>
           </Link>
 
-          {/* Minimal Apple-Style Navigation Links */}
-          <nav className="hidden sm:flex items-center gap-7 text-xs font-semibold text-slate-600">
+          {/* Minimal Navigation Links */}
+          <nav className="hidden md:flex items-center gap-9 text-sm font-bold text-slate-600">
             <a href="#features" className="hover:text-slate-950 transition-colors">Overview</a>
             <a href="#capabilities" className="hover:text-slate-950 transition-colors">Capabilities</a>
             <a href="#architecture" className="hover:text-slate-950 transition-colors">Architecture</a>
           </nav>
 
           {/* Action Links */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Link
               to="/login"
-              className="text-xs font-bold text-slate-700 hover:text-slate-950 transition-colors px-2 py-1"
+              className="text-sm font-bold text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-all px-4 py-2 rounded-full"
             >
               Sign In
             </Link>
             <Link
               to="/register-company"
-              className="px-3.5 py-1.5 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1"
+              className="px-5 sm:px-6 py-2.5 sm:py-3 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs sm:text-sm font-black shadow-md shadow-[#12B7D4]/25 transition-all flex items-center gap-2 cursor-pointer"
             >
               <span>Get Started</span>
-              <ArrowRight size={12} />
+              <ArrowRight size={14} />
             </Link>
           </div>
 
@@ -136,7 +141,7 @@ const Landing = () => {
       </header>
 
       {/* ── HERO SECTION ── */}
-      <section className="relative z-10 pt-28 sm:pt-36 pb-14 sm:pb-20 px-4 sm:px-6 max-w-4xl mx-auto text-center">
+      <section className="relative z-10 pt-36 sm:pt-44 pb-14 sm:pb-20 px-4 sm:px-6 max-w-4xl mx-auto text-center">
         
         {/* Apple Style Pill Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100/90 border border-slate-200/80 mb-5">
