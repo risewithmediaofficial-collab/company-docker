@@ -74,19 +74,29 @@ const FeatureCard = ({ title, subText, icon: Icon, badge, linkTo = "/login", wav
 
 const Landing = () => {
   return (
-    <div className="min-h-screen bg-[#fbfbfd] text-slate-900 font-sans selection:bg-[#12B7D4]/25 selection:text-slate-900 relative overflow-x-hidden antialiased">
+    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-[#12B7D4]/25 selection:text-slate-900 relative overflow-x-hidden antialiased">
       
-      {/* ── Background Abstract Blue Shapes ── */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div 
-          className="absolute inset-0 opacity-[0.22]" 
+      {/* ── BACKGROUND PATTERN (Gradient & Vertical Grid with Mask) ── */}
+      <div className="absolute inset-x-0 top-0 h-[700px] sm:h-[840px] pointer-events-none overflow-hidden z-0">
+        <div
+          className="w-full h-full relative"
           style={{
-            backgroundImage: 'radial-gradient(#12B7D4 0.75px, transparent 0.75px)',
-            backgroundSize: '24px 24px',
+            background:
+              'linear-gradient(to bottom, #fff 0%, #fff 40%, rgba(255, 255, 255, 0) 100%), linear-gradient(to right, #0ed2da, #5f29c7)',
           }}
-        />
-        <div className="absolute -top-36 left-1/2 -translate-x-1/2 w-[760px] h-[400px] bg-gradient-to-b from-[#12B7D4]/15 via-[#0284c7]/8 to-transparent rounded-full blur-[90px]" />
-        <div className="absolute top-[600px] -left-28 w-[450px] h-[450px] bg-[#12B7D4]/10 rounded-full blur-[100px]" />
+        >
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage: 'linear-gradient(90deg, #ccc 1px, transparent 1px)',
+              backgroundSize: '50px 100%',
+              maskImage:
+                'linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 70%)',
+              WebkitMaskImage:
+                'linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 70%)',
+            }}
+          />
+        </div>
       </div>
 
       {/* ── FIXED NAVIGATION BAR (Enlarged, Spacious & Premium) ── */}
