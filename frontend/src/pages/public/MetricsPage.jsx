@@ -5,6 +5,7 @@ import PublicLayout from '../../components/public/PublicLayout';
 import HeroPattern from '../../components/public/HeroPattern';
 import ScrollReveal from '../../components/public/ScrollReveal';
 import SectionShowcase from '../../components/public/SectionShowcase';
+import StatsBanner from '../../components/public/StatsBanner';
 
 const MetricsPage = () => {
   return (
@@ -48,27 +49,11 @@ const MetricsPage = () => {
         </div>
       </section>
 
-      {/* ── 4 SIMPLE STATS STRIP ── */}
-      <section className="bg-white py-8 px-4 sm:px-8 border-b border-slate-100">
-        <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 text-left sm:text-center">
-          <div>
-            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">99.9%</span>
-            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1 block">Always Online</span>
-          </div>
-          <div>
-            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">10x</span>
-            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1 block">Faster Approvals</span>
-          </div>
-          <div>
-            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">0</span>
-            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1 block">App Switching</span>
-          </div>
-          <div>
-            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">24/7</span>
-            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1 block">Client Access</span>
-          </div>
-        </div>
-      </section>
+      {/* ── IMPACT STATS BANNER ── */}
+      <StatsBanner
+        title="We are proud of our works"
+        subtitle="We bring solutions to make life easier for our customers."
+      />
 
       {/* ── CLEAN ZIG-ZAG SECTIONS (ALIGNED WITH SMARTPHONE SHOWCASE & STICKERS) ── */}
       <div className="py-20 sm:py-28 px-4 sm:px-8 max-w-6xl mx-auto space-y-24 sm:space-y-32">

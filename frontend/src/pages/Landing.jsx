@@ -5,6 +5,7 @@ import PublicLayout from '../components/public/PublicLayout';
 import HeroPattern from '../components/public/HeroPattern';
 import ScrollReveal from '../components/public/ScrollReveal';
 import SectionShowcase from '../components/public/SectionShowcase';
+import StatsBanner from '../components/public/StatsBanner';
 
 const Landing = () => {
   return (
@@ -57,27 +58,8 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* ── HIGHLIGHTS STRIP ── */}
-      <section className="bg-white py-8 px-4 sm:px-8 border-b border-slate-100">
-        <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 text-left sm:text-center">
-          <div>
-            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">All-in-One</span>
-            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">No More Scattered Apps</span>
-          </div>
-          <div>
-            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">Fast Approvals</span>
-            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">Zero Confusing Emails</span>
-          </div>
-          <div>
-            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">GST Bills</span>
-            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">Ready in 1-Click</span>
-          </div>
-          <div>
-            <span className="font-bold text-2xl sm:text-3xl text-slate-950 block">100% Private</span>
-            <span className="text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-0.5 block">Safe for Your Team</span>
-          </div>
-        </div>
-      </section>
+      {/* ── IMPACT STATS BANNER (MATCHING REFERENCE DESIGN) ── */}
+      <StatsBanner />
 
       {/* ── CLEAN ZIG-ZAG SECTIONS (ALIGNED WITH SMARTPHONE SHOWCASE & STICKERS) ── */}
       <div className="py-20 sm:py-28 px-4 sm:px-8 max-w-6xl mx-auto space-y-24 sm:space-y-32">
