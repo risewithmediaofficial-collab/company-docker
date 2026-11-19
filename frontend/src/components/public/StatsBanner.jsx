@@ -38,22 +38,22 @@ const StatsBanner = ({
   ],
 }) => {
   return (
-    <section className="py-8 sm:py-12 px-4 sm:px-8 max-w-7xl mx-auto">
-      <div className="rounded-3xl sm:rounded-[32px] bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-cyan-50/80 border border-emerald-100/80 p-8 sm:p-12 lg:p-14 shadow-xs">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+    <section className="py-6 sm:py-12 px-3 sm:px-8 max-w-7xl mx-auto">
+      <div className="rounded-2xl sm:rounded-[32px] bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-cyan-50/80 border border-emerald-100/80 p-5 sm:p-10 lg:p-12 shadow-xs">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-center">
           
           {/* Left Column: Heading & Description */}
-          <div className="lg:col-span-4 text-left space-y-2">
-            <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[32px] text-slate-950 tracking-tight leading-snug">
+          <div className="lg:col-span-4 text-left space-y-1.5 sm:space-y-2">
+            <h2 className="font-extrabold text-xl sm:text-3xl lg:text-[32px] text-slate-950 tracking-tight leading-snug">
               {title}
             </h2>
-            <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
+            <p className="text-xs sm:text-base text-slate-600 font-medium leading-relaxed">
               {subtitle}
             </p>
           </div>
 
           {/* Right Column: 4 Stats with Green Icons & Logo Blue Sub-labels */}
-          <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 items-center text-center">
+          <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8 items-center text-center">
             
             {/* Stat 1: Thumbs Up with Stars -> All-in-One */}
             <div className="flex flex-col items-center">

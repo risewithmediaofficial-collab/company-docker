@@ -432,21 +432,25 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
   const TopBadgeIcon = item.topBadgeIcon;
   const ChatBadgeIcon = item.chatBadgeIcon;
 
-  // Determine which person image to show (sitting vs standing)
+  // Determine which person image to show (sitting vs standing) with WebP + PNG fallback
   const resolvedPersonType = person || item.personType;
-  const personImageSrc =
+  const webpSrc =
+    resolvedPersonType === 'standing'
+      ? '/images/people/person_thumbsup_tablet.webp'
+      : '/images/people/person_happy_mobile.webp';
+  const pngSrc =
     resolvedPersonType === 'standing'
       ? '/images/people/person_thumbsup_tablet.png'
       : '/images/people/person_happy_mobile.png';
 
   return (
-    <div className="relative w-full max-w-[390px] sm:max-w-[430px] mx-auto py-8 px-2 sm:px-4 flex items-center justify-center select-none">
+    <div className="relative w-full max-w-[340px] xs:max-w-[380px] sm:max-w-[430px] mx-auto py-6 sm:py-8 px-1 sm:px-4 flex items-center justify-center select-none">
       
       {/* ── AMBIENT SOFT GRADIENT GLOW (Behind Showcase) ── */}
       <div className="absolute -inset-4 bg-gradient-to-tr from-emerald-100/50 via-teal-50/40 to-cyan-100/50 rounded-full blur-2xl pointer-events-none -z-10" />
 
       {/* ── MINT DOTTED GRID PATTERN (Top-Left Backdrop, matching reference) ── */}
-      <div className="absolute top-0 -left-2 sm:-left-6 w-28 h-28 pointer-events-none opacity-45">
+      <div className="absolute top-0 -left-1 sm:-left-6 w-24 h-24 sm:w-28 sm:h-28 pointer-events-none opacity-45">
         <svg width="100%" height="100%" fill="none">
           <pattern id={`dot-grid-${type}`} width="12" height="12" patternUnits="userSpaceOnUse">
             <circle cx="2.5" cy="2.5" r="1.5" className="fill-emerald-500" />
@@ -472,7 +476,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
       </svg>
 
       {/* ── FLOATING NOTIFICATION CARD (Top-Left Dialog) ── */}
-      <div className="absolute -top-3 -left-4 sm:-left-8 z-30 max-w-[185px] sm:max-w-[205px] bg-white/95 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl shadow-xl border border-slate-200/90 text-left transition-transform duration-300 hover:scale-105">
+      <div className="absolute -top-2 left-0 sm:-left-6 z-30 max-w-[160px] xs:max-w-[185px] sm:max-w-[205px] bg-white/95 backdrop-blur-md p-2 sm:p-3 rounded-2xl shadow-xl border border-slate-200/90 text-left transition-transform duration-300 hover:scale-105">
         <div className="flex items-center gap-1.5 mb-1">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
           <span className="text-[9px] font-black uppercase tracking-wider text-emerald-700">
@@ -497,59 +501,68 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
 
       {/* ── FLOATING STICKER 1 (Top-Right): Feature Badge (WITHOUT TEXT) ── */}
       <div
-        className={`absolute -top-2 right-2 sm:right-0 z-35 w-11 h-11 sm:w-12 sm:h-12 rounded-2xl ${item.topBadgeBg} ${item.topBadgeBorder} border-2 text-white flex items-center justify-center shadow-lg rotate-12 transition-transform duration-300 hover:rotate-0 hover:scale-110`}
+        className={`absolute -top-1.5 right-1 sm:right-0 z-35 w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl ${item.topBadgeBg} ${item.topBadgeBorder} border-2 text-white flex items-center justify-center shadow-lg rotate-12 transition-transform duration-300 hover:rotate-0 hover:scale-110`}
         aria-hidden="true"
       >
-        <TopBadgeIcon size={22} className="stroke-[2.5]" />
+        <TopBadgeIcon size={18} className="sm:hidden stroke-[2.5]" />
+        <TopBadgeIcon size={22} className="hidden sm:block stroke-[2.5]" />
       </div>
 
       {/* ── SMARTPHONE DEVICE MOCKUP (Central Anchor, offset slightly left to balance person) ── */}
-      <div className="w-[225px] sm:w-[255px] bg-slate-900 rounded-[38px] p-2.5 shadow-2xl shadow-slate-900/20 border-4 border-slate-800 relative z-20 transition-transform duration-300 hover:scale-[1.01] -ml-8 sm:-ml-10">
+      <div className="w-[195px] xs:w-[215px] sm:w-[255px] bg-slate-900 rounded-[32px] sm:rounded-[38px] p-2 sm:p-2.5 shadow-2xl shadow-slate-900/20 border-[3px] sm:border-4 border-slate-800 relative z-20 transition-transform duration-300 hover:scale-[1.01] -ml-5 sm:-ml-10">
         {/* Dynamic Island / Notch */}
-        <div className="w-16 h-3.5 bg-slate-900 rounded-full mx-auto mb-2 flex items-center justify-end pr-1.5">
-          <div className="w-2 h-2 rounded-full bg-slate-800" />
+        <div className="w-14 sm:w-16 h-3 sm:h-3.5 bg-slate-900 rounded-full mx-auto mb-1.5 sm:mb-2 flex items-center justify-end pr-1.5">
+          <div className="w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full bg-slate-800" />
         </div>
 
         {/* Screen Content Wrapper */}
-        <div className="bg-slate-50 rounded-[30px] overflow-hidden border border-slate-200/60 p-3 min-h-[280px] sm:min-h-[300px]">
+        <div className="bg-slate-50 rounded-[26px] sm:rounded-[30px] overflow-hidden border border-slate-200/60 p-2.5 sm:p-3 min-h-[260px] sm:min-h-[300px]">
           {item.renderPhoneScreen()}
         </div>
 
         {/* Phone Bottom Pill Indicator */}
-        <div className="w-24 h-1 bg-slate-700 rounded-full mx-auto mt-2" />
+        <div className="w-20 sm:w-24 h-1 bg-slate-700 rounded-full mx-auto mt-1.5 sm:mt-2" />
       </div>
 
       {/* ── REALISTIC CUTOUT PERSON (Gesturing to Phone Screen, matching reference image) ── */}
       {showPerson && (
-        <div className="absolute -bottom-3 -right-2 sm:-right-6 z-30 pointer-events-none select-none">
-          <img
-            src={personImageSrc}
-            alt="Agency Team"
-            className="w-[170px] sm:w-[210px] max-h-[260px] object-contain drop-shadow-2xl transition-transform duration-300 hover:scale-105"
-            loading="lazy"
-          />
+        <div className="absolute -bottom-2 -right-1 sm:-right-6 z-30 pointer-events-none select-none">
+          <picture className="w-[140px] xs:w-[165px] sm:w-[210px] max-h-[260px] drop-shadow-2xl transition-transform duration-300 hover:scale-105 block">
+            <source srcSet={webpSrc} type="image/webp" />
+            <img
+              src={pngSrc}
+              alt="Agency Team"
+              className="w-full h-auto object-contain"
+              loading="lazy"
+              decoding="async"
+              width="210"
+              height="260"
+            />
+          </picture>
         </div>
       )}
 
       {/* ── FLOATING STICKER 2 (Middle-Right): Circular Chat Badge (WITHOUT TEXT) ── */}
       <div
-        className={`absolute top-24 -right-2 sm:-right-4 z-35 w-10 h-10 sm:w-11 sm:h-11 rounded-full ${item.chatBadgeBg} ${item.chatBadgeBorder} border-2 text-white flex items-center justify-center shadow-lg -rotate-6 transition-transform duration-300 hover:rotate-0 hover:scale-110`}
+        className={`absolute top-20 right-0 sm:-right-4 z-35 w-8 h-8 sm:w-11 sm:h-11 rounded-full ${item.chatBadgeBg} ${item.chatBadgeBorder} border-2 text-white flex items-center justify-center shadow-lg -rotate-6 transition-transform duration-300 hover:rotate-0 hover:scale-110`}
         aria-hidden="true"
       >
-        <ChatBadgeIcon size={20} className="stroke-[2.5]" />
+        <ChatBadgeIcon size={16} className="sm:hidden stroke-[2.5]" />
+        <ChatBadgeIcon size={20} className="hidden sm:block stroke-[2.5]" />
       </div>
 
       {/* ── FLOATING STICKER 3 (Bottom-Left): Scalloped Checkmark Seal Badge (WITHOUT TEXT) ── */}
       <div
-        className="absolute bottom-4 -left-3 sm:-left-6 z-35 flex items-center justify-center filter drop-shadow-lg transition-transform duration-300 hover:scale-110 -rotate-3"
+        className="absolute bottom-3 left-0 sm:-left-6 z-35 flex items-center justify-center filter drop-shadow-lg transition-transform duration-300 hover:scale-110 -rotate-3"
         aria-hidden="true"
       >
         <div className="relative flex items-center justify-center">
-          <svg viewBox="0 0 100 100" className="w-13 h-13 sm:w-15 sm:h-15 text-emerald-500 fill-current">
+          <svg viewBox="0 0 100 100" className="w-11 h-11 sm:w-15 sm:h-15 text-emerald-500 fill-current">
             <path d={SCALLOP_PATH} />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <Check size={22} className="text-white stroke-[3.5]" />
+            <Check size={18} className="sm:hidden text-white stroke-[3.5]" />
+            <Check size={22} className="hidden sm:block text-white stroke-[3.5]" />
           </div>
         </div>
       </div>

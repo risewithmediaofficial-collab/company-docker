@@ -3,7 +3,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Suspense, lazy, useEffect } from 'react';
 import { fetchMe } from './store/slices/authSlice';
 import { Toaster as SonnerToaster } from 'sonner';
-import WebsiteLaunchLoader from './components/WebsiteLaunchLoader';
 import BannerNotificationHost from './components/notifications/BannerNotificationHost';
 
 // Layouts
@@ -154,7 +153,6 @@ const App = () => {
 
   return (
     <>
-      <WebsiteLaunchLoader />
       {isResolvingInitialAuth ? (
         <LoadingScreen />
       ) : (

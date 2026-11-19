@@ -52,11 +52,11 @@ const CapabilitiesPage = () => {
       </section>
 
       {/* ── CLEAN ZIG-ZAG SECTIONS (ALIGNED WITH SMARTPHONE SHOWCASE & STICKERS) ── */}
-      <div className="py-20 sm:py-28 px-4 sm:px-8 max-w-6xl mx-auto space-y-24 sm:space-y-32">
+      <div className="py-14 sm:py-28 px-3 sm:px-8 max-w-6xl mx-auto space-y-16 sm:space-y-32 overflow-hidden">
 
         {/* ── 01: Client & Deal Tracker ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center pb-20 border-b border-slate-100">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center pb-14 sm:pb-20 border-b border-slate-100">
             {/* Left Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 space-y-4 text-left">
               <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
@@ -116,7 +116,7 @@ const CapabilitiesPage = () => {
 
         {/* ── 02: Social Media Calendar (Alternating) ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center pb-20 border-b border-slate-100">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center pb-14 sm:pb-20 border-b border-slate-100">
             {/* Left Column: Visual Smartphone Showcase with Floating Stickers */}
             <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
               <SectionShowcase type="calendar" />
@@ -176,7 +176,7 @@ const CapabilitiesPage = () => {
 
         {/* ── 03: Client Approvals ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center pb-20 border-b border-slate-100">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center pb-14 sm:pb-20 border-b border-slate-100">
             {/* Left Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 space-y-4 text-left">
               <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
@@ -236,7 +236,7 @@ const CapabilitiesPage = () => {
 
         {/* ── 04: Fast GST Invoicing (Alternating) ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center pb-20 border-b border-slate-100">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center pb-14 sm:pb-20 border-b border-slate-100">
             {/* Left Column: Visual Smartphone Showcase with Floating Stickers */}
             <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
               <SectionShowcase type="billing" />
@@ -296,7 +296,7 @@ const CapabilitiesPage = () => {
 
         {/* ── 05: Staff Attendance & Workspace ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
             {/* Left Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 space-y-4 text-left">
               <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">

@@ -52,11 +52,11 @@ const AboutPage = () => {
       </section>
 
       {/* ── CLEAN ZIG-ZAG SECTIONS (ALIGNED WITH SMARTPHONE SHOWCASE & STICKERS) ── */}
-      <div className="py-20 sm:py-28 px-4 sm:px-8 max-w-6xl mx-auto space-y-24 sm:space-y-32">
+      <div className="py-14 sm:py-28 px-3 sm:px-8 max-w-6xl mx-auto space-y-16 sm:space-y-32 overflow-hidden">
 
         {/* ── ZIG-ZAG 01: Why We Built This ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center pb-20 border-b border-slate-100">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center pb-14 sm:pb-20 border-b border-slate-100">
             {/* Left Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 space-y-4 text-left">
               <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
@@ -116,7 +116,7 @@ const AboutPage = () => {
 
         {/* ── ZIG-ZAG 02: Built for Agency Rhythm (Alternating) ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center pb-20 border-b border-slate-100">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center pb-14 sm:pb-20 border-b border-slate-100">
             {/* Left Column: Visual Smartphone Showcase with Floating Stickers */}
             <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
               <SectionShowcase type="rhythm" />
@@ -176,7 +176,7 @@ const AboutPage = () => {
 
         {/* ── ZIG-ZAG 03: 100% Privacy & Safety ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
             {/* Left Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 space-y-4 text-left">
               <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
