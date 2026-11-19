@@ -383,9 +383,11 @@ const DayCellDeliverableSlot = ({
       onClick={() => onOpenDrawer()}
       title={
         hasMultiple
-          ? `${relevantItems.length} deliverables on this date (${relevantItems.map((i) => i.label || i.type).join(', ')}). Click to open sidebar & add more!`
+          ? `${relevantItems.length} deliverables on this date (${relevantItems.map((i) => i.title ? `${i.label} - ${i.title}` : i.label || i.type).join(', ')}). Click to open sidebar & add more!`
+          : primaryItem?.title
+          ? `${primaryItem.label ? primaryItem.label + ' • ' : ''}${primaryItem.title} (Click to open sidebar)`
           : displayVal
-          ? `${displayVal} (Click to open sidebar & details)`
+          ? `${displayVal} (Click to open sidebar)`
           : 'Click to open sidebar & add Reel, Post, or Story'
       }
     >

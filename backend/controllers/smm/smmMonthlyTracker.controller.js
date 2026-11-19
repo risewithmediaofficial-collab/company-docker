@@ -1,6 +1,7 @@
 // =============================================
 // SMM MONTHLY TRACKER CONTROLLER
 // =============================================
+import mongoose from 'mongoose';
 import SmmMonthlyTracker from '../../models/smm/smmMonthlyTracker.model.js';
 import SmmClient from '../../models/smm/smmClient.model.js';
 import SmmContent from '../../models/smm/smmContent.model.js';
@@ -27,9 +28,8 @@ const SMM_CONTENT_TYPES = [
 const isSmmTask = (task) => {
   if (!task) return false;
   if (task.isDevTask || task.department === 'Development') return false;
-  if (task.taskCategory === 'non_content') return false;
-  const type = String(task.taskType || '').toLowerCase();
-  return SMM_CONTENT_TYPES.includes(type) || task.taskCategory === 'content';
+  if (task.taskCategory === 'non_content' || task.nonContentCategory) return false;
+  return true;
 };
 
 const isTaskAssigned = (task) => {
@@ -316,26 +316,35 @@ export const getMonthlyTrackers = async (req, res) => {
       });
     }
 
-    // 4. Check which clients have assigned SMM tasks for this month
+    // 4. Check which clients have SMM tasks for this month
     const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0);
     const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+    const bufferStart = new Date(startOfMonth.getTime() - 24 * 3600 * 1000);
+    const bufferEnd = new Date(endOfMonth.getTime() + 24 * 3600 * 1000);
+
     const rawMonthTasks = await Task.find(withWorkspaceScope(req, {
-      $or: [
-        { postingScheduleDate: { $gte: startOfMonth, $lte: endOfMonth } },
-        { publishingDate: { $gte: startOfMonth, $lte: endOfMonth } },
-        { dueDate: { $gte: startOfMonth, $lte: endOfMonth } },
+      $and: [
+        {
+          $or: [
+            { postingScheduleDate: { $gte: bufferStart, $lte: bufferEnd } },
+            { publishingDate: { $gte: bufferStart, $lte: bufferEnd } },
+            { editDueDate: { $gte: bufferStart, $lte: bufferEnd } },
+            { designDueDate: { $gte: bufferStart, $lte: bufferEnd } },
+            { dueDate: { $gte: bufferStart, $lte: bufferEnd } },
+          ],
+        },
+        { isDevTask: { $ne: true } },
+        { department: { $ne: 'Development' } },
+        { taskCategory: { $ne: 'non_content' } },
       ],
-      taskCategory: { $in: ['content', 'smm'] },
-      isDevTask: { $ne: true },
-      department: { $ne: 'Development' },
     })).populate('project', '_id name client').lean();
 
-    const assignedMonthTasks = rawMonthTasks.filter((t) => isSmmTask(t) && isTaskAssigned(t));
-    const clientsWithAssignedTasks = new Set();
-    assignedMonthTasks.forEach((t) => {
+    const monthTasks = rawMonthTasks.filter((t) => isSmmTask(t));
+    const clientsWithTasks = new Set();
+    monthTasks.forEach((t) => {
       const cId = t.client?._id?.toString() || (t.client ? t.client.toString() : null) || (t.project?.client ? t.project.client.toString() : null);
       if (cId) {
-        clientsWithAssignedTasks.add(cId);
+        clientsWithTasks.add(cId);
         if (t.project && !clientToProject.has(cId)) {
           clientToProject.set(cId, t.project);
         }
@@ -411,13 +420,13 @@ export const getMonthlyTrackers = async (req, res) => {
       if (existing) {
         rows.push(existing);
       } else {
-        // Only scaffold if client actually has assigned SMM tasks or project deliverables
-        const hasAssignedTasks = clientsWithAssignedTasks.has(cIdStr);
+        // Only scaffold if client actually has SMM tasks, project deliverables, or SMM project
+        const hasTasks = clientsWithTasks.has(cIdStr);
         const hasDelivs = clientsWithDeliverables.has(cIdStr);
         const proj = clientToProject.get(cIdStr);
         const isSmmProj = proj && (proj.category === 'smm' || proj.category === 'social_media');
 
-        if (hasAssignedTasks || hasDelivs || isSmmProj) {
+        if (hasTasks || hasDelivs || isSmmProj) {
           rows.push({
             _id: null,
             client: { _id: client._id, companyName: client.companyName },
@@ -593,6 +602,15 @@ export const updateDayCell = async (req, res) => {
     if (req.body.items !== undefined) {
       const itemsList = Array.isArray(req.body.items) ? req.body.items : [];
       dayCell.items = itemsList;
+
+      // Two-way sync: if item has an id matching a Task and title is edited, update the Task in MongoDB!
+      if (Array.isArray(itemsList)) {
+        for (const it of itemsList) {
+          if (it.id && mongoose.Types.ObjectId.isValid(it.id) && it.title) {
+            Task.findByIdAndUpdate(it.id, { $set: { title: it.title.trim() } }).catch(() => {});
+          }
+        }
+      }
 
       // Automatically sync primary post/story fields from items if not explicitly provided
       const contentItems = itemsList.filter((it) => ['reel', 'post', 'video', 'carousel'].includes(it.type));
@@ -837,6 +855,8 @@ export const syncTasksWithTracker = async (req, res) => {
 
     const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0);
     const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+    const bufferStart = new Date(startOfMonth.getTime() - 24 * 3600 * 1000);
+    const bufferEnd = new Date(endOfMonth.getTime() + 24 * 3600 * 1000);
 
     // 1. Fetch active projects within scope to map project -> client & client -> project
     const projects = await Project.find(withWorkspaceScope(req, { status: { $ne: 'cancelled' } }))
@@ -899,23 +919,28 @@ export const syncTasksWithTracker = async (req, res) => {
       deliverablesByClient[cId].total += qty;
     });
 
-    // 4. Fetch content tasks with postingScheduleDate, publishingDate, or dueDate in this month
+    // 4. Fetch content tasks — match by any date field in target month
     const rawTasks = await Task.find(withWorkspaceScope(req, {
-      $or: [
-        { postingScheduleDate: { $gte: startOfMonth, $lte: endOfMonth } },
-        { publishingDate: { $gte: startOfMonth, $lte: endOfMonth } },
-        { dueDate: { $gte: startOfMonth, $lte: endOfMonth } },
+      $and: [
+        {
+          $or: [
+            { postingScheduleDate: { $gte: bufferStart, $lte: bufferEnd } },
+            { publishingDate: { $gte: bufferStart, $lte: bufferEnd } },
+            { editDueDate: { $gte: bufferStart, $lte: bufferEnd } },
+            { designDueDate: { $gte: bufferStart, $lte: bufferEnd } },
+            { dueDate: { $gte: bufferStart, $lte: bufferEnd } },
+          ],
+        },
+        { isDevTask: { $ne: true } },
+        { department: { $ne: 'Development' } },
+        { taskCategory: { $ne: 'non_content' } },
       ],
-      taskCategory: { $in: ['content', 'smm'] },
-      isDevTask: { $ne: true },
-      department: { $ne: 'Development' },
     }))
       .populate('project', '_id client name')
       .populate('client', '_id company name')
       .lean();
 
-    // STRICT: Only SMM tasks that ARE ASSIGNED!
-    const tasks = rawTasks.filter((t) => isSmmTask(t) && isTaskAssigned(t));
+    const tasks = rawTasks.filter((t) => isSmmTask(t));
 
     const tasksByClient = {};
     const clientProjectNameMap = new Map();
@@ -943,7 +968,7 @@ export const syncTasksWithTracker = async (req, res) => {
       }
     });
 
-    // ONLY sync clients that actually have assigned SMM tasks OR active project deliverables
+    // ONLY sync clients that actually have SMM tasks OR active project deliverables
     const eligibleClientIds = new Set([
       ...Object.keys(tasksByClient),
       ...Object.keys(deliverablesByClient),
@@ -957,7 +982,7 @@ export const syncTasksWithTracker = async (req, res) => {
       const clientTasks = tasksByClient[cId] || [];
       const clientDeliv = deliverablesByClient[cId];
 
-      // If client has neither deliverables nor assigned tasks scheduled, skip
+      // If client has neither deliverables nor tasks scheduled, skip
       if (!clientDeliv && clientTasks.length === 0) {
         continue;
       }
@@ -983,12 +1008,11 @@ export const syncTasksWithTracker = async (req, res) => {
       let tracker = await SmmMonthlyTracker.findOne({ client: client._id, month, year });
       const days = tracker?.days && tracker.days.length > 0 ? tracker.days : buildEmptyDays(year, month);
 
-      // Sort tasks chronologically
-      clientTasks.sort((a, b) => {
-        const da = new Date(a.postingScheduleDate || a.publishingDate || a.dueDate || a.createdAt);
-        const db = new Date(b.postingScheduleDate || b.publishingDate || b.dueDate || b.createdAt);
-        return da - db;
-      });
+      // Sort tasks chronologically using best post date
+      const getTaskDate = (t) =>
+        t.postingScheduleDate || t.publishingDate || t.dueDate || t.editDueDate || t.designDueDate || t.createdAt;
+
+      clientTasks.sort((a, b) => new Date(getTaskDate(a)) - new Date(getTaskDate(b)));
 
       // Find project for this client
       const projInfo = clientProjectNameMap.get(cId)
@@ -999,9 +1023,13 @@ export const syncTasksWithTracker = async (req, res) => {
 
       let reelIdx = 1, postIdx = 1, storyIdx = 1;
       clientTasks.forEach((task) => {
-        const pDate = task.postingScheduleDate || task.publishingDate || task.dueDate;
+        const pDate = getTaskDate(task);
         if (!pDate) return;
-        const dayNum = new Date(pDate).getDate();
+        const dObj = new Date(pDate);
+        let dayNum = dObj.getDate();
+        if (dObj.getMonth() + 1 !== month && dObj.getUTCMonth() + 1 === month) {
+          dayNum = dObj.getUTCDate();
+        }
         if (dayNum < 1 || dayNum > daysInMonth) return;
 
         const dayCell = days.find((d) => d.day === dayNum);
