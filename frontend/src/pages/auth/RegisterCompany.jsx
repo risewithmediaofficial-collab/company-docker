@@ -27,9 +27,9 @@ import axios from 'axios';
 import { toast } from 'sonner';
 
 const steps = [
-  { id: 1, label: 'Company Details', icon: Building2, desc: 'Agency name & industry' },
-  { id: 2, label: 'Owner Profile', icon: User, desc: 'Contact details' },
-  { id: 3, label: 'Security & Trial', icon: Lock, desc: 'Password & activation' },
+  { id: 1, label: 'Company Details', shortLabel: 'Company', icon: Building2, desc: 'Agency name & industry' },
+  { id: 2, label: 'Owner Profile', shortLabel: 'Owner', icon: User, desc: 'Contact details' },
+  { id: 3, label: 'Security & Trial', shortLabel: 'Security', icon: Lock, desc: 'Password & activation' },
 ];
 
 const industries = [
@@ -209,18 +209,18 @@ const RegisterCompany = () => {
           </div>
 
           {/* Dedicated Company Login Portal Card */}
-          <div className="bg-blue-50/90 border border-blue-200 rounded-2xl p-4 mb-6 text-left space-y-2.5">
+          <div className="bg-cyan-50/80 border border-[#12B7D4]/30 rounded-2xl p-4 mb-6 text-left space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
-                <Globe size={14} className="text-blue-600" />
+              <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <Globe size={14} className="text-[#12B7D4]" />
                 Your Dedicated Login Portal
               </span>
-              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-xs">
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#12B7D4] text-white shadow-xs">
                 Custom URL
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-slate-900 font-semibold bg-white px-3 py-2 rounded-xl border border-blue-200/80 flex-1 truncate select-all">
+              <span className="font-mono text-xs text-slate-900 font-semibold bg-white px-3 py-2 rounded-xl border border-[#12B7D4]/30 flex-1 truncate select-all">
                 {`${window.location.origin}/login/${createdSlug || form.slug}`}
               </span>
               <button
@@ -230,7 +230,7 @@ const RegisterCompany = () => {
                   navigator.clipboard.writeText(url);
                   toast.success('Copied your custom login portal URL!');
                 }}
-                className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-xs flex items-center gap-1.5 shrink-0"
+                className="px-3 py-2 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-xs transition-all shadow-xs flex items-center gap-1.5 shrink-0"
               >
                 <Copy size={13} />
                 <span>Copy</span>
@@ -244,13 +244,13 @@ const RegisterCompany = () => {
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <button
               onClick={() => navigate(`/login/${createdSlug || form.slug}`)}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm transition-all shadow-lg shadow-[#12B7D4]/25 flex items-center justify-center gap-2 cursor-pointer"
             >
               Open Company Portal <ChevronRight size={16} />
             </button>
             <button
               onClick={() => navigate('/login')}
-              className="w-full sm:w-auto py-3.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm transition-all whitespace-nowrap"
+              className="w-full sm:w-auto py-3.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm transition-all whitespace-nowrap cursor-pointer"
             >
               Main Login
             </button>
@@ -261,41 +261,44 @@ const RegisterCompany = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50/90 via-white to-slate-50 text-slate-900 flex flex-col justify-center items-center p-4 md:p-8 relative overflow-hidden font-sans">
-      {/* Background Soft Blue Spots */}
-      <div className="absolute top-1/4 -left-48 w-[500px] h-[500px] bg-blue-300/30 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-48 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute top-0 right-1/3 w-80 h-80 bg-sky-200/30 rounded-full blur-[100px] pointer-events-none" />
+    <div className="min-h-screen bg-slate-50/60 text-slate-900 flex flex-col justify-center items-center p-3.5 sm:p-6 md:p-8 relative overflow-hidden font-sans">
+      {/* Ambient Brand Logo Blue Glows (matching Login and CRM) */}
+      <div className="fixed top-1/4 -left-36 w-80 sm:w-96 h-[500px] bg-gradient-to-r from-[#12B7D4]/12 via-[#12B7D4]/6 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
+      <div className="fixed top-1/3 -right-36 w-80 sm:w-96 h-[500px] bg-gradient-to-l from-[#12B7D4]/10 via-[#12B7D4]/5 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
 
       {/* Main Container */}
-      <div className="w-full max-w-2xl relative z-10">
+      <div className="w-full max-w-2xl relative z-10 py-6 sm:py-8">
 
         {/* Top Header & Official Logo */}
-        <div className="text-center mb-8">
-          <Link to="/login" className="inline-flex items-center gap-3 mb-4 group">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white p-2 shadow-xl shadow-blue-500/10 border border-slate-200/80 group-hover:scale-105 transition-transform">
+        <div className="text-center mb-6 sm:mb-8">
+          <Link to="/login" className="inline-flex items-center gap-3 mb-3.5 group">
+            <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-white p-2 shadow-md border border-slate-200/80 group-hover:scale-105 transition-transform">
               <img
                 src="/branding/rise-with-media-logo.png"
-                alt="RISE WITH MEDIA logo"
+                alt="RiseWithMedia logo"
                 className="h-full w-full object-contain"
               />
             </div>
             <div className="text-left">
-              <span className="text-slate-900 font-extrabold text-xl tracking-wider block leading-none">RISE WITH MEDIA</span>
-              <span className="text-blue-600 text-[11px] font-bold uppercase tracking-widest mt-1 block">Agency SaaS Operating System</span>
+              <span className="text-slate-950 font-extrabold text-lg sm:text-xl tracking-wider block leading-none">
+                RISE WITH MEDIA
+              </span>
+              <span className="text-[#12B7D4] text-[10px] sm:text-[11px] font-bold uppercase tracking-widest mt-1 block">
+                Agency SaaS Operating System
+              </span>
             </div>
           </Link>
 
-          <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mb-2">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-950 tracking-tight mb-2">
             Start Your 14-Day Free Trial
           </h1>
-          <p className="text-slate-600 text-sm max-w-md mx-auto">
+          <p className="text-slate-600 text-xs sm:text-sm max-w-md mx-auto">
             Set up your agency workspace in under 2 minutes. No credit card required.
           </p>
         </div>
 
         {/* Stepper Header */}
-        <div className="grid grid-cols-3 gap-2 mb-6">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
           {steps.map((s) => {
             const isActive = step === s.id;
             const isDone = step > s.id;
@@ -303,33 +306,42 @@ const RegisterCompany = () => {
               <div
                 key={s.id}
                 onClick={() => isDone && setStep(s.id)}
-                className={`p-3 rounded-2xl border transition-all duration-300 ${
+                className={`p-2.5 sm:p-3 rounded-2xl border transition-all duration-300 ${
                   isDone ? 'cursor-pointer' : ''
                 } ${
                   isActive
-                    ? 'bg-blue-600/10 border-blue-500/40 shadow-md shadow-blue-500/10'
+                    ? 'bg-[#12B7D4]/10 border-[#12B7D4]/40 shadow-xs'
                     : isDone
                     ? 'bg-emerald-50 border-emerald-200'
-                    : 'bg-white/80 border-slate-200/80'
+                    : 'bg-white border-slate-200/80'
                 }`}
               >
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2 sm:gap-2.5">
                   <div
-                    className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-bold transition-colors ${
+                    className={`w-6 h-6 sm:w-7 sm:h-7 rounded-xl flex items-center justify-center text-xs font-black shrink-0 transition-colors ${
                       isActive
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-[#12B7D4] text-white shadow-2xs'
                         : isDone
                         ? 'bg-emerald-600 text-white'
                         : 'bg-slate-100 text-slate-500'
                     }`}
                   >
-                    {isDone ? <Check size={14} /> : s.id}
+                    {isDone ? <Check size={14} className="stroke-[3]" /> : s.id}
                   </div>
-                  <div className="min-w-0 flex-1 hidden sm:block">
-                    <p className={`text-xs font-bold truncate ${isActive ? 'text-blue-700' : isDone ? 'text-emerald-700' : 'text-slate-600'}`}>
-                      {s.label}
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={`text-[11px] sm:text-xs font-bold truncate leading-tight ${
+                        isActive
+                          ? 'text-[#0e7490]'
+                          : isDone
+                          ? 'text-emerald-700'
+                          : 'text-slate-600'
+                      }`}
+                    >
+                      <span className="sm:hidden">{s.shortLabel}</span>
+                      <span className="hidden sm:inline">{s.label}</span>
                     </p>
-                    <p className="text-[10px] text-slate-400 truncate">{s.desc}</p>
+                    <p className="text-[10px] text-slate-400 truncate hidden sm:block">{s.desc}</p>
                   </div>
                 </div>
               </div>
@@ -337,8 +349,8 @@ const RegisterCompany = () => {
           })}
         </div>
 
-        {/* Form Card (Light Theme) */}
-        <form onSubmit={(e) => { e.preventDefault(); if (step === 3) handleSubmit(); else nextStep(); }} className="bg-white/95 border border-slate-200/90 backdrop-blur-2xl rounded-3xl p-6 md:p-8 shadow-xl shadow-blue-900/5 relative">
+        {/* Form Card (Light Theme, CRM Colors) */}
+        <form onSubmit={(e) => { e.preventDefault(); if (step === 3) handleSubmit(); else nextStep(); }} className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-7 md:p-8 shadow-xl shadow-slate-900/5 relative">
 
           <AnimatePresence mode="wait">
 
@@ -353,8 +365,8 @@ const RegisterCompany = () => {
                 className="space-y-5"
               >
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <Building2 size={20} className="text-blue-600" />
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <Building2 size={20} className="text-[#12B7D4]" />
                     Company & Agency Details
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
@@ -367,7 +379,7 @@ const RegisterCompany = () => {
                     Company / Agency Name <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <Building2 size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
+                    <Building2 size={18} className="absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
                     <input
                       type="text"
                       value={form.companyName}
@@ -375,7 +387,7 @@ const RegisterCompany = () => {
                       placeholder="e.g. Apex Digital Marketing"
                       className={`w-full bg-slate-50/80 border ${
                         errors.companyName ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'
-                      } rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all`}
+                      } rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all`}
                     />
                   </div>
                   {errors.companyName && <p className="text-red-500 text-xs mt-1">{errors.companyName}</p>}
@@ -390,7 +402,7 @@ const RegisterCompany = () => {
                     <span className="text-[11px] text-slate-400">Custom login URL</span>
                   </div>
                   <div className="relative flex items-center">
-                    <span className="absolute left-3 text-xs font-mono text-slate-400 select-none font-medium">
+                    <span className="absolute left-3.5 text-xs font-mono text-slate-400 select-none font-semibold">
                       /login/
                     </span>
                     <input
@@ -400,13 +412,16 @@ const RegisterCompany = () => {
                       placeholder="apex-digital"
                       className={`w-full bg-slate-50/80 border ${
                         errors.slug ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'
-                      } rounded-xl py-3 pl-16 pr-4 text-slate-900 font-mono text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all`}
+                      } rounded-xl py-3 pl-16 pr-4 text-slate-900 font-mono text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all`}
                     />
                   </div>
                   {errors.slug && <p className="text-red-500 text-xs mt-1">{errors.slug}</p>}
-                  <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    Branded Login Portal: <code className="font-mono text-blue-600 font-semibold">{window.location.origin}/login/{form.slug || 'company-slug'}</code>
+                  <p className="text-[11px] text-slate-500 mt-1 flex flex-wrap items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#12B7D4] shrink-0" />
+                    <span>Branded Login Portal:</span>
+                    <code className="font-mono text-[#0e7490] font-semibold break-all">
+                      {window.location.origin}/login/{form.slug || 'company-slug'}
+                    </code>
                   </p>
                 </div>
 
@@ -416,56 +431,60 @@ const RegisterCompany = () => {
                     <label className="text-xs font-bold text-slate-700">
                       Company Logo (optional)
                     </label>
-                    <span className="text-[11px] text-slate-400">PNG, JPG, SVG or WebP (max 2MB)</span>
+                    <span className="text-[11px] text-slate-400">PNG, JPG, SVG, WebP (max 2MB)</span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
                     {/* File upload option */}
-                    <div className="relative border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-xl p-3 text-center bg-slate-50/50 hover:bg-blue-50/20 transition-all flex flex-col items-center justify-center cursor-pointer group">
+                    <div className="relative border-2 border-dashed border-slate-200 hover:border-[#12B7D4] rounded-xl p-3 text-center bg-slate-50/50 hover:bg-[#12B7D4]/5 transition-all flex flex-col items-center justify-center cursor-pointer group min-h-[96px]">
                       <input
                         type="file"
                         accept="image/*"
                         onChange={handleLogoUpload}
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
                       />
-                      <Upload size={20} className="text-slate-400 group-hover:text-blue-600 transition-colors mb-1" />
-                      <p className="text-xs font-semibold text-slate-700 group-hover:text-blue-600 transition-colors">
+                      <Upload size={20} className="text-slate-400 group-hover:text-[#12B7D4] transition-colors mb-1" />
+                      <p className="text-xs font-semibold text-slate-700 group-hover:text-[#12B7D4] transition-colors">
                         Click to upload logo image
                       </p>
                       <p className="text-[10px] text-slate-400">or drag and drop file here</p>
                     </div>
 
                     {/* Image URL input & thumbnail */}
-                    <div className="flex flex-col justify-between space-y-1.5">
+                    <div className="flex flex-col justify-between space-y-2">
                       <div className="relative">
-                        <ImageIcon size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
+                        <ImageIcon size={18} className="absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
                         <input
                           type="url"
                           value={form.logo}
                           onChange={(e) => update('logo', e.target.value)}
                           placeholder="Or paste direct logo URL (https://...)"
-                          className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-slate-900 text-xs placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                          className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-slate-900 text-xs placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all"
                         />
                       </div>
-                      {form.logo && (
-                        <div className="flex items-center justify-between p-2 rounded-xl bg-blue-50 border border-blue-200/60 text-xs">
+                      {form.logo ? (
+                        <div className="flex items-center justify-between p-2 rounded-xl bg-cyan-50/80 border border-[#12B7D4]/25 text-xs">
                           <div className="flex items-center gap-2 min-w-0">
                             <img
                               src={form.logo}
                               alt="Logo preview"
-                              className="w-7 h-7 rounded-lg object-contain bg-white border border-blue-200 shrink-0"
+                              className="w-7 h-7 rounded-lg object-contain bg-white border border-[#12B7D4]/30 shrink-0"
                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
-                            <span className="text-[11px] font-semibold text-blue-700 truncate">Logo attached</span>
+                            <span className="text-[11px] font-semibold text-[#0e7490] truncate">Logo attached</span>
                           </div>
                           <button
                             type="button"
                             onClick={() => update('logo', '')}
-                            className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-white/60 transition-colors"
+                            className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-white transition-colors"
                             title="Remove logo"
                           >
                             <Trash2 size={13} />
                           </button>
+                        </div>
+                      ) : (
+                        <div className="p-2 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-400 flex items-center justify-center">
+                          <span>No logo uploaded yet</span>
                         </div>
                       )}
                     </div>
@@ -473,9 +492,9 @@ const RegisterCompany = () => {
                 </div>
 
                 {/* Live Brand Preview Showing Company Name + RWM */}
-                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/90 to-indigo-50/90 border border-blue-200/80 shadow-xs flex items-center justify-between gap-3">
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-50/80 via-teal-50/40 to-slate-50 border border-[#12B7D4]/25 shadow-xs flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-blue-200 p-1 flex items-center justify-center shrink-0 shadow-xs">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-[#12B7D4]/30 p-1 flex items-center justify-center shrink-0 shadow-xs">
                       {form.logo ? (
                         <img
                           src={form.logo}
@@ -484,11 +503,11 @@ const RegisterCompany = () => {
                           onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
                       ) : (
-                        <Building2 size={20} className="text-blue-600" />
+                        <Building2 size={20} className="text-[#12B7D4]" />
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-blue-600">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#0e7490]">
                         Dashboard Display Format
                       </p>
                       <h4 className="text-sm font-black text-slate-900 truncate">
@@ -496,7 +515,7 @@ const RegisterCompany = () => {
                       </h4>
                     </div>
                   </div>
-                  <span className="shrink-0 text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-blue-600 text-white shadow-xs">
+                  <span className="shrink-0 text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-[#12B7D4] text-white shadow-xs">
                     Live Preview
                   </span>
                 </div>
@@ -511,7 +530,7 @@ const RegisterCompany = () => {
                       <select
                         value={form.industry}
                         onChange={(e) => update('industry', e.target.value)}
-                        className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none cursor-pointer"
+                        className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all appearance-none cursor-pointer"
                       >
                         <option value="">Select industry</option>
                         {industries.map((ind) => (
@@ -526,13 +545,13 @@ const RegisterCompany = () => {
                       Company Website (optional)
                     </label>
                     <div className="relative">
-                      <Globe size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
+                      <Globe size={18} className="absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
                       <input
                         type="url"
                         value={form.website}
                         onChange={(e) => update('website', e.target.value)}
                         placeholder="https://youragency.com"
-                        className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all"
                       />
                     </div>
                   </div>
@@ -551,8 +570,8 @@ const RegisterCompany = () => {
                 className="space-y-5"
               >
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <User size={20} className="text-blue-600" />
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <User size={20} className="text-[#12B7D4]" />
                     Account Administrator Profile
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
@@ -565,7 +584,7 @@ const RegisterCompany = () => {
                     Your Full Name <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <User size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
+                    <User size={18} className="absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
                     <input
                       type="text"
                       value={form.ownerName}
@@ -573,7 +592,7 @@ const RegisterCompany = () => {
                       placeholder="e.g. Vikramaditya Roy"
                       className={`w-full bg-slate-50/80 border ${
                         errors.ownerName ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'
-                      } rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all`}
+                      } rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all`}
                     />
                   </div>
                   {errors.ownerName && <p className="text-red-500 text-xs mt-1">{errors.ownerName}</p>}
@@ -585,7 +604,7 @@ const RegisterCompany = () => {
                       Work Email <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <Mail size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
+                      <Mail size={18} className="absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
                       <input
                         type="email"
                         value={form.email}
@@ -593,7 +612,7 @@ const RegisterCompany = () => {
                         placeholder="owner@youragency.com"
                         className={`w-full bg-slate-50/80 border ${
                           errors.email ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'
-                        } rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all`}
+                        } rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all`}
                       />
                     </div>
                     {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
@@ -604,13 +623,13 @@ const RegisterCompany = () => {
                       Phone Number (optional)
                     </label>
                     <div className="relative">
-                      <Phone size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
+                      <Phone size={18} className="absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
                       <input
                         type="tel"
                         value={form.phone}
                         onChange={(e) => update('phone', e.target.value)}
                         placeholder="+91 98765 43210"
-                        className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all"
                       />
                     </div>
                   </div>
@@ -629,8 +648,8 @@ const RegisterCompany = () => {
                 className="space-y-5"
               >
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <Lock size={20} className="text-blue-600" />
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <Lock size={20} className="text-[#12B7D4]" />
                     Security & Plan Activation
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
@@ -644,7 +663,7 @@ const RegisterCompany = () => {
                       Password <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <Lock size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
+                      <Lock size={18} className="absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
                       <input
                         type={showPassword ? 'text' : 'password'}
                         name="password"
@@ -655,7 +674,7 @@ const RegisterCompany = () => {
                         placeholder="At least 6 characters"
                         className={`w-full bg-slate-50/80 border ${
                           errors.password ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'
-                        } rounded-xl py-3 pl-10 pr-10 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all`}
+                        } rounded-xl py-3 pl-10 pr-10 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all`}
                       />
                       <button
                         type="button"
@@ -673,7 +692,7 @@ const RegisterCompany = () => {
                        Confirm Password <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <Lock size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
+                      <Lock size={18} className="absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
                       <input
                         type={showConfirm ? 'text' : 'password'}
                         name="confirmPassword"
@@ -684,7 +703,7 @@ const RegisterCompany = () => {
                         placeholder="Repeat your password"
                         className={`w-full bg-slate-50/80 border ${
                           errors.confirmPassword ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'
-                        } rounded-xl py-3 pl-10 pr-10 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all`}
+                        } rounded-xl py-3 pl-10 pr-10 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all`}
                       />
                       <button
                         type="button"
@@ -699,10 +718,10 @@ const RegisterCompany = () => {
                 </div>
 
                 {/* Plan Highlights Box */}
-                <div className="bg-gradient-to-br from-blue-50 via-indigo-50/50 to-blue-50/80 border border-blue-200/80 rounded-2xl p-4">
+                <div className="bg-gradient-to-br from-cyan-50/70 via-teal-50/40 to-slate-50 border border-[#12B7D4]/25 rounded-2xl p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <Sparkles size={16} className="text-blue-600" />
-                    <span className="text-blue-900 text-xs font-extrabold uppercase tracking-wider">
+                    <Sparkles size={16} className="text-[#12B7D4]" />
+                    <span className="text-slate-900 text-xs font-extrabold uppercase tracking-wider">
                       Included in Your 14-Day Free Trial
                     </span>
                   </div>
@@ -710,7 +729,7 @@ const RegisterCompany = () => {
                     {trialFeatures.map((feat) => (
                       <div key={feat} className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 text-emerald-600">
-                          <Check size={10} />
+                          <Check size={10} className="stroke-[3]" />
                         </div>
                         <span>{feat}</span>
                       </div>
@@ -723,12 +742,12 @@ const RegisterCompany = () => {
           </AnimatePresence>
 
           {/* Form Actions */}
-          <div className="flex items-center gap-3 mt-8 pt-5 border-t border-slate-200/80">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 mt-8 pt-5 border-t border-slate-200/80">
             {step > 1 && (
               <button
                 type="button"
                 onClick={prevStep}
-                className="px-5 py-3 rounded-xl border border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700 transition-all text-sm font-semibold flex items-center gap-1.5 shadow-sm"
+                className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-all text-sm font-semibold flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
               >
                 <ChevronLeft size={16} /> Back
               </button>
@@ -738,7 +757,7 @@ const RegisterCompany = () => {
               <button
                 type="button"
                 onClick={nextStep}
-                className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+                className="flex-1 py-3.5 px-6 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-extrabold text-sm transition-all shadow-lg shadow-[#12B7D4]/25 flex items-center justify-center gap-2 cursor-pointer"
               >
                 Continue to Next Step <ChevronRight size={16} />
               </button>
@@ -747,11 +766,11 @@ const RegisterCompany = () => {
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading}
-                className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 py-3.5 px-6 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-extrabold text-sm transition-all shadow-lg shadow-[#12B7D4]/25 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                     Creating Workspace...
                   </span>
                 ) : (
@@ -769,7 +788,7 @@ const RegisterCompany = () => {
         <div className="text-center mt-6">
           <p className="text-slate-600 text-xs sm:text-sm font-medium">
             Already have an account?{' '}
-            <Link to="/login" className="text-blue-600 hover:text-blue-700 font-bold underline underline-offset-4 transition-colors">
+            <Link to="/login" className="text-[#12B7D4] hover:text-[#0ea5c6] font-bold underline underline-offset-4 transition-colors">
               Sign into existing workspace
             </Link>
           </p>
