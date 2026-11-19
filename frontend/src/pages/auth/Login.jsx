@@ -29,9 +29,9 @@ import { toggleDarkMode } from '../../store/slices/uiSlice';
 
 // ── Left Navigation Rail / Mobile Header (CardNav) ───────────────────────────
 const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
-  <nav className="card-nav flex flex-row md:flex-col items-center justify-between md:justify-start w-full md:w-24 shrink-0 py-2 px-3 sm:px-4 md:py-8 md:px-0 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800/80 relative z-30 bg-slate-50/70 dark:bg-slate-900/60 rounded-t-3xl md:rounded-t-none md:rounded-l-3xl">
+  <nav className="card-nav relative flex flex-row md:flex-col items-center justify-between md:justify-start w-full md:w-24 shrink-0 py-2.5 px-3.5 sm:px-4 md:py-8 md:px-0 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800/80 z-30 bg-slate-50/70 dark:bg-slate-900/60 rounded-t-3xl md:rounded-t-none md:rounded-l-3xl">
     {/* Left Side (Mobile Branding) / Top Item (Desktop Logo) */}
-    <div className="flex items-center gap-2 md:mb-8 shrink-0">
+    <div className="flex items-center gap-2 md:mb-8 shrink-0 z-10">
       <Link to="/" className="group flex items-center gap-2" title="RiseWithMedia Home">
         <div className="w-8 h-8 md:w-11 md:h-11 rounded-xl md:rounded-2xl bg-white dark:bg-slate-800 p-1.5 md:p-2 shadow-2xs border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center group-hover:scale-105 transition-transform overflow-hidden">
           {portalOrg?.logo ? (
@@ -57,50 +57,49 @@ const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
       </Link>
     </div>
 
-    {/* Right Container (Mobile Header Controls) / Desktop Rail Items */}
-    <div className="flex flex-row md:flex-col items-center gap-1.5 md:gap-3 shrink-0 md:w-full md:flex-1 md:justify-between md:px-2">
-      {/* Segmented Tabs (Mobile Pill Container / Desktop Rail) */}
-      <div className="flex flex-row md:flex-col items-center gap-1 md:gap-3 p-1 md:p-0 bg-slate-200/60 dark:bg-slate-800/60 md:bg-transparent md:dark:bg-transparent rounded-xl md:rounded-none w-auto md:w-full shrink-0">
-        {/* Sign In Button */}
-        <button
-          type="button"
-          onClick={() => onSelect('signin')}
-          className={`signin group relative flex items-center md:flex-col justify-center gap-1.5 md:gap-1 py-1.5 px-2.5 sm:px-3 md:py-3.5 md:px-1 rounded-lg md:rounded-2xl transition-all duration-200 text-xs font-bold cursor-pointer ${
-            view === 'signin'
-              ? 'text-[#12B7D4] bg-white dark:bg-slate-900 shadow-2xs md:shadow-sm md:shadow-[#12B7D4]/15'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-          }`}
-        >
-          {view === 'signin' && (
-            <span className="hidden md:block active-bar absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#12B7D4] rounded-r-full shadow-xs" />
-          )}
-          <UserCheck size={15} className={`transition-transform duration-200 ${view === 'signin' ? 'scale-110 text-[#12B7D4]' : ''}`} />
-          <span className="leading-none text-[11px] md:text-xs">Sign In</span>
-        </button>
+    {/* Center: Modern Segmented Switch Button (Mobile: Exactly Centered / Desktop: Vertical Rail) */}
+    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 md:relative md:top-auto md:left-auto md:translate-x-0 md:translate-y-0 flex flex-row md:flex-col items-center gap-1 md:gap-3 p-1 md:p-0 bg-slate-200/70 dark:bg-slate-800/80 md:bg-transparent md:dark:bg-transparent rounded-2xl md:rounded-none border border-slate-200/70 dark:border-slate-700/60 md:border-none shadow-xs md:shadow-none z-10 w-auto md:w-full md:px-2">
+      {/* Sign In Button */}
+      <button
+        type="button"
+        onClick={() => onSelect('signin')}
+        className={`signin group relative flex items-center md:flex-col justify-center gap-1.5 md:gap-1 py-1.5 px-3 md:py-3.5 md:px-1 rounded-xl md:rounded-2xl transition-all duration-200 text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 ${
+          view === 'signin'
+            ? 'text-[#12B7D4] bg-white dark:bg-slate-900 shadow-2xs md:shadow-sm md:shadow-[#12B7D4]/15'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+        }`}
+      >
+        {view === 'signin' && (
+          <span className="hidden md:block active-bar absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#12B7D4] rounded-r-full shadow-xs" />
+        )}
+        <UserCheck size={14} className={`transition-transform duration-200 shrink-0 ${view === 'signin' ? 'scale-110 text-[#12B7D4]' : ''}`} />
+        <span className="leading-none text-[11px] md:text-xs whitespace-nowrap">Sign In</span>
+      </button>
 
-        {/* Sign Up Button */}
-        <button
-          type="button"
-          onClick={() => onSelect('signup')}
-          className={`signup group relative flex items-center md:flex-col justify-center gap-1.5 md:gap-1 py-1.5 px-2.5 sm:px-3 md:py-3.5 md:px-1 rounded-lg md:rounded-2xl transition-all duration-200 text-xs font-bold cursor-pointer ${
-            view === 'signup'
-              ? 'text-[#12B7D4] bg-white dark:bg-slate-900 shadow-2xs md:shadow-sm md:shadow-[#12B7D4]/15'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-          }`}
-        >
-          {view === 'signup' && (
-            <span className="hidden md:block active-bar absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#12B7D4] rounded-r-full shadow-xs" />
-          )}
-          <UserPlus size={15} className={`transition-transform duration-200 ${view === 'signup' ? 'scale-110 text-[#12B7D4]' : ''}`} />
-          <span className="leading-none text-[11px] md:text-xs">Sign Up</span>
-        </button>
-      </div>
+      {/* Sign Up Button */}
+      <button
+        type="button"
+        onClick={() => onSelect('signup')}
+        className={`signup group relative flex items-center md:flex-col justify-center gap-1.5 md:gap-1 py-1.5 px-3 md:py-3.5 md:px-1 rounded-xl md:rounded-2xl transition-all duration-200 text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 ${
+          view === 'signup'
+            ? 'text-[#12B7D4] bg-white dark:bg-slate-900 shadow-2xs md:shadow-sm md:shadow-[#12B7D4]/15'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+        }`}
+      >
+        {view === 'signup' && (
+          <span className="hidden md:block active-bar absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#12B7D4] rounded-r-full shadow-xs" />
+        )}
+        <UserPlus size={14} className={`transition-transform duration-200 shrink-0 ${view === 'signup' ? 'scale-110 text-[#12B7D4]' : ''}`} />
+        <span className="leading-none text-[11px] md:text-xs whitespace-nowrap">Sign Up</span>
+      </button>
+    </div>
 
-      {/* Theme Toggle Button (Mobile: right of pills; Desktop: bottom of rail) */}
+    {/* Right Side: Theme Toggle Button (Mobile: Right Edge / Desktop: Bottom of Rail) */}
+    <div className="flex items-center shrink-0 z-10 md:mt-auto md:mb-1 md:w-full md:justify-center md:px-2">
       <button
         type="button"
         onClick={onToggleTheme}
-        className="w-8 h-8 md:w-10 md:h-10 md:mt-auto md:mb-1 rounded-lg md:rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-[#12B7D4] dark:hover:text-[#12B7D4] hover:border-[#12B7D4]/40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-2xs cursor-pointer shrink-0"
+        className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-[#12B7D4] dark:hover:text-[#12B7D4] hover:border-[#12B7D4]/40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-2xs cursor-pointer shrink-0"
         title={darkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
         aria-label="Toggle theme"
       >
