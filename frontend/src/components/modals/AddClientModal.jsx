@@ -84,6 +84,7 @@ const CLIENT_REQUIREMENTS = [
 ];
 
 const clientFormSchema = z.object({
+  clientId: z.string().optional(),
   name: z.string().min(2, 'Name must be at least 2 characters'),
   company: z.string().min(2, 'Company name is required'),
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
@@ -137,6 +138,7 @@ export const AddClientModal = ({ open, onOpenChange, client = null, initialStatu
   const form = useForm({
     resolver: zodResolver(clientFormSchema),
     defaultValues: {
+      clientId: '',
       name: '',
       company: '',
       email: '',
@@ -176,6 +178,7 @@ export const AddClientModal = ({ open, onOpenChange, client = null, initialStatu
   useEffect(() => {
     if (client) {
       form.reset({
+        clientId: client.clientId || '',
         name: client.name,
         company: client.company || '',
         email: client.email,
@@ -205,6 +208,7 @@ export const AddClientModal = ({ open, onOpenChange, client = null, initialStatu
           toast.info('Draft restored');
         } catch {
           form.reset({
+            clientId: '',
             name: '',
             company: '',
             email: '',
@@ -357,6 +361,30 @@ export const AddClientModal = ({ open, onOpenChange, client = null, initialStatu
             {/* Scrollable Form Body - Google Form Linear Stack */}
             <div className="space-y-4 sm:space-y-6 p-4 sm:p-7 overflow-y-auto flex-1 min-h-0 custom-scrollbar overscroll-contain">
               <div className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="clientId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center justify-between">
+                        <FormLabel className="text-sm font-semibold text-foreground">Client ID</FormLabel>
+                        <span className="text-[11px] text-muted-foreground font-mono">
+                          Auto-generated if left blank (e.g. CLT-0001)
+                        </span>
+                      </div>
+                      <FormControl>
+                        <Input
+                          placeholder="Auto-assigned (e.g. CLT-0001) or enter custom ID"
+                          className="h-11 rounded-xl bg-secondary/75 px-4 text-sm font-mono tracking-wide focus:ring-2 focus:ring-primary/20"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="name"

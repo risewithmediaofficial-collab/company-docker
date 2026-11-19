@@ -3,10 +3,12 @@
 // =============================================
 
 import mongoose from 'mongoose';
+import { getNextSequence } from './counter.model.js';
 
 const clientSchema = new mongoose.Schema(
   {
     organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization' },
+    clientId: { type: String, unique: true, sparse: true, trim: true, index: true },
     name: { type: String, required: true, trim: true },
     email: { type: String, trim: true, lowercase: true },
     phone: { type: String, trim: true },
@@ -131,6 +133,18 @@ clientSchema.index({ email: 1 });
 clientSchema.index({ organizationId: 1, status: 1, createdAt: -1 });
 clientSchema.index({ assignedManager: 1, createdAt: -1 });
 clientSchema.index({ userId: 1 });
+
+clientSchema.pre('save', async function (next) {
+  if (!this.clientId) {
+    try {
+      const nextSeq = await getNextSequence('clientId', 1);
+      this.clientId = `CLT-${String(nextSeq).padStart(4, '0')}`;
+    } catch (err) {
+      console.error('Failed to generate clientId sequence:', err);
+    }
+  }
+  next();
+});
 
 const Client = mongoose.model('Client', clientSchema);
 export default Client;

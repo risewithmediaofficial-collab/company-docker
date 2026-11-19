@@ -106,6 +106,7 @@ export const getClients = async (req, res) => {
     }
     if (search) {
       filter.$or = [
+        { clientId: { $regex: search, $options: 'i' } },
         { name: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
         { company: { $regex: search, $options: 'i' } },
@@ -332,16 +333,18 @@ export const getClient = async (req, res) => {
       const escaped = decodedId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       client = await Client.findOne({
         $or: [
+          { clientId: { $regex: new RegExp(`^${escaped}$`, 'i') } },
           { company: { $regex: new RegExp(`^${escaped}$`, 'i') } },
           { email: decodedId.toLowerCase() },
           { name: { $regex: new RegExp(`^${escaped}$`, 'i') } },
         ],
       }).populate(clientPopulate);
 
-      // Fallback 2b: Also check SmmClient by name
+      // Fallback 2b: Also check SmmClient by name or clientId
       if (!client) {
         const smmClient = await SmmClient.findOne({
           $or: [
+            { clientId: { $regex: new RegExp(`^${escaped}$`, 'i') } },
             { companyName: { $regex: new RegExp(`^${escaped}$`, 'i') } },
             { email: decodedId.toLowerCase() },
             { primaryContact: { $regex: new RegExp(`^${escaped}$`, 'i') } },
@@ -351,6 +354,7 @@ export const getClient = async (req, res) => {
           try {
             client = await Client.create({
               _id: smmClient._id,
+              clientId: smmClient.clientId,
               name: smmClient.primaryContact || smmClient.companyName,
               company: smmClient.companyName,
               email: smmClient.email || `${smmClient._id}@client.internal`,
@@ -372,18 +376,166 @@ export const getClient = async (req, res) => {
       return res.status(access.status).json({ success: false, message: access.message });
     }
 
-    const [projects, recentActivity] = await Promise.all([
-      Project.find({ client: client._id }).select('name status progress startDate dueDate category priority budget').sort({ createdAt: -1 }),
+    const projects = await Project.find({ client: client._id })
+      .select('name status progress startDate dueDate category priority budget team manager')
+      .populate('manager', 'name avatar')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const projectIds = projects.map((p) => p._id);
+
+    const [tasks, recentActivity] = await Promise.all([
+      Task.find({
+        $or: [
+          { client: client._id },
+          ...(projectIds.length > 0 ? [{ project: { $in: projectIds } }] : []),
+        ],
+      })
+        .select('title status priority dueDate taskType taskCategory assignedTo project deliverable createdAt updatedAt')
+        .populate('assignedTo', 'name email avatar')
+        .populate('project', 'name')
+        .sort({ dueDate: 1, createdAt: -1 })
+        .limit(200)
+        .lean(),
       ActivityLog.find({ relatedClient: client._id })
         .populate('actor', 'name avatar role')
         .sort({ createdAt: -1 })
-        .limit(15),
+        .limit(15)
+        .lean(),
     ]);
 
     res.json({
       success: true,
       client: serializeClient(client),
       projects,
+      tasks,
+      recentActivity,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getClientOverview = async (req, res) => {
+  try {
+    const rawSearch = (req.query.search || req.query.q || req.query.clientId || req.params.id || '').trim();
+    if (!rawSearch) {
+      return res.status(400).json({ success: false, message: 'Please provide a client name, client ID, or search term.' });
+    }
+
+    const decoded = decodeURIComponent(rawSearch).trim();
+    const escaped = decoded.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    let client = null;
+    if (mongoose.Types.ObjectId.isValid(decoded)) {
+      client = await Client.findById(decoded).populate(clientPopulate);
+    }
+
+    if (!client) {
+      client = await Client.findOne({
+        $or: [
+          { clientId: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+          { company: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+          { name: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+          { email: decoded.toLowerCase() },
+          { clientId: { $regex: escaped, $options: 'i' } },
+          { company: { $regex: escaped, $options: 'i' } },
+          { name: { $regex: escaped, $options: 'i' } },
+        ],
+      }).populate(clientPopulate);
+    }
+
+    if (!client) {
+      const smmClient = await SmmClient.findOne({
+        $or: [
+          { clientId: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+          { companyName: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+          { primaryContact: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+          { email: decoded.toLowerCase() },
+        ],
+      }).lean();
+
+      if (smmClient) {
+        client = await Client.findById(smmClient._id).populate(clientPopulate);
+      }
+    }
+
+    if (!client) {
+      const suggestions = await Client.find({
+        $or: [
+          { clientId: { $regex: escaped, $options: 'i' } },
+          { company: { $regex: escaped, $options: 'i' } },
+          { name: { $regex: escaped, $options: 'i' } },
+          { email: { $regex: escaped, $options: 'i' } },
+        ],
+      })
+        .select('name company email phone status clientId tier monthlyPlanFee services')
+        .limit(10)
+        .lean();
+
+      return res.status(404).json({
+        success: false,
+        message: `No exact client found matching "${rawSearch}".`,
+        suggestions: suggestions.map(serializeClient),
+      });
+    }
+
+    const access = assertClientAccess(req, client);
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const projects = await Project.find({ client: client._id })
+      .select('name status progress startDate dueDate category priority budget team manager')
+      .populate('manager', 'name avatar')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const projectIds = projects.map((p) => p._id);
+
+    const tasks = await Task.find({
+      $or: [
+        { client: client._id },
+        ...(projectIds.length > 0 ? [{ project: { $in: projectIds } }] : []),
+      ],
+    })
+      .select('title status priority dueDate taskType taskCategory assignedTo project deliverable createdAt updatedAt')
+      .populate('assignedTo', 'name email avatar')
+      .populate('project', 'name')
+      .sort({ dueDate: 1, createdAt: -1 })
+      .lean();
+
+    const recentActivity = await ActivityLog.find({ relatedClient: client._id })
+      .populate('actor', 'name avatar role')
+      .sort({ createdAt: -1 })
+      .limit(15)
+      .lean();
+
+    const completedTaskStatuses = new Set(['done', 'completed', 'approved', 'Completed', 'Done', 'Approved']);
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter((t) => completedTaskStatuses.has(t.status)).length;
+    const pendingTasks = totalTasks - completedTasks;
+    const now = new Date();
+    const overdueTasks = tasks.filter((t) => !completedTaskStatuses.has(t.status) && t.dueDate && new Date(t.dueDate) < now).length;
+
+    const totalProjects = projects.length;
+    const activeProjects = projects.filter((p) => ['in_progress', 'planning', 'active', 'In Progress', 'Active'].includes(p.status)).length;
+    const completedProjects = projects.filter((p) => ['completed', 'delivered', 'Completed'].includes(p.status)).length;
+
+    res.json({
+      success: true,
+      client: serializeClient(client),
+      projects,
+      tasks,
+      stats: {
+        totalProjects,
+        activeProjects,
+        completedProjects,
+        totalTasks,
+        completedTasks,
+        pendingTasks,
+        overdueTasks,
+      },
       recentActivity,
     });
   } catch (error) {

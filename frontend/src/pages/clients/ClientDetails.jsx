@@ -255,6 +255,7 @@ const ClientDetails = () => {
           const decodedId = decodeURIComponent(id).toLowerCase().trim();
           const found = allList.find(c => 
             String(c._id) === id || 
+            (c.clientId && c.clientId.toLowerCase().trim() === decodedId) ||
             (c.company && c.company.toLowerCase().trim() === decodedId) ||
             (c.name && c.name.toLowerCase().trim() === decodedId)
           );
@@ -415,8 +416,18 @@ const ClientDetails = () => {
       <NotionDetailPage
         backTo={isClientUser ? null : '/clients'}
         backLabel={isClientUser ? null : 'Clients'}
-        title={client.company || client.name}
+        title={(
+          <span className="flex items-center gap-2 flex-wrap">
+            <span>{client.company || client.name}</span>
+            {client.clientId && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-primary/10 text-primary border border-primary/20">
+                {client.clientId}
+              </span>
+            )}
+          </span>
+        )}
         subtitle={[
+          client.clientId ? `ID: ${client.clientId}` : null,
           client.email,
           client.phone,
           client.website,
@@ -567,6 +578,7 @@ const ClientDetails = () => {
               <h2 className="font-bold text-lg">Client Information</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm">
                 {[
+                  ['Client ID', client.clientId || 'Not assigned'],
                   ['Type / Sector', client.industry || 'Not set'],
                   ['Account Tier', client.tier || 'Starter'],
                   ['Contract Start', client.contractStartDate ? new Date(client.contractStartDate).toLocaleDateString() : '—'],

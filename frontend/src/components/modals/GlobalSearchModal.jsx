@@ -43,13 +43,14 @@ const GlobalSearchModal = ({ open, onOpenChange }) => {
           path: `/tasks/${item._id}`,
           Icon: CheckCircle2,
         })),
-        ...(clients.data?.data || []).map((item) => ({
+        ...((clients.data?.clients || clients.data?.data || [])).map((item) => ({
           id: item._id,
-          title: item.name,
+          title: item.company || item.name,
           type: 'client',
-          description: item.company,
+          description: [item.clientId ? `#${item.clientId}` : null, item.company ? item.name : null, item.email, item.phone].filter(Boolean).join(' • '),
           path: `/clients/${item._id}`,
           Icon: User,
+          badge: item.clientId,
         })),
         ...(leads.data?.data || []).map((item) => ({
           id: item._id,
@@ -131,7 +132,14 @@ const GlobalSearchModal = ({ open, onOpenChange }) => {
                   <ResultIcon size={16} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-sm text-foreground truncate">{result.title}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm text-foreground truncate">{result.title}</span>
+                    {result.badge && (
+                      <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-primary/10 text-primary border border-primary/20 shrink-0">
+                        {result.badge}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-muted-foreground truncate">{result.description || result.type}</div>
                 </div>
               </button>

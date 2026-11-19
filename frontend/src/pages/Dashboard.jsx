@@ -70,6 +70,7 @@ import { useEodReports } from '../hooks/useEodReports';
 import { AttendanceWidget } from '../components/attendance/AttendanceWidget';
 import { WeeklyTodosWidget } from '../components/todos/WeeklyTodosWidget';
 import { DailyTasksWidget } from '../components/dashboard/DailyTasksWidget';
+import { ClientOverviewSearch } from '../components/dashboard/ClientOverviewSearch';
 import { SelectDropdown } from '../components/ui/SelectDropdown';
 import api from '../api';
 import { formatINR } from '../utils/currency';
@@ -340,6 +341,12 @@ const Dashboard = () => {
         {/* - TAB 1: FULL DATA-DRIVEN COMMAND CENTER - */}
         {activeTab === 'command' && (
           <div className="space-y-6">
+            {/* CLIENT 360° QUICK LOOKUP & OVERVIEW SEARCH */}
+            <ClientOverviewSearch
+              onCreateTask={() => setCreateTaskOpen(true)}
+              onCreateProject={() => setCreateProjectOpen(true)}
+            />
+
             {/* 1. TOP 5 CORE METRIC CARDS (INTERACTIVE & CLICKABLE) */}
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
               {/* Active Clients */}

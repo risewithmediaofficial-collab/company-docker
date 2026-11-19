@@ -4,6 +4,7 @@ import {
   createClient,
   deleteClient,
   getClient,
+  getClientOverview,
   getClients,
   syncPortalUsersHandler,
   updateClient,
@@ -32,7 +33,9 @@ const clientViewRoles = [
 ];
 
 router.get('/', authorize(...clientViewRoles), getClients);
+router.get('/lookup/overview', authorize(...clientViewRoles), getClientOverview);
 router.post('/sync-portal-users', authorize('superAdmin', 'admin', 'organizationOwner', 'manager'), syncPortalUsersHandler);
+router.get('/:id/overview', authorize(...clientViewRoles), getClientOverview);
 router.get('/:id', authorize(...clientViewRoles), getClient);
 router.post('/', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager'), createClient);
 router.put('/:id', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager'), updateClient);

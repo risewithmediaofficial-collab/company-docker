@@ -248,6 +248,7 @@ const Clients = () => {
       const q = searchTerm.toLowerCase().trim();
       result = result.filter(
         (c) =>
+          (c.clientId || '').toLowerCase().includes(q) ||
           (c.name || '').toLowerCase().includes(q) ||
           (c.company || '').toLowerCase().includes(q) ||
           (c.email || '').toLowerCase().includes(q) ||
@@ -319,8 +320,15 @@ const Clients = () => {
               {initials}
             </div>
             <div className="min-w-0">
-              <div className="font-bold text-foreground text-xs hover:text-primary transition-colors cursor-pointer truncate">
-                {displayName}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-bold text-foreground text-xs hover:text-primary transition-colors cursor-pointer truncate">
+                  {displayName}
+                </span>
+                {row.clientId && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-primary/10 text-primary border border-primary/20 shrink-0">
+                    {row.clientId}
+                  </span>
+                )}
               </div>
               {contactPerson && (
                 <div className="text-[11px] text-muted-foreground truncate">
@@ -718,12 +726,19 @@ const Clients = () => {
                                 {/* Compact Initial Row: Name + Enlarge Button */}
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="min-w-0 flex-1">
-                                    <h4
-                                      className="text-sm font-bold text-foreground group-hover:text-primary transition-colors leading-snug truncate"
-                                      title={displayName}
-                                    >
-                                      {displayName}
-                                    </h4>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <h4
+                                        className="text-sm font-bold text-foreground group-hover:text-primary transition-colors leading-snug truncate"
+                                        title={displayName}
+                                      >
+                                        {displayName}
+                                      </h4>
+                                      {client.clientId && (
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-primary/10 text-primary border border-primary/20 shrink-0">
+                                          {client.clientId}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                   <div className="flex items-center gap-1 shrink-0">
                                     {isExpanded && (

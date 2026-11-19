@@ -30,6 +30,7 @@ export const getSmmClients = async (req, res) => {
     crmClients.forEach((c) => {
       combinedMap.set(c._id.toString(), {
         _id: c._id,
+        clientId: c.clientId,
         companyName: c.company || c.name,
         name: c.name,
         email: c.email,
@@ -45,6 +46,7 @@ export const getSmmClients = async (req, res) => {
       if (!combinedMap.has(c._id.toString())) {
         combinedMap.set(c._id.toString(), {
           _id: c._id,
+          clientId: c.clientId,
           companyName: c.companyName,
           name: c.companyName,
           email: c.email,
@@ -83,6 +85,7 @@ export const getSmmClient = async (req, res) => {
       const escaped = decoded.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       client = await Client.findOne({
         $or: [
+          { clientId: { $regex: new RegExp(`^${escaped}$`, 'i') } },
           { company: { $regex: new RegExp(`^${escaped}$`, 'i') } },
           { name: { $regex: new RegExp(`^${escaped}$`, 'i') } },
           { email: decoded.toLowerCase() },
@@ -91,6 +94,7 @@ export const getSmmClient = async (req, res) => {
       if (!client) {
         client = await SmmClient.findOne({
           $or: [
+            { clientId: { $regex: new RegExp(`^${escaped}$`, 'i') } },
             { companyName: { $regex: new RegExp(`^${escaped}$`, 'i') } },
             { primaryContact: { $regex: new RegExp(`^${escaped}$`, 'i') } },
             { email: decoded.toLowerCase() },
@@ -123,6 +127,8 @@ export const createSmmClient = async (req, res) => {
       status: 'Active',
     });
 
+    let assignedClientId = req.body.clientId || null;
+
     try {
       const crmClient = await Client.create({
         name: companyName,
@@ -132,9 +138,15 @@ export const createSmmClient = async (req, res) => {
         website: req.body.website,
         logo: req.body.brandLogo,
         status: 'active',
+        ...(assignedClientId ? { clientId: assignedClientId } : {}),
       });
       if (crmClient && crmClient.email) {
         await ensureClientUserAccount(crmClient, req.user);
+      }
+      if (crmClient?.clientId) {
+        assignedClientId = crmClient.clientId;
+        smmClient.clientId = assignedClientId;
+        await smmClient.save();
       }
     } catch (e) {
       if (req.body.email) {
@@ -144,6 +156,10 @@ export const createSmmClient = async (req, res) => {
             if (req.body.phone && !existingCrmClient.phone) {
               existingCrmClient.phone = req.body.phone;
               await existingCrmClient.save();
+            }
+            if (existingCrmClient.clientId && !smmClient.clientId) {
+              smmClient.clientId = existingCrmClient.clientId;
+              await smmClient.save();
             }
             await ensureClientUserAccount(existingCrmClient, req.user);
           }

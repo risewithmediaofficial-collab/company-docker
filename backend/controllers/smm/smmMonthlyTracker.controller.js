@@ -45,6 +45,25 @@ const isTaskAssigned = (task) => {
   return false;
 };
 
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+const getMonthMatchers = (month, year) => {
+  const mIndex = Math.max(0, Math.min(11, (parseInt(month, 10) || 1) - 1));
+  const fullMonth = MONTH_NAMES[mIndex];
+  const shortMonth = fullMonth.slice(0, 3);
+  const monthRegex = new RegExp(`(${fullMonth}|${shortMonth})`, 'i');
+
+  const startOfMonth = new Date(year, mIndex, 1, 0, 0, 0, 0);
+  const endOfMonth = new Date(year, mIndex + 1, 0, 23, 59, 59, 999);
+  const bufferStart = new Date(startOfMonth.getTime() - 24 * 3600 * 1000);
+  const bufferEnd = new Date(endOfMonth.getTime() + 24 * 3600 * 1000);
+
+  return { fullMonth, shortMonth, monthRegex, startOfMonth, endOfMonth, bufferStart, bufferEnd };
+};
+
 // ── Helper: build empty days array for a month ─────────────────────────────
 const buildEmptyDays = (year, month) => {
   const daysInMonth = new Date(year, month, 0).getDate(); // month is 1-based
@@ -159,6 +178,232 @@ const resolveClientForUser = async (user) => {
   return null;
 };
 
+// ── Helper: format "18:30" -> "6:30P", "10:00" -> "10A" ─────────────────────
+export const formatShortTime = (timeStr) => {
+  if (!timeStr) return '';
+  if (timeStr instanceof Date) {
+    let h = timeStr.getHours();
+    const m = String(timeStr.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'P' : 'A';
+    h = h % 12 || 12;
+    return m === '00' ? `${h}${ampm}` : `${h}:${m}${ampm}`;
+  }
+  const str = String(timeStr);
+  if (str.includes('T')) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      let h = d.getHours();
+      const m = String(d.getMinutes()).padStart(2, '0');
+      const ampm = h >= 12 ? 'P' : 'A';
+      h = h % 12 || 12;
+      return m === '00' ? `${h}${ampm}` : `${h}:${m}${ampm}`;
+    }
+  }
+  const match = str.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return str;
+  let h = parseInt(match[1], 10);
+  const m = match[2];
+  const ampm = h >= 12 ? 'P' : 'A';
+  h = h % 12 || 12;
+  return m === '00' ? `${h}${ampm}` : `${h}:${m}${ampm}`;
+};
+
+// ── Helper: classify task content type (Reel vs Post vs Story) ───────────────
+export const classifyTaskContentType = (task) => {
+  const tType = (task.taskType || '').toLowerCase();
+  const cType = (task.contentType || '').toLowerCase();
+  const vType = (task.videoType || '').toLowerCase();
+  const title = (task.title || '').toLowerCase();
+
+  if (
+    tType === 'story' ||
+    title.includes('[story]') ||
+    title.startsWith('story:') ||
+    title.includes('story #')
+  ) {
+    return 'story';
+  }
+
+  if (
+    tType === 'reel' ||
+    tType === 'video' ||
+    tType === 'video_content' ||
+    cType === 'videos' ||
+    vType === 'reels' ||
+    vType === 'shorts' ||
+    vType === 'youtube' ||
+    vType === 'long_video' ||
+    title.includes('[reel]') ||
+    title.startsWith('reel:') ||
+    title.includes('reel #') ||
+    title.includes('reel ')
+  ) {
+    return 'reel';
+  }
+
+  return 'post';
+};
+
+// ── Helper: classify deliverable type from ProjectMonthlyDeliverable ──────────
+export const classifyDeliverableType = (contentType) => {
+  const norm = (contentType || '').toLowerCase().trim();
+  if (
+    norm.includes('reel') ||
+    norm.includes('short') ||
+    norm.includes('video') ||
+    norm.includes('youtube')
+  ) {
+    return 'reel';
+  }
+  if (norm.includes('story') || norm.includes('stories')) {
+    return 'story';
+  }
+  return 'post';
+};
+
+// ── Helper: map task workflow status to tracker cell status ───────────────────
+export const mapTaskStatusToCellStatus = (task) => {
+  const pStatus = (task.postingStatus || '').toLowerCase();
+  const status = (task.status || '').toLowerCase();
+
+  if (pStatus === 'posted' || status === 'completed' || status === 'done' || status === 'approved') {
+    return 'done';
+  }
+  if (status === 'rejected') {
+    return 'skip';
+  }
+  if (
+    pStatus === 'scheduled' ||
+    ['in_progress', 'review', 'client_approval', 'smm_team', 'on_process', 'review_required'].includes(status)
+  ) {
+    return 'pending';
+  }
+  return 'todo';
+};
+
+// ── Helper: merge tasks into day cells ────────────────────────────────────────
+export const mergeTasksIntoDays = (
+  days,
+  clientTasks = [],
+  daysInMonth,
+  projectName = '',
+  clientCompanyName = ''
+) => {
+  if (!Array.isArray(days) || clientTasks.length === 0) return { days, modified: false, taskCount: 0 };
+
+  let modified = false;
+  let taskCount = 0;
+  let reelIdx = 1, postIdx = 1, storyIdx = 1;
+
+  const getTaskDate = (t) =>
+    t.postingScheduleDate || t.publishingDate || t.dueDate || t.editDueDate || t.designDueDate || t.startDate || t.createdAt;
+
+  const sortedTasks = [...clientTasks].sort((a, b) => new Date(getTaskDate(a)) - new Date(getTaskDate(b)));
+
+  sortedTasks.forEach((task) => {
+    const pDate = getTaskDate(task);
+    let dayNum = null;
+
+    if (pDate) {
+      const dObj = new Date(pDate);
+      if (!isNaN(dObj.getTime())) {
+        dayNum = dObj.getDate();
+      }
+    }
+
+    if (!dayNum || dayNum < 1 || dayNum > daysInMonth) {
+      const dayMatch = (task.title || '').match(/\b(?:day|date)[-:\s]*(\d{1,2})\b/i);
+      if (dayMatch) {
+        const parsedDay = parseInt(dayMatch[1], 10);
+        if (parsedDay >= 1 && parsedDay <= daysInMonth) {
+          dayNum = parsedDay;
+        }
+      }
+    }
+
+    if (!dayNum || dayNum < 1) dayNum = 1;
+    if (dayNum > daysInMonth) dayNum = daysInMonth;
+
+    const dayCell = days.find((d) => d.day === dayNum);
+    if (!dayCell) return;
+
+    const cType = classifyTaskContentType(task);
+    const status = mapTaskStatusToCellStatus(task);
+    const timeStr = formatShortTime(task.publishingTime || task.postingScheduleDate || pDate);
+
+    // Extract reel/post/story number from title if present (e.g. "Reel #1: ...", "Post 2 - ...")
+    let label = '';
+    const reelMatch = (task.title || '').match(/reel\s*#?\s*(\d+)/i);
+    const postMatch = (task.title || '').match(/post\s*#?\s*(\d+)/i);
+    const storyMatch = (task.title || '').match(/story\s*#?\s*(\d+)/i);
+
+    if (cType === 'reel') {
+      const num = reelMatch ? parseInt(reelMatch[1], 10) : reelIdx++;
+      label = `R${num} ${timeStr}`.trim();
+    } else if (cType === 'story') {
+      const num = storyMatch ? parseInt(storyMatch[1], 10) : storyIdx++;
+      label = `S${num} ${timeStr}`.trim();
+    } else {
+      const num = postMatch ? parseInt(postMatch[1], 10) : postIdx++;
+      label = `P${num} ${timeStr}`.trim();
+    }
+
+    if (!Array.isArray(dayCell.items)) {
+      dayCell.items = [];
+    }
+
+    const taskIdStr = task._id?.toString();
+    const existingIdx = taskIdStr ? dayCell.items.findIndex((it) => it.id === taskIdStr) : -1;
+    const itemType = cType === 'story' ? 'story' : cType === 'reel' ? 'reel' : 'post';
+
+    const dayItem = {
+      id: taskIdStr || '',
+      type: itemType,
+      label,
+      time: timeStr,
+      status,
+      title: task.title || '',
+      projectName: projectName || task.project?.name || '',
+      clientName: clientCompanyName || task.client?.company || '',
+      note: task.description || '',
+      driveLink: task.rawFootageLink || task.driveLink || '',
+      postingDate: task.postingScheduleDate || task.publishingDate || pDate,
+    };
+
+    if (existingIdx >= 0) {
+      dayCell.items[existingIdx] = { ...dayCell.items[existingIdx], ...dayItem };
+    } else {
+      dayCell.items.push(dayItem);
+    }
+
+    if (cType === 'reel' || cType === 'post') {
+      if (!hasPosterContent(dayCell.postLabel)) {
+        dayCell.postLabel = label;
+        dayCell.postStatus = status;
+        modified = true;
+      } else if (status === 'done' && dayCell.postStatus !== 'done') {
+        dayCell.postStatus = 'done';
+        modified = true;
+      }
+    }
+
+    if (cType === 'story') {
+      if (!hasPosterContent(dayCell.storyLabel)) {
+        dayCell.storyLabel = label;
+        dayCell.storyStatus = status;
+        modified = true;
+      } else if (status === 'done' && dayCell.storyStatus !== 'done') {
+        dayCell.storyStatus = 'done';
+        modified = true;
+      }
+    }
+
+    taskCount++;
+  });
+
+  return { days, modified, taskCount };
+};
+
 // ── GET all tracker rows for a given month/year ─────────────────────────────
 // GET /api/smm/tracker?month=9&year=2026
 export const getMonthlyTrackers = async (req, res) => {
@@ -196,6 +441,29 @@ export const getMonthlyTrackers = async (req, res) => {
         status: 'Active',
       };
 
+      const { monthRegex, bufferStart, bufferEnd } = getMonthMatchers(month, year);
+      const rawClientTasks = await Task.find({
+        $or: [
+          { client: { $in: clientIds } },
+          { clientName: { $regex: new RegExp(`^${(client.companyName || '').trim()}$`, 'i') } },
+        ],
+        $and: [
+          {
+            $or: [
+              { postingScheduleDate: { $gte: bufferStart, $lte: bufferEnd } },
+              { publishingDate: { $gte: bufferStart, $lte: bufferEnd } },
+              { dueDate: { $gte: bufferStart, $lte: bufferEnd } },
+              { title: monthRegex },
+            ],
+          },
+          { isDevTask: { $ne: true } },
+          { department: { $ne: 'Development' } },
+          { taskCategory: { $ne: 'non_content' } },
+        ],
+      }).lean();
+
+      const clientTasks = rawClientTasks.filter((t) => isSmmTask(t));
+
       let rowData;
       if (tracker && !tracker.isExcluded) {
         let modified = false;
@@ -217,21 +485,46 @@ export const getMonthlyTrackers = async (req, res) => {
           return newDay;
         });
 
+        if (clientTasks.length > 0) {
+          const { modified: tasksMod } = mergeTasksIntoDays(
+            updatedDays,
+            clientTasks,
+            daysInMonth,
+            tracker.projectName || '',
+            clientObj.companyName
+          );
+          if (tasksMod) modified = true;
+        }
+
         if (modified && tracker._id) {
           SmmMonthlyTracker.findByIdAndUpdate(tracker._id, { $set: { days: updatedDays } }).catch(() => {});
         }
 
         rowData = { ...tracker, days: updatedDays, client: clientObj };
       } else {
+        const scaffoldDays = buildEmptyDays(year, month);
+        mergeTasksIntoDays(
+          scaffoldDays,
+          clientTasks,
+          daysInMonth,
+          '',
+          clientObj.companyName
+        );
+        let rCount = clientTasks.filter((t) => classifyTaskContentType(t) === 'reel').length;
+        let pCount = clientTasks.filter((t) => classifyTaskContentType(t) === 'post').length;
+        let sCount = clientTasks.filter((t) => classifyTaskContentType(t) === 'story').length;
+        const plan = (rCount > 0 || pCount > 0) ? `${rCount}R + ${pCount}P` : '';
+        const storyPlan = sCount > 0 ? `${sCount} STORIES` : '30 STORIES';
+
         rowData = {
           _id: null,
           client: clientObj,
           team: 'RWM',
-          plan: '',
-          storyPlan: '30 STORIES',
+          plan,
+          storyPlan,
           month,
           year,
-          days: buildEmptyDays(year, month),
+          days: scaffoldDays,
           _scaffold: true,
         };
       }
@@ -243,9 +536,11 @@ export const getMonthlyTrackers = async (req, res) => {
     const projectFilter = withWorkspaceScope(req, { status: { $ne: 'cancelled' } });
     const projects = await Project.find(projectFilter).select('_id client name category').lean();
     const clientToProject = new Map();
+    const projectToClient = new Map();
     projects.forEach((p) => {
       if (p.client) {
         const cId = p.client.toString();
+        projectToClient.set(p._id.toString(), cId);
         if (!clientToProject.has(cId) || p.category === 'smm' || p.category === 'social_media') {
           clientToProject.set(cId, p);
         }
@@ -261,19 +556,28 @@ export const getMonthlyTrackers = async (req, res) => {
 
     // Build unified active client map
     const clientMap = new Map();
+    const nameToClientId = new Map();
+
     crmClients.forEach((c) => {
       const cName = c.company || c.name || 'Client';
-      clientMap.set(c._id.toString(), {
+      const cIdStr = c._id.toString();
+      clientMap.set(cIdStr, {
         _id: c._id,
+        clientId: c.clientId,
         companyName: cName,
         status: 'Active',
       });
+      const norm = cName.trim().toLowerCase();
+      if (norm && !nameToClientId.has(norm)) {
+        nameToClientId.set(norm, cIdStr);
+      }
       // Background mirror to SmmClient for consistency
       SmmClient.findByIdAndUpdate(
         c._id,
         {
           $setOnInsert: {
             _id: c._id,
+            clientId: c.clientId,
             companyName: cName,
             status: 'Active',
             email: c.email || '',
@@ -285,12 +589,19 @@ export const getMonthlyTrackers = async (req, res) => {
     });
 
     smmClientsList.forEach((c) => {
-      if (!clientMap.has(c._id.toString())) {
-        clientMap.set(c._id.toString(), {
+      const cIdStr = c._id.toString();
+      const cName = c.companyName || 'Client';
+      if (!clientMap.has(cIdStr)) {
+        clientMap.set(cIdStr, {
           _id: c._id,
-          companyName: c.companyName || 'Client',
+          clientId: c.clientId,
+          companyName: cName,
           status: c.status || 'Active',
         });
+      }
+      const norm = cName.trim().toLowerCase();
+      if (norm && !nameToClientId.has(norm)) {
+        nameToClientId.set(norm, cIdStr);
       }
     });
 
@@ -308,56 +619,112 @@ export const getMonthlyTrackers = async (req, res) => {
         Client.find({ _id: { $in: missingClientIds } }).lean(),
         SmmClient.find({ _id: { $in: missingClientIds } }).lean(),
       ]);
-      extraCrm.forEach((c) => clientMap.set(c._id.toString(), { _id: c._id, companyName: c.company || c.name || 'Client', status: 'Active' }));
+      extraCrm.forEach((c) => {
+        const cIdStr = c._id.toString();
+        const cName = c.company || c.name || 'Client';
+        clientMap.set(cIdStr, { _id: c._id, clientId: c.clientId, companyName: cName, status: 'Active' });
+        const norm = cName.trim().toLowerCase();
+        if (norm && !nameToClientId.has(norm)) nameToClientId.set(norm, cIdStr);
+      });
       extraSmm.forEach((c) => {
-        if (!clientMap.has(c._id.toString())) {
-          clientMap.set(c._id.toString(), { _id: c._id, companyName: c.companyName || 'Client', status: c.status || 'Active' });
+        const cIdStr = c._id.toString();
+        const cName = c.companyName || 'Client';
+        if (!clientMap.has(cIdStr)) {
+          clientMap.set(cIdStr, { _id: c._id, clientId: c.clientId, companyName: cName, status: c.status || 'Active' });
+          const norm = cName.trim().toLowerCase();
+          if (norm && !nameToClientId.has(norm)) nameToClientId.set(norm, cIdStr);
         }
       });
     }
 
     // 4. Check which clients have SMM tasks for this month
-    const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0);
-    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
-    const bufferStart = new Date(startOfMonth.getTime() - 24 * 3600 * 1000);
-    const bufferEnd = new Date(endOfMonth.getTime() + 24 * 3600 * 1000);
+    const { monthRegex, bufferStart, bufferEnd } = getMonthMatchers(month, year);
 
-    const rawMonthTasks = await Task.find(withWorkspaceScope(req, {
-      $and: [
-        {
-          $or: [
-            { postingScheduleDate: { $gte: bufferStart, $lte: bufferEnd } },
-            { publishingDate: { $gte: bufferStart, $lte: bufferEnd } },
-            { editDueDate: { $gte: bufferStart, $lte: bufferEnd } },
-            { designDueDate: { $gte: bufferStart, $lte: bufferEnd } },
-            { dueDate: { $gte: bufferStart, $lte: bufferEnd } },
-          ],
-        },
-        { isDevTask: { $ne: true } },
-        { department: { $ne: 'Development' } },
-        { taskCategory: { $ne: 'non_content' } },
-      ],
-    })).populate('project', '_id name client').lean();
-
-    const monthTasks = rawMonthTasks.filter((t) => isSmmTask(t));
-    const clientsWithTasks = new Set();
-    monthTasks.forEach((t) => {
-      const cId = t.client?._id?.toString() || (t.client ? t.client.toString() : null) || (t.project?.client ? t.project.client.toString() : null);
-      if (cId) {
-        clientsWithTasks.add(cId);
-        if (t.project && !clientToProject.has(cId)) {
-          clientToProject.set(cId, t.project);
-        }
-      }
-    });
+    // Target project IDs explicitly mapped to this month (by name or deliverable)
+    const monthProjectIds = projects
+      .filter((p) => p.name && monthRegex.test(p.name))
+      .map((p) => p._id.toString());
 
     // 5. Check which clients have monthly deliverables
     const deliverables = await ProjectMonthlyDeliverable.find(withWorkspaceScope(req, { month, year })).lean();
     const clientsWithDeliverables = new Set();
+    const deliverablesByClient = {};
+    const deliverableProjectIds = [];
+
     deliverables.forEach((d) => {
       const pIdStr = d.projectId?.toString();
+      if (pIdStr) deliverableProjectIds.push(pIdStr);
       const proj = projects.find((p) => p._id.toString() === pIdStr);
-      if (proj?.client) clientsWithDeliverables.add(proj.client.toString());
+      const cId = proj?.client ? proj.client.toString() : projectToClient.get(pIdStr);
+      if (cId) {
+        clientsWithDeliverables.add(cId);
+        if (!deliverablesByClient[cId]) {
+          deliverablesByClient[cId] = { reels: 0, posts: 0, stories: 0, total: 0, projectId: pIdStr };
+        }
+        const type = classifyDeliverableType(d.contentType);
+        const qty = Number(d.targetQuantity) || 0;
+        if (type === 'reel') deliverablesByClient[cId].reels += qty;
+        else if (type === 'post') deliverablesByClient[cId].posts += qty;
+        else if (type === 'story') deliverablesByClient[cId].stories += qty;
+        deliverablesByClient[cId].total += qty;
+      }
+    });
+
+    const targetProjectIds = Array.from(new Set([...monthProjectIds, ...deliverableProjectIds]));
+
+    const taskQueryOr = [
+      { postingScheduleDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { publishingDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { editDueDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { designDueDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { dueDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { startDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { title: monthRegex },
+    ];
+
+    if (targetProjectIds.length > 0) {
+      taskQueryOr.push({ project: { $in: targetProjectIds } });
+    }
+
+    const rawMonthTasks = await Task.find(withWorkspaceScope(req, {
+      $and: [
+        { $or: taskQueryOr },
+        { isDevTask: { $ne: true } },
+        { department: { $ne: 'Development' } },
+        { taskCategory: { $ne: 'non_content' } },
+      ],
+    })).populate('project', '_id name client').populate('client', '_id company name').lean();
+
+    const monthTasks = rawMonthTasks.filter((t) => isSmmTask(t));
+    const clientsWithTasks = new Set();
+    const tasksByClient = {};
+    const tasksByCompanyName = new Map();
+
+    monthTasks.forEach((t) => {
+      let cId = t.client?._id?.toString() || (t.client ? t.client.toString() : null) || (t.project?.client ? t.project.client.toString() : null) || projectToClient.get(t.project?._id?.toString());
+      if (!cId && t.clientName) {
+        cId = nameToClientId.get(t.clientName.trim().toLowerCase());
+      }
+      if (cId) {
+        clientsWithTasks.add(cId);
+        if (!tasksByClient[cId]) tasksByClient[cId] = [];
+        tasksByClient[cId].push(t);
+        if (t.project && !clientToProject.has(cId)) {
+          clientToProject.set(cId, t.project);
+        }
+      }
+
+      // Also index by company name and project name for cross-matching
+      const compName = (t.client?.company || t.client?.name || t.clientName || '').trim().toLowerCase();
+      if (compName) {
+        if (!tasksByCompanyName.has(compName)) tasksByCompanyName.set(compName, []);
+        tasksByCompanyName.get(compName).push(t);
+      }
+      if (t.project?.name) {
+        const pKey = `proj::${t.project.name.trim().toLowerCase()}`;
+        if (!tasksByCompanyName.has(pKey)) tasksByCompanyName.set(pKey, []);
+        tasksByCompanyName.get(pKey).push(t);
+      }
     });
 
     const trackerMap = {};
@@ -385,13 +752,33 @@ export const getMonthlyTrackers = async (req, res) => {
           return newDay;
         });
 
+        const clientObj = clientMap.get(cIdStr) || { _id: t.client, companyName: 'Client', status: 'Active' };
+        const proj = clientToProject.get(cIdStr) || null;
+        const projectName = t.projectName || proj?.name || '';
+        const compKey = (clientObj.companyName || '').trim().toLowerCase();
+        const pKey = projectName ? `proj::${projectName.trim().toLowerCase()}` : '';
+
+        // Live merge scheduled tasks into updatedDays for real-time visibility
+        const clientMonthTasks = tasksByClient[cIdStr]
+          || (compKey ? tasksByCompanyName.get(compKey) : null)
+          || (pKey ? tasksByCompanyName.get(pKey) : null)
+          || [];
+
+        if (clientMonthTasks.length > 0) {
+          const { modified: tasksMod } = mergeTasksIntoDays(
+            updatedDays,
+            clientMonthTasks,
+            daysInMonth,
+            projectName,
+            clientObj.companyName
+          );
+          if (tasksMod) modified = true;
+        }
+
         if (modified && t._id) {
           SmmMonthlyTracker.findByIdAndUpdate(t._id, { $set: { days: updatedDays } }).catch(() => {});
         }
 
-        const clientObj = clientMap.get(cIdStr) || { _id: t.client, companyName: 'Client', status: 'Active' };
-        const proj = clientToProject.get(cIdStr) || null;
-        const projectName = t.projectName || proj?.name || '';
         const pop = {
           ...t,
           days: updatedDays,
@@ -405,53 +792,81 @@ export const getMonthlyTrackers = async (req, res) => {
     });
 
     const handledClientIds = new Set();
+    const seenCompanyKeys = new Set();
     const rows = [];
 
-    // Filter to only clients that have SMM relevance (saved tracker, assigned SMM tasks, or deliverables)
-    for (const [cIdStr, client] of clientMap.entries()) {
-      handledClientIds.add(cIdStr);
-      const existing = trackerMap[cIdStr];
-
-      // If explicitly marked as excluded for this month, skip it
-      if (existing?.isExcluded) {
-        continue;
-      }
-
-      if (existing) {
-        rows.push(existing);
-      } else {
-        // Only scaffold if client actually has SMM tasks, project deliverables, or SMM project
-        const hasTasks = clientsWithTasks.has(cIdStr);
-        const hasDelivs = clientsWithDeliverables.has(cIdStr);
-        const proj = clientToProject.get(cIdStr);
-        const isSmmProj = proj && (proj.category === 'smm' || proj.category === 'social_media');
-
-        if (hasTasks || hasDelivs || isSmmProj) {
-          rows.push({
-            _id: null,
-            client: { _id: client._id, companyName: client.companyName },
-            projectName: proj?.name || '',
-            project: proj ? { _id: proj._id, name: proj.name } : null,
-            team: 'RWM',
-            plan: '',
-            storyPlan: '30 STORIES',
-            month,
-            year,
-            days: buildEmptyDays(year, month),
-            _scaffold: true,
-          });
-        }
-      }
+    // 1. Process all existing (saved) trackers first
+    for (const existing of existingPopulatedList) {
+      if (existing.isExcluded) continue;
+      const cIdStr = existing.client?._id?.toString() || existing.client?.toString();
+      const compKey = (existing.client?.companyName || '').trim().toLowerCase();
+      if (compKey) seenCompanyKeys.add(compKey);
+      if (cIdStr) handledClientIds.add(cIdStr);
+      rows.push(existing);
     }
 
-    // Also include any other non-excluded trackers for this month
-    for (const existing of existingPopulatedList) {
-      const cIdStr = existing.client?._id?.toString();
-      if (cIdStr && !handledClientIds.has(cIdStr) && !existing.isExcluded) {
-        const proj = clientToProject.get(cIdStr) || null;
-        existing.projectName = existing.projectName || proj?.name || '';
-        existing.project = proj ? { _id: proj._id, name: proj.name } : (existing.project ? { _id: existing.project, name: existing.projectName } : null);
-        rows.push(existing);
+    // 2. Only scaffold clients that do NOT already have a row for this company
+    for (const [cIdStr, client] of clientMap.entries()) {
+      if (handledClientIds.has(cIdStr)) continue;
+      const compKey = (client.companyName || '').trim().toLowerCase();
+      if (compKey && seenCompanyKeys.has(compKey)) {
+        continue; // Already has a tracker row for this company
+      }
+
+      const proj = clientToProject.get(cIdStr);
+      const pKey = proj?.name ? `proj::${proj.name.trim().toLowerCase()}` : '';
+      const clientMonthTasks = tasksByClient[cIdStr]
+        || (compKey ? tasksByCompanyName.get(compKey) : null)
+        || (pKey ? tasksByCompanyName.get(pKey) : null)
+        || [];
+
+      const hasTasks = clientMonthTasks.length > 0 || clientsWithTasks.has(cIdStr);
+      const hasDelivs = clientsWithDeliverables.has(cIdStr);
+      const isSmmProj = proj && (proj.category === 'smm' || proj.category === 'social_media');
+
+      if (hasTasks || hasDelivs || isSmmProj) {
+        if (compKey) seenCompanyKeys.add(compKey);
+        handledClientIds.add(cIdStr);
+
+        const scaffoldDays = buildEmptyDays(year, month);
+        mergeTasksIntoDays(
+          scaffoldDays,
+          clientMonthTasks,
+          daysInMonth,
+          proj?.name || '',
+          client.companyName
+        );
+
+        const clientDeliv = deliverablesByClient[cIdStr];
+        let reelsTarget = clientDeliv?.reels ?? 0;
+        let postsTarget = clientDeliv?.posts ?? 0;
+        let storiesTarget = clientDeliv?.stories ?? 0;
+
+        if (reelsTarget === 0 && postsTarget === 0) {
+          const rCount = clientMonthTasks.filter((t) => classifyTaskContentType(t) === 'reel').length;
+          const pCount = clientMonthTasks.filter((t) => classifyTaskContentType(t) === 'post').length;
+          const sCount = clientMonthTasks.filter((t) => classifyTaskContentType(t) === 'story').length;
+          if (rCount > 0) reelsTarget = rCount;
+          if (pCount > 0) postsTarget = pCount;
+          if (sCount > 0) storiesTarget = sCount;
+        }
+
+        const plan = (reelsTarget > 0 || postsTarget > 0) ? `${reelsTarget}R + ${postsTarget}P` : '';
+        const storyPlan = `${storiesTarget || 30} STORIES`;
+
+        rows.push({
+          _id: null,
+          client: { _id: client._id, clientId: client.clientId, companyName: client.companyName },
+          projectName: proj?.name || '',
+          project: proj ? { _id: proj._id, name: proj.name } : null,
+          team: 'RWM',
+          plan,
+          storyPlan,
+          month,
+          year,
+          days: scaffoldDays,
+          _scaffold: true,
+        });
       }
     }
 
@@ -743,106 +1158,6 @@ export const updateTrackerMeta = async (req, res) => {
   }
 };
 
-// ── Helper: format "18:30" -> "6:30P", "10:00" -> "10A"
-const formatShortTime = (timeStr) => {
-  if (!timeStr) return '';
-  if (timeStr instanceof Date) {
-    let h = timeStr.getHours();
-    const m = String(timeStr.getMinutes()).padStart(2, '0');
-    const ampm = h >= 12 ? 'P' : 'A';
-    h = h % 12 || 12;
-    return m === '00' ? `${h}${ampm}` : `${h}:${m}${ampm}`;
-  }
-  const str = String(timeStr);
-  if (str.includes('T')) {
-    const d = new Date(str);
-    if (!isNaN(d.getTime())) {
-      let h = d.getHours();
-      const m = String(d.getMinutes()).padStart(2, '0');
-      const ampm = h >= 12 ? 'P' : 'A';
-      h = h % 12 || 12;
-      return m === '00' ? `${h}${ampm}` : `${h}:${m}${ampm}`;
-    }
-  }
-  const match = str.match(/^(\d{1,2}):(\d{2})/);
-  if (!match) return str;
-  let h = parseInt(match[1], 10);
-  const m = match[2];
-  const ampm = h >= 12 ? 'P' : 'A';
-  h = h % 12 || 12;
-  return m === '00' ? `${h}${ampm}` : `${h}:${m}${ampm}`;
-};
-
-// ── Helper: classify task content type (Reel vs Post vs Story) ───────────────
-export const classifyTaskContentType = (task) => {
-  const tType = (task.taskType || '').toLowerCase();
-  const cType = (task.contentType || '').toLowerCase();
-  const vType = (task.videoType || '').toLowerCase();
-  const title = (task.title || '').toLowerCase();
-
-  if (
-    tType === 'story' ||
-    title.includes('[story]') ||
-    title.startsWith('story:')
-  ) {
-    return 'story';
-  }
-
-  if (
-    tType === 'reel' ||
-    tType === 'video' ||
-    tType === 'video_content' ||
-    cType === 'videos' ||
-    vType === 'reels' ||
-    vType === 'shorts' ||
-    vType === 'youtube' ||
-    vType === 'long_video' ||
-    title.includes('[reel]') ||
-    title.startsWith('reel:')
-  ) {
-    return 'reel';
-  }
-
-  return 'post';
-};
-
-// ── Helper: classify deliverable type from ProjectMonthlyDeliverable ──────────
-export const classifyDeliverableType = (contentType) => {
-  const norm = (contentType || '').toLowerCase().trim();
-  if (
-    norm.includes('reel') ||
-    norm.includes('short') ||
-    norm.includes('video') ||
-    norm.includes('youtube')
-  ) {
-    return 'reel';
-  }
-  if (norm.includes('story') || norm.includes('stories')) {
-    return 'story';
-  }
-  return 'post';
-};
-
-// ── Helper: map task workflow status to tracker cell status ───────────────────
-export const mapTaskStatusToCellStatus = (task) => {
-  const pStatus = (task.postingStatus || '').toLowerCase();
-  const status = (task.status || '').toLowerCase();
-
-  if (pStatus === 'posted' || status === 'completed' || status === 'done' || status === 'approved') {
-    return 'done';
-  }
-  if (status === 'rejected') {
-    return 'skip';
-  }
-  if (
-    pStatus === 'scheduled' ||
-    ['in_progress', 'review', 'client_approval', 'smm_team', 'on_process', 'review_required'].includes(status)
-  ) {
-    return 'pending';
-  }
-  return 'todo';
-};
-
 // ── POST /api/smm/tracker/sync-tasks ─────────────────────────────────────────
 // Syncs One-Page Tracker with Tasks and Project Monthly Deliverables:
 // 1. Project monthly deliverables count sets target count for Reels and Posts in Plan
@@ -853,10 +1168,7 @@ export const syncTasksWithTracker = async (req, res) => {
     const year  = parseInt(req.body.year, 10)  || new Date().getFullYear();
     const daysInMonth = new Date(year, month, 0).getDate();
 
-    const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0);
-    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
-    const bufferStart = new Date(startOfMonth.getTime() - 24 * 3600 * 1000);
-    const bufferEnd = new Date(endOfMonth.getTime() + 24 * 3600 * 1000);
+    const { monthRegex, startOfMonth, endOfMonth, bufferStart, bufferEnd } = getMonthMatchers(month, year);
 
     // 1. Fetch active projects within scope to map project -> client & client -> project
     const projects = await Project.find(withWorkspaceScope(req, { status: { $ne: 'cancelled' } }))
@@ -919,18 +1231,29 @@ export const syncTasksWithTracker = async (req, res) => {
       deliverablesByClient[cId].total += qty;
     });
 
-    // 4. Fetch content tasks — match by any date field in target month
+    // 4. Fetch content tasks — match either by date in month, project name matching month, title matching month, or deliverable projects
+    const allTargetProjectIds = Array.from(new Set([
+      ...projects.filter((p) => p.name && monthRegex.test(p.name)).map((p) => p._id.toString()),
+      ...deliverables.map((d) => d.projectId?.toString()).filter(Boolean),
+    ]));
+
+    const taskQueryOr = [
+      { postingScheduleDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { publishingDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { editDueDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { designDueDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { dueDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { startDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { title: monthRegex },
+    ];
+
+    if (allTargetProjectIds.length > 0) {
+      taskQueryOr.push({ project: { $in: allTargetProjectIds } });
+    }
+
     const rawTasks = await Task.find(withWorkspaceScope(req, {
       $and: [
-        {
-          $or: [
-            { postingScheduleDate: { $gte: bufferStart, $lte: bufferEnd } },
-            { publishingDate: { $gte: bufferStart, $lte: bufferEnd } },
-            { editDueDate: { $gte: bufferStart, $lte: bufferEnd } },
-            { designDueDate: { $gte: bufferStart, $lte: bufferEnd } },
-            { dueDate: { $gte: bufferStart, $lte: bufferEnd } },
-          ],
-        },
+        { $or: taskQueryOr },
         { isDevTask: { $ne: true } },
         { department: { $ne: 'Development' } },
         { taskCategory: { $ne: 'non_content' } },
@@ -1010,7 +1333,7 @@ export const syncTasksWithTracker = async (req, res) => {
 
       // Sort tasks chronologically using best post date
       const getTaskDate = (t) =>
-        t.postingScheduleDate || t.publishingDate || t.dueDate || t.editDueDate || t.designDueDate || t.createdAt;
+        t.postingScheduleDate || t.publishingDate || t.dueDate || t.editDueDate || t.designDueDate || t.startDate || t.createdAt;
 
       clientTasks.sort((a, b) => new Date(getTaskDate(a)) - new Date(getTaskDate(b)));
 
@@ -1021,71 +1344,8 @@ export const syncTasksWithTracker = async (req, res) => {
       const projectId = projInfo?._id || projInfo?.id || null;
       const projectName = projInfo?.name || '';
 
-      let reelIdx = 1, postIdx = 1, storyIdx = 1;
-      clientTasks.forEach((task) => {
-        const pDate = getTaskDate(task);
-        if (!pDate) return;
-        const dObj = new Date(pDate);
-        let dayNum = dObj.getDate();
-        if (dObj.getMonth() + 1 !== month && dObj.getUTCMonth() + 1 === month) {
-          dayNum = dObj.getUTCDate();
-        }
-        if (dayNum < 1 || dayNum > daysInMonth) return;
-
-        const dayCell = days.find((d) => d.day === dayNum);
-        if (!dayCell) return;
-
-        const timeStr = formatShortTime(task.publishingTime || pDate);
-        const status = mapTaskStatusToCellStatus(task);
-        const cType = classifyTaskContentType(task);
-
-        let label = '';
-        let itemType = 'post';
-
-        if (cType === 'reel') {
-          itemType = 'reel';
-          label = `R${reelIdx++} ${timeStr}`.trim();
-          dayCell.postLabel = label;
-          dayCell.postStatus = status;
-        } else if (cType === 'story') {
-          itemType = 'story';
-          label = `S${storyIdx++} ${timeStr}`.trim();
-          dayCell.storyLabel = label;
-          dayCell.storyStatus = status;
-        } else {
-          itemType = 'post';
-          label = `P${postIdx++} ${timeStr}`.trim();
-          dayCell.postLabel = label;
-          dayCell.postStatus = status;
-        }
-
-        if (!dayCell.note && (task.description || task.notes)) {
-          dayCell.note = (task.description || task.notes || '').slice(0, 200);
-        }
-
-        if (!Array.isArray(dayCell.items)) {
-          dayCell.items = [];
-        }
-        const existingIdx = dayCell.items.findIndex((it) => it.id === task._id.toString());
-        const dayItem = {
-          id: task._id.toString(),
-          type: itemType,
-          label,
-          time: timeStr,
-          status,
-          title: task.title || '',
-          projectName: projectName || task.project?.name || '',
-          clientName: client.companyName || task.client?.company || '',
-          note: task.description || '',
-          driveLink: task.rawFootageLink || '',
-        };
-        if (existingIdx >= 0) {
-          dayCell.items[existingIdx] = dayItem;
-        } else {
-          dayCell.items.push(dayItem);
-        }
-        syncedTaskCount++;
-      });
+      mergeTasksIntoDays(days, clientTasks, daysInMonth, projectName, client.companyName);
+      syncedTaskCount += clientTasks.length;
 
       // Mirror to SmmClient for consistency
       await SmmClient.findByIdAndUpdate(
@@ -1100,20 +1360,24 @@ export const syncTasksWithTracker = async (req, res) => {
         { upsert: true }
       ).catch(() => {});
 
+      const updateFields = {
+        plan,
+        storyPlan,
+        days,
+        project: projectId,
+        projectName,
+        isExcluded: false,
+      };
+      if (mongoose.Types.ObjectId.isValid(req.user?.organizationId)) {
+        updateFields.organizationId = req.user.organizationId;
+      }
+      if (mongoose.Types.ObjectId.isValid(req.user?._id)) {
+        updateFields.updatedBy = req.user._id;
+      }
+
       await SmmMonthlyTracker.findOneAndUpdate(
         { client: client._id, month, year },
-        {
-          $set: {
-            plan,
-            storyPlan,
-            days,
-            project: projectId,
-            projectName,
-            organizationId: req.user?.organizationId,
-            isExcluded: false,
-            updatedBy: req.user?._id,
-          },
-        },
+        { $set: updateFields },
         { upsert: true, new: true }
       );
       updatedCount++;
@@ -1147,8 +1411,7 @@ export const getClientDeliverablesSummary = async (req, res) => {
       return res.status(400).json({ success: false, message: 'clientId is required' });
     }
 
-    const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0);
-    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+    const { monthRegex, bufferStart, bufferEnd } = getMonthMatchers(month, year);
 
     // Find all projects for this client
     const projects = await Project.find({ client: clientId }).select('_id name category').lean();
@@ -1173,27 +1436,28 @@ export const getClientDeliverablesSummary = async (req, res) => {
       else if (type === 'story') storiesCount += qty;
     });
 
-    // Find assigned SMM tasks scheduled with postingScheduleDate, publishingDate, or dueDate
+    const taskDateOr = [
+      { postingScheduleDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { publishingDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { dueDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { startDate: { $gte: bufferStart, $lte: bufferEnd } },
+      { title: monthRegex },
+    ];
+
     const rawTasks = await Task.find({
       $or: [
         { client: clientId },
         { project: { $in: projectIds } },
       ],
       $and: [
-        {
-          $or: [
-            { postingScheduleDate: { $gte: startOfMonth, $lte: endOfMonth } },
-            { publishingDate: { $gte: startOfMonth, $lte: endOfMonth } },
-            { dueDate: { $gte: startOfMonth, $lte: endOfMonth } },
-          ],
-        },
+        { $or: taskDateOr },
       ],
-      taskCategory: { $in: ['content', 'smm'] },
       isDevTask: { $ne: true },
       department: { $ne: 'Development' },
+      taskCategory: { $ne: 'non_content' },
     }).lean();
 
-    const tasks = rawTasks.filter((t) => isSmmTask(t) && isTaskAssigned(t));
+    const tasks = rawTasks.filter((t) => isSmmTask(t));
 
     const taskReels = tasks.filter((t) => classifyTaskContentType(t) === 'reel').length;
     const taskPosts = tasks.filter((t) => classifyTaskContentType(t) === 'post').length;

@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 
 const smmClientSchema = new mongoose.Schema(
   {
+    clientId: { type: String, trim: true, index: true },
     companyName: { type: String, required: true, trim: true },
     brandLogo: { type: String, default: '' },
     website: { type: String, default: '' },

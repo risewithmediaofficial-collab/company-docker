@@ -25,6 +25,7 @@ import mongoose from 'mongoose';
 import { syncAllClientUsers } from './controllers/client.controller.js';
 import { migrateDevTasksFromTasksCollection } from './utils/devTaskMigration.js';
 import { migrateLegacyOrganizationData } from './utils/legacyOrgMigration.js';
+import { backfillClientIds } from './utils/clientMigration.js';
 
 // Route imports
 import authRoutes from './routes/auth.routes.js';
@@ -129,6 +130,9 @@ const runDatabaseStartupTasks = async () => {
 
   // Background migration to ensure legacy documents are associated with primary organization
   migrateLegacyOrganizationData().catch((err) => console.error('[Legacy Org Migration Error]', err.message));
+
+  // Background migration to ensure human-readable sequential Client IDs (CLT-0001, etc.)
+  backfillClientIds().catch((err) => console.error('[Client ID Migration Error]', err.message));
 };
 
 mongoose.connection.on('connected', () => {
