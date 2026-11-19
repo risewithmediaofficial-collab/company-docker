@@ -14,6 +14,7 @@ export const smmApi = {
   updateTrackerDayCell: (id, day, data) => api.patch(`/smm/tracker/${id}/day/${day}`, data),
   updateTrackerMeta: (id, data) => api.patch(`/smm/tracker/${id}/meta`, data),
   deleteTracker: (id, config) => api.delete(`/smm/tracker/${id}`, config),
+  bulkDeleteTrackers: (data) => api.post('/smm/tracker/bulk-delete', data),
   syncTasksTracker: (data) => api.post('/smm/tracker/sync-tasks', data),
   syncContentTracker: (data) => api.post('/smm/tracker/sync-tasks', data),
   getClientDeliverablesSummary: (params) => api.get('/smm/tracker/client-deliverables-summary', { params }),

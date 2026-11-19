@@ -27,8 +27,8 @@ const MONTHS = [
 const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 // ── Column pixel widths (Desktop & Responsive Mobile) ─────────────────────────
-const COL_DESKTOP = { NO: 36, TEAM: 52, CLIENT: 200, PLAN: 104, DAY: 68, DONE: 68 };
-const COL_MOBILE  = { NO: 28, TEAM: 48, CLIENT: 130, PLAN: 84,  DAY: 54, DONE: 54 };
+const COL_DESKTOP = { NO: 46, TEAM: 52, CLIENT: 200, PLAN: 104, DAY: 68, DONE: 68 };
+const COL_MOBILE  = { NO: 36, TEAM: 48, CLIENT: 130, PLAN: 84,  DAY: 54, DONE: 54 };
 
 export const COL = COL_DESKTOP;
 export const L = {
@@ -518,6 +518,33 @@ const SMMOnePageTracker = () => {
   const [clientToDelete, setClientToDelete] = useState(null);
   const [deleteMode, setDeleteMode] = useState('month'); // 'month' | 'permanent'
   const [deleting, setDeleting] = useState(false);
+
+  // Bulk selection & deletion state
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+  const [bulkDeleteMode, setBulkDeleteMode] = useState('month'); // 'month' | 'permanent'
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const getRowId = (row) => row.client?._id?.toString() || row._id?.toString() || row.projectName || String(row.client?.companyName);
+  const isSelected = (row) => selectedIds.includes(getRowId(row));
+
+  const handleToggleSelectRow = (row) => {
+    const id = getRowId(row);
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleToggleSelectAll = () => {
+    if (rows.length === 0) return;
+    if (selectedIds.length === rows.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(rows.map(r => getRowId(r)));
+    }
+  };
+
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [month, year]);
   const [drawerState, setDrawerState] = useState({
     isOpen: false,
     client: null,
@@ -945,6 +972,45 @@ const SMMOnePageTracker = () => {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const isPermanent = bulkDeleteMode === 'permanent';
+      const selectedRows = rows.filter((r) => selectedIds.includes(getRowId(r)));
+      const items = selectedRows.map((r) => ({
+        clientId: r.client?._id,
+        trackerId: r._id || 'scaffold',
+      }));
+      const clientIds = selectedRows.map((r) => r.client?._id).filter(Boolean);
+
+      await smmApi.bulkDeleteTrackers({
+        items,
+        clientIds,
+        month,
+        year,
+        deleteClient: isPermanent,
+      });
+
+      toast.success(
+        isPermanent
+          ? `${selectedRows.length} client(s) permanently deleted`
+          : `${selectedRows.length} client(s) removed from ${MONTHS[month - 1]} ${year} tracker`
+      );
+
+      setSelectedIds([]);
+      setBulkDeleteModalOpen(false);
+      setBulkDeleteMode('month');
+      fetchData();
+      fetchClients();
+    } catch (err) {
+      console.error('Failed to bulk delete clients:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete selected clients');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   const ensureRow = async (row) => {
     if (row._id) return row;
     const res = await smmApi.upsertTracker({ clientId:row.client._id, month, year, plan:row.plan, storyPlan:row.storyPlan, team:row.team, days:row.days });
@@ -1153,6 +1219,39 @@ const SMMOnePageTracker = () => {
           </h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {selectedIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setBulkDeleteMode('month');
+                setBulkDeleteModalOpen(true);
+              }}
+              className="h-10 inline-flex items-center gap-1.5 px-3.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors cursor-pointer"
+              title="Delete selected clients"
+            >
+              <Trash2 size={14} />
+              <span>Delete Selected ({selectedIds.length})</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleToggleSelectAll}
+            className={`h-10 inline-flex items-center gap-1.5 px-3 text-xs font-semibold rounded-xl transition-colors cursor-pointer ${
+              selectedIds.length > 0
+                ? 'bg-brand/10 text-brand ring-1 ring-brand/40 hover:bg-brand/20'
+                : 'bg-card text-foreground hover:bg-secondary'
+            }`}
+            title={selectedIds.length === rows.length && rows.length > 0 ? 'Deselect All' : 'Select All'}
+          >
+            <input
+              type="checkbox"
+              checked={rows.length > 0 && selectedIds.length === rows.length}
+              readOnly
+              className="accent-cyan-500 rounded cursor-pointer pointer-events-none"
+              style={{ width: 13, height: 13 }}
+            />
+            <span>{selectedIds.length === rows.length && rows.length > 0 ? 'Deselect All' : `Select All (${rows.length})`}</span>
+          </button>
           <div className="flex items-center gap-1 bg-card rounded-xl px-1.5 py-1 h-10">
             <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-secondary transition-colors cursor-pointer" title="Previous Month"><ChevronLeft size={15}/></button>
             <span className="text-xs font-bold text-foreground w-28 text-center">{MONTHS[month-1]} {year}</span>
@@ -1401,12 +1500,27 @@ const SMMOnePageTracker = () => {
               const pctColor = pct === 100 ? 'hsl(var(--foreground))' : pct >= 60 ? '#52525b' : '#a1a1aa';
 
               return (
-                <div key={row.client?._id || rowIdx} className="bg-card rounded-2xl p-3.5 sm:p-4 space-y-3">
+                <div
+                  key={row.client?._id || rowIdx}
+                  className={`bg-card rounded-2xl p-3.5 sm:p-4 space-y-3 transition-colors ${
+                    isSelected(row) ? 'ring-2 ring-brand/40 bg-brand/5' : ''
+                  }`}
+                >
                   <div className="flex items-center justify-between pb-2.5">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="w-6 h-6 rounded-lg bg-secondary text-foreground font-black text-xs flex items-center justify-center shrink-0 tabular-nums">
-                        {rowIdx + 1}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={isSelected(row)}
+                          onChange={() => handleToggleSelectRow(row)}
+                          className="cursor-pointer accent-cyan-500 rounded"
+                          style={{ width: 14, height: 14 }}
+                          title={`Select ${name}`}
+                        />
+                        <span className="w-6 h-6 rounded-lg bg-secondary text-foreground font-black text-xs flex items-center justify-center tabular-nums">
+                          {rowIdx + 1}
+                        </span>
+                      </div>
                       <div className="min-w-0">
                         <h4 className="font-bold text-sm text-foreground truncate" title={row.projectName || row.project?.name || name}>
                           {row.projectName || row.project?.name || name}
@@ -1506,12 +1620,48 @@ const SMMOnePageTracker = () => {
         <div className="bg-card rounded-2xl overflow-hidden ">
           {/* Title bar */}
           <div className="bg-zinc-900 border-b-2 border-brand/60 text-zinc-50 px-4 sm:px-5 py-2.5 flex items-center justify-between flex-wrap gap-2">
-            <span className="font-black text-xs sm:text-sm tracking-wide">
-              {section==='posts' ? 'POST & REEL TRACKER' : '30-DAY STORY SHEET — EVERY CLIENT / EVERY DAY'}
-            </span>
-            <span className="text-[10px] sm:text-[11px] font-semibold text-zinc-300">
-              {section==='posts' ? 'INSTAGRAM + FACEBOOK • IST • CLICK STATUS TO UPDATE' : 'STORIES — EVERY CLIENT / EVERY DAY'}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="font-black text-xs sm:text-sm tracking-wide">
+                {section==='posts' ? 'POST & REEL TRACKER' : '30-DAY STORY SHEET — EVERY CLIENT / EVERY DAY'}
+              </span>
+              {selectedIds.length > 0 && (
+                <span className="bg-zinc-800 text-zinc-200 border border-zinc-700 px-2 py-0.5 rounded-full text-[11px] font-bold">
+                  {selectedIds.length} of {rows.length} selected
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleToggleSelectAll}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors cursor-pointer border border-zinc-700/80"
+              >
+                <input
+                  type="checkbox"
+                  checked={rows.length > 0 && selectedIds.length === rows.length}
+                  readOnly
+                  className="cursor-pointer accent-cyan-500 rounded pointer-events-none"
+                  style={{ width: 12, height: 12 }}
+                />
+                <span>{selectedIds.length === rows.length && rows.length > 0 ? 'Deselect All' : `Select All (${rows.length})`}</span>
+              </button>
+              {selectedIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBulkDeleteMode('month');
+                    setBulkDeleteModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer shadow-sm"
+                >
+                  <Trash2 size={12} />
+                  <span>Delete Selected ({selectedIds.length})</span>
+                </button>
+              )}
+              <span className="text-[10px] sm:text-[11px] font-semibold text-zinc-400 hidden md:inline ml-1">
+                {section==='posts' ? 'INSTAGRAM + FACEBOOK • IST • CLICK STATUS TO UPDATE' : 'STORIES — EVERY CLIENT / EVERY DAY'}
+              </span>
+            </div>
           </div>
 
           {/* Scrollable wrapper — overflow-x with touch scrolling */}
@@ -1540,7 +1690,20 @@ const SMMOnePageTracker = () => {
               {/* ── THEAD ── */}
               <thead>
                 <tr>
-                  <th style={HDR_STICKY(curL.NO, curCol.NO)}>NO</th>
+                  <th style={HDR_STICKY(curL.NO, curCol.NO)}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+                      <input
+                        type="checkbox"
+                        checked={rows.length > 0 && selectedIds.length === rows.length}
+                        ref={el => { if (el) el.indeterminate = selectedIds.length > 0 && selectedIds.length < rows.length; }}
+                        onChange={handleToggleSelectAll}
+                        className="cursor-pointer accent-cyan-500 rounded"
+                        style={{ width: 13, height: 13 }}
+                        title={selectedIds.length === rows.length && rows.length > 0 ? "Deselect All" : "Select All"}
+                      />
+                      <span style={{ fontSize: 9, fontWeight: 800 }}>NO</span>
+                    </div>
+                  </th>
                   <th style={isMobile ? { ...HDR_BASE, width: curCol.TEAM, minWidth: curCol.TEAM, maxWidth: curCol.TEAM, position: 'static' } : HDR_STICKY(curL.TEAM, curCol.TEAM)}>TEAM</th>
                   <th style={{ ...HDR_STICKY(curL.CLIENT, curCol.CLIENT), textAlign:'left', paddingLeft: isMobile ? 4 : 8, boxShadow: isMobile ? '2px 0 6px -2px rgba(0,0,0,0.2)' : undefined }}>PROJECT & CLIENT</th>
                   <th style={isMobile ? { ...HDR_BASE, width: curCol.PLAN, minWidth: curCol.PLAN, maxWidth: curCol.PLAN, position: 'static' } : HDR_STICKY(curL.PLAN, curCol.PLAN)}>PLAN</th>
@@ -1613,9 +1776,25 @@ const SMMOnePageTracker = () => {
                     <React.Fragment key={row.client?._id || rowIdx}>
 
                       {/* Content row */}
-                      <tr>
-                        <td style={CELL_STICKY(curL.NO, curCol.NO)}>
-                          <span style={{ fontWeight:800, fontSize:10.5, fontVariantNumeric:'tabular-nums' }}>{rowIdx+1}</span>
+                      <tr style={{ backgroundColor: isSelected(row) ? 'rgba(6, 182, 212, 0.07)' : undefined }}>
+                        <td style={{
+                          ...CELL_STICKY(curL.NO, curCol.NO),
+                          backgroundColor: isSelected(row) ? 'rgba(6, 182, 212, 0.15)' : undefined,
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2.5 }}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected(row)}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleToggleSelectRow(row);
+                              }}
+                              className="cursor-pointer accent-cyan-500 rounded"
+                              style={{ width: 13, height: 13 }}
+                              title={`Select ${name}`}
+                            />
+                            <span style={{ fontWeight:800, fontSize:10, fontVariantNumeric:'tabular-nums' }}>{rowIdx+1}</span>
+                          </div>
                         </td>
                         <td style={isMobile ? { ...CELL_BASE, width: curCol.TEAM, minWidth: curCol.TEAM, maxWidth: curCol.TEAM, color:'hsl(var(--muted-foreground))', fontWeight:700, fontSize:10 } : { ...CELL_STICKY(curL.TEAM, curCol.TEAM), color:'hsl(var(--muted-foreground))', fontWeight:700, fontSize:10 }}>
                           {row.team || 'RWM'}
@@ -1681,8 +1860,8 @@ const SMMOnePageTracker = () => {
                       </tr>
 
                       {/* Status row */}
-                      <tr style={{ borderBottom:'2px solid hsl(var(--border))' }}>
-                        <td style={STATUS_CELL_STICKY(curL.NO, curCol.NO)}/>
+                      <tr style={{ borderBottom:'2px solid hsl(var(--border))', backgroundColor: isSelected(row) ? 'rgba(6, 182, 212, 0.04)' : undefined }}>
+                        <td style={{ ...STATUS_CELL_STICKY(curL.NO, curCol.NO), backgroundColor: isSelected(row) ? 'rgba(6, 182, 212, 0.12)' : undefined }}/>
                         <td style={isMobile ? { ...CELL_BASE, width: curCol.TEAM, minWidth: curCol.TEAM, maxWidth: curCol.TEAM, background:'hsl(var(--secondary))' } : STATUS_CELL_STICKY(curL.TEAM, curCol.TEAM)}/>
                         <td style={{ ...STATUS_CELL_STICKY(curL.CLIENT, curCol.CLIENT), textAlign:'left', paddingLeft: isMobile ? 4 : 8, boxShadow: isMobile ? '2px 0 6px -2px rgba(0,0,0,0.12)' : undefined }}>
                           <span style={{ fontSize:9, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', color:'hsl(var(--muted-foreground))', whiteSpace:'nowrap' }}>
@@ -2047,6 +2226,141 @@ const SMMOnePageTracker = () => {
                     : deleteMode === 'month'
                     ? 'Remove from Tracker'
                     : 'Delete Permanently'}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bulk Delete Confirmation Modal ── */}
+      {bulkDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-card rounded-2xl max-w-md w-full max-h-[90dvh] overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar border border-border">
+            {/* Header */}
+            <div className="flex items-start justify-between pb-3">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-red-500/10 text-red-500 shrink-0">
+                  <Trash2 size={20} className="sm:w-5 sm:h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-sm sm:text-base text-foreground truncate">
+                    Delete {selectedIds.length} Selected Client(s)
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {MONTHS[month - 1]} {year} Social Tracker
+                  </p>
+                </div>
+              </div>
+              <button
+                disabled={bulkDeleting}
+                onClick={() => setBulkDeleteModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-secondary text-muted-foreground transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Selected Clients Preview Chips */}
+            <div className="bg-muted/40 rounded-xl p-3 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-semibold">Clients to Remove:</span>
+                <span className="font-black text-foreground">{selectedIds.length} selected</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto custom-scrollbar pt-1">
+                {rows
+                  .filter((r) => selectedIds.includes(getRowId(r)))
+                  .map((r, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1 bg-secondary text-foreground text-[11px] font-semibold px-2 py-0.5 rounded-md"
+                    >
+                      {r.client?.companyName || r.projectName || 'Client'}
+                    </span>
+                  ))}
+              </div>
+            </div>
+
+            {/* Options */}
+            <div className="space-y-2.5">
+              <label
+                onClick={() => setBulkDeleteMode('month')}
+                className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors ${
+                  bulkDeleteMode === 'month'
+                    ? 'bg-brand/10 ring-1 ring-brand'
+                    : 'bg-card hover:bg-secondary/50 border border-border/50'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="bulkDeleteMode"
+                  checked={bulkDeleteMode === 'month'}
+                  onChange={() => setBulkDeleteMode('month')}
+                  className="mt-0.5 text-primary focus:ring-brand/40"
+                />
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-foreground">
+                    Remove from {MONTHS[month - 1]} {year} only (Recommended)
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    Hides these clients from this month's tracker. Preserves client profiles and all other months.
+                  </div>
+                </div>
+              </label>
+
+              <label
+                onClick={() => setBulkDeleteMode('permanent')}
+                className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors ${
+                  bulkDeleteMode === 'permanent'
+                    ? 'bg-red-500/10 ring-1 ring-red-500'
+                    : 'bg-card hover:bg-secondary/50 border border-border/50'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="bulkDeleteMode"
+                  checked={bulkDeleteMode === 'permanent'}
+                  onChange={() => setBulkDeleteMode('permanent')}
+                  className="mt-0.5 text-red-600 focus:ring-red-400"
+                />
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-red-600 dark:text-red-400 flex items-center gap-1">
+                    <AlertTriangle size={12} />
+                    Permanently delete client(s)
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    Permanently deletes these clients, all associated projects, and all tracker history across all months.
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={bulkDeleting}
+                onClick={() => setBulkDeleteModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold rounded-xl hover:bg-secondary transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={bulkDeleting}
+                onClick={handleBulkDelete}
+                className={`px-4 py-2 text-xs font-bold rounded-xl text-white transition-opacity inline-flex items-center gap-1.5 disabled:opacity-50 cursor-pointer ${
+                  bulkDeleteMode === 'permanent' ? 'bg-red-600 hover:bg-red-700' : 'bg-primary text-primary-foreground hover:opacity-90'
+                }`}
+              >
+                {bulkDeleting && <RefreshCw size={13} className="animate-spin" />}
+                <Trash2 size={13} />
+                <span>
+                  {bulkDeleting
+                    ? 'Deleting...'
+                    : bulkDeleteMode === 'month'
+                    ? `Remove ${selectedIds.length} from Tracker`
+                    : `Permanently Delete ${selectedIds.length}`}
                 </span>
               </button>
             </div>

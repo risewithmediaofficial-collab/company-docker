@@ -6,6 +6,7 @@ import {
   updateDayCell,
   updateTrackerMeta,
   deleteTracker,
+  bulkDeleteTrackers,
   syncContentWithTracker,
   syncTasksWithTracker,
   getClientDeliverablesSummary,
@@ -21,6 +22,7 @@ router.get('/client/:clientId', authorize('superAdmin', 'admin', 'manager', 'emp
 
 // Staff-only mutations
 router.post('/', authorize('superAdmin', 'admin', 'manager', 'employee'), upsertTracker);
+router.post('/bulk-delete', authorize('superAdmin', 'admin', 'manager'), bulkDeleteTrackers);
 router.post('/sync-tasks', authorize('superAdmin', 'admin', 'manager', 'employee'), syncTasksWithTracker);
 router.post('/sync-content', authorize('superAdmin', 'admin', 'manager', 'employee'), syncTasksWithTracker);
 router.patch('/:id/day/:day', authorize('superAdmin', 'admin', 'manager', 'employee'), updateDayCell);

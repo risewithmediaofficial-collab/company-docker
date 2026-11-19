@@ -1704,3 +1704,93 @@ export const deleteTracker = async (req, res) => {
   }
 };
 
+// ── POST /api/smm/tracker/bulk-delete ─────────────────────────────────────────
+// Bulk delete / exclude multiple tracker rows at once
+export const bulkDeleteTrackers = async (req, res) => {
+  try {
+    const { items = [], clientIds = [], month, year, deleteClient = false } = req.body;
+    const m = parseInt(month, 10);
+    const y = parseInt(year, 10);
+
+    const targetClientIds = new Set(clientIds.filter(Boolean));
+    const targetTrackerIds = new Set();
+
+    items.forEach((it) => {
+      if (it.clientId) targetClientIds.add(it.clientId.toString());
+      if (it.trackerId && it.trackerId !== 'scaffold' && it.trackerId !== 'null' && it.trackerId !== 'undefined') {
+        targetTrackerIds.add(it.trackerId.toString());
+      }
+    });
+
+    const cIdsArray = Array.from(targetClientIds);
+    const tIdsArray = Array.from(targetTrackerIds);
+
+    if (cIdsArray.length === 0 && tIdsArray.length === 0) {
+      return res.status(400).json({ success: false, message: 'No items or clients specified for deletion' });
+    }
+
+    if (deleteClient) {
+      // Permanently delete clients and all their tracker docs
+      if (tIdsArray.length > 0) {
+        await SmmMonthlyTracker.deleteMany({ _id: { $in: tIdsArray } });
+      }
+      if (cIdsArray.length > 0) {
+        await SmmMonthlyTracker.deleteMany({ client: { $in: cIdsArray } });
+        await Promise.allSettled([
+          SmmClient.deleteMany({ _id: { $in: cIdsArray } }),
+          Client.deleteMany({ _id: { $in: cIdsArray } }),
+        ]);
+        cIdsArray.forEach((cId) => emitLiveEvent('clientDeleted', cId));
+      }
+
+      emitLiveEvent('smmTrackerDeleted', { month: m, year: y, bulk: true });
+      emitLiveEvent('smmTrackerUpdated', { month: m, year: y });
+
+      return res.json({
+        success: true,
+        message: `Permanently deleted ${Math.max(cIdsArray.length, tIdsArray.length)} client(s) and their tracker history`,
+        count: Math.max(cIdsArray.length, tIdsArray.length),
+      });
+    }
+
+    // Otherwise, mark as isExcluded for this month so scaffold and views exclude them
+    const updateOps = [];
+
+    if (tIdsArray.length > 0) {
+      updateOps.push(
+        SmmMonthlyTracker.updateMany(
+          { _id: { $in: tIdsArray } },
+          { $set: { isExcluded: true, updatedBy: req.user?._id } }
+        )
+      );
+    }
+
+    for (const cId of cIdsArray) {
+      updateOps.push(
+        SmmMonthlyTracker.findOneAndUpdate(
+          { client: cId, month: m, year: y },
+          {
+            $set: { isExcluded: true, updatedBy: req.user?._id },
+            $setOnInsert: { days: buildEmptyDays(y, m), createdBy: req.user?._id },
+          },
+          { upsert: true }
+        )
+      );
+    }
+
+    await Promise.all(updateOps);
+
+    emitLiveEvent('smmTrackerDeleted', { month: m, year: y, bulk: true });
+    emitLiveEvent('smmTrackerUpdated', { month: m, year: y });
+
+    return res.json({
+      success: true,
+      message: `Removed ${Math.max(cIdsArray.length, tIdsArray.length)} client(s) from this month's tracker`,
+      count: Math.max(cIdsArray.length, tIdsArray.length),
+    });
+  } catch (err) {
+    console.error('bulkDeleteTrackers error:', err);
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+};
+
