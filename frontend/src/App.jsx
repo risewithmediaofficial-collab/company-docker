@@ -189,7 +189,7 @@ const App = () => {
             <Route path="/login/:companySlug"      element={<Login />} />
             <Route path="/:companySlug/login"      element={<Login />} />
             <Route path="/:companySlug"            element={<Login />} />
-            <Route path="/register"               element={!isAuthenticated ? <Register />       : <Navigate to="/" />} />
+            <Route path="/register"               element={!isAuthenticated ? <Login initialView="signup" /> : <Navigate to="/" />} />
             <Route path="/forgot-password"        element={!isAuthenticated ? <ForgotPassword /> : <Navigate to="/" />} />
             <Route path="/reset-password/:token" element={!isAuthenticated ? <ResetPassword /> : <Navigate to="/" />} />
           </Route>
