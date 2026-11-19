@@ -6,6 +6,7 @@ import HeroPattern from '../components/public/HeroPattern';
 import ScrollReveal from '../components/public/ScrollReveal';
 import SectionShowcase from '../components/public/SectionShowcase';
 import StatsBanner from '../components/public/StatsBanner';
+import SoftwareComparison from '../components/public/SoftwareComparison';
 
 const Landing = () => {
   return (
@@ -61,18 +62,21 @@ const Landing = () => {
       {/* ── IMPACT STATS BANNER (MATCHING REFERENCE DESIGN) ── */}
       <StatsBanner />
 
+      {/* ── MODERN COMPARISON SECTION ("WHAT THEY HAVE" VS "WHAT WE DO") ── */}
+      <SoftwareComparison />
+
       {/* ── CLEAN ZIG-ZAG SECTIONS (ALIGNED WITH SMARTPHONE SHOWCASE & STICKERS) ── */}
       <div className="py-8 sm:py-16 px-4 sm:px-8 max-w-6xl mx-auto space-y-10 sm:space-y-16">
 
-        {/* ── ZIG-ZAG 01: Client & Deal Tracker ── */}
+        {/* ── ZIG-ZAG 01: Sales & Client CRM ── */}
         <ScrollReveal>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center pb-10 sm:pb-14 border-b border-slate-100">
             {/* Left Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 space-y-3.5 text-left">
               <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
-                Never Lose a Lead.
+                Leads & Sales Pipeline Tracker.
                 <span className="text-[#12B7D4] block mt-1 pb-0.5">
-                  Never Miss a Follow-up.
+                  Never Let a Paying Deal Slip Away.
                 </span>
               </h2>
 
@@ -83,8 +87,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Direct Client Notes</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Save phone numbers, GSTIN, and service requirements in one view.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Visual Sales Funnel</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Move leads from New Lead → Contacted → Discovery Call → Proposal Sent → Won.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -92,8 +96,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Clear Deal Stages</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Know inquiries, quoted proposals, or signed retainer status.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">One-Click Conversion</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Instantly convert any won deal into an active Client Profile with a linked project.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -101,8 +105,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Zero WhatsApp Chaos</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Stop digging through endless unorganized group chats.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Encrypted Client Vault</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Safely store client website logins, social credentials, hosting, and API keys.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -110,8 +114,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Instant Follow-up Rate</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Your team contacts inquiries today with zero delay.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Churn Prevention Alerts</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Automated alerts notify managers when an active client has no contact in 14 or 30 days.</p>
                   </div>
                 </div>
               </div>
@@ -124,7 +128,7 @@ const Landing = () => {
           </div>
         </ScrollReveal>
 
-        {/* ── ZIG-ZAG 02: Social Media Calendar (Alternating: Showcase on Left, Text on Right) ── */}
+        {/* ── ZIG-ZAG 02: Operations, Tasks & Content Calendar (Showcase Left, Text Right) ── */}
         <ScrollReveal>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center pb-10 sm:pb-14 border-b border-slate-100">
             {/* Left Column: Visual Smartphone Showcase with Floating Stickers */}
@@ -135,9 +139,9 @@ const Landing = () => {
             {/* Right Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 order-1 lg:order-2 space-y-3.5 text-left">
               <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
-                Plan a Month of Content.
+                Agile Kanban & Content Calendar.
                 <span className="text-[#12B7D4] block mt-1 pb-0.5">
-                  Ready in 10 Minutes.
+                  Built for Creative Marketing Teams.
                 </span>
               </h2>
 
@@ -148,8 +152,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Visual Monthly Grid</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">See upcoming posts, reels, and stories arranged by date.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Visual Kanban Boards</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Drag-and-drop tasks across To Do → In Progress → Review / Approval → Completed.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -157,8 +161,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Team Synchronization</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Writers, graphic designers, and video editors stay in sync.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Multi-Platform Calendar</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Schedule posts, reels, and stories across Instagram, Facebook, LinkedIn, YouTube, and X.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -166,8 +170,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Caption & Asset Storage</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Attach captions, hashtags, and approved graphics directly.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">SMM Monthly Quotas</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Track deliverables per client (15 Posts, 8 Reels, 4 Carousels) with live quota counts.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -175,8 +179,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Zero Missed Deadlines</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Deliver posts on time without panicked last-minute calls.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Daily Focus & EOD Reports</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Morning checklists and 60-second end-of-day accomplishment summaries for managers.</p>
                   </div>
                 </div>
               </div>
@@ -184,15 +188,15 @@ const Landing = () => {
           </div>
         </ScrollReveal>
 
-        {/* ── ZIG-ZAG 03: 1-Tap Client Approvals ── */}
+        {/* ── ZIG-ZAG 03: Client VIP Portal & Approvals ── */}
         <ScrollReveal>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center pb-10 sm:pb-14 border-b border-slate-100">
             {/* Left Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 space-y-3.5 text-left">
               <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
-                Clients Approve on Phone.
+                Branded VIP Client Portal.
                 <span className="text-[#12B7D4] block mt-1 pb-0.5">
-                  Zero Endless Calls.
+                  1-Tap Mobile Approvals & Live Budgets.
                 </span>
               </h2>
 
@@ -203,8 +207,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Mobile Screen Previews</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Clients preview Instagram posts and reels on their smartphones.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Dedicated Client Portal</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Clients log into a private branded portal to view live project progress without calling.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -212,8 +216,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Instant 1-Tap Sign-off</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">One simple tap to approve with recorded timestamp.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">1-Tap Creative Approvals</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Clients preview Instagram posts and reels on their phone and sign off with 1 tap.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -221,8 +225,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Zero Passwords Needed</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Private review token links so clients never remember passwords.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Live Ad Budget Tracker</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Transparent reporting on Meta and Google ad spends and remaining monthly budget.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -230,8 +234,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Direct Change Requests</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Client edit notes stay attached directly to the creative file.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Digital Proposals & Quotes</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Shareable web contracts with custom line-item pricing and online acceptance.</p>
                   </div>
                 </div>
               </div>
@@ -244,7 +248,7 @@ const Landing = () => {
           </div>
         </ScrollReveal>
 
-        {/* ── ZIG-ZAG 04: Fast GST Billing (Alternating: Showcase on Left, Text on Right) ── */}
+        {/* ── ZIG-ZAG 04: Finance, GST & Accounting (Showcase Left, Text Right) ── */}
         <ScrollReveal>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center pb-10 sm:pb-14 border-b border-slate-100">
             {/* Left Column: Visual Smartphone Showcase with Floating Stickers */}
@@ -255,9 +259,9 @@ const Landing = () => {
             {/* Right Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 order-1 lg:order-2 space-y-3.5 text-left">
               <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
-                Generate Clean Tax Invoices.
+                Agency Finance & GST Billing.
                 <span className="text-[#12B7D4] block mt-1 pb-0.5">
-                  Ready in 30 Seconds.
+                  Automated Tax Invoices & Real-Time P&L.
                 </span>
               </h2>
 
@@ -268,8 +272,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Auto 18% GST Split</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Calculates CGST (9%) and SGST (9%) automatically with tax breakdown.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">GST Tax Invoices</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Auto-calculated CGST (9%) and SGST (9%) with sequential invoice numbers and PDF export.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -277,8 +281,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">1-Click PDF Downloads</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Generate printable, branded PDF tax receipts instantly for clients.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Live Profit & Loss</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Shows real-time incoming revenue, total expenses, burn rate, and agency profit margins.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -286,8 +290,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Payment Status Tracking</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Clear status tags for paid, partial, and pending invoices.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Staff Payroll & Salaries</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Calculate monthly salaries, attendance hours, advance deductions, and payout records.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -295,8 +299,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Bank & QR Details</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Your agency GSTIN, PAN, bank account, and UPI QR on every bill.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Agency Loans & EMIs</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Track agency business borrowings, monthly EMI due dates, balances, and interest rates.</p>
                   </div>
                 </div>
               </div>
@@ -304,15 +308,15 @@ const Landing = () => {
           </div>
         </ScrollReveal>
 
-        {/* ── ZIG-ZAG 05: Staff Attendance & Workspace ── */}
+        {/* ── ZIG-ZAG 05: HR, Attendance & Multi-Tenant SaaS ── */}
         <ScrollReveal>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
             {/* Left Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 space-y-3.5 text-left">
               <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
-                Safe, Private Workspace.
+                Geofenced GPS Attendance & HR.
                 <span className="text-[#12B7D4] block mt-1 pb-0.5">
-                  Built for Your Entire Team.
+                  Safe, Private Agency Operations.
                 </span>
               </h2>
 
@@ -323,8 +327,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Selfie Mobile Check-in</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Staff mark daily attendance with a quick selfie snapshot & timestamp.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">GPS Punch Clock</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">1-click mobile clock-in verifying staff are within office radius, with remote WFH toggle.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -332,8 +336,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Strict Role Permissions</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Designers and writers only see their assigned client tasks.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Strict Role Governance</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Designers and writers only see assigned client tasks; company margins stay 100% private.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -341,8 +345,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Isolated Company Space</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Your client records, rates, and projects stay 100% private.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Domain & SSL Watchdog</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Automated warning alerts trigger 30, 15, and 7 days before client websites expire.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -350,8 +354,8 @@ const Landing = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Automated Daily Backups</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Agency data and deliverable files are safely backed up automatically.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Hardware Asset Library</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Inventory tracking for company laptops, studio cameras, mics, and equipment assignments.</p>
                   </div>
                 </div>
               </div>
@@ -372,10 +376,10 @@ const Landing = () => {
                 Comprehensive Agency OS
               </span>
               <h3 className="text-2xl sm:text-3xl font-black tracking-tight">
-                Want to see all 22+ Agency Tools in Action?
+                Want to see our Role-Based Workspaces & Capabilities?
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed">
-                Explore our full feature guide covering Leads CRM, Client Vault, SMM Tracker, Influencer Management, GST Invoices, GPS Attendance, and our Software Development Suite.
+                Explore how agency founders, project managers, creative staff, and paying clients each get their own personalized, noise-free workspace.
               </p>
             </div>
             <Link

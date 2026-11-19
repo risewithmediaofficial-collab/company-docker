@@ -60,21 +60,21 @@ const AboutPage = () => {
             {/* Left Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 space-y-3.5 text-left">
               <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
-                Stop Juggling Five
+                Leads & Sales Pipeline Tracker.
                 <span className="text-[#12B7D4] block mt-1 pb-0.5">
-                  Scattered Apps.
+                  Never Let a Paying Deal Slip Away.
                 </span>
               </h2>
 
-              {/* 4 Checkmark Bullet Points (Matching Reference Image) */}
+              {/* 4 Checkmark Bullet Points */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
                 <div className="flex items-start gap-2.5">
                   <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">One Unified Login</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Access daily tasks, calendars, and clients from one place.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Visual Sales Funnel</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Move leads from New Lead → Contacted → Discovery Call → Proposal Sent → Won.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -82,8 +82,8 @@ const AboutPage = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Zero Learning Curve</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Designed so any team member understands it in 5 minutes.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">One-Click Conversion</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Instantly convert any won deal into an active Client Profile with a linked project.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -91,8 +91,8 @@ const AboutPage = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">No More Lost Notes</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Client briefs and deliverable notes stay attached permanently.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Encrypted Client Vault</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Safely store client website logins, social credentials, hosting, and API keys.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -100,8 +100,8 @@ const AboutPage = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Always Accountable</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">See exactly who owns each graphic, reel, or invoice.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Churn Prevention Alerts</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Automated alerts notify managers when an active client has no contact in 14 or 30 days.</p>
                   </div>
                 </div>
               </div>
@@ -119,15 +119,15 @@ const AboutPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center pb-10 sm:pb-14 border-b border-slate-100">
             {/* Left Column: Visual Smartphone Showcase with Floating Stickers */}
             <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
-              <SectionShowcase type="rhythm" />
+              <SectionShowcase type="calendar" />
             </div>
 
             {/* Right Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 order-1 lg:order-2 space-y-3.5 text-left">
               <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
-                Designed Around How
+                Agile Kanban & Content Calendar.
                 <span className="text-[#12B7D4] block mt-1 pb-0.5">
-                  Agencies Actually Work.
+                  Built for Creative Marketing Teams.
                 </span>
               </h2>
 
@@ -138,8 +138,8 @@ const AboutPage = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Step 1 — Capture Lead</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Log client phone number, requirements, and budget quote.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Visual Kanban Boards</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Drag-and-drop tasks across To Do → In Progress → Review / Approval → Completed.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -147,8 +147,8 @@ const AboutPage = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Step 2 — Schedule Posts</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Stage graphics, reels, and captions on the monthly calendar.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Multi-Platform Calendar</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Schedule posts, reels, and stories across Instagram, Facebook, LinkedIn, YouTube, and X.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -156,8 +156,8 @@ const AboutPage = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Step 3 — 1-Tap Sign-off</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Client approves creatives directly with zero password needed.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">SMM Monthly Quotas</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Track deliverables per client (15 Posts, 8 Reels, 4 Carousels) with live quota counts.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -165,8 +165,8 @@ const AboutPage = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Step 4 — Send GST Bill</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Generate 18% GST invoice PDF with bank details in 30 seconds.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Daily Focus & EOD Reports</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Morning checklists and 60-second end-of-day accomplishment summaries for managers.</p>
                   </div>
                 </div>
               </div>
@@ -180,9 +180,9 @@ const AboutPage = () => {
             {/* Left Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 space-y-3.5 text-left">
               <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
-                Your Clients and Data
+                Geofenced GPS Attendance & HR.
                 <span className="text-[#12B7D4] block mt-1 pb-0.5">
-                  Stay 100% Yours.
+                  Safe, Private Agency Operations.
                 </span>
               </h2>
 
@@ -193,8 +193,8 @@ const AboutPage = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Isolated Database</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Dedicated space; other agencies cannot view your records.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">GPS Punch Clock</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">1-click mobile clock-in verifying staff are within office radius, with remote WFH toggle.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -202,8 +202,8 @@ const AboutPage = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Staff Access Control</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Employees only see clients and tasks assigned to them.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Strict Role Governance</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Designers and writers only see assigned client tasks; company margins stay 100% private.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -211,8 +211,8 @@ const AboutPage = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Automated Daily Backups</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Continuous backups ensure deliverables are never lost.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Domain & SSL Watchdog</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Automated warning alerts trigger 30, 15, and 7 days before client websites expire.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -220,8 +220,8 @@ const AboutPage = () => {
                     <Check size={13} className="stroke-[3]" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Company Subdomain</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Custom agency workspace URL so clients recognize your brand.</p>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Hardware Asset Library</h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Inventory tracking for company laptops, studio cameras, mics, and equipment assignments.</p>
                   </div>
                 </div>
               </div>
@@ -229,7 +229,7 @@ const AboutPage = () => {
 
             {/* Right Column: Visual Smartphone Showcase with Floating Stickers */}
             <div className="lg:col-span-5 flex justify-center">
-              <SectionShowcase type="privacy" />
+              <SectionShowcase type="attendance" />
             </div>
           </div>
         </ScrollReveal>

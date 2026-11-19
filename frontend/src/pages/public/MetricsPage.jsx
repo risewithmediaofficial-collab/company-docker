@@ -116,7 +116,7 @@ const MetricsPage = () => {
 
             {/* Right Column: Visual Smartphone Showcase with Floating Stickers */}
             <div className="lg:col-span-5 flex justify-center">
-              <SectionShowcase type="privacy" />
+              <SectionShowcase type="attendance" />
             </div>
           </div>
         </ScrollReveal>
@@ -126,7 +126,7 @@ const MetricsPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
             {/* Left Column: Visual Smartphone Showcase with Floating Stickers */}
             <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
-              <SectionShowcase type="speed" />
+              <SectionShowcase type="billing" />
             </div>
 
             {/* Right Column: Heading & 4 Checkmarked Points */}
