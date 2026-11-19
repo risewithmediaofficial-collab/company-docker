@@ -58,19 +58,21 @@ const AuthLayout = () => {
 
   return (
     <div className="min-h-[100dvh] w-full flex items-center justify-center bg-background relative overflow-x-hidden p-2 sm:p-6 py-2 sm:py-12 transition-colors duration-300">
-      {/* Floating Theme Toggle (Top Right) */}
-      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
-        <button
-          type="button"
-          onClick={() => dispatch(toggleDarkMode())}
-          className="min-h-[40px] px-3 py-2 rounded-xl bg-card text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
-          title={darkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
-          aria-label="Toggle dark mode"
-        >
-          {darkMode ? <Sun size={16} className="text-zinc-200" /> : <Moon size={16} className="text-zinc-700" />}
-          <span className="hidden sm:inline">{darkMode ? 'Light' : 'Dark'}</span>
-        </button>
-      </div>
+      {/* Floating Theme Toggle (Only for SubAuth standalone pages like forgot-password, styled with border & shadow) */}
+      {isSubAuth && (
+        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
+          <button
+            type="button"
+            onClick={() => dispatch(toggleDarkMode())}
+            className="min-h-[38px] px-3 py-1.5 rounded-xl bg-card border border-border/80 shadow-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
+            title={darkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+            aria-label="Toggle dark mode"
+          >
+            {darkMode ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-zinc-700 dark:text-zinc-300" />}
+            <span className="hidden sm:inline">{darkMode ? 'Light' : 'Dark'}</span>
+          </button>
+        </div>
+      )}
 
       {/* Auth Main Area */}
       {isSubAuth ? (
