@@ -27,8 +27,8 @@ const MONTHS = [
 const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 // ── Column pixel widths (Desktop & Responsive Mobile) ─────────────────────────
-const COL_DESKTOP = { NO: 36, TEAM: 52, CLIENT: 176, PLAN: 104, DAY: 68, DONE: 68 };
-const COL_MOBILE  = { NO: 28, TEAM: 48, CLIENT: 112, PLAN: 84,  DAY: 54, DONE: 54 };
+const COL_DESKTOP = { NO: 36, TEAM: 52, CLIENT: 200, PLAN: 104, DAY: 68, DONE: 68 };
+const COL_MOBILE  = { NO: 28, TEAM: 48, CLIENT: 130, PLAN: 84,  DAY: 54, DONE: 54 };
 
 export const COL = COL_DESKTOP;
 export const L = {
@@ -519,6 +519,7 @@ const SMMOnePageTracker = () => {
   const [drawerState, setDrawerState] = useState({
     isOpen: false,
     client: null,
+    projectName: '',
     dayNumber: null,
     dayCell: null,
     trackerId: null,
@@ -1035,6 +1036,7 @@ const SMMOnePageTracker = () => {
     setDrawerState({
       isOpen: true,
       client: row.client,
+      projectName: row.projectName || row.project?.name || '',
       dayNumber: dayNum,
       dayCell: cell,
       trackerId: row._id || null,
@@ -1404,12 +1406,19 @@ const SMMOnePageTracker = () => {
                         {rowIdx + 1}
                       </span>
                       <div className="min-w-0">
-                        <h4 className="font-bold text-sm text-foreground truncate" title={name}>
-                          {name}
+                        <h4 className="font-bold text-sm text-foreground truncate" title={row.projectName || row.project?.name || name}>
+                          {row.projectName || row.project?.name || name}
                         </h4>
-                        <span className="text-[10px] font-semibold text-muted-foreground bg-secondary px-1.5 py-0.5 rounded ">
-                          Team: {row.team || 'RWM'}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {(row.projectName || row.project?.name) && (
+                            <span className="text-[11px] text-muted-foreground truncate" title={`Client: ${name}`}>
+                              Client: {name}
+                            </span>
+                          )}
+                          <span className="text-[10px] font-semibold text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
+                            Team: {row.team || 'RWM'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                     <button
@@ -1531,7 +1540,7 @@ const SMMOnePageTracker = () => {
                 <tr>
                   <th style={HDR_STICKY(curL.NO, curCol.NO)}>NO</th>
                   <th style={isMobile ? { ...HDR_BASE, width: curCol.TEAM, minWidth: curCol.TEAM, maxWidth: curCol.TEAM, position: 'static' } : HDR_STICKY(curL.TEAM, curCol.TEAM)}>TEAM</th>
-                  <th style={{ ...HDR_STICKY(curL.CLIENT, curCol.CLIENT), textAlign:'left', paddingLeft: isMobile ? 4 : 8, boxShadow: isMobile ? '2px 0 6px -2px rgba(0,0,0,0.2)' : undefined }}>CLIENT</th>
+                  <th style={{ ...HDR_STICKY(curL.CLIENT, curCol.CLIENT), textAlign:'left', paddingLeft: isMobile ? 4 : 8, boxShadow: isMobile ? '2px 0 6px -2px rgba(0,0,0,0.2)' : undefined }}>PROJECT & CLIENT</th>
                   <th style={isMobile ? { ...HDR_BASE, width: curCol.PLAN, minWidth: curCol.PLAN, maxWidth: curCol.PLAN, position: 'static' } : HDR_STICKY(curL.PLAN, curCol.PLAN)}>PLAN</th>
                   {dayHeaders.map(({d, dow, sun, isToday}) => {
                     let thStyle = HDR_BASE;
@@ -1610,13 +1619,23 @@ const SMMOnePageTracker = () => {
                           {row.team || 'RWM'}
                         </td>
                         <td style={{ ...CELL_STICKY(curL.CLIENT, curCol.CLIENT), textAlign:'left', paddingLeft: isMobile ? 4 : 8, paddingRight: isMobile ? 4 : 6, boxShadow: isMobile ? '2px 0 6px -2px rgba(0,0,0,0.12)' : undefined }}>
-                          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:3 }}>
-                            <span
-                              style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontWeight:700, fontSize: isMobile ? 10 : 11 }}
-                              title={name}
-                            >
-                              {name}
-                            </span>
+                          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:3, minWidth:0 }}>
+                            <div style={{ overflow:'hidden', minWidth:0, display:'flex', flexDirection:'column', lineHeight: 1.25 }}>
+                              <span
+                                style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontWeight:800, fontSize: isMobile ? 10 : 11.5, color:'hsl(var(--foreground))' }}
+                                title={row.projectName || row.project?.name || name}
+                              >
+                                {row.projectName || row.project?.name || name}
+                              </span>
+                              {(row.projectName || row.project?.name) && (
+                                <span
+                                  style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontWeight:500, fontSize: isMobile ? 8.5 : 9.5, color:'hsl(var(--muted-foreground))' }}
+                                  title={`Client: ${name}`}
+                                >
+                                  {name}
+                                </span>
+                              )}
+                            </div>
                             <button
                               type="button"
                               onClick={(e) => {
@@ -2037,6 +2056,7 @@ const SMMOnePageTracker = () => {
         isOpen={drawerState.isOpen}
         onClose={() => setDrawerState((prev) => ({ ...prev, isOpen: false }))}
         client={drawerState.client}
+        projectName={drawerState.projectName}
         dayNumber={drawerState.dayNumber}
         monthName={MONTHS[month - 1]}
         year={year}

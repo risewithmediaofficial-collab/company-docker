@@ -9,6 +9,41 @@ import Task from '../../models/task.model.js';
 import Project from '../../models/project.model.js';
 import ProjectMonthlyDeliverable from '../../models/projectMonthlyDeliverable.model.js';
 import { emitLiveEvent } from '../../utils/socketEmitter.js';
+import { withWorkspaceScope } from '../../middleware/auth.middleware.js';
+
+// ── Helpers: SMM task verification & assignment check ────────────────────────
+const SMM_CONTENT_TYPES = [
+  'reel',
+  'post',
+  'poster',
+  'video',
+  'social_media_post',
+  'story',
+  'carousel_post',
+  'custom_content',
+  'content',
+];
+
+const isSmmTask = (task) => {
+  if (!task) return false;
+  if (task.isDevTask || task.department === 'Development') return false;
+  if (task.taskCategory === 'non_content') return false;
+  const type = String(task.taskType || '').toLowerCase();
+  return SMM_CONTENT_TYPES.includes(type) || task.taskCategory === 'content';
+};
+
+const isTaskAssigned = (task) => {
+  if (!task) return false;
+  if (Array.isArray(task.assignedTo) && task.assignedTo.length > 0) return true;
+  if (task.assignedManager) return true;
+  if (task.publisherAssigned) return true;
+  if (task.editorAssigned) return true;
+  if (task.videographerAssigned) return true;
+  if (task.scriptWriterAssigned) return true;
+  if (task.designerAssigned) return true;
+  if (task.assignedPersonName && String(task.assignedPersonName).trim() !== '') return true;
+  return false;
+};
 
 // ── Helper: build empty days array for a month ─────────────────────────────
 const buildEmptyDays = (year, month) => {
@@ -204,10 +239,24 @@ export const getMonthlyTrackers = async (req, res) => {
       return res.json({ success: true, data: { rows: [rowData], month, year, daysInMonth } });
     }
 
-    // 1. Fetch all active clients from BOTH CRM Client and SMM Client
+    // 1. Fetch active projects within scope to map client -> project
+    const projectFilter = withWorkspaceScope(req, { status: { $ne: 'cancelled' } });
+    const projects = await Project.find(projectFilter).select('_id client name category').lean();
+    const clientToProject = new Map();
+    projects.forEach((p) => {
+      if (p.client) {
+        const cId = p.client.toString();
+        if (!clientToProject.has(cId) || p.category === 'smm' || p.category === 'social_media') {
+          clientToProject.set(cId, p);
+        }
+      }
+    });
+
+    // 2. Fetch all active clients from BOTH CRM Client and SMM Client within scope
+    const clientFilter = withWorkspaceScope(req, { status: { $regex: /^active$/i } });
     const [crmClients, smmClientsList] = await Promise.all([
-      Client.find({ status: { $regex: /^active$/i } }).sort({ company: 1, name: 1 }).lean(),
-      SmmClient.find({ status: { $regex: /^active$/i } }).sort({ companyName: 1 }).lean(),
+      Client.find(clientFilter).sort({ company: 1, name: 1 }).lean(),
+      SmmClient.find(withWorkspaceScope(req, { status: { $regex: /^active$/i } })).sort({ companyName: 1 }).lean(),
     ]);
 
     // Build unified active client map
@@ -245,26 +294,62 @@ export const getMonthlyTrackers = async (req, res) => {
       }
     });
 
-    // 2. Fetch existing tracker docs for this month/year
-    const existingTrackers = await SmmMonthlyTracker.find({ month, year }).lean();
+    // 3. Fetch existing tracker docs for this month/year within scope
+    const trackerFilter = withWorkspaceScope(req, { month, year });
+    const existingTrackers = await SmmMonthlyTracker.find(trackerFilter).lean();
 
     // Look for any client IDs in existingTrackers not yet in clientMap
     const missingClientIds = existingTrackers
-      .map(t => t.client?.toString())
-      .filter(id => id && !clientMap.has(id));
+      .map((t) => t.client?.toString())
+      .filter((id) => id && !clientMap.has(id));
 
     if (missingClientIds.length > 0) {
       const [extraCrm, extraSmm] = await Promise.all([
         Client.find({ _id: { $in: missingClientIds } }).lean(),
         SmmClient.find({ _id: { $in: missingClientIds } }).lean(),
       ]);
-      extraCrm.forEach(c => clientMap.set(c._id.toString(), { _id: c._id, companyName: c.company || c.name || 'Client', status: 'Active' }));
-      extraSmm.forEach(c => {
+      extraCrm.forEach((c) => clientMap.set(c._id.toString(), { _id: c._id, companyName: c.company || c.name || 'Client', status: 'Active' }));
+      extraSmm.forEach((c) => {
         if (!clientMap.has(c._id.toString())) {
           clientMap.set(c._id.toString(), { _id: c._id, companyName: c.companyName || 'Client', status: c.status || 'Active' });
         }
       });
     }
+
+    // 4. Check which clients have assigned SMM tasks for this month
+    const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0);
+    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+    const rawMonthTasks = await Task.find(withWorkspaceScope(req, {
+      $or: [
+        { postingScheduleDate: { $gte: startOfMonth, $lte: endOfMonth } },
+        { publishingDate: { $gte: startOfMonth, $lte: endOfMonth } },
+        { dueDate: { $gte: startOfMonth, $lte: endOfMonth } },
+      ],
+      taskCategory: { $in: ['content', 'smm'] },
+      isDevTask: { $ne: true },
+      department: { $ne: 'Development' },
+    })).populate('project', '_id name client').lean();
+
+    const assignedMonthTasks = rawMonthTasks.filter((t) => isSmmTask(t) && isTaskAssigned(t));
+    const clientsWithAssignedTasks = new Set();
+    assignedMonthTasks.forEach((t) => {
+      const cId = t.client?._id?.toString() || (t.client ? t.client.toString() : null) || (t.project?.client ? t.project.client.toString() : null);
+      if (cId) {
+        clientsWithAssignedTasks.add(cId);
+        if (t.project && !clientToProject.has(cId)) {
+          clientToProject.set(cId, t.project);
+        }
+      }
+    });
+
+    // 5. Check which clients have monthly deliverables
+    const deliverables = await ProjectMonthlyDeliverable.find(withWorkspaceScope(req, { month, year })).lean();
+    const clientsWithDeliverables = new Set();
+    deliverables.forEach((d) => {
+      const pIdStr = d.projectId?.toString();
+      const proj = projects.find((p) => p._id.toString() === pIdStr);
+      if (proj?.client) clientsWithDeliverables.add(proj.client.toString());
+    });
 
     const trackerMap = {};
     const existingPopulatedList = [];
@@ -296,7 +381,15 @@ export const getMonthlyTrackers = async (req, res) => {
         }
 
         const clientObj = clientMap.get(cIdStr) || { _id: t.client, companyName: 'Client', status: 'Active' };
-        const pop = { ...t, days: updatedDays, client: clientObj };
+        const proj = clientToProject.get(cIdStr) || null;
+        const projectName = t.projectName || proj?.name || '';
+        const pop = {
+          ...t,
+          days: updatedDays,
+          client: clientObj,
+          projectName,
+          project: proj ? { _id: proj._id, name: proj.name } : (t.project ? { _id: t.project, name: projectName } : null),
+        };
         trackerMap[cIdStr] = pop;
         existingPopulatedList.push(pop);
       }
@@ -305,7 +398,7 @@ export const getMonthlyTrackers = async (req, res) => {
     const handledClientIds = new Set();
     const rows = [];
 
-    // For active clients, return existing (if not excluded) or scaffold (if not excluded)
+    // Filter to only clients that have SMM relevance (saved tracker, assigned SMM tasks, or deliverables)
     for (const [cIdStr, client] of clientMap.entries()) {
       handledClientIds.add(cIdStr);
       const existing = trackerMap[cIdStr];
@@ -318,18 +411,27 @@ export const getMonthlyTrackers = async (req, res) => {
       if (existing) {
         rows.push(existing);
       } else {
-        // Scaffold (not yet saved)
-        rows.push({
-          _id: null,
-          client: { _id: client._id, companyName: client.companyName },
-          team: 'RWM',
-          plan: '',
-          storyPlan: '30 STORIES',
-          month,
-          year,
-          days: buildEmptyDays(year, month),
-          _scaffold: true,
-        });
+        // Only scaffold if client actually has assigned SMM tasks or project deliverables
+        const hasAssignedTasks = clientsWithAssignedTasks.has(cIdStr);
+        const hasDelivs = clientsWithDeliverables.has(cIdStr);
+        const proj = clientToProject.get(cIdStr);
+        const isSmmProj = proj && (proj.category === 'smm' || proj.category === 'social_media');
+
+        if (hasAssignedTasks || hasDelivs || isSmmProj) {
+          rows.push({
+            _id: null,
+            client: { _id: client._id, companyName: client.companyName },
+            projectName: proj?.name || '',
+            project: proj ? { _id: proj._id, name: proj.name } : null,
+            team: 'RWM',
+            plan: '',
+            storyPlan: '30 STORIES',
+            month,
+            year,
+            days: buildEmptyDays(year, month),
+            _scaffold: true,
+          });
+        }
       }
     }
 
@@ -337,6 +439,9 @@ export const getMonthlyTrackers = async (req, res) => {
     for (const existing of existingPopulatedList) {
       const cIdStr = existing.client?._id?.toString();
       if (cIdStr && !handledClientIds.has(cIdStr) && !existing.isExcluded) {
+        const proj = clientToProject.get(cIdStr) || null;
+        existing.projectName = existing.projectName || proj?.name || '';
+        existing.project = proj ? { _id: proj._id, name: proj.name } : (existing.project ? { _id: existing.project, name: existing.projectName } : null);
         rows.push(existing);
       }
     }
@@ -347,6 +452,7 @@ export const getMonthlyTrackers = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
+
 
 
 // ── GET single tracker row by clientId + month/year ─────────────────────────
@@ -391,8 +497,11 @@ export const getTrackerByClient = async (req, res) => {
       SmmMonthlyTracker.findByIdAndUpdate(tracker._id, { $set: { days: updatedDays } }).catch(() => {});
     }
 
+    const proj = await Project.findOne(withWorkspaceScope(req, { client: clientId, status: { $ne: 'cancelled' } })).select('_id name').lean();
     tracker.days = updatedDays;
     tracker.client = await resolveClientObj(clientId);
+    tracker.projectName = tracker.projectName || proj?.name || '';
+    tracker.project = proj ? { _id: proj._id, name: proj.name } : null;
     res.json({ success: true, data: tracker });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error', error: err.message });
@@ -400,13 +509,23 @@ export const getTrackerByClient = async (req, res) => {
 };
 
 // ── UPSERT (create or update) a tracker row ─────────────────────────────────
-// POST /api/smm/tracker  { clientId, month, year, plan, storyPlan, team, days }
+// POST /api/smm/tracker  { clientId, month, year, plan, storyPlan, team, days, projectName, projectId }
 export const upsertTracker = async (req, res) => {
   try {
-    const { clientId, month, year, plan, storyPlan, team, days } = req.body;
+    const { clientId, month, year, plan, storyPlan, team, days, projectName, projectId } = req.body;
 
     if (!clientId || !month || !year) {
       return res.status(400).json({ success: false, message: 'clientId, month, year are required' });
+    }
+
+    let finalProjectName = projectName || '';
+    let finalProjectId = projectId || null;
+    if (!finalProjectName) {
+      const proj = await Project.findOne(withWorkspaceScope(req, { client: clientId, status: { $ne: 'cancelled' } })).select('_id name').lean();
+      if (proj) {
+        finalProjectName = proj.name;
+        finalProjectId = proj._id;
+      }
     }
 
     const tracker = await SmmMonthlyTracker.findOneAndUpdate(
@@ -417,6 +536,9 @@ export const upsertTracker = async (req, res) => {
           plan: plan || '',
           storyPlan: storyPlan || '30 STORIES',
           days: days || buildEmptyDays(year, month),
+          project: finalProjectId,
+          projectName: finalProjectName,
+          organizationId: req.user?.organizationId,
           isExcluded: false,
           updatedBy: req.user?._id,
         },
@@ -431,6 +553,8 @@ export const upsertTracker = async (req, res) => {
     ).lean();
 
     tracker.client = await resolveClientObj(clientId);
+    tracker.projectName = finalProjectName;
+    tracker.project = finalProjectId ? { _id: finalProjectId, name: finalProjectName } : null;
 
     emitLiveEvent('smmTrackerUpdated', {
       trackerId: tracker._id,
@@ -714,10 +838,26 @@ export const syncTasksWithTracker = async (req, res) => {
     const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0);
     const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
 
-    // 1. Fetch all active clients from both CRM Client and SmmClient
+    // 1. Fetch active projects within scope to map project -> client & client -> project
+    const projects = await Project.find(withWorkspaceScope(req, { status: { $ne: 'cancelled' } }))
+      .select('_id client name category')
+      .lean();
+    const projectToClient = new Map();
+    const clientToProject = new Map();
+    projects.forEach((p) => {
+      if (p.client) {
+        const cId = p.client.toString();
+        projectToClient.set(p._id.toString(), cId);
+        if (!clientToProject.has(cId) || p.category === 'smm' || p.category === 'social_media') {
+          clientToProject.set(cId, p);
+        }
+      }
+    });
+
+    // 2. Fetch all active clients from both CRM Client and SmmClient within scope
     const [crmClients, smmClientsList] = await Promise.all([
-      Client.find({ status: { $regex: /^active$/i } }).lean(),
-      SmmClient.find({ status: { $regex: /^active$/i } }).lean(),
+      Client.find(withWorkspaceScope(req, { status: { $regex: /^active$/i } })).lean(),
+      SmmClient.find(withWorkspaceScope(req, { status: { $regex: /^active$/i } })).lean(),
     ]);
 
     const clientMap = new Map();
@@ -740,17 +880,8 @@ export const syncTasksWithTracker = async (req, res) => {
       if (name && !nameToClientId.has(name)) nameToClientId.set(name, c._id.toString());
     });
 
-    // 2. Fetch projects to map project -> client
-    const projects = await Project.find({}).select('_id client name category').lean();
-    const projectToClient = new Map();
-    projects.forEach((p) => {
-      if (p.client) {
-        projectToClient.set(p._id.toString(), p.client.toString());
-      }
-    });
-
-    // 3. Fetch monthly deliverables for this month and year from projects
-    const deliverables = await ProjectMonthlyDeliverable.find({ month, year }).lean();
+    // 3. Fetch monthly deliverables for this month and year from projects within scope
+    const deliverables = await ProjectMonthlyDeliverable.find(withWorkspaceScope(req, { month, year })).lean();
     const deliverablesByClient = {};
     deliverables.forEach((d) => {
       const pIdStr = d.projectId?.toString();
@@ -758,7 +889,7 @@ export const syncTasksWithTracker = async (req, res) => {
       if (!cId) return;
 
       if (!deliverablesByClient[cId]) {
-        deliverablesByClient[cId] = { reels: 0, posts: 0, stories: 0, total: 0 };
+        deliverablesByClient[cId] = { reels: 0, posts: 0, stories: 0, total: 0, projectId: pIdStr };
       }
       const type = classifyDeliverableType(d.contentType);
       const qty = Number(d.targetQuantity) || 0;
@@ -768,30 +899,27 @@ export const syncTasksWithTracker = async (req, res) => {
       deliverablesByClient[cId].total += qty;
     });
 
-    // 4. Fetch content tasks that have a posting date in this month
-    const tasks = await Task.find({
+    // 4. Fetch content tasks with postingScheduleDate, publishingDate, or dueDate in this month
+    const rawTasks = await Task.find(withWorkspaceScope(req, {
       $or: [
         { postingScheduleDate: { $gte: startOfMonth, $lte: endOfMonth } },
         { publishingDate: { $gte: startOfMonth, $lte: endOfMonth } },
+        { dueDate: { $gte: startOfMonth, $lte: endOfMonth } },
       ],
-      taskCategory: { $ne: 'non_content' },
-      taskType: {
-        $nin: [
-          'non_content',
-          'website_development',
-          'web_dev',
-          'app_development',
-          'software_development',
-          'seo',
-          'maintenance',
-        ],
-      },
-    })
+      taskCategory: { $in: ['content', 'smm'] },
+      isDevTask: { $ne: true },
+      department: { $ne: 'Development' },
+    }))
       .populate('project', '_id client name')
       .populate('client', '_id company name')
       .lean();
 
+    // STRICT: Only SMM tasks that ARE ASSIGNED!
+    const tasks = rawTasks.filter((t) => isSmmTask(t) && isTaskAssigned(t));
+
     const tasksByClient = {};
+    const clientProjectNameMap = new Map();
+
     tasks.forEach((t) => {
       let cId = t.client?._id?.toString() || (t.client ? t.client.toString() : null);
       if (!cId && t.project) {
@@ -808,19 +936,28 @@ export const syncTasksWithTracker = async (req, res) => {
           const cName = t.client?.company || t.client?.name || t.clientName || 'Client';
           clientMap.set(cId, { _id: cId, companyName: cName });
         }
+
+        if (t.project?.name) {
+          clientProjectNameMap.set(cId, { id: t.project._id, name: t.project.name });
+        }
       }
     });
 
-    const clients = Array.from(clientMap.values());
+    // ONLY sync clients that actually have assigned SMM tasks OR active project deliverables
+    const eligibleClientIds = new Set([
+      ...Object.keys(tasksByClient),
+      ...Object.keys(deliverablesByClient),
+    ]);
+
     let updatedCount = 0;
     let syncedTaskCount = 0;
 
-    for (const client of clients) {
-      const cId = client._id.toString();
+    for (const cId of eligibleClientIds) {
+      const client = clientMap.get(cId) || { _id: cId, companyName: 'Client' };
       const clientTasks = tasksByClient[cId] || [];
       const clientDeliv = deliverablesByClient[cId];
 
-      // If client has neither deliverables nor tasks scheduled, skip automatic overwrite
+      // If client has neither deliverables nor assigned tasks scheduled, skip
       if (!clientDeliv && clientTasks.length === 0) {
         continue;
       }
@@ -848,14 +985,22 @@ export const syncTasksWithTracker = async (req, res) => {
 
       // Sort tasks chronologically
       clientTasks.sort((a, b) => {
-        const da = new Date(a.postingScheduleDate || a.publishingDate || a.createdAt);
-        const db = new Date(b.postingScheduleDate || b.publishingDate || b.createdAt);
+        const da = new Date(a.postingScheduleDate || a.publishingDate || a.dueDate || a.createdAt);
+        const db = new Date(b.postingScheduleDate || b.publishingDate || b.dueDate || b.createdAt);
         return da - db;
       });
 
+      // Find project for this client
+      const projInfo = clientProjectNameMap.get(cId)
+        || clientToProject.get(cId)
+        || (clientDeliv?.projectId ? projects.find((p) => p._id.toString() === clientDeliv.projectId) : null);
+      const projectId = projInfo?._id || projInfo?.id || null;
+      const projectName = projInfo?.name || '';
+
       let reelIdx = 1, postIdx = 1, storyIdx = 1;
       clientTasks.forEach((task) => {
-        const pDate = task.postingScheduleDate || task.publishingDate;
+        const pDate = task.postingScheduleDate || task.publishingDate || task.dueDate;
+        if (!pDate) return;
         const dayNum = new Date(pDate).getDate();
         if (dayNum < 1 || dayNum > daysInMonth) return;
 
@@ -901,6 +1046,8 @@ export const syncTasksWithTracker = async (req, res) => {
           time: timeStr,
           status,
           title: task.title || '',
+          projectName: projectName || task.project?.name || '',
+          clientName: client.companyName || task.client?.company || '',
           note: task.description || '',
           driveLink: task.rawFootageLink || '',
         };
@@ -932,6 +1079,9 @@ export const syncTasksWithTracker = async (req, res) => {
             plan,
             storyPlan,
             days,
+            project: projectId,
+            projectName,
+            organizationId: req.user?.organizationId,
             isExcluded: false,
             updatedBy: req.user?._id,
           },
@@ -945,7 +1095,7 @@ export const syncTasksWithTracker = async (req, res) => {
 
     res.json({
       success: true,
-      message: `Successfully synced ${syncedTaskCount} tasks and deliverables across ${updatedCount} clients`,
+      message: `Successfully synced ${syncedTaskCount} assigned SMM tasks across ${updatedCount} clients`,
       syncedClients: updatedCount,
       totalTasks: syncedTaskCount,
       totalDeliverables: deliverables.length,
@@ -955,6 +1105,7 @@ export const syncTasksWithTracker = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
+
 
 // ── GET /api/smm/tracker/client-deliverables-summary ────────────────────────
 // Fetches deliverables and scheduled tasks for a single client for Add Client modal
@@ -994,8 +1145,8 @@ export const getClientDeliverablesSummary = async (req, res) => {
       else if (type === 'story') storiesCount += qty;
     });
 
-    // Find tasks scheduled with postingScheduleDate or publishingDate
-    const tasks = await Task.find({
+    // Find assigned SMM tasks scheduled with postingScheduleDate, publishingDate, or dueDate
+    const rawTasks = await Task.find({
       $or: [
         { client: clientId },
         { project: { $in: projectIds } },
@@ -1005,22 +1156,16 @@ export const getClientDeliverablesSummary = async (req, res) => {
           $or: [
             { postingScheduleDate: { $gte: startOfMonth, $lte: endOfMonth } },
             { publishingDate: { $gte: startOfMonth, $lte: endOfMonth } },
+            { dueDate: { $gte: startOfMonth, $lte: endOfMonth } },
           ],
         },
       ],
-      taskCategory: { $ne: 'non_content' },
-      taskType: {
-        $nin: [
-          'non_content',
-          'website_development',
-          'web_dev',
-          'app_development',
-          'software_development',
-          'seo',
-          'maintenance',
-        ],
-      },
+      taskCategory: { $in: ['content', 'smm'] },
+      isDevTask: { $ne: true },
+      department: { $ne: 'Development' },
     }).lean();
+
+    const tasks = rawTasks.filter((t) => isSmmTask(t) && isTaskAssigned(t));
 
     const taskReels = tasks.filter((t) => classifyTaskContentType(t) === 'reel').length;
     const taskPosts = tasks.filter((t) => classifyTaskContentType(t) === 'post').length;

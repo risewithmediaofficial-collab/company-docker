@@ -21,6 +21,8 @@ const dayItemSchema = new mongoose.Schema(
       default: 'todo',
     },
     title: { type: String, default: '' },      // Optional topic or hook
+    projectName: { type: String, default: '', trim: true },
+    clientName: { type: String, default: '', trim: true },
     note: { type: String, default: '' },       // Details / caption
     driveLink: { type: String, default: '' },  // Google Drive asset link
   },
@@ -67,6 +69,19 @@ const smmMonthlyTrackerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'SmmClient',
       required: true,
+    },
+
+    // Linked project (shows project name alongside client name)
+    project: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Project',
+    },
+    projectName: { type: String, default: '', trim: true },
+
+    // Organization / Tenant scoping
+    organizationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organization',
     },
 
     // Team label (e.g. "RWM")
