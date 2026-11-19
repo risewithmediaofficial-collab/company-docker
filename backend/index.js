@@ -24,6 +24,7 @@ import User from './models/user.model.js';
 import mongoose from 'mongoose';
 import { syncAllClientUsers } from './controllers/client.controller.js';
 import { migrateDevTasksFromTasksCollection } from './utils/devTaskMigration.js';
+import { migrateLegacyOrganizationData } from './utils/legacyOrgMigration.js';
 
 // Route imports
 import authRoutes from './routes/auth.routes.js';
@@ -125,6 +126,9 @@ const runDatabaseStartupTasks = async () => {
 
   // Background migration to strictly separate dev tasks from tasks collection
   migrateDevTasksFromTasksCollection().catch((err) => console.error('[DevTask Migration Error]', err.message));
+
+  // Background migration to ensure legacy documents are associated with primary organization
+  migrateLegacyOrganizationData().catch((err) => console.error('[Legacy Org Migration Error]', err.message));
 };
 
 mongoose.connection.on('connected', () => {
@@ -230,6 +234,23 @@ const safeUploadStatic = express.static(env.uploadDir, {
 });
 app.use('/uploads', safeUploadStatic);
 app.use('/api/uploads', safeUploadStatic);
+
+// Graceful fallback for missing image uploads (prevents broken 404 image errors in console)
+const missingUploadImageFallback = (req, res, next) => {
+  const ext = path.extname(req.path).toLowerCase();
+  if (['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg'].includes(ext)) {
+    const transparentPng = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+      'base64'
+    );
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    return res.status(200).send(transparentPng);
+  }
+  next();
+};
+app.use('/uploads', missingUploadImageFallback);
+app.use('/api/uploads', missingUploadImageFallback);
 
 if (env.nodeEnv === 'development') {
   app.use(morgan('dev'));

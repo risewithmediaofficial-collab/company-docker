@@ -3,7 +3,10 @@
 // =============================================
 
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import User from '../models/user.model.js';
+
+const BLOCKED_QUERY_ID = new mongoose.Types.ObjectId('000000000000000000000000');
 
 // Short-lived in-memory cache for authenticated user lookups (TTL: 20s, max 500 entries)
 // Eliminates repetitive User.findById queries across parallel API calls on the same view
@@ -161,9 +164,9 @@ export const requirePermission = (permissionKey) => {
  */
 export const withWorkspaceScope = (req, baseQuery = {}) => {
   const user = req?.user;
-  // Fail closed if user is missing
+  // Fail closed safely if user is missing
   if (!user) {
-    return { ...baseQuery, _id: null };
+    return { ...baseQuery, _id: BLOCKED_QUERY_ID };
   }
 
   const ghostOrgId =
@@ -173,17 +176,19 @@ export const withWorkspaceScope = (req, baseQuery = {}) => {
 
   let query = { ...baseQuery };
 
-  // Ghost Mode (superAdmin viewing a specific tenant CRM stealthily)
+  // Ghost Mode (superAdmin or admin viewing a specific tenant CRM stealthily)
   if (ghostOrgId && (user.role === 'superAdmin' || user.role === 'admin')) {
     query.organizationId = ghostOrgId;
-  } else if (user.role === 'superAdmin' && !user.organizationId) {
-    // Platform superAdmin — global access across all tenants
+  } else if ((user.role === 'superAdmin' || user.role === 'admin') && !user.organizationId) {
+    // Platform superAdmin / system admin without organizationId — global access across all tenants & legacy data
   } else if (user.organizationId) {
-    // Strict tenant isolation: Scope to user's exact organization
-    query.organizationId = user.organizationId;
+    // Tenant isolation: Match user's organization or legacy unassigned records
+    query.organizationId = { $in: [user.organizationId, null] };
+  } else if (['client', 'clientAdmin', 'clientMember'].includes(user.role)) {
+    // Client-side user: scope is enforced by brandId / clientId below
   } else {
-    // Safety net: non-superAdmin user with no organization assigned - fail closed
-    return { ...baseQuery, organizationId: '__BLOCKED_NO_ORG__', _id: null };
+    // Safety net: user with no organization assigned - fail closed safely without CastError
+    return { ...baseQuery, _id: BLOCKED_QUERY_ID };
   }
 
   const requestedWorkspace = req.headers?.['x-workspace-id'];
@@ -201,14 +206,14 @@ export const withWorkspaceScope = (req, baseQuery = {}) => {
   if (['client', 'clientAdmin', 'clientMember'].includes(user.role)) {
     if (user.brandId) {
       if (requestedWorkspace && requestedWorkspace !== 'global' && String(requestedWorkspace) !== String(user.brandId)) {
-        return { ...query, brandId: null, _id: null };
+        return { ...query, brandId: null, _id: BLOCKED_QUERY_ID };
       }
       query.brandId = user.brandId;
     } else if (user.clientId) {
       query.client = user.clientId;
     } else {
-      // Client has neither brandId nor clientId: fail closed
-      return { ...query, _id: null };
+      // Client has neither brandId nor clientId: fail closed safely
+      return { ...query, _id: BLOCKED_QUERY_ID };
     }
     return query;
   }
@@ -218,13 +223,13 @@ export const withWorkspaceScope = (req, baseQuery = {}) => {
   if (['editor', 'designer', 'adsManager'].includes(user.role)) {
     const assigned = Array.isArray(user.assignedBrands) ? user.assignedBrands : [];
     if (assigned.length === 0) {
-      return { ...query, brandId: { $in: [] } };
+      return { ...query, brandId: { $in: [] }, _id: BLOCKED_QUERY_ID };
     }
 
     if (requestedWorkspace && requestedWorkspace !== 'global') {
       const isAuthorized = assigned.map(String).includes(String(requestedWorkspace));
       if (!isAuthorized) {
-        return { ...query, brandId: null, _id: null };
+        return { ...query, brandId: null, _id: BLOCKED_QUERY_ID };
       }
       query.brandId = requestedWorkspace;
       return query;
@@ -240,7 +245,7 @@ export const withWorkspaceScope = (req, baseQuery = {}) => {
     if (requestedWorkspace && requestedWorkspace !== 'global') {
       const isAuthorized = user.assignedBrands.map(String).includes(String(requestedWorkspace));
       if (!isAuthorized) {
-        return { ...query, brandId: null, _id: null };
+        return { ...query, brandId: null, _id: BLOCKED_QUERY_ID };
       }
       query.brandId = requestedWorkspace;
     } else {
@@ -248,6 +253,7 @@ export const withWorkspaceScope = (req, baseQuery = {}) => {
     }
     return query;
   }
+
 
   // General employee with no specific brand restriction:
   if (requestedWorkspace && requestedWorkspace !== 'global') {

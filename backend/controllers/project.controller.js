@@ -374,6 +374,13 @@ export const getProjects = async (req, res) => {
               { createdAt: { $gte: start, $lte: end } },
             ],
           },
+          {
+            // Ongoing active projects created on or before range end that are still in progress
+            $and: [
+              { createdAt: { $lte: end } },
+              { status: { $nin: ['completed', 'Completed', 'cancelled', 'Cancelled'] } },
+            ],
+          },
         ],
       });
     }

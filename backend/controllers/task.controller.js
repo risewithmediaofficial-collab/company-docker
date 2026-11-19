@@ -850,6 +850,13 @@ export const getTasks = async (req, res) => {
               { createdAt: { $gte: start, $lte: end } },
             ],
           },
+          {
+            // Ongoing incomplete tasks created on or before range end that need action
+            $and: [
+              { createdAt: { $lte: end } },
+              { status: { $nin: ['approved', 'done', 'completed', 'Completed', 'Done', 'Approved'] } },
+            ],
+          },
         ],
       });
     }
