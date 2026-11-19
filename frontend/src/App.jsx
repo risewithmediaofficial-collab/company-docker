@@ -168,9 +168,12 @@ const App = () => {
       <Suspense fallback={null}>
         <Routes>
           {/* ── Public Standalone Pages (gowap.in style) ────────────────── */}
+          <Route path="/our-story" element={<AboutPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/what-we-do" element={<CapabilitiesPage />} />
           <Route path="/capabilities" element={<CapabilitiesPage />} />
           <Route path="/features" element={<CapabilitiesPage />} />
+          <Route path="/our-impact" element={<MetricsPage />} />
           <Route path="/metrics" element={<MetricsPage />} />
           <Route path="/overview" element={<MetricsPage />} />
           <Route path="/home" element={<Landing />} />

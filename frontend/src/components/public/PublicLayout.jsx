@@ -4,9 +4,9 @@ import { ArrowRight, Menu, X, MessageSquare } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Home', path: '/' },
-  { label: 'About', path: '/about' },
-  { label: 'Capabilities', path: '/capabilities' },
-  { label: 'Metrics', path: '/metrics' },
+  { label: 'Our Story', path: '/our-story' },
+  { label: 'What We Do', path: '/what-we-do' },
+  { label: 'Our Impact', path: '/our-impact' },
 ];
 
 const PublicLayout = ({
@@ -38,6 +38,9 @@ const PublicLayout = ({
 
   const isActive = (path) => {
     if (path === '/') return location.pathname === '/' || location.pathname === '/home';
+    if (path === '/our-story') return location.pathname === '/our-story' || location.pathname === '/about';
+    if (path === '/what-we-do') return location.pathname === '/what-we-do' || location.pathname === '/capabilities' || location.pathname === '/features';
+    if (path === '/our-impact') return location.pathname === '/our-impact' || location.pathname === '/metrics' || location.pathname === '/overview';
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
@@ -109,20 +112,14 @@ const PublicLayout = ({
             </Link>
           </div>
 
-          {/* Mobile Right Controls: Register Pill + Animated Hamburger */}
-          <div className="flex md:hidden items-center gap-1.5 sm:gap-2">
-            <Link
-              to="/register-company"
-              className="px-3.5 py-1.5 rounded-full bg-[#12B7D4] text-white font-extrabold text-xs shadow-sm hover:bg-[#0ea5c6] transition-all shrink-0"
-            >
-              Register
-            </Link>
+          {/* Mobile Right Controls: Hamburger Menu Toggle */}
+          <div className="flex md:hidden items-center">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-xl text-slate-800 hover:bg-slate-100 active:scale-95 transition-all focus:outline-none"
               aria-label="Toggle Navigation Menu"
             >
-              {mobileMenuOpen ? <X size={22} className="stroke-[2.5]" /> : <Menu size={22} className="stroke-[2.5]" />}
+              {mobileMenuOpen ? <X size={24} className="stroke-[2.5]" /> : <Menu size={24} className="stroke-[2.5]" />}
             </button>
           </div>
 
@@ -132,10 +129,10 @@ const PublicLayout = ({
         {mobileMenuOpen && (
           <>
             <div
-              className="md:hidden fixed inset-0 top-16 bg-slate-950/40 backdrop-blur-xs z-40 transition-opacity"
+              className="md:hidden fixed inset-0 top-16 bg-slate-950/60 backdrop-blur-sm z-40 transition-opacity"
               onClick={() => setMobileMenuOpen(false)}
             />
-            <div className="md:hidden absolute top-16 inset-x-0 z-50 bg-white/98 backdrop-blur-xl border-b border-slate-200/90 shadow-2xl py-5 px-5 flex flex-col gap-2 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="md:hidden fixed top-16 inset-x-0 z-50 bg-white border-b border-slate-200 shadow-2xl py-5 px-5 flex flex-col gap-2 animate-in fade-in slide-in-from-top-2 duration-150">
               <nav className="flex flex-col gap-1">
                 {NAV_ITEMS.map((item) => {
                   const active = isActive(item.path);
@@ -266,9 +263,9 @@ const PublicLayout = ({
               </p>
               <ul className="space-y-2.5 text-xs sm:text-sm font-medium">
                 <li><Link to="/" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Home</Link></li>
-                <li><Link to="/about" className="text-slate-400 hover:text-[#12B7D4] transition-colors">About Us</Link></li>
-                <li><Link to="/capabilities" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Capabilities</Link></li>
-                <li><Link to="/metrics" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Metrics</Link></li>
+                <li><Link to="/our-story" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Our Story</Link></li>
+                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">What We Do</Link></li>
+                <li><Link to="/our-impact" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Our Impact</Link></li>
                 <li><Link to="/register-company" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Register Company</Link></li>
               </ul>
             </div>
@@ -279,11 +276,11 @@ const PublicLayout = ({
                 Platform Solutions
               </p>
               <ul className="space-y-2.5 text-xs sm:text-sm font-medium">
-                <li><Link to="/capabilities" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Lead Pipeline & Deals</Link></li>
-                <li><Link to="/capabilities" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Content Calendar & SMM</Link></li>
-                <li><Link to="/capabilities" className="text-slate-400 hover:text-[#12B7D4] transition-colors">1-Tap Client Review</Link></li>
-                <li><Link to="/capabilities" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Automated GST Invoices</Link></li>
-                <li><Link to="/metrics" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Tenant Privacy & Backups</Link></li>
+                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Lead Pipeline & Deals</Link></li>
+                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Content Calendar & SMM</Link></li>
+                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">1-Tap Client Review</Link></li>
+                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Automated GST Invoices</Link></li>
+                <li><Link to="/our-impact" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Tenant Privacy & Backups</Link></li>
               </ul>
             </div>
 
