@@ -57,7 +57,7 @@ const AuthLayout = () => {
   }, [cleanSlug, isActualCompanySlug]);
 
   return (
-    <div className="min-h-[100dvh] w-full flex items-center justify-center bg-background relative overflow-x-hidden p-3 sm:p-6 py-10 sm:py-12 transition-colors duration-300">
+    <div className="min-h-[100dvh] w-full flex items-center justify-center bg-background relative overflow-x-hidden p-2 sm:p-6 py-2 sm:py-12 transition-colors duration-300">
       {/* Floating Theme Toggle (Top Right) */}
       <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
         <button
