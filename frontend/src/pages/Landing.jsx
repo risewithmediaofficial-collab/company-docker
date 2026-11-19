@@ -1,46 +1,42 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check, Sparkles, Zap, Layers, Calendar, CreditCard } from 'lucide-react';
 import PublicLayout from '../components/public/PublicLayout';
 import HeroPattern from '../components/public/HeroPattern';
 import ScrollReveal from '../components/public/ScrollReveal';
 import SectionShowcase from '../components/public/SectionShowcase';
 import StatsBanner from '../components/public/StatsBanner';
 import SoftwareComparison from '../components/public/SoftwareComparison';
+import HeroPipelineShowcase from '../components/public/HeroPipelineShowcase';
 
-const Landing = () => {
+export const Landing = () => {
   return (
     <PublicLayout>
-      {/* ── HERO SECTION (Pattern strictly cut off right below action buttons) ── */}
-      <section className="relative overflow-hidden border-b border-slate-200/80 pt-12 sm:pt-20 pb-14 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
-        {/* Pattern strictly bounded inside Hero Section using ONLY Logo Blue #12B7D4 */}
+      {/* ── 1. HERO SECTION ── */}
+      <section className="relative overflow-hidden border-b border-slate-200/80 pt-12 sm:pt-20 pb-12 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
         <HeroPattern />
 
-        {/* Hero Content */}
         <div className="relative z-10 max-w-4xl mx-auto">
-          {/* Plain Text Section Title (NO ROUNDED PILL, Human-Made Clean Typography) */}
-          <p className="text-xs sm:text-sm font-bold tracking-widest text-[#12B7D4] uppercase mb-4">
-            Simple Software for Marketing Agencies
-          </p>
+          {/* Section Overline Pill */}
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#12B7D4]/10 border border-[#12B7D4]/25 text-[#0d99b2] text-xs font-black uppercase tracking-wider mb-4">
+            <span>All-in-One Agency CRM & Operating System</span>
+          </div>
 
-          {/* Big Clean Title (Black & Blue, Clean Solid Typography with Full Letter Visibility) */}
-          <h1 className="font-extrabold text-3xl sm:text-5xl lg:text-[62px] text-slate-950 tracking-tight leading-[1.16]">
-            Manage Your Agency.
+          {/* Main Headline */}
+          <h1 className="font-extrabold text-3xl sm:text-5xl lg:text-[62px] text-slate-950 tracking-tight leading-[1.15]">
+            Manage Your Entire Agency.
             <span className="text-[#12B7D4] block mt-1 sm:mt-2 pb-1">
-              All in One Place.
+              In One Simple, Unified Flow.
             </span>
           </h1>
 
-          {/* Simple Human Subtitle */}
-          <p className="mt-5 text-lg sm:text-xl font-bold text-slate-800 tracking-tight">
-            Clients. Social Media. Fast Approvals. GST Bills.
+          {/* Subtitle */}
+          <p className="mt-4 sm:mt-5 text-base sm:text-xl text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
+            Stop switching between scattered spreadsheets, lost WhatsApp chats, and disconnected tools.
+            Leads, client tasks, social media calendars, and GST invoices — all in one place.
           </p>
 
-          <p className="mt-3 text-base text-slate-600 font-medium max-w-2xl mx-auto leading-relaxed">
-            Stop switching between scattered spreadsheets and endless chats. Everything your marketing agency needs in one clear, simple flow.
-          </p>
-
-          {/* Registration & Login Buttons */}
+          {/* CTA Buttons */}
           <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
             <Link
               to="/register-company"
@@ -56,343 +52,262 @@ const Landing = () => {
               Login to Account
             </Link>
           </div>
+
+          {/* Trust Micro-copy */}
+          <div className="mt-4 flex items-center justify-center flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-slate-500">
+            <span className="flex items-center gap-1">
+              <span className="text-emerald-500 font-bold">✓</span> 14-Day Free Trial
+            </span>
+            <span className="hidden sm:inline">•</span>
+            <span className="flex items-center gap-1">
+              <span className="text-emerald-500 font-bold">✓</span> No Credit Card Required
+            </span>
+            <span className="hidden sm:inline">•</span>
+            <span className="flex items-center gap-1">
+              <span className="text-emerald-500 font-bold">✓</span> Instant Setup in 2 Mins
+            </span>
+          </div>
+
+          {/* ── ODOO-STYLE LIVE CRM PIPELINE SHOWCASE ── */}
+          <HeroPipelineShowcase />
         </div>
       </section>
 
-      {/* ── IMPACT STATS BANNER (MATCHING REFERENCE DESIGN) ── */}
+      {/* ── 2. STATS BANNER ── */}
       <StatsBanner />
 
-      {/* ── MODERN COMPARISON SECTION ("WHAT THEY HAVE" VS "WHAT WE DO") ── */}
+      {/* ── 3. MODERN SOFTWARE COMPARISON ("WHAT THEY HAVE" VS "WHAT WE DO") ── */}
       <SoftwareComparison />
 
-      {/* ── CLEAN ZIG-ZAG SECTIONS (ALIGNED WITH SMARTPHONE SHOWCASE & STICKERS) ── */}
-      <div className="py-8 sm:py-16 px-4 sm:px-8 max-w-6xl mx-auto space-y-10 sm:space-y-16">
+      {/* ── 4. THREE CORE PILLARS SHOWCASE (CLEAN ODOO-STYLE ALIGNMENT, ZERO DUPLICATION) ── */}
+      <div className="space-y-0">
 
-        {/* ── ZIG-ZAG 01: Sales & Client CRM ── */}
-        <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center pb-10 sm:pb-14 border-b border-slate-100">
-            {/* Left Column: Heading & 4 Checkmarked Points */}
-            <div className="lg:col-span-7 space-y-3.5 text-left">
-              <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
-                Leads & Sales Pipeline Tracker.
-                <span className="text-[#12B7D4] block mt-1 pb-0.5">
-                  Never Let a Paying Deal Slip Away.
-                </span>
-              </h2>
+        {/* ── PILLAR 1: Complete Client & Deal Lifecycle (White BG) ── */}
+        <section className="py-14 sm:py-20 px-4 sm:px-8 bg-white border-t border-slate-200/80">
+          <div className="max-w-6xl mx-auto">
+            <ScrollReveal>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
+                {/* Left: Text & Features (Neatly Constrained with Card Bullets) */}
+                <div className="lg:col-span-7 space-y-4 text-left">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-black uppercase tracking-wider">
+                    <Sparkles size={12} />
+                    <span>Sales & Client Acquisition</span>
+                  </span>
 
-              {/* 4 Checkmark Bullet Points (Matching User Reference Image Layout) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Visual Sales Funnel</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Move leads from New Lead → Contacted → Discovery Call → Proposal Sent → Won.</p>
+                  <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
+                    Capture Every Lead.
+                    <span className="text-[#12B7D4] block mt-1">
+                      Close Deals Without Friction.
+                    </span>
+                  </h2>
+
+                  <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-xl">
+                    Never let an inquiry get lost in unorganized WhatsApp chats. Track deal value, generate professional proposals, and store credentials safely.
+                  </p>
+
+                  {/* Clean Feature Mini-Cards (Perfect Text Alignment) */}
+                  <div className="space-y-3 pt-2 max-w-xl">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                      <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check size={14} className="stroke-[3]" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Visual Sales Pipeline</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Move deals smoothly from New Lead → Contacted → Discovery Call → Proposal Sent → Won.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                      <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check size={14} className="stroke-[3]" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">1-Click Client & Project Creation</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">When a deal is won, 1 click instantly sets up their client directory profile with linked project tasks.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                      <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check size={14} className="stroke-[3]" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Encrypted Client Vault</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Securely store website admin logins, social media passwords, and API keys with role-based access.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">One-Click Conversion</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Instantly convert any won deal into an active Client Profile with a linked project.</p>
-                  </div>
+
+                {/* Right: Visual Showcase */}
+                <div className="lg:col-span-5 flex justify-center">
+                  <SectionShowcase type="leads" />
                 </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Encrypted Client Vault</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Safely store client website logins, social credentials, hosting, and API keys.</p>
-                  </div>
+              </div>
+            </ScrollReveal>
+          </div>
+        </section>
+
+        {/* ── PILLAR 2: Creative Execution & Content Calendar (Subtle Slate Tint BG) ── */}
+        <section className="py-14 sm:py-20 px-4 sm:px-8 bg-slate-50/70 border-y border-slate-200/80">
+          <div className="max-w-6xl mx-auto">
+            <ScrollReveal>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
+                {/* Left: Visual Showcase (Alternating Side) */}
+                <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
+                  <SectionShowcase type="calendar" />
                 </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Churn Prevention Alerts</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Automated alerts notify managers when an active client has no contact in 14 or 30 days.</p>
+
+                {/* Right: Text & Features */}
+                <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 border border-cyan-200 text-cyan-800 text-[11px] font-black uppercase tracking-wider">
+                    <Calendar size={12} />
+                    <span>Creative & Social Media</span>
+                  </span>
+
+                  <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
+                    Agile Content Calendar.
+                    <span className="text-[#12B7D4] block mt-1">
+                      1-Tap Client Approvals on Phone.
+                    </span>
+                  </h2>
+
+                  <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-xl">
+                    Coordinate writers, graphic designers, and video editors without chaotic meetings. Clients preview creatives directly on their phone and approve in 1 tap.
+                  </p>
+
+                  {/* Clean Feature Mini-Cards */}
+                  <div className="space-y-3 pt-2 max-w-xl">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                      <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check size={14} className="stroke-[3]" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Multi-Platform Visual Grid</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Plan and stage reels, carousels, and stories across Instagram, LinkedIn, Facebook, and X.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                      <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check size={14} className="stroke-[3]" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">SMM Deliverable Quotas</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Real-time quota counters per client (e.g. 15 Posts, 8 Reels, 4 Carousels) so monthly targets are always hit.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                      <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check size={14} className="stroke-[3]" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">1-Tap Client Review Links</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Clients review mockups on their mobile screen with zero login friction, recording verified sign-off timestamps.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Right Column: Visual Smartphone Showcase with Floating Stickers */}
-            <div className="lg:col-span-5 flex justify-center">
-              <SectionShowcase type="leads" />
-            </div>
+            </ScrollReveal>
           </div>
-        </ScrollReveal>
+        </section>
 
-        {/* ── ZIG-ZAG 02: Operations, Tasks & Content Calendar (Showcase Left, Text Right) ── */}
-        <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center pb-10 sm:pb-14 border-b border-slate-100">
-            {/* Left Column: Visual Smartphone Showcase with Floating Stickers */}
-            <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
-              <SectionShowcase type="calendar" />
-            </div>
+        {/* ── PILLAR 3: Billing, Finance & Team Operations (White BG) ── */}
+        <section className="py-14 sm:py-20 px-4 sm:px-8 bg-white border-b border-slate-200/80">
+          <div className="max-w-6xl mx-auto">
+            <ScrollReveal>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
+                {/* Left: Text & Features */}
+                <div className="lg:col-span-7 space-y-4 text-left">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-black uppercase tracking-wider">
+                    <CreditCard size={12} />
+                    <span>Finance, Billing & Operations</span>
+                  </span>
 
-            {/* Right Column: Heading & 4 Checkmarked Points */}
-            <div className="lg:col-span-7 order-1 lg:order-2 space-y-3.5 text-left">
-              <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
-                Agile Kanban & Content Calendar.
-                <span className="text-[#12B7D4] block mt-1 pb-0.5">
-                  Built for Creative Marketing Teams.
-                </span>
-              </h2>
+                  <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
+                    GST Invoices in 30 Seconds.
+                    <span className="text-[#12B7D4] block mt-1">
+                      Live Agency Profit & Loss.
+                    </span>
+                  </h2>
 
-              {/* 4 Checkmark Bullet Points */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Visual Kanban Boards</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Drag-and-drop tasks across To Do → In Progress → Review / Approval → Completed.</p>
+                  <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-xl">
+                    Eliminate spreadsheet accounting. Automatic CGST (9%) and SGST (9%) tax calculations, staff payroll, and GPS attendance under one secure roof.
+                  </p>
+
+                  {/* Clean Feature Mini-Cards */}
+                  <div className="space-y-3 pt-2 max-w-xl">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                      <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check size={14} className="stroke-[3]" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Auto GST Tax Invoices & PDF</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Sequential tax numbering, automated tax splits, UPI QR codes, and 1-click printable PDF receipts.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                      <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check size={14} className="stroke-[3]" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Real-Time Agency P&L</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Monitor incoming client revenue, operational tool subscriptions, and net margins protected by a PIN gate.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                      <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check size={14} className="stroke-[3]" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Geofenced GPS Punch Clock</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Staff mark office attendance verified by GPS radius, with an approved remote WFH toggle.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Multi-Platform Calendar</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Schedule posts, reels, and stories across Instagram, Facebook, LinkedIn, YouTube, and X.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">SMM Monthly Quotas</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Track deliverables per client (15 Posts, 8 Reels, 4 Carousels) with live quota counts.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Daily Focus & EOD Reports</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Morning checklists and 60-second end-of-day accomplishment summaries for managers.</p>
-                  </div>
+
+                {/* Right: Visual Showcase */}
+                <div className="lg:col-span-5 flex justify-center">
+                  <SectionShowcase type="billing" />
                 </div>
               </div>
-            </div>
+            </ScrollReveal>
           </div>
-        </ScrollReveal>
+        </section>
 
-        {/* ── ZIG-ZAG 03: Client VIP Portal & Approvals ── */}
+      </div>
+
+      {/* ── 5. FINAL ACTION BANNER ── */}
+      <section className="py-14 sm:py-20 px-4 sm:px-8 max-w-6xl mx-auto">
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center pb-10 sm:pb-14 border-b border-slate-100">
-            {/* Left Column: Heading & 4 Checkmarked Points */}
-            <div className="lg:col-span-7 space-y-3.5 text-left">
-              <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
-                Branded VIP Client Portal.
-                <span className="text-[#12B7D4] block mt-1 pb-0.5">
-                  1-Tap Mobile Approvals & Live Budgets.
-                </span>
-              </h2>
-
-              {/* 4 Checkmark Bullet Points */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Dedicated Client Portal</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Clients log into a private branded portal to view live project progress without calling.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">1-Tap Creative Approvals</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Clients preview Instagram posts and reels on their phone and sign off with 1 tap.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Live Ad Budget Tracker</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Transparent reporting on Meta and Google ad spends and remaining monthly budget.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Digital Proposals & Quotes</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Shareable web contracts with custom line-item pricing and online acceptance.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Visual Smartphone Showcase with Floating Stickers */}
-            <div className="lg:col-span-5 flex justify-center">
-              <SectionShowcase type="approvals" />
-            </div>
-          </div>
-        </ScrollReveal>
-
-        {/* ── ZIG-ZAG 04: Finance, GST & Accounting (Showcase Left, Text Right) ── */}
-        <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center pb-10 sm:pb-14 border-b border-slate-100">
-            {/* Left Column: Visual Smartphone Showcase with Floating Stickers */}
-            <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
-              <SectionShowcase type="billing" />
-            </div>
-
-            {/* Right Column: Heading & 4 Checkmarked Points */}
-            <div className="lg:col-span-7 order-1 lg:order-2 space-y-3.5 text-left">
-              <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
-                Agency Finance & GST Billing.
-                <span className="text-[#12B7D4] block mt-1 pb-0.5">
-                  Automated Tax Invoices & Real-Time P&L.
-                </span>
-              </h2>
-
-              {/* 4 Checkmark Bullet Points */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">GST Tax Invoices</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Auto-calculated CGST (9%) and SGST (9%) with sequential invoice numbers and PDF export.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Live Profit & Loss</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Shows real-time incoming revenue, total expenses, burn rate, and agency profit margins.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Staff Payroll & Salaries</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Calculate monthly salaries, attendance hours, advance deductions, and payout records.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Agency Loans & EMIs</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Track agency business borrowings, monthly EMI due dates, balances, and interest rates.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </ScrollReveal>
-
-        {/* ── ZIG-ZAG 05: HR, Attendance & Multi-Tenant SaaS ── */}
-        <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
-            {/* Left Column: Heading & 4 Checkmarked Points */}
-            <div className="lg:col-span-7 space-y-3.5 text-left">
-              <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
-                Geofenced GPS Attendance & HR.
-                <span className="text-[#12B7D4] block mt-1 pb-0.5">
-                  Safe, Private Agency Operations.
-                </span>
-              </h2>
-
-              {/* 4 Checkmark Bullet Points */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">GPS Punch Clock</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">1-click mobile clock-in verifying staff are within office radius, with remote WFH toggle.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Strict Role Governance</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Designers and writers only see assigned client tasks; company margins stay 100% private.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Domain & SSL Watchdog</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Automated warning alerts trigger 30, 15, and 7 days before client websites expire.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Hardware Asset Library</h3>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Inventory tracking for company laptops, studio cameras, mics, and equipment assignments.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Visual Smartphone Showcase with Floating Stickers */}
-            <div className="lg:col-span-5 flex justify-center">
-              <SectionShowcase type="attendance" />
-            </div>
-          </div>
-        </ScrollReveal>
-
-        {/* ── COMPLETE PLATFORM FEATURES TEASER ── */}
-        <ScrollReveal>
-          <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white relative overflow-hidden shadow-2xl text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-6">
+          <div className="p-8 sm:p-14 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white relative overflow-hidden shadow-2xl text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8">
             <div className="space-y-2 max-w-2xl">
               <span className="text-xs font-black uppercase tracking-widest text-[#12B7D4] block">
-                Comprehensive Agency OS
+                Ready to Upgrade Your Agency?
               </span>
-              <h3 className="text-2xl sm:text-3xl font-black tracking-tight">
-                Want to see our Role-Based Workspaces & Capabilities?
+              <h3 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
+                Stop juggling 6 different tools.
+                <span className="text-[#12B7D4] block">Run your agency like a well-oiled machine.</span>
               </h3>
-              <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed">
-                Explore how agency founders, project managers, creative staff, and paying clients each get their own personalized, noise-free workspace.
+              <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed pt-1">
+                Set up your agency workspace in under 2 minutes. No credit card required. Full team access included.
               </p>
             </div>
             <Link
-              to="/what-we-do"
-              className="px-7 py-3.5 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm shadow-lg shadow-[#12B7D4]/30 transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+              to="/register-company"
+              className="px-8 py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#12B7D4]/30 transition-all flex items-center gap-2 shrink-0 cursor-pointer"
             >
-              <span>Explore What We Do</span>
-              <ArrowRight size={15} />
+              <span>Start 14-Day Free Trial</span>
+              <ArrowRight size={16} />
             </Link>
           </div>
         </ScrollReveal>
-
-      </div>
+      </section>
     </PublicLayout>
   );
 };
