@@ -230,8 +230,8 @@ const PublicLayout = ({
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 items-start pb-12 border-b border-slate-800/80">
             
-            {/* Col 1: Brand & Mission (5 cols) */}
-            <div className="sm:col-span-2 lg:col-span-5 space-y-4 text-left">
+            {/* Col 1: Brand & Mission (6 cols) */}
+            <div className="sm:col-span-2 lg:col-span-6 space-y-4 text-left">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 shadow-xs">
                   <img
@@ -259,8 +259,8 @@ const PublicLayout = ({
               </div>
             </div>
 
-            {/* Col 2: Quick Links (2 cols) */}
-            <div className="sm:col-span-1 lg:col-span-2 space-y-3 text-left">
+            {/* Col 2: Quick Links (3 cols) */}
+            <div className="sm:col-span-1 lg:col-span-3 space-y-3 text-left">
               <p className="text-xs font-bold text-white uppercase tracking-wider">
                 Quick Links
               </p>
@@ -285,26 +285,6 @@ const PublicLayout = ({
                 <li><Link to="/capabilities" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Automated GST Invoices</Link></li>
                 <li><Link to="/metrics" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Tenant Privacy & Backups</Link></li>
               </ul>
-            </div>
-
-            {/* Col 4: Platform Status Card (2 cols, right aligned) */}
-            <div className="sm:col-span-2 lg:col-span-2 flex flex-col items-start lg:items-end justify-start pt-2 sm:pt-0">
-              <div className="w-full sm:w-auto bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 flex flex-col items-center text-center shadow-lg">
-                <div className="w-14 h-14 rounded-xl bg-slate-800/80 border border-slate-700/60 p-2 flex items-center justify-center mb-2.5 shadow-xs">
-                  <img
-                    src="/branding/rise-with-media-logo.png"
-                    alt="RiseWithMedia OS"
-                    className="w-full h-full object-contain"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
-                </div>
-                <p className="text-xs font-bold text-white tracking-tight">RiseWithMedia OS</p>
-                <div className="mt-2 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>All Systems Active</span>
-                </div>
-                <p className="text-[10px] text-slate-400 mt-2 font-medium">99.98% Uptime SLA</p>
-              </div>
             </div>
 
           </div>
