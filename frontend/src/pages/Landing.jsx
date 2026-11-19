@@ -17,10 +17,10 @@ export const Landing = () => {
         <HeroPattern />
 
         <div className="relative z-10 max-w-4xl mx-auto">
-          {/* Section Overline Pill */}
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#12B7D4]/10 border border-[#12B7D4]/25 text-[#0d99b2] text-xs font-black uppercase tracking-wider mb-4">
-            <span>All-in-One Agency CRM & Operating System</span>
-          </div>
+          {/* Plain Text Section Title (No Rounded Pill Effect) */}
+          <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#12B7D4] uppercase mb-3 sm:mb-4">
+            All-in-One Agency CRM & Operating System
+          </p>
 
           {/* Main Headline */}
           <h1 className="font-extrabold text-3xl sm:text-5xl lg:text-[62px] text-slate-950 tracking-tight leading-[1.15]">
@@ -89,10 +89,9 @@ export const Landing = () => {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
                 {/* Left: Text & Features (Neatly Constrained with Card Bullets) */}
                 <div className="lg:col-span-7 space-y-4 text-left">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-black uppercase tracking-wider">
-                    <Sparkles size={12} />
-                    <span>Sales & Client Acquisition</span>
-                  </span>
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">
+                    Sales & Client Acquisition
+                  </p>
 
                   <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                     Capture Every Lead.
@@ -160,10 +159,9 @@ export const Landing = () => {
 
                 {/* Right: Text & Features */}
                 <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 border border-cyan-200 text-cyan-800 text-[11px] font-black uppercase tracking-wider">
-                    <Calendar size={12} />
-                    <span>Creative & Social Media</span>
-                  </span>
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">
+                    Creative & Social Media
+                  </p>
 
                   <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                     Agile Content Calendar.
@@ -221,10 +219,9 @@ export const Landing = () => {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
                 {/* Left: Text & Features */}
                 <div className="lg:col-span-7 space-y-4 text-left">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-black uppercase tracking-wider">
-                    <CreditCard size={12} />
-                    <span>Finance, Billing & Operations</span>
-                  </span>
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">
+                    Finance, Billing & Operations
+                  </p>
 
                   <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                     GST Invoices in 30 Seconds.

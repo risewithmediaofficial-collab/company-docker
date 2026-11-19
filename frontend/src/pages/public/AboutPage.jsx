@@ -29,10 +29,10 @@ export const AboutPage = () => {
         <HeroPattern />
         
         <div className="relative z-10 max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#12B7D4]/10 border border-[#12B7D4]/25 text-[#0d99b2] text-xs font-black uppercase tracking-wider mb-4">
-            <Heart size={13} className="text-[#12B7D4]" />
-            <span>The Agency Founder's Story</span>
-          </div>
+          {/* Plain Text Section Title (No Rounded Pill Effect) */}
+          <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#12B7D4] uppercase mb-3 sm:mb-4">
+            The Agency Founder's Story
+          </p>
 
           <h1 className="font-extrabold text-3xl sm:text-5xl lg:text-[58px] text-slate-950 tracking-tight leading-[1.16]">
             Built by Agency Owners,
@@ -216,10 +216,9 @@ export const AboutPage = () => {
 
               {/* Right Column: Clean Vertically Aligned Step Cards */}
               <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#12B7D4]/10 text-[#0d99b2] text-[11px] font-black uppercase tracking-wider">
-                  <Clock size={12} />
-                  <span>The Agency Rhythm</span>
-                </span>
+                <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">
+                  The Agency Rhythm
+                </p>
 
                 <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
                   How We Designed

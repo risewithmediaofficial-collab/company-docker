@@ -486,11 +486,10 @@ export const CapabilitiesPage = () => {
         <HeroPattern />
 
         <div className="relative z-10 max-w-4xl mx-auto">
-          {/* Eyebrow Pill */}
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#12B7D4]/10 border border-[#12B7D4]/25 text-[#0d99b2] text-xs font-black uppercase tracking-wider mb-4">
-            <Sparkles size={13} className="text-[#12B7D4]" />
-            <span>22 Verified Agency Capabilities</span>
-          </div>
+          {/* Plain Text Section Title (No Rounded Pill Effect) */}
+          <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#12B7D4] uppercase mb-3 sm:mb-4">
+            22 Verified Agency Capabilities
+          </p>
 
           <h1 className="font-extrabold text-3xl sm:text-5xl lg:text-[58px] text-slate-950 tracking-tight leading-[1.15]">
             Every Feature Built For

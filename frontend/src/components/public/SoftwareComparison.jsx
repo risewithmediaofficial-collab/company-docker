@@ -82,13 +82,12 @@ export const SoftwareComparison = () => {
         {/* ── CARD 1: WHAT THEY HAVE (Other Softwares) ── */}
         <div className="p-6 sm:p-8 rounded-3xl bg-slate-50/80 border border-slate-200 shadow-2xs flex flex-col justify-between transition-all">
           <div>
-            {/* Header Badge */}
+            {/* Header Plain Text (No Rounded Pill Effect) */}
             <div className="flex items-center justify-between gap-2 mb-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100/80 text-rose-700 text-[11px] font-black uppercase tracking-wider border border-rose-200">
-                <AlertCircle size={12} className="stroke-[2.5]" />
-                <span>The Fragmented Stack</span>
+              <span className="text-xs font-black uppercase tracking-wider text-rose-600">
+                The Fragmented Stack
               </span>
-              <span className="text-[11px] font-bold text-slate-400">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 What They Have
               </span>
             </div>
@@ -141,13 +140,12 @@ export const SoftwareComparison = () => {
           <div className="absolute top-0 right-0 w-44 h-44 bg-[#12B7D4]/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10">
-            {/* Header Badge */}
+            {/* Header Plain Text (No Rounded Pill Effect) */}
             <div className="flex items-center justify-between gap-2 mb-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#12B7D4]/15 text-[#0d99b2] text-[11px] font-black uppercase tracking-wider border border-[#12B7D4]/30">
-                <Sparkles size={12} className="stroke-[2.5]" />
-                <span>All-in-One Operating System</span>
+              <span className="text-xs font-black uppercase tracking-wider text-[#12B7D4]">
+                All-in-One Operating System
               </span>
-              <span className="text-[11px] font-black text-[#12B7D4] uppercase tracking-wider">
+              <span className="text-xs font-black text-[#12B7D4] uppercase tracking-wider">
                 What We Do
               </span>
             </div>

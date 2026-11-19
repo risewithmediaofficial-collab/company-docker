@@ -32,10 +32,10 @@ export const MetricsPage = () => {
         <HeroPattern />
 
         <div className="relative z-10 max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#12B7D4]/10 border border-[#12B7D4]/25 text-[#0d99b2] text-xs font-black uppercase tracking-wider mb-4">
-            <TrendingUp size={13} className="text-[#12B7D4]" />
-            <span>Proven Agency Benchmarks</span>
-          </div>
+          {/* Plain Text Section Title (No Rounded Pill Effect) */}
+          <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#12B7D4] uppercase mb-3 sm:mb-4">
+            Proven Agency Benchmarks
+          </p>
 
           <h1 className="font-extrabold text-3xl sm:text-5xl lg:text-[58px] text-slate-950 tracking-tight leading-[1.16]">
             Measurable Impact.
@@ -132,10 +132,9 @@ export const MetricsPage = () => {
                 
                 {/* Left: Text & Features (Neatly Constrained with Card Bullets) */}
                 <div className="lg:col-span-7 space-y-4 text-left">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-black uppercase tracking-wider">
-                    <Lock size={12} />
-                    <span>Security & Compliance</span>
-                  </span>
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">
+                    Security & Compliance
+                  </p>
 
                   <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                     Your Agency Data
@@ -300,10 +299,9 @@ export const MetricsPage = () => {
 
                 {/* Right: Text & Features */}
                 <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 border border-cyan-200 text-cyan-800 text-[11px] font-black uppercase tracking-wider">
-                    <Zap size={12} />
-                    <span>Speed & Reliability</span>
-                  </span>
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">
+                    Speed & Reliability
+                  </p>
 
                   <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                     Sub-Second Page Loads.
