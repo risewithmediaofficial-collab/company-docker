@@ -67,20 +67,14 @@ const Landing = () => {
         {/* ── ZIG-ZAG 01: Client & Deal Tracker ── */}
         <ScrollReveal>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center pb-20 border-b border-slate-100">
-            {/* Left Column: Heading, Summary & 4 Checkmarked Points */}
+            {/* Left Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 space-y-4 text-left">
-              <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
-                01 — Client & Deal Tracker
-              </p>
               <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
                 Never Lose a Lead.
                 <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   Never Miss a Follow-up.
                 </span>
               </h2>
-              <p className="text-base text-slate-600 font-medium leading-relaxed pt-1">
-                Keep all client phone numbers, requirements, and deal details organized so nobody forgets a follow-up.
-              </p>
 
               {/* 4 Checkmark Bullet Points (Matching User Reference Image Layout) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
@@ -138,20 +132,14 @@ const Landing = () => {
               <SectionShowcase type="calendar" />
             </div>
 
-            {/* Right Column: Heading, Summary & 4 Checkmarked Points */}
+            {/* Right Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
-              <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
-                02 — Social Media Planner
-              </p>
               <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
                 Plan a Month of Content.
                 <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   Ready in 10 Minutes.
                 </span>
               </h2>
-              <p className="text-base text-slate-600 font-medium leading-relaxed pt-1">
-                Visual agency calendar for your designers and writers. Everyone knows what needs to be created, approved, and posted.
-              </p>
 
               {/* 4 Checkmark Bullet Points */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
@@ -199,20 +187,14 @@ const Landing = () => {
         {/* ── ZIG-ZAG 03: 1-Tap Client Approvals ── */}
         <ScrollReveal>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center pb-20 border-b border-slate-100">
-            {/* Left Column: Heading, Summary & 4 Checkmarked Points */}
+            {/* Left Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 space-y-4 text-left">
-              <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
-                03 — 1-Tap Client Approvals
-              </p>
               <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
                 Clients Approve on Phone.
                 <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   Zero Endless Calls.
                 </span>
               </h2>
-              <p className="text-base text-slate-600 font-medium leading-relaxed pt-1">
-                Give each client a private link to review creative designs. They tap to approve in seconds or request changes without endless calls.
-              </p>
 
               {/* 4 Checkmark Bullet Points */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
@@ -270,20 +252,14 @@ const Landing = () => {
               <SectionShowcase type="billing" />
             </div>
 
-            {/* Right Column: Heading, Summary & 4 Checkmarked Points */}
+            {/* Right Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
-              <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
-                04 — Fast GST Billing
-              </p>
               <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
                 Generate Clean Tax Invoices.
                 <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   Ready in 30 Seconds.
                 </span>
               </h2>
-              <p className="text-base text-slate-600 font-medium leading-relaxed pt-1">
-                Create clean tax invoices in seconds with automatic GST calculation. Download PDF receipts immediately.
-              </p>
 
               {/* 4 Checkmark Bullet Points */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
@@ -331,20 +307,14 @@ const Landing = () => {
         {/* ── ZIG-ZAG 05: Staff Attendance & Workspace ── */}
         <ScrollReveal>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-            {/* Left Column: Heading, Summary & 4 Checkmarked Points */}
+            {/* Left Column: Heading & 4 Checkmarked Points */}
             <div className="lg:col-span-7 space-y-4 text-left">
-              <p className="text-xs font-bold tracking-widest text-[#12B7D4] uppercase">
-                05 — Staff Attendance & Workspace
-              </p>
               <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
                 Safe, Private Workspace.
                 <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
                   Built for Your Entire Team.
                 </span>
               </h2>
-              <p className="text-base text-slate-600 font-medium leading-relaxed pt-1">
-                Simple selfie check-in for team attendance, role permissions so staff only see what they need, and your client data stays 100% private.
-              </p>
 
               {/* 4 Checkmark Bullet Points */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
@@ -395,40 +365,6 @@ const Landing = () => {
         </ScrollReveal>
 
       </div>
-
-      {/* ── BOTTOM CTA SECTION (Distinct Register & Login Buttons) ── */}
-      <section className="bg-slate-900 text-white py-16 sm:py-20 px-4 sm:px-8 border-t border-slate-800 relative overflow-hidden">
-        <div className="max-w-4xl mx-auto text-left sm:text-center relative z-10 space-y-6">
-          <p className="text-xs sm:text-sm font-bold tracking-widest text-[#12B7D4] uppercase">
-            Start Running Your Agency Smarter
-          </p>
-          <h2 className="font-extrabold text-3xl sm:text-5xl text-white tracking-tight leading-tight">
-            Ready to Organize Your{' '}
-            <span className="bg-gradient-to-r from-[#12B7D4] via-[#38bdf8] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer">
-              Entire Agency?
-            </span>
-          </h2>
-          <p className="text-slate-300 text-sm sm:text-base font-medium max-w-xl mx-auto">
-            Register your company in 2 minutes. Keep your clients happy, your team on track, and your bills on time.
-          </p>
-
-          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
-            <Link
-              to="/register-company"
-              className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#12B7D4]/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>Register Company</span>
-              <ArrowRight size={16} />
-            </Link>
-            <Link
-              to="/login"
-              className="px-7 sm:px-9 py-3.5 sm:py-4 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 font-bold text-sm sm:text-base transition-all flex items-center justify-center"
-            >
-              Login to Account
-            </Link>
-          </div>
-        </div>
-      </section>
     </PublicLayout>
   );
 };

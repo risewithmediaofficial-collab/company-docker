@@ -14,6 +14,10 @@ import {
   Sparkles,
   QrCode,
   Zap,
+  Plane,
+  Rocket,
+  ThumbsUp,
+  CheckCircle2,
 } from 'lucide-react';
 
 /**
@@ -24,20 +28,24 @@ const SCALLOP_PATH =
 
 /**
  * SectionShowcase Component
- * Recreates the modern SaaS smartphone showcase with floating stickers,
- * dashed trajectory orbits, scalloped checkmark seal, and chat bubbles
- * exactly matching the reference design.
+ * Recreates the modern SaaS smartphone showcase with:
+ * - Real smiling team member / founder cutout photo gesturing to the phone
+ * - Pure visual floating stickers with NO TEXT (airplane/badge, WhatsApp circle, scalloped checkmark seal)
+ * - Dotted grid pattern and dashed orbital trajectory
+ * - Interactive smartphone mockup screen
  */
-const SectionShowcase = ({ type = 'leads' }) => {
+const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
   // Configuration per feature type
   const configs = {
     leads: {
-      sealText: 'Lead Verified',
-      bubbleText: '₹75k Retainer Won',
-      topBadgeIcon: MessageSquare,
-      topBadgeBg: 'bg-[#25D366]',
+      personType: 'sitting',
+      topBadgeIcon: Plane,
+      topBadgeBg: 'bg-emerald-500',
       topBadgeBorder: 'border-emerald-300',
-      notificationTag: 'WhatsApp Inquiry',
+      chatBadgeIcon: MessageSquare,
+      chatBadgeBg: 'bg-[#25D366]',
+      chatBadgeBorder: 'border-emerald-300',
+      notificationTag: 'Inquiry Received',
       notificationTitle: 'Rohit Sharma • Nexa Retail',
       notificationDesc: '"Need Meta ad campaigns & monthly reels. Budget ₹75k."',
       btnText: 'Quick Quote',
@@ -81,11 +89,13 @@ const SectionShowcase = ({ type = 'leads' }) => {
     },
 
     calendar: {
-      sealText: 'Calendar Synced',
-      bubbleText: 'Scheduled 6:00 PM',
+      personType: 'standing',
       topBadgeIcon: Instagram,
       topBadgeBg: 'bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600',
       topBadgeBorder: 'border-pink-300',
+      chatBadgeIcon: Calendar,
+      chatBadgeBg: 'bg-[#12B7D4]',
+      chatBadgeBorder: 'border-cyan-300',
       notificationTag: 'Creative Staged',
       notificationTitle: 'Diwali Festive Launch',
       notificationDesc: '5 carousel graphics & hashtags attached.',
@@ -131,11 +141,13 @@ const SectionShowcase = ({ type = 'leads' }) => {
     },
 
     approvals: {
-      sealText: 'Approved in 4m',
-      bubbleText: 'Approved by CEO',
-      topBadgeIcon: Smartphone,
+      personType: 'sitting',
+      topBadgeIcon: CheckCircle2,
       topBadgeBg: 'bg-[#12B7D4]',
       topBadgeBorder: 'border-cyan-300',
+      chatBadgeIcon: CheckCheck,
+      chatBadgeBg: 'bg-emerald-500',
+      chatBadgeBorder: 'border-emerald-300',
       notificationTag: '1-Tap Sign-off',
       notificationTitle: 'Q4 Launch Creative',
       notificationDesc: 'Client review link generated. Zero login needed.',
@@ -174,11 +186,13 @@ const SectionShowcase = ({ type = 'leads' }) => {
     },
 
     billing: {
-      sealText: '18% GST Compliant',
-      bubbleText: 'Paid via UPI QR',
+      personType: 'standing',
       topBadgeIcon: QrCode,
       topBadgeBg: 'bg-emerald-600',
       topBadgeBorder: 'border-emerald-300',
+      chatBadgeIcon: Zap,
+      chatBadgeBg: 'bg-[#12B7D4]',
+      chatBadgeBorder: 'border-cyan-300',
       notificationTag: 'GST Tax Invoice',
       notificationTitle: 'Invoice #RWM-2026-089',
       notificationDesc: 'Auto CGST (9%) + SGST (9%) calculated.',
@@ -227,11 +241,13 @@ const SectionShowcase = ({ type = 'leads' }) => {
     },
 
     attendance: {
-      sealText: 'Selfie Verified',
-      bubbleText: 'Present On-Time',
+      personType: 'sitting',
       topBadgeIcon: ShieldCheck,
       topBadgeBg: 'bg-[#12B7D4]',
       topBadgeBorder: 'border-cyan-300',
+      chatBadgeIcon: Clock,
+      chatBadgeBg: 'bg-emerald-500',
+      chatBadgeBorder: 'border-emerald-300',
       notificationTag: 'Attendance Active',
       notificationTitle: 'Priya Nair • Sr. Designer',
       notificationDesc: 'Checked in at 09:28 AM with mobile selfie.',
@@ -279,11 +295,13 @@ const SectionShowcase = ({ type = 'leads' }) => {
     },
 
     privacy: {
-      sealText: '100% Private',
-      bubbleText: 'Strictly Isolated',
+      personType: 'standing',
       topBadgeIcon: ShieldCheck,
       topBadgeBg: 'bg-slate-900',
       topBadgeBorder: 'border-slate-700',
+      chatBadgeIcon: Building2,
+      chatBadgeBg: 'bg-emerald-600',
+      chatBadgeBorder: 'border-emerald-300',
       notificationTag: 'Company Tenant',
       notificationTitle: 'Dedicated Agency DB',
       notificationDesc: 'Zero data bleed between agencies.',
@@ -319,11 +337,13 @@ const SectionShowcase = ({ type = 'leads' }) => {
     },
 
     speed: {
-      sealText: '0.38s Ultra Fast',
-      bubbleText: 'Under 0.4s Load',
+      personType: 'sitting',
       topBadgeIcon: Zap,
       topBadgeBg: 'bg-amber-500',
       topBadgeBorder: 'border-amber-300',
+      chatBadgeIcon: Smartphone,
+      chatBadgeBg: 'bg-[#12B7D4]',
+      chatBadgeBorder: 'border-cyan-300',
       notificationTag: 'Edge Performance',
       notificationTitle: 'Instant Mobile Load',
       notificationDesc: 'Optimized lightweight bundles on 4G & WiFi.',
@@ -361,11 +381,13 @@ const SectionShowcase = ({ type = 'leads' }) => {
     },
 
     rhythm: {
-      sealText: 'Daily Flow Done',
-      bubbleText: '4 Steps in 1 Hub',
+      personType: 'standing',
       topBadgeIcon: Sparkles,
       topBadgeBg: 'bg-[#12B7D4]',
       topBadgeBorder: 'border-cyan-300',
+      chatBadgeIcon: CheckCheck,
+      chatBadgeBg: 'bg-emerald-500',
+      chatBadgeBorder: 'border-emerald-300',
       notificationTag: 'Agency Rhythm',
       notificationTitle: 'Morning To Evening',
       notificationDesc: 'Leads, schedule, approvals, and GST billing.',
@@ -408,10 +430,31 @@ const SectionShowcase = ({ type = 'leads' }) => {
 
   const item = configs[type] || configs.leads;
   const TopBadgeIcon = item.topBadgeIcon;
+  const ChatBadgeIcon = item.chatBadgeIcon;
+
+  // Determine which person image to show (sitting vs standing)
+  const resolvedPersonType = person || item.personType;
+  const personImageSrc =
+    resolvedPersonType === 'standing'
+      ? '/images/people/person_thumbsup_tablet.png'
+      : '/images/people/person_happy_mobile.png';
 
   return (
-    <div className="relative w-full max-w-[380px] sm:max-w-[420px] mx-auto py-8 px-4 flex items-center justify-center select-none">
+    <div className="relative w-full max-w-[390px] sm:max-w-[430px] mx-auto py-8 px-2 sm:px-4 flex items-center justify-center select-none">
       
+      {/* ── AMBIENT SOFT GRADIENT GLOW (Behind Showcase) ── */}
+      <div className="absolute -inset-4 bg-gradient-to-tr from-emerald-100/50 via-teal-50/40 to-cyan-100/50 rounded-full blur-2xl pointer-events-none -z-10" />
+
+      {/* ── MINT DOTTED GRID PATTERN (Top-Left Backdrop, matching reference) ── */}
+      <div className="absolute top-0 -left-2 sm:-left-6 w-28 h-28 pointer-events-none opacity-45">
+        <svg width="100%" height="100%" fill="none">
+          <pattern id={`dot-grid-${type}`} width="12" height="12" patternUnits="userSpaceOnUse">
+            <circle cx="2.5" cy="2.5" r="1.5" className="fill-emerald-500" />
+          </pattern>
+          <rect width="100%" height="100%" fill={`url(#dot-grid-${type})`} />
+        </svg>
+      </div>
+
       {/* ── BACKGROUND DASHED ORBITAL PATH (Linking Stickers) ── */}
       <svg
         className="absolute -inset-2 w-[calc(100%+16px)] h-[calc(100%+16px)] pointer-events-none overflow-visible"
@@ -420,16 +463,16 @@ const SectionShowcase = ({ type = 'leads' }) => {
       >
         <path
           d="M 50 320 C 20 180, 80 50, 260 40 C 350 45, 380 120, 360 260 C 340 360, 180 390, 80 340"
-          stroke="#94a3b8"
+          stroke="#10b981"
           strokeWidth="2"
           strokeDasharray="6 6"
           strokeLinecap="round"
-          opacity="0.55"
+          opacity="0.38"
         />
       </svg>
 
-      {/* ── FLOATING STICKER 1: Popping Notification Card (Top-Left) ── */}
-      <div className="absolute -top-3 -left-3 sm:-left-8 z-30 max-w-[190px] sm:max-w-[210px] bg-white/95 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl shadow-xl border border-slate-200/90 text-left transition-transform duration-300 hover:scale-105">
+      {/* ── FLOATING NOTIFICATION CARD (Top-Left Dialog) ── */}
+      <div className="absolute -top-3 -left-4 sm:-left-8 z-30 max-w-[185px] sm:max-w-[205px] bg-white/95 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl shadow-xl border border-slate-200/90 text-left transition-transform duration-300 hover:scale-105">
         <div className="flex items-center gap-1.5 mb-1">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
           <span className="text-[9px] font-black uppercase tracking-wider text-emerald-700">
@@ -452,16 +495,16 @@ const SectionShowcase = ({ type = 'leads' }) => {
         </div>
       </div>
 
-      {/* ── FLOATING STICKER 2: Top-Right App/Feature Circular Badge ── */}
+      {/* ── FLOATING STICKER 1 (Top-Right): Feature Badge (WITHOUT TEXT) ── */}
       <div
-        className={`absolute -top-3 -right-2 sm:-right-4 z-30 w-11 h-11 sm:w-12 sm:h-12 rounded-full ${item.topBadgeBg} ${item.topBadgeBorder} border-2 text-white flex items-center justify-center shadow-lg transition-transform duration-300 hover:scale-110`}
-        title={item.sealText}
+        className={`absolute -top-2 right-2 sm:right-0 z-35 w-11 h-11 sm:w-12 sm:h-12 rounded-2xl ${item.topBadgeBg} ${item.topBadgeBorder} border-2 text-white flex items-center justify-center shadow-lg rotate-12 transition-transform duration-300 hover:rotate-0 hover:scale-110`}
+        aria-hidden="true"
       >
         <TopBadgeIcon size={22} className="stroke-[2.5]" />
       </div>
 
-      {/* ── SMARTPHONE DEVICE MOCKUP (Central Anchor) ── */}
-      <div className="w-[240px] sm:w-[270px] bg-slate-900 rounded-[38px] p-2.5 shadow-2xl shadow-slate-900/20 border-4 border-slate-800 relative z-20 transition-transform duration-300 hover:scale-[1.01]">
+      {/* ── SMARTPHONE DEVICE MOCKUP (Central Anchor, offset slightly left to balance person) ── */}
+      <div className="w-[225px] sm:w-[255px] bg-slate-900 rounded-[38px] p-2.5 shadow-2xl shadow-slate-900/20 border-4 border-slate-800 relative z-20 transition-transform duration-300 hover:scale-[1.01] -ml-8 sm:-ml-10">
         {/* Dynamic Island / Notch */}
         <div className="w-16 h-3.5 bg-slate-900 rounded-full mx-auto mb-2 flex items-center justify-end pr-1.5">
           <div className="w-2 h-2 rounded-full bg-slate-800" />
@@ -476,30 +519,39 @@ const SectionShowcase = ({ type = 'leads' }) => {
         <div className="w-24 h-1 bg-slate-700 rounded-full mx-auto mt-2" />
       </div>
 
-      {/* ── FLOATING STICKER 3: Scalloped Circular Checkmark Seal Badge (Bottom-Left on Orbit) ── */}
+      {/* ── REALISTIC CUTOUT PERSON (Gesturing to Phone Screen, matching reference image) ── */}
+      {showPerson && (
+        <div className="absolute -bottom-3 -right-2 sm:-right-6 z-30 pointer-events-none select-none">
+          <img
+            src={personImageSrc}
+            alt="Agency Team"
+            className="w-[170px] sm:w-[210px] max-h-[260px] object-contain drop-shadow-2xl transition-transform duration-300 hover:scale-105"
+            loading="lazy"
+          />
+        </div>
+      )}
+
+      {/* ── FLOATING STICKER 2 (Middle-Right): Circular Chat Badge (WITHOUT TEXT) ── */}
       <div
-        className="absolute -bottom-2 -left-3 sm:-left-6 z-30 flex items-center gap-2 group transition-transform duration-300 hover:scale-105"
+        className={`absolute top-24 -right-2 sm:-right-4 z-35 w-10 h-10 sm:w-11 sm:h-11 rounded-full ${item.chatBadgeBg} ${item.chatBadgeBorder} border-2 text-white flex items-center justify-center shadow-lg -rotate-6 transition-transform duration-300 hover:rotate-0 hover:scale-110`}
+        aria-hidden="true"
       >
-        <div className="relative flex items-center justify-center filter drop-shadow-md">
-          <svg viewBox="0 0 100 100" className="w-14 h-14 sm:w-16 sm:h-16 text-emerald-500 fill-current">
+        <ChatBadgeIcon size={20} className="stroke-[2.5]" />
+      </div>
+
+      {/* ── FLOATING STICKER 3 (Bottom-Left): Scalloped Checkmark Seal Badge (WITHOUT TEXT) ── */}
+      <div
+        className="absolute bottom-4 -left-3 sm:-left-6 z-35 flex items-center justify-center filter drop-shadow-lg transition-transform duration-300 hover:scale-110 -rotate-3"
+        aria-hidden="true"
+      >
+        <div className="relative flex items-center justify-center">
+          <svg viewBox="0 0 100 100" className="w-13 h-13 sm:w-15 sm:h-15 text-emerald-500 fill-current">
             <path d={SCALLOP_PATH} />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
             <Check size={22} className="text-white stroke-[3.5]" />
           </div>
         </div>
-        <div className="hidden sm:block bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-xl shadow-md border border-slate-200/90 text-left">
-          <p className="text-[10px] font-bold text-slate-900 leading-tight">{item.sealText}</p>
-          <p className="text-[8px] font-bold text-emerald-600 uppercase">100% Verified</p>
-        </div>
-      </div>
-
-      {/* ── FLOATING STICKER 4: Action Chat Bubble with Double Checkmarks (Right/Bottom) ── */}
-      <div
-        className="absolute bottom-6 -right-2 sm:-right-6 z-30 px-3.5 py-1.5 rounded-full bg-emerald-50/95 backdrop-blur-md border border-emerald-300/90 shadow-lg text-emerald-900 font-bold text-xs sm:text-sm flex items-center gap-1.5 -rotate-2 transition-transform duration-300 hover:rotate-0 hover:scale-105"
-      >
-        <span>{item.bubbleText}</span>
-        <CheckCheck size={15} className="text-emerald-600 shrink-0" />
       </div>
 
     </div>
