@@ -364,6 +364,30 @@ const Landing = () => {
           </div>
         </ScrollReveal>
 
+        {/* ── COMPLETE PLATFORM FEATURES TEASER ── */}
+        <ScrollReveal>
+          <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white relative overflow-hidden shadow-2xl text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-6">
+            <div className="space-y-2 max-w-2xl">
+              <span className="text-xs font-black uppercase tracking-widest text-[#12B7D4] block">
+                Comprehensive Agency OS
+              </span>
+              <h3 className="text-2xl sm:text-3xl font-black tracking-tight">
+                Want to see all 22+ Agency Tools in Action?
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed">
+                Explore our full feature guide covering Leads CRM, Client Vault, SMM Tracker, Influencer Management, GST Invoices, GPS Attendance, and our Software Development Suite.
+              </p>
+            </div>
+            <Link
+              to="/what-we-do"
+              className="px-7 py-3.5 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm shadow-lg shadow-[#12B7D4]/30 transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+            >
+              <span>Explore What We Do</span>
+              <ArrowRight size={15} />
+            </Link>
+          </div>
+        </ScrollReveal>
+
       </div>
     </PublicLayout>
   );
