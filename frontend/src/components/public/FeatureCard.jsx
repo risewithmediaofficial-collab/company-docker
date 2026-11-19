@@ -44,7 +44,7 @@ const FeatureCard = ({
 
       {/* Message Text Container */}
       <div className="relative z-10 flex flex-col justify-center items-start flex-grow min-w-0 text-left">
-        <p className="font-display text-base sm:text-lg font-bold text-slate-900 group-hover:text-[#12B7D4] transition-colors truncate w-full">
+        <p className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-[#12B7D4] transition-colors truncate w-full">
           {title}
         </p>
         <p className="text-xs sm:text-sm text-slate-600 font-medium truncate w-full mt-0.5">
