@@ -475,33 +475,9 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
         />
       </svg>
 
-      {/* ── FLOATING NOTIFICATION CARD (Left Dialog - positioned beside phone, inside mobile frame) ── */}
-      <div className="absolute top-8 sm:top-12 left-1 xs:left-2 sm:-left-8 lg:-left-12 z-30 w-[140px] xs:w-[158px] sm:w-[190px] bg-white/95 backdrop-blur-md p-2 xs:p-2.5 sm:p-3 rounded-2xl shadow-xl border border-slate-200/90 text-left transition-transform duration-300 hover:scale-105">
-        <div className="flex items-center gap-1.5 mb-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
-          <span className="text-[8.5px] sm:text-[9px] font-black uppercase tracking-wider text-emerald-700 truncate">
-            {item.notificationTag}
-          </span>
-        </div>
-        <p className="text-[10.5px] sm:text-xs font-bold text-slate-900 leading-snug truncate">
-          {item.notificationTitle}
-        </p>
-        <p className="text-[8.5px] sm:text-[10px] text-slate-500 font-medium leading-relaxed mt-0.5 line-clamp-2">
-          {item.notificationDesc}
-        </p>
-        <div className="mt-2 flex items-center gap-1 sm:gap-1.5 flex-wrap sm:flex-nowrap">
-          <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-[#12B7D4] text-white text-[8.5px] sm:text-[9px] font-bold shadow-2xs whitespace-nowrap">
-            {item.btnText}
-          </span>
-          <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[8.5px] sm:text-[9px] font-semibold border border-slate-200 whitespace-nowrap">
-            {item.btnSecondary}
-          </span>
-        </div>
-      </div>
-
       {/* ── FLOATING STICKER 1 (Top-Right): Feature Badge (WITHOUT TEXT) ── */}
       <div
-        className={`absolute -top-1.5 sm:-top-2 right-1 sm:right-2 z-35 w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl ${item.topBadgeBg} ${item.topBadgeBorder} border-2 text-white flex items-center justify-center shadow-lg rotate-12 transition-transform duration-300 hover:rotate-0 hover:scale-110`}
+        className={`absolute -top-2 right-2 sm:right-4 z-35 w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl ${item.topBadgeBg} ${item.topBadgeBorder} border-2 text-white flex items-center justify-center shadow-lg rotate-12 transition-transform duration-300 hover:rotate-0 hover:scale-110`}
         aria-hidden="true"
       >
         <TopBadgeIcon size={18} className="sm:hidden stroke-[2.5]" />
@@ -509,7 +485,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
       </div>
 
       {/* ── SMARTPHONE DEVICE MOCKUP (Clean, unobstructed screen) ── */}
-      <div className="w-[205px] xs:w-[220px] sm:w-[250px] bg-slate-900 rounded-[32px] sm:rounded-[38px] p-2 sm:p-2.5 shadow-2xl shadow-slate-900/20 border-[3px] sm:border-4 border-slate-800 relative z-20 transition-transform duration-300 hover:scale-[1.01] ml-9 xs:ml-10 sm:ml-8">
+      <div className="w-[215px] xs:w-[235px] sm:w-[260px] bg-slate-900 rounded-[32px] sm:rounded-[38px] p-2 sm:p-2.5 shadow-2xl shadow-slate-900/20 border-[3px] sm:border-4 border-slate-800 relative z-20 transition-transform duration-300 hover:scale-[1.01]">
         {/* Dynamic Island / Notch */}
         <div className="w-14 sm:w-16 h-3 sm:h-3.5 bg-slate-900 rounded-full mx-auto mb-1.5 sm:mb-2 flex items-center justify-end pr-1.5">
           <div className="w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full bg-slate-800" />
@@ -526,8 +502,8 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
 
       {/* ── REALISTIC CUTOUT PERSON (Gesturing to Phone Screen, matching reference image) ── */}
       {showPerson && (
-        <div className="absolute -bottom-2 right-0 sm:-right-4 z-30 pointer-events-none select-none">
-          <picture className="w-[125px] xs:w-[145px] sm:w-[195px] max-h-[260px] drop-shadow-2xl transition-transform duration-300 hover:scale-105 block">
+        <div className="absolute -bottom-2 -right-1 sm:-right-4 z-30 pointer-events-none select-none">
+          <picture className="w-[130px] xs:w-[155px] sm:w-[200px] max-h-[270px] drop-shadow-2xl transition-transform duration-300 hover:scale-105 block">
             <source srcSet={webpSrc} type="image/webp" />
             <img
               src={pngSrc}
@@ -544,7 +520,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
 
       {/* ── FLOATING STICKER 2 (Middle-Right): Circular Chat Badge (WITHOUT TEXT) ── */}
       <div
-        className={`absolute top-20 right-0 sm:-right-3 z-35 w-8 h-8 sm:w-11 sm:h-11 rounded-full ${item.chatBadgeBg} ${item.chatBadgeBorder} border-2 text-white flex items-center justify-center shadow-lg -rotate-6 transition-transform duration-300 hover:rotate-0 hover:scale-110`}
+        className={`absolute top-20 -right-1 sm:-right-3 z-35 w-8 h-8 sm:w-11 sm:h-11 rounded-full ${item.chatBadgeBg} ${item.chatBadgeBorder} border-2 text-white flex items-center justify-center shadow-lg -rotate-6 transition-transform duration-300 hover:rotate-0 hover:scale-110`}
         aria-hidden="true"
       >
         <ChatBadgeIcon size={16} className="sm:hidden stroke-[2.5]" />
@@ -553,7 +529,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
 
       {/* ── FLOATING STICKER 3 (Bottom-Left): Scalloped Checkmark Seal Badge (WITHOUT TEXT) ── */}
       <div
-        className="absolute bottom-3 left-1 sm:-left-4 z-35 flex items-center justify-center filter drop-shadow-lg transition-transform duration-300 hover:scale-110 -rotate-3"
+        className="absolute bottom-3 left-1 sm:left-2 z-35 flex items-center justify-center filter drop-shadow-lg transition-transform duration-300 hover:scale-110 -rotate-3"
         aria-hidden="true"
       >
         <div className="relative flex items-center justify-center">
