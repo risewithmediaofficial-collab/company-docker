@@ -23,9 +23,9 @@ const MetricsPage = () => {
             Fast & Reliable Infrastructure
           </p>
 
-          <h1 className="font-extrabold text-4xl sm:text-6xl lg:text-[68px] text-slate-950 tracking-tight leading-[1.08]">
+          <h1 className="font-extrabold text-3xl sm:text-5xl lg:text-[62px] text-slate-950 tracking-tight leading-[1.16]">
             Fast Speed.
-            <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1 sm:mt-2">
+            <span className="text-[#12B7D4] block mt-1 sm:mt-2 pb-1">
               Always Working.
             </span>
           </h1>
@@ -59,16 +59,16 @@ const MetricsPage = () => {
       />
 
       {/* ── CLEAN ZIG-ZAG SECTIONS (ALIGNED WITH SMARTPHONE SHOWCASE & STICKERS) ── */}
-      <div className="py-14 sm:py-28 px-3 sm:px-8 max-w-6xl mx-auto space-y-16 sm:space-y-32 overflow-hidden">
+      <div className="py-8 sm:py-16 px-4 sm:px-8 max-w-6xl mx-auto space-y-10 sm:space-y-16">
 
         {/* ── ZIG-ZAG 01: Complete Privacy ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center pb-14 sm:pb-20 border-b border-slate-100">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center pb-10 sm:pb-14 border-b border-slate-100">
             {/* Left Column: Heading & 4 Checkmarked Points */}
-            <div className="lg:col-span-7 space-y-4 text-left">
-              <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
+            <div className="lg:col-span-7 space-y-3.5 text-left">
+              <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
                 Your Data Stays
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+                <span className="text-[#12B7D4] block mt-1 pb-0.5">
                   100% Yours.
                 </span>
               </h2>
@@ -123,17 +123,17 @@ const MetricsPage = () => {
 
         {/* ── ZIG-ZAG 02: Fast Everywhere (Alternating) ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
             {/* Left Column: Visual Smartphone Showcase with Floating Stickers */}
             <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
               <SectionShowcase type="speed" />
             </div>
 
             {/* Right Column: Heading & 4 Checkmarked Points */}
-            <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
-              <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
+            <div className="lg:col-span-7 order-1 lg:order-2 space-y-3.5 text-left">
+              <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
                 Smooth on Any Phone,
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+                <span className="text-[#12B7D4] block mt-1 pb-0.5">
                   Laptop or Tablet.
                 </span>
               </h2>

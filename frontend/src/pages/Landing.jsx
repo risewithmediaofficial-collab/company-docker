@@ -22,10 +22,10 @@ const Landing = () => {
             Simple Software for Marketing Agencies
           </p>
 
-          {/* Big Clean Title (Black & Blue with Shimmer Animation) */}
-          <h1 className="font-extrabold text-4xl sm:text-6xl lg:text-[68px] text-slate-950 tracking-tight leading-[1.08]">
+          {/* Big Clean Title (Black & Blue, Clean Solid Typography with Full Letter Visibility) */}
+          <h1 className="font-extrabold text-3xl sm:text-5xl lg:text-[62px] text-slate-950 tracking-tight leading-[1.16]">
             Manage Your Agency.
-            <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1 sm:mt-2">
+            <span className="text-[#12B7D4] block mt-1 sm:mt-2 pb-1">
               All in One Place.
             </span>
           </h1>
@@ -62,16 +62,16 @@ const Landing = () => {
       <StatsBanner />
 
       {/* ── CLEAN ZIG-ZAG SECTIONS (ALIGNED WITH SMARTPHONE SHOWCASE & STICKERS) ── */}
-      <div className="py-14 sm:py-28 px-3 sm:px-8 max-w-6xl mx-auto space-y-16 sm:space-y-32 overflow-hidden">
+      <div className="py-8 sm:py-16 px-4 sm:px-8 max-w-6xl mx-auto space-y-10 sm:space-y-16">
 
         {/* ── ZIG-ZAG 01: Client & Deal Tracker ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center pb-14 sm:pb-20 border-b border-slate-100">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center pb-10 sm:pb-14 border-b border-slate-100">
             {/* Left Column: Heading & 4 Checkmarked Points */}
-            <div className="lg:col-span-7 space-y-4 text-left">
-              <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
+            <div className="lg:col-span-7 space-y-3.5 text-left">
+              <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
                 Never Lose a Lead.
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+                <span className="text-[#12B7D4] block mt-1 pb-0.5">
                   Never Miss a Follow-up.
                 </span>
               </h2>
@@ -126,17 +126,17 @@ const Landing = () => {
 
         {/* ── ZIG-ZAG 02: Social Media Calendar (Alternating: Showcase on Left, Text on Right) ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center pb-14 sm:pb-20 border-b border-slate-100">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center pb-10 sm:pb-14 border-b border-slate-100">
             {/* Left Column: Visual Smartphone Showcase with Floating Stickers */}
             <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
               <SectionShowcase type="calendar" />
             </div>
 
             {/* Right Column: Heading & 4 Checkmarked Points */}
-            <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
-              <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
+            <div className="lg:col-span-7 order-1 lg:order-2 space-y-3.5 text-left">
+              <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
                 Plan a Month of Content.
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+                <span className="text-[#12B7D4] block mt-1 pb-0.5">
                   Ready in 10 Minutes.
                 </span>
               </h2>
@@ -186,12 +186,12 @@ const Landing = () => {
 
         {/* ── ZIG-ZAG 03: 1-Tap Client Approvals ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center pb-14 sm:pb-20 border-b border-slate-100">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center pb-10 sm:pb-14 border-b border-slate-100">
             {/* Left Column: Heading & 4 Checkmarked Points */}
-            <div className="lg:col-span-7 space-y-4 text-left">
-              <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
+            <div className="lg:col-span-7 space-y-3.5 text-left">
+              <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
                 Clients Approve on Phone.
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+                <span className="text-[#12B7D4] block mt-1 pb-0.5">
                   Zero Endless Calls.
                 </span>
               </h2>
@@ -246,17 +246,17 @@ const Landing = () => {
 
         {/* ── ZIG-ZAG 04: Fast GST Billing (Alternating: Showcase on Left, Text on Right) ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center pb-14 sm:pb-20 border-b border-slate-100">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center pb-10 sm:pb-14 border-b border-slate-100">
             {/* Left Column: Visual Smartphone Showcase with Floating Stickers */}
             <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
               <SectionShowcase type="billing" />
             </div>
 
             {/* Right Column: Heading & 4 Checkmarked Points */}
-            <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
-              <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
+            <div className="lg:col-span-7 order-1 lg:order-2 space-y-3.5 text-left">
+              <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
                 Generate Clean Tax Invoices.
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+                <span className="text-[#12B7D4] block mt-1 pb-0.5">
                   Ready in 30 Seconds.
                 </span>
               </h2>
@@ -306,12 +306,12 @@ const Landing = () => {
 
         {/* ── ZIG-ZAG 05: Staff Attendance & Workspace ── */}
         <ScrollReveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
             {/* Left Column: Heading & 4 Checkmarked Points */}
-            <div className="lg:col-span-7 space-y-4 text-left">
-              <h2 className="font-extrabold text-3xl sm:text-4xl lg:text-[42px] text-slate-950 tracking-tight leading-[1.15]">
+            <div className="lg:col-span-7 space-y-3.5 text-left">
+              <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
                 Safe, Private Workspace.
-                <span className="bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#12B7D4] bg-clip-text text-transparent animate-text-shimmer block mt-1">
+                <span className="text-[#12B7D4] block mt-1 pb-0.5">
                   Built for Your Entire Team.
                 </span>
               </h2>

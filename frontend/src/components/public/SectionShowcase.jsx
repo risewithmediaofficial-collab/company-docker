@@ -444,7 +444,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
       : '/images/people/person_happy_mobile.png';
 
   return (
-    <div className="relative w-full max-w-[370px] xs:max-w-[410px] sm:max-w-[460px] mx-auto py-8 sm:py-12 px-2 sm:px-6 flex items-center justify-center select-none">
+    <div className="relative w-full max-w-[370px] xs:max-w-[410px] sm:max-w-[460px] mx-auto py-3 sm:py-6 px-2 sm:px-6 flex items-center justify-center select-none">
       
       {/* ── AMBIENT SOFT GRADIENT GLOW (Behind Showcase) ── */}
       <div className="absolute -inset-4 bg-gradient-to-tr from-emerald-100/50 via-teal-50/40 to-cyan-100/50 rounded-full blur-2xl pointer-events-none -z-10" />
