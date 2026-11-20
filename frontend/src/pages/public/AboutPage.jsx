@@ -84,11 +84,6 @@ export const AboutPage = () => {
           {/* Card 01 */}
           <ScrollReveal delay={0} className="h-full">
             <div className="h-full bg-white rounded-3xl border border-slate-200 p-8 sm:p-9 space-y-4 relative overflow-hidden flex flex-col justify-between">
-              {/* Circular Corner Badge */}
-              <div className="w-24 h-24 bg-rose-500 rounded-full absolute -right-5 -top-7 shadow-inner">
-                <p className="absolute bottom-6 left-7 text-white font-extrabold text-2xl tracking-tight">01</p>
-              </div>
-
               <div className="space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center">
                   <MessageSquare size={24} />
@@ -108,18 +103,13 @@ export const AboutPage = () => {
           {/* Card 02 */}
           <ScrollReveal delay={120} className="h-full">
             <div className="h-full bg-white rounded-3xl border border-slate-200 p-8 sm:p-9 space-y-4 relative overflow-hidden flex flex-col justify-between">
-              {/* Circular Corner Badge */}
-              <div className="w-24 h-24 bg-amber-500 rounded-full absolute -right-5 -top-7 shadow-inner">
-                <p className="absolute bottom-6 left-7 text-white font-extrabold text-2xl tracking-tight">02</p>
-              </div>
-
               <div className="space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center">
                   <Layers size={24} />
                 </div>
                 <h3 className="font-bold text-xl text-slate-950 tracking-tight">The 6-App Subscription Tax</h3>
                 <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                  Paying $300+/mo across disjointed tools just to duplicate the same client details.
+                  Paying ₹25,000+/mo across disjointed tools just to duplicate the same client details.
                 </p>
               </div>
 
@@ -132,11 +122,6 @@ export const AboutPage = () => {
           {/* Card 03 */}
           <ScrollReveal delay={240} className="h-full">
             <div className="h-full bg-white rounded-3xl border border-slate-200 p-8 sm:p-9 space-y-4 relative overflow-hidden flex flex-col justify-between">
-              {/* Circular Corner Badge */}
-              <div className="w-24 h-24 bg-[#12B7D4] rounded-full absolute -right-5 -top-7 shadow-inner">
-                <p className="absolute bottom-6 left-7 text-white font-extrabold text-2xl tracking-tight">03</p>
-              </div>
-
               <div className="space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-[#12B7D4] flex items-center justify-center">
                   <Receipt size={24} />
@@ -318,11 +303,6 @@ export const AboutPage = () => {
           {/* Card 01: Retainer-First Mindset */}
           <ScrollReveal delay={0} className="h-full">
             <div className="h-full bg-white rounded-3xl border border-slate-200 p-8 sm:p-9 space-y-4 relative overflow-hidden flex flex-col justify-between">
-              {/* Circular Corner Badge */}
-              <div className="w-24 h-24 bg-[#12B7D4] rounded-full absolute -right-5 -top-7 shadow-inner">
-                <p className="absolute bottom-6 left-7 text-white font-extrabold text-2xl tracking-tight">01</p>
-              </div>
-
               <div className="space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-[#12B7D4] flex items-center justify-center">
                   <Zap size={24} />
@@ -342,11 +322,6 @@ export const AboutPage = () => {
           {/* Card 02: Radical Financial Privacy */}
           <ScrollReveal delay={120} className="h-full">
             <div className="h-full bg-white rounded-3xl border border-slate-200 p-8 sm:p-9 space-y-4 relative overflow-hidden flex flex-col justify-between">
-              {/* Circular Corner Badge */}
-              <div className="w-24 h-24 bg-emerald-500 rounded-full absolute -right-5 -top-7 shadow-inner">
-                <p className="absolute bottom-6 left-7 text-white font-extrabold text-2xl tracking-tight">02</p>
-              </div>
-
               <div className="space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                   <Shield size={24} />
@@ -366,11 +341,6 @@ export const AboutPage = () => {
           {/* Card 03: Client Clarity Without Noise */}
           <ScrollReveal delay={240} className="h-full">
             <div className="h-full bg-white rounded-3xl border border-slate-200 p-8 sm:p-9 space-y-4 relative overflow-hidden flex flex-col justify-between">
-              {/* Circular Corner Badge */}
-              <div className="w-24 h-24 bg-violet-500 rounded-full absolute -right-5 -top-7 shadow-inner">
-                <p className="absolute bottom-6 left-7 text-white font-extrabold text-2xl tracking-tight">03</p>
-              </div>
-
               <div className="space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center">
                   <Users size={24} />
