@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Zap } from 'lucide-react';
+import { ArrowRight, Zap, AlertTriangle } from 'lucide-react';
 import ScrollReveal from './ScrollReveal';
 
 /**
@@ -190,8 +190,8 @@ const FragmentedStackIllustration = () => (
           filter="url(#frag-shadow)"
         />
         <circle cx="24" cy="17" r="9" fill="#ECFDF5" stroke="#10B981" strokeWidth="1.5" />
-        <text x="24" y="21" textAnchor="middle" fill="#059669" fontSize="12" fontWeight="900" fontFamily="sans-serif">
-          $
+        <text x="24" y="21" textAnchor="middle" fill="#059669" fontSize="11" fontWeight="900" fontFamily="sans-serif">
+          ₹
         </text>
         {/* Label */}
         <text x="24" y="50" textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="700" fontFamily="sans-serif">
@@ -481,12 +481,12 @@ export const SoftwareComparison = () => {
       </ScrollReveal>
 
       {/* ── SIDE-BY-SIDE GRAPHIC INFOGRAPHIC (EXACT IMAGE 2 RECREATION) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch animate-fade-up">
-        {/* ── CARD 1: THE FRAGMENTED STACK (CHAOTIC TANGLED WEB) ── */}
-        <div className="p-6 sm:p-7 rounded-3xl bg-slate-50/70 border border-slate-200 flex flex-col justify-between">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-stretch animate-fade-up">
+        {/* ── COLUMN 1: THE FRAGMENTED STACK (CHAOTIC TANGLED WEB) ── */}
+        <div className="flex flex-col justify-between">
           <div>
             {/* Header Topline */}
-            <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center justify-between gap-2 h-5 mb-3">
               <span className="text-[11px] font-black uppercase tracking-wider text-rose-600">
                 The Fragmented Stack
               </span>
@@ -496,17 +496,22 @@ export const SoftwareComparison = () => {
             </div>
 
             {/* Title & Disconnected Tool Stack */}
-            <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              5 to 8 Disconnected Apps
-            </h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Trello • WhatsApp • HubSpot • QuickBooks • Spreadsheets
-            </p>
+            <div className="min-h-[58px] flex flex-col justify-start">
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">
+                5 to 8 Disconnected Apps
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-1 leading-normal">
+                Trello • WhatsApp • HubSpot • QuickBooks • Spreadsheets
+              </p>
+            </div>
 
             {/* Metrics Tag */}
-            <div className="mt-3.5 px-3.5 py-2 rounded-2xl bg-white border border-rose-200/70 flex items-center justify-between text-xs font-bold text-rose-600">
-              <span>Cost Penalty:</span>
-              <span className="font-extrabold text-rose-700">$250 – $500+/mo • 12 hrs lost/wk</span>
+            <div className="mt-3.5 px-4 py-2.5 min-h-[42px] rounded-xl bg-rose-50/90 flex items-center justify-between text-xs font-bold text-rose-600">
+              <span className="flex items-center gap-1.5 text-rose-600">
+                <AlertTriangle size={13} className="text-rose-500 shrink-0" />
+                <span>Cost Penalty:</span>
+              </span>
+              <span className="font-extrabold text-rose-700">₹25,000 – ₹45,000/mo • 12 hrs lost/wk</span>
             </div>
 
             {/* THE TANGLED GRAPHIC ILLUSTRATION (NO TEXT PARAGRAPHS) */}
@@ -516,39 +521,38 @@ export const SoftwareComparison = () => {
           </div>
 
           {/* Bottom Summary */}
-          <div className="pt-4 mt-2 border-t border-slate-200/80 text-center text-xs font-bold text-slate-400">
+          <div className="pt-3 mt-2 min-h-[42px] flex items-center justify-center text-center text-xs font-bold text-slate-400">
             Result: Lost client deals, data leaks & endless tool switching
           </div>
         </div>
 
-        {/* ── CARD 2: RISEWITHMEDIA OS (CLEAN SERPENTINE PIPELINE) ── */}
-        <div className="p-6 sm:p-7 rounded-3xl bg-white border border-[#12B7D4]/40 flex flex-col justify-between relative overflow-hidden">
-          {/* Subtle Ambient Glow */}
-          <div className="absolute top-0 right-0 w-44 h-44 bg-[#12B7D4]/10 rounded-full blur-3xl pointer-events-none" />
-
+        {/* ── COLUMN 2: RISEWITHMEDIA OS (CLEAN SERPENTINE PIPELINE) ── */}
+        <div className="flex flex-col justify-between relative">
           <div className="relative z-10">
             {/* Header Topline */}
-            <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center justify-between gap-2 h-5 mb-3">
               <span className="text-[11px] font-black uppercase tracking-wider text-[#12B7D4]">
                 All-in-One Operating System
               </span>
-              <span className="text-[11px] font-black text-[#12B7D4] uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-[#12B7D4] uppercase tracking-wider">
                 What We Do
               </span>
             </div>
 
             {/* Title & Core Modules */}
-            <h3 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight">
-              RiseWithMedia OS
-            </h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              CRM • Content Calendar • 1-Tap Approvals • GST • Vault
-            </p>
+            <div className="min-h-[58px] flex flex-col justify-start">
+              <h3 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-tight">
+                RiseWithMedia OS
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-1 leading-normal">
+                CRM • Content Calendar • 1-Tap Approvals • GST • Vault
+              </p>
+            </div>
 
             {/* Value Pill */}
-            <div className="mt-3.5 px-3.5 py-2 rounded-2xl bg-[#12B7D4]/10 border border-[#12B7D4]/30 flex items-center justify-between text-xs font-bold text-slate-900">
+            <div className="mt-3.5 px-4 py-2.5 min-h-[42px] rounded-xl bg-[#12B7D4]/10 flex items-center justify-between text-xs font-bold text-slate-900">
               <span className="flex items-center gap-1.5 text-[#0d99b2]">
-                <Zap size={13} className="fill-[#12B7D4]" />
+                <Zap size={13} className="fill-[#12B7D4] shrink-0" />
                 <span>14-Day Free Trial:</span>
               </span>
               <span className="font-extrabold text-slate-950">Zero Credit Card • Complete Access</span>
@@ -561,13 +565,13 @@ export const SoftwareComparison = () => {
           </div>
 
           {/* Bottom Footer with CTA */}
-          <div className="pt-4 mt-2 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 relative z-10">
+          <div className="pt-3 mt-2 min-h-[42px] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 relative z-10">
             <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
               <span>✓ Save 12+ hours every week</span>
             </span>
             <Link
               to="/register-company"
-              className="px-5 py-2 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              className="px-5 py-2.5 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-none shrink-0"
             >
               <span>Get Started Free</span>
               <ArrowRight size={13} />
