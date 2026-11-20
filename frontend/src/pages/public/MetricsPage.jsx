@@ -27,12 +27,12 @@ export const MetricsPage = () => {
       ctaTitle="Reliable Infrastructure For Your Agency."
       ctaSubtitle="Focus on creative campaigns while we keep your agency operations smooth, fast, and dependable."
     >
-      {/* ── 1. HERO HEADER ── */}
+      {/* 1. HERO HEADER */}
       <section className="relative overflow-hidden pt-12 sm:pt-20 pb-14 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
         <HeroPattern />
 
         <div className="relative z-10 max-w-3xl mx-auto">
-          {/* Plain Text Section Title (No Rounded Pill Effect) */}
+          {/* Plain Text Section Title */}
           <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#12B7D4] uppercase mb-3 sm:mb-4">
             Proven Agency Benchmarks
           </p>
@@ -66,13 +66,13 @@ export const MetricsPage = () => {
         </div>
       </section>
 
-      {/* ── 2. IMPACT STATS BANNER ── */}
+      {/* 2. IMPACT STATS BANNER */}
       <StatsBanner
         title="Real Agency Impact Benchmarks"
         subtitle="Measurable numbers verified across active creative studios and performance agencies."
       />
 
-      {/* ── 3. FOUR MEASURABLE OUTCOMES (CARDS GRID) ── */}
+      {/* 3. FOUR MEASURABLE OUTCOMES */}
       <section className="py-14 sm:py-20 px-4 sm:px-8 max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
           <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] mb-2">
@@ -121,16 +121,14 @@ export const MetricsPage = () => {
         </div>
       </section>
 
-      {/* ── 4. ENTERPRISE DATA ISOLATION & SPEED SHOWCASE (UNIQUE ARCHITECTURE CARDS) ── */}
+      {/* 4. ENTERPRISE DATA ISOLATION & SPEED SHOWCASE */}
       <div className="space-y-0">
-        
-        {/* Showcase 01: Multi-Tenant Database Security (Slate Tint BG, Borderless) ── */}
+        {/* Showcase 01: Multi-Tenant Database Security */}
         <section className="py-14 sm:py-20 px-4 sm:px-8 bg-slate-50/70">
           <div className="max-w-6xl mx-auto">
             <ScrollReveal>
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
-                
-                {/* Left: Text & Features (Neatly Constrained with Card Bullets) */}
+                {/* Left: Text & Features */}
                 <div className="lg:col-span-7 space-y-4 text-left">
                   <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
                     Security & Compliance
@@ -180,7 +178,7 @@ export const MetricsPage = () => {
                   </div>
                 </div>
 
-                {/* Right: Unique Enterprise Tenant Security Visual Card (NO PHONE MOCKUP DUPLICATION) */}
+                {/* Right: Security Visual Card */}
                 <div className="lg:col-span-5 flex justify-center">
                   <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
                     <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -243,13 +241,12 @@ export const MetricsPage = () => {
           </div>
         </section>
 
-        {/* Showcase 02: Performance & Speed (White BG, Borderless) ── */}
+        {/* Showcase 02: Performance & Speed */}
         <section className="py-14 sm:py-20 px-4 sm:px-8 bg-white">
           <div className="max-w-6xl mx-auto">
             <ScrollReveal>
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
-                
-                {/* Left: Speed Visual Card (Alternating Side - NO PHONE MOCKUP DUPLICATION) */}
+                {/* Left: Speed Visual Card */}
                 <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
                   <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
                     <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -350,10 +347,9 @@ export const MetricsPage = () => {
             </ScrollReveal>
           </div>
         </section>
-
       </div>
 
-      {/* ── 5. FINAL ACTION BANNER (Clean White Fill, Seamless Borderless) ── */}
+      {/* 5. FINAL ACTION BANNER */}
       <section className="w-full bg-white text-slate-900 py-16 sm:py-20 px-4 sm:px-8">
         <div className="max-w-6xl mx-auto">
           <ScrollReveal>
