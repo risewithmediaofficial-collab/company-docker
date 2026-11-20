@@ -7,13 +7,12 @@ import ScrollReveal from '../components/public/ScrollReveal';
 import SectionShowcase from '../components/public/SectionShowcase';
 import StatsBanner from '../components/public/StatsBanner';
 import SoftwareComparison from '../components/public/SoftwareComparison';
-import HeroPipelineShowcase from '../components/public/HeroPipelineShowcase';
 
 export const Landing = () => {
   return (
     <PublicLayout>
       {/* ── 1. HERO SECTION ── */}
-      <section className="relative overflow-hidden border-b border-slate-200/80 pt-12 sm:pt-20 pb-12 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
+      <section className="relative overflow-hidden pt-12 sm:pt-20 pb-12 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
         <HeroPattern />
 
         <div className="relative z-10 max-w-4xl mx-auto">
@@ -67,9 +66,6 @@ export const Landing = () => {
               <span className="text-emerald-500 font-bold">✓</span> Instant Setup in 2 Mins
             </span>
           </div>
-
-          {/* ── ODOO-STYLE LIVE CRM PIPELINE SHOWCASE ── */}
-          <HeroPipelineShowcase />
         </div>
       </section>
 
@@ -83,7 +79,7 @@ export const Landing = () => {
       <div className="space-y-0">
 
         {/* ── PILLAR 1: Complete Client & Deal Lifecycle (White BG) ── */}
-        <section className="py-14 sm:py-20 px-4 sm:px-8 bg-white border-t border-slate-200/80">
+        <section className="py-14 sm:py-20 px-4 sm:px-8 bg-white">
           <div className="max-w-6xl mx-auto">
             <ScrollReveal>
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
@@ -213,7 +209,7 @@ export const Landing = () => {
         </section>
 
         {/* ── PILLAR 3: Billing, Finance & Team Operations (White BG) ── */}
-        <section className="py-14 sm:py-20 px-4 sm:px-8 bg-white border-b border-slate-200/80">
+        <section className="py-14 sm:py-20 px-4 sm:px-8 bg-white">
           <div className="max-w-6xl mx-auto">
             <ScrollReveal>
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">

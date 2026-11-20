@@ -21,7 +21,7 @@ export const AboutPage = () => {
       ctaSubtitle="Get your agency workspace set up in 2 minutes. Free 14-day trial, no credit card required."
     >
       {/* ── 1. HERO HEADER ── */}
-      <section className="relative overflow-hidden border-b border-slate-200/80 pt-14 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-8 text-left sm:text-center">
+      <section className="relative overflow-hidden pt-14 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-8 text-left sm:text-center">
         <HeroPattern />
         
         <div className="relative z-10 max-w-3xl mx-auto">
@@ -156,7 +156,7 @@ export const AboutPage = () => {
       </section>
 
       {/* ── 3. THE 4-STEP AGENCY OPERATING RHYTHM ── */}
-      <section className="py-16 sm:py-24 px-4 sm:px-8 bg-slate-50/70 border-y border-slate-200/80">
+      <section className="py-16 sm:py-24 px-4 sm:px-8 bg-slate-50/70">
         <div className="max-w-6xl mx-auto">
           <ScrollReveal>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">

@@ -28,7 +28,7 @@ export const MetricsPage = () => {
       ctaSubtitle="Focus on creative campaigns while we keep your agency operations smooth, fast, and dependable."
     >
       {/* ── 1. HERO HEADER ── */}
-      <section className="relative overflow-hidden border-b border-slate-200/80 pt-12 sm:pt-20 pb-14 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
+      <section className="relative overflow-hidden pt-12 sm:pt-20 pb-14 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
         <HeroPattern />
 
         <div className="relative z-10 max-w-3xl mx-auto">

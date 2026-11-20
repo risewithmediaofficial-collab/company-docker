@@ -95,7 +95,7 @@ export const CapabilitiesPage = () => {
       ctaSubtitle="Register your agency in 2 minutes. Eliminate 6+ subscriptions and give your team pure operational clarity."
     >
       {/* ── 1. HERO ── */}
-      <section className="relative overflow-hidden border-b border-slate-200/80 pt-12 sm:pt-20 pb-12 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
+      <section className="relative overflow-hidden pt-12 sm:pt-20 pb-12 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
         <HeroPattern />
         <div className="relative z-10 max-w-4xl mx-auto">
           <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#12B7D4] uppercase mb-3 sm:mb-4">
