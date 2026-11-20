@@ -393,5 +393,80 @@ input[type="number"] {
   animation: pulseGlow 3s ease-in-out infinite;
 }
 
+/* ── Apple Minimalist Marker Highlight Styles ── */
+.marker-highlight {
+  position: relative;
+  display: inline-block;
+  white-space: normal;
+  font-weight: inherit;
+  z-index: 1;
+}
+
+.marker-highlight::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  bottom: 8%;
+  height: 44%;
+  background: rgba(18, 183, 212, 0.22);
+  border-radius: 4px;
+  z-index: -1;
+  transform: rotate(-0.5deg);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.marker-highlight:hover::before {
+  height: 60%;
+  background: rgba(18, 183, 212, 0.34);
+}
+
+.marker-highlight-amber::before {
+  background: rgba(245, 158, 11, 0.25);
+  transform: rotate(0.4deg);
+}
+
+.marker-highlight-emerald::before {
+  background: rgba(16, 185, 129, 0.24);
+  transform: rotate(-0.4deg);
+}
+
+.marker-highlight-rose::before {
+  background: rgba(244, 63, 94, 0.24);
+  transform: rotate(0.5deg);
+}
+
+.marker-highlight-violet::before {
+  background: rgba(139, 92, 246, 0.25);
+  transform: rotate(-0.5deg);
+}
+
+/* ── Apple Scroll Stack & Card Elevation ── */
+.scroll-stack-card {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+  will-change: transform, box-shadow;
+}
+
+.scroll-stack-card:hover {
+  transform: translateY(-6px) scale(1.008);
+}
+
+/* ── Text Fadeup Animation ── */
+@keyframes textFadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: textFadeUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+
 
 
