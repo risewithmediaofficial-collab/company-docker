@@ -137,8 +137,16 @@ clientSchema.index({ userId: 1 });
 clientSchema.pre('save', async function (next) {
   if (!this.clientId) {
     try {
-      const nextSeq = await getNextSequence('clientId', 1);
-      this.clientId = `CLT-${String(nextSeq).padStart(4, '0')}`;
+      // Format: CLI-BUSINESS NAME 1st three letters + 001 (e.g. CLI-SAR001, CLI-MSM001)
+      const rawName = (this.company || this.name || 'CLIENT').trim();
+      const lettersOnly = rawName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      const prefix = (lettersOnly.slice(0, 3) || 'CLI').padEnd(3, 'X');
+      
+      const count = await mongoose.model('Client').countDocuments({
+        clientId: new RegExp(`^CLI-${prefix}`, 'i'),
+      });
+      const seq = String(count + 1).padStart(3, '0');
+      this.clientId = `CLI-${prefix}${seq}`;
     } catch (err) {
       console.error('Failed to generate clientId sequence:', err);
     }

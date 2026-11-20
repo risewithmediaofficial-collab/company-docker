@@ -24,6 +24,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from '@/components/ui/muiIcons';
+import { InstagramIcon, FacebookIcon, YouTubeIcon } from '@/components/ui/SocialIcons';
 
 export const BOARD_CATEGORY_DEFINITIONS = [
   {
@@ -42,7 +43,13 @@ export const BOARD_CATEGORY_DEFINITIONS = [
     aliases: ['social_media_post', 'social', 'smm', 'reel', 'story', 'carousel_post', 'instagram'],
     label: 'Social Media / SMM',
     description: 'Instagram, Reels, Carousel posts & content calendar',
-    icon: Share2,
+    icon: InstagramIcon,
+    customIcon: () => (
+      <span className="inline-flex items-center gap-1 shrink-0">
+        <InstagramIcon size={13} />
+        <FacebookIcon size={13} />
+      </span>
+    ),
     dotColor: 'bg-zinc-700 dark:bg-zinc-300',
     borderClass: 'border-l-zinc-700 dark:border-l-zinc-300',
     badgeClass: 'bg-zinc-500/10 text-zinc-800 dark:text-zinc-200 border-zinc-500/30',
@@ -53,7 +60,12 @@ export const BOARD_CATEGORY_DEFINITIONS = [
     aliases: ['video_production', 'video', 'video_shoot', 'shorts', 'youtube', 'shoot'],
     label: 'Video Production',
     description: 'Shooting, reels editing, YouTube & promo videos',
-    icon: Video,
+    icon: YouTubeIcon,
+    customIcon: () => (
+      <span className="inline-flex items-center gap-1 shrink-0">
+        <YouTubeIcon size={14} />
+      </span>
+    ),
     dotColor: 'bg-zinc-600 dark:bg-zinc-400',
     borderClass: 'border-l-zinc-600 dark:border-l-zinc-400',
     badgeClass: 'bg-zinc-500/10 text-zinc-800 dark:text-zinc-200 border-zinc-500/30',
@@ -76,6 +88,12 @@ export const BOARD_CATEGORY_DEFINITIONS = [
     label: 'Paid Ads / Meta & Google',
     description: 'Meta Ads, PPC campaigns, creatives & lead gen',
     icon: Megaphone,
+    customIcon: () => (
+      <span className="inline-flex items-center gap-1 shrink-0">
+        <FacebookIcon size={13} />
+        <Megaphone size={12} className="text-muted-foreground group-hover:text-foreground" />
+      </span>
+    ),
     dotColor: 'bg-neutral-800 dark:bg-neutral-200',
     borderClass: 'border-l-neutral-800 dark:border-l-neutral-200',
     badgeClass: 'bg-neutral-500/10 text-neutral-800 dark:text-neutral-200 border-neutral-500/30',
@@ -191,7 +209,11 @@ export const CategoryColorLegend = ({
                 <div className="flex items-center justify-between gap-1">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className={`h-2.5 w-2.5 rounded-full ${item.dotColor} shrink-0`} />
-                    <Icon size={12} className="shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    {item.customIcon ? (
+                      <item.customIcon />
+                    ) : (
+                      <Icon size={12} className="shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    )}
                   </div>
                   <span className={`h-1.5 w-4 rounded-full ${item.swatchClass} opacity-80`} />
                 </div>

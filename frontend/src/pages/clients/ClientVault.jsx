@@ -296,7 +296,7 @@ const SocialAccountRow = ({
         <div className="px-3 pb-3 pt-2.5 space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
-              <span className="px-1.5 py-0.5 rounded bg-secondary text-[9px] font-bold">{platform.code}</span>
+              <SocialIcon platform={account.platform || platform.code} size={15} />
               <span>{account.platform === 'facebook' ? 'Facebook Pages' : 'Instagram Profiles / Pages'}</span>
               <span className="text-muted-foreground font-normal tabular-nums">({(account.pages || []).length})</span>
             </p>
@@ -391,7 +391,7 @@ const RevealedAccountRow = ({ account, copiedId, onCopy }) => {
   return (
     <div className="rounded-lg bg-background/60 p-2.5 space-y-2 text-xs">
       <div className="flex items-center gap-1.5 font-bold text-foreground">
-        <span className="px-1.5 py-0.5 rounded bg-secondary text-[9px] font-bold">{platform.code}</span>
+        <SocialIcon platform={account.platform || platform.code} size={16} />
         <span>{account.platformLabel || platform.label}</span>
         {account.pages && account.pages.length > 0 && (
           <span className="ml-auto text-[10px] font-normal text-muted-foreground tabular-nums">
@@ -1212,8 +1212,10 @@ export default function ClientVault() {
               <span className="flex items-center gap-1.5">
                 <AtSign size={12} />
                 <span className="tabular-nums">{accounts.length} Platform Account{accounts.length > 1 ? 's' : ''}</span>
-                <span className="text-muted-foreground font-mono text-[10px]">
-                  ({accounts.map((a) => getPlatform(a.platform).code).join(', ')})
+                <span className="flex items-center gap-1 ml-1">
+                  {accounts.map((a, idx) => (
+                    <SocialIcon key={idx} platform={a.platform} size={13} />
+                  ))}
                 </span>
               </span>
               {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}

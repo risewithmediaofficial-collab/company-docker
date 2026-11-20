@@ -71,6 +71,7 @@ export const DialogContent = React.forwardRef(
             onEscapeKeyDown={props.onEscapeKeyDown || ((e) => e.preventDefault())}
             {...props}
           >
+            <DialogPrimitive.Title className="sr-only">Dialog Window</DialogPrimitive.Title>
             <DialogPrimitive.Description className="sr-only">Dialog modal window</DialogPrimitive.Description>
             {/* Notion-Style Header Close Action Group */}
             {!hideCloseButton && (
@@ -117,7 +118,8 @@ export const DialogContent = React.forwardRef(
               onEscapeKeyDown={props.onEscapeKeyDown || ((e) => e.preventDefault())}
               {...props}
             >
-              <DialogPrimitive.Description className="sr-only">Dialog modal window</DialogPrimitive.Description>
+              <DialogPrimitive.Title className="sr-only">Dialog Window</DialogPrimitive.Title>
+            <DialogPrimitive.Description className="sr-only">Dialog modal window</DialogPrimitive.Description>
               {!hideCloseButton && (
                 <div className="absolute right-3.5 top-3.5 z-50 flex items-center gap-1.5">
                   <kbd className="hidden sm:inline-flex items-center justify-center h-5 px-1.5 rounded bg-secondary text-[9px] font-mono font-medium text-muted-foreground select-none">

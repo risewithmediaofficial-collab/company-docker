@@ -155,7 +155,7 @@ export const ClientOverviewSearch = ({ onCreateTask, onCreateProject }) => {
             onFocus={() => {
               if (suggestions.length > 0) setIsDropdownOpen(true);
             }}
-            placeholder="Search client by Client ID (e.g. CLT-0001) or Name to show full projects, tasks & client details..."
+            placeholder="Search client by Client ID (e.g. CLI-SAR001) or Name to show full projects, tasks & client details..."
             className="w-full h-12 sm:h-14 pl-11 sm:pl-12 pr-24 sm:pr-28 rounded-2xl bg-card border border-border/80 text-foreground placeholder:text-muted-foreground/70 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition-all shadow-xs"
           />
           <div className="absolute right-2 sm:right-3 flex items-center gap-1.5">

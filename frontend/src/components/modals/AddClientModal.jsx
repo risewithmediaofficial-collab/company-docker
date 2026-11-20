@@ -369,12 +369,12 @@ export const AddClientModal = ({ open, onOpenChange, client = null, initialStatu
                       <div className="flex items-center justify-between">
                         <FormLabel className="text-sm font-semibold text-foreground">Client ID</FormLabel>
                         <span className="text-[11px] text-muted-foreground font-mono">
-                          Auto-generated if left blank (e.g. CLT-0001)
+                          Auto-generated if left blank (e.g. CLI-SAR001)
                         </span>
                       </div>
                       <FormControl>
                         <Input
-                          placeholder="Auto-assigned (e.g. CLT-0001) or enter custom ID"
+                          placeholder="Auto-assigned (e.g. CLI-SAR001) or enter custom ID"
                           className="h-11 rounded-xl bg-secondary/75 px-4 text-sm font-mono tracking-wide focus:ring-2 focus:ring-primary/20"
                           {...field}
                           value={field.value || ''}

@@ -63,6 +63,7 @@ export const shouldShowGlobalDateFilter = (rawPathname) => {
 };
 
 const DATE_SORT_OPTIONS = [
+  { id: 'allTime', label: 'All Dates' },
   { id: 'this_month', label: 'This Month' },
   { id: 'previous_month', label: 'Previous Month' },
   { id: 'yearly', label: 'Yearly' },

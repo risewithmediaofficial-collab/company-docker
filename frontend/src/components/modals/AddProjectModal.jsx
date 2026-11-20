@@ -1023,6 +1023,21 @@ export const AddProjectModal = ({ open, onOpenChange, project = null, defaultCli
                           type="date"
                           className="h-11 rounded-xl bg-secondary/75 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 "
                           {...field}
+                          value={field.value || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            field.onChange(val);
+                            if (val) {
+                              const [y, m, d] = val.split('-').map(Number);
+                              if (y && m && d) {
+                                const nextDate = new Date(y, m, d);
+                                const nextY = nextDate.getFullYear();
+                                const nextM = String(nextDate.getMonth() + 1).padStart(2, '0');
+                                const nextD = String(nextDate.getDate()).padStart(2, '0');
+                                form.setValue('endDate', `${nextY}-${nextM}-${nextD}`);
+                              }
+                            }
+                          }}
                         />
                       </div>
                     </FormControl>
@@ -1047,6 +1062,8 @@ export const AddProjectModal = ({ open, onOpenChange, project = null, defaultCli
                           type="date"
                           className="h-11 rounded-xl bg-secondary/75 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 "
                           {...field}
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value)}
                         />
                       </div>
                     </FormControl>

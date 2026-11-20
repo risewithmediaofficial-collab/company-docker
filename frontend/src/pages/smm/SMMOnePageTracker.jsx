@@ -52,6 +52,7 @@ const HDR_BASE = {
   top: 0,
   zIndex: 20,
   background: '#18181b',
+  backgroundColor: '#18181b',
   color: '#fafafa',
   fontSize: 10,
   fontWeight: 800,
@@ -70,11 +71,14 @@ const HDR_STICKY = (left, width) => ({
   width,
   minWidth: width,
   maxWidth: width,
+  background: '#18181b',
+  backgroundColor: '#18181b',
 });
-const HDR_SUN = { ...HDR_BASE, background: '#27272a', color: '#d4d4d8' };
+const HDR_SUN = { ...HDR_BASE, background: '#27272a', backgroundColor: '#27272a', color: '#d4d4d8' };
 const HDR_TODAY = {
   ...HDR_BASE,
   background: '#083344',
+  backgroundColor: '#083344',
   color: '#ffffff',
   boxShadow: 'inset 0 0 0 2px #12B7D4',
 };
@@ -86,7 +90,8 @@ const CELL_BASE = {
   whiteSpace: 'nowrap',
   verticalAlign: 'middle',
   textAlign: 'center',
-  background: 'hsl(var(--card))',
+  background: 'var(--tracker-cell-bg, #ffffff)',
+  backgroundColor: 'var(--tracker-cell-bg, #ffffff)',
   color: 'inherit',
 };
 const CELL_STICKY = (left, width) => ({
@@ -97,12 +102,14 @@ const CELL_STICKY = (left, width) => ({
   width,
   minWidth: width,
   maxWidth: width,
-  background: 'hsl(var(--card))',
+  background: 'var(--tracker-cell-bg, #ffffff)',
+  backgroundColor: 'var(--tracker-cell-bg, #ffffff)',
   boxShadow: left === L.PLAN ? '2px 0 6px -2px rgba(0,0,0,0.08)' : undefined,
 });
 const STATUS_CELL_STICKY = (left, width) => ({
   ...CELL_STICKY(left, width),
-  background: 'hsl(var(--secondary))',
+  background: 'var(--tracker-status-bg, #f8fafc)',
+  backgroundColor: 'var(--tracker-status-bg, #f8fafc)',
   padding: '4px 4px',
   zIndex: 15,
   boxShadow: left === L.PLAN ? '2px 0 6px -2px rgba(0,0,0,0.08)' : undefined,
@@ -1202,7 +1209,13 @@ const SMMOnePageTracker = () => {
 
   const curCol = isMobile ? COL_MOBILE : COL_DESKTOP;
   const curL = isMobile
-    ? { NO: 0, TEAM: undefined, CLIENT: COL_MOBILE.NO, PLAN: undefined, DONE: undefined }
+    ? {
+        NO: 0,
+        TEAM: COL_MOBILE.NO,
+        CLIENT: COL_MOBILE.NO + COL_MOBILE.TEAM,
+        PLAN: COL_MOBILE.NO + COL_MOBILE.TEAM + COL_MOBILE.CLIENT,
+        DONE: undefined,
+      }
     : L;
   const totalW = isMobile
     ? (COL_MOBILE.NO + COL_MOBILE.TEAM + COL_MOBILE.CLIENT + COL_MOBILE.PLAN + COL_MOBILE.DONE + daysInMonth * COL_MOBILE.DAY)
@@ -1704,7 +1717,7 @@ const SMMOnePageTracker = () => {
                       <span style={{ fontSize: 9, fontWeight: 800 }}>NO</span>
                     </div>
                   </th>
-                  <th style={isMobile ? { ...HDR_BASE, width: curCol.TEAM, minWidth: curCol.TEAM, maxWidth: curCol.TEAM, position: 'static' } : HDR_STICKY(curL.TEAM, curCol.TEAM)}>TEAM</th>
+                  <th style={HDR_STICKY(curL.TEAM, curCol.TEAM)}>TEAM</th>
                   <th style={{ ...HDR_STICKY(curL.CLIENT, curCol.CLIENT), textAlign:'left', paddingLeft: isMobile ? 4 : 8, boxShadow: isMobile ? '2px 0 6px -2px rgba(0,0,0,0.2)' : undefined }}>PROJECT & CLIENT</th>
                   <th style={isMobile ? { ...HDR_BASE, width: curCol.PLAN, minWidth: curCol.PLAN, maxWidth: curCol.PLAN, position: 'static' } : HDR_STICKY(curL.PLAN, curCol.PLAN)}>PLAN</th>
                   {dayHeaders.map(({d, dow, sun, isToday}) => {
@@ -1779,7 +1792,7 @@ const SMMOnePageTracker = () => {
                       <tr style={{ backgroundColor: isSelected(row) ? 'rgba(6, 182, 212, 0.07)' : undefined }}>
                         <td style={{
                           ...CELL_STICKY(curL.NO, curCol.NO),
-                          backgroundColor: isSelected(row) ? 'rgba(6, 182, 212, 0.15)' : undefined,
+                          backgroundColor: isSelected(row) ? 'var(--tracker-cell-selected, #ecfeff)' : 'var(--tracker-cell-bg, #ffffff)',
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2.5 }}>
                             <input
@@ -1796,10 +1809,23 @@ const SMMOnePageTracker = () => {
                             <span style={{ fontWeight:800, fontSize:10, fontVariantNumeric:'tabular-nums' }}>{rowIdx+1}</span>
                           </div>
                         </td>
-                        <td style={isMobile ? { ...CELL_BASE, width: curCol.TEAM, minWidth: curCol.TEAM, maxWidth: curCol.TEAM, color:'hsl(var(--muted-foreground))', fontWeight:700, fontSize:10 } : { ...CELL_STICKY(curL.TEAM, curCol.TEAM), color:'hsl(var(--muted-foreground))', fontWeight:700, fontSize:10 }}>
+                        <td style={{
+                          ...CELL_STICKY(curL.TEAM, curCol.TEAM),
+                          color:'hsl(var(--muted-foreground))',
+                          fontWeight:700,
+                          fontSize:10,
+                          backgroundColor: isSelected(row) ? 'var(--tracker-cell-selected, #ecfeff)' : 'var(--tracker-cell-bg, #ffffff)',
+                        }}>
                           {row.team || 'RWM'}
                         </td>
-                        <td style={{ ...CELL_STICKY(curL.CLIENT, curCol.CLIENT), textAlign:'left', paddingLeft: isMobile ? 4 : 8, paddingRight: isMobile ? 4 : 6, boxShadow: isMobile ? '2px 0 6px -2px rgba(0,0,0,0.12)' : undefined }}>
+                        <td style={{
+                          ...CELL_STICKY(curL.CLIENT, curCol.CLIENT),
+                          textAlign:'left',
+                          paddingLeft: isMobile ? 4 : 8,
+                          paddingRight: isMobile ? 4 : 6,
+                          boxShadow: isMobile ? '2px 0 6px -2px rgba(0,0,0,0.12)' : undefined,
+                          backgroundColor: isSelected(row) ? 'var(--tracker-cell-selected, #ecfeff)' : 'var(--tracker-cell-bg, #ffffff)',
+                        }}>
                           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:3, minWidth:0 }}>
                             <div style={{ overflow:'hidden', minWidth:0, display:'flex', flexDirection:'column', lineHeight: 1.25 }}>
                               <span
@@ -1831,7 +1857,10 @@ const SMMOnePageTracker = () => {
                             </button>
                           </div>
                         </td>
-                        <td style={isMobile ? { ...CELL_BASE, width: curCol.PLAN, minWidth: curCol.PLAN, maxWidth: curCol.PLAN } : CELL_STICKY(curL.PLAN, curCol.PLAN)}>
+                        <td style={{
+                          ...(isMobile ? { ...CELL_BASE, width: curCol.PLAN, minWidth: curCol.PLAN, maxWidth: curCol.PLAN } : CELL_STICKY(curL.PLAN, curCol.PLAN)),
+                          backgroundColor: isSelected(row) ? 'var(--tracker-cell-selected, #ecfeff)' : 'var(--tracker-cell-bg, #ffffff)',
+                        }}>
                           <EditablePlan value={row[planField]} placeholder={planPH} onSave={v => handleMetaSave(rowIdx, planField, v)}/>
                         </td>
                         {dayHeaders.map(({d, sun, isToday}) => {
@@ -1848,10 +1877,13 @@ const SMMOnePageTracker = () => {
                             </td>
                           );
                         })}
-                        <td style={isMobile
-                          ? { ...CELL_BASE, width: curCol.DONE, minWidth: curCol.DONE, maxWidth: curCol.DONE }
-                          : { ...CELL_STICKY('auto', curCol.DONE), right:0, left:'auto', zIndex:15, background:'hsl(var(--card))', boxShadow:'-2px 0 6px -2px rgba(0,0,0,0.08)' }
-                        }>
+                        <td style={{
+                          ...(isMobile
+                            ? { ...CELL_BASE, width: curCol.DONE, minWidth: curCol.DONE, maxWidth: curCol.DONE }
+                            : { ...CELL_STICKY('auto', curCol.DONE), right:0, left:'auto', zIndex:15, boxShadow:'-2px 0 6px -2px rgba(0,0,0,0.08)' }
+                          ),
+                          backgroundColor: isSelected(row) ? 'var(--tracker-cell-selected, #ecfeff)' : 'var(--tracker-cell-bg, #ffffff)',
+                        }}>
                           <div style={{ fontWeight:800, fontSize:10, fontVariantNumeric:'tabular-nums' }}>{done}/{total}</div>
                           <div style={{ marginTop:2, height:4, background:'hsl(var(--secondary))', borderRadius:4, overflow:'hidden' }}>
                             <div style={{ height:'100%', width:`${pct}%`, background:pctColor, borderRadius:4, transition:'width 0.3s' }}/>
@@ -1861,14 +1893,29 @@ const SMMOnePageTracker = () => {
 
                       {/* Status row */}
                       <tr style={{ borderBottom:'2px solid hsl(var(--border))', backgroundColor: isSelected(row) ? 'rgba(6, 182, 212, 0.04)' : undefined }}>
-                        <td style={{ ...STATUS_CELL_STICKY(curL.NO, curCol.NO), backgroundColor: isSelected(row) ? 'rgba(6, 182, 212, 0.12)' : undefined }}/>
-                        <td style={isMobile ? { ...CELL_BASE, width: curCol.TEAM, minWidth: curCol.TEAM, maxWidth: curCol.TEAM, background:'hsl(var(--secondary))' } : STATUS_CELL_STICKY(curL.TEAM, curCol.TEAM)}/>
-                        <td style={{ ...STATUS_CELL_STICKY(curL.CLIENT, curCol.CLIENT), textAlign:'left', paddingLeft: isMobile ? 4 : 8, boxShadow: isMobile ? '2px 0 6px -2px rgba(0,0,0,0.12)' : undefined }}>
+                        <td style={{
+                          ...STATUS_CELL_STICKY(curL.NO, curCol.NO),
+                          backgroundColor: isSelected(row) ? 'var(--tracker-status-selected, #e0f7fa)' : 'var(--tracker-status-bg, #f8fafc)',
+                        }}/>
+                        <td style={{
+                          ...STATUS_CELL_STICKY(curL.TEAM, curCol.TEAM),
+                          backgroundColor: isSelected(row) ? 'var(--tracker-status-selected, #e0f7fa)' : 'var(--tracker-status-bg, #f8fafc)',
+                        }}/>
+                        <td style={{
+                          ...STATUS_CELL_STICKY(curL.CLIENT, curCol.CLIENT),
+                          textAlign:'left',
+                          paddingLeft: isMobile ? 4 : 8,
+                          boxShadow: isMobile ? '2px 0 6px -2px rgba(0,0,0,0.12)' : undefined,
+                          backgroundColor: isSelected(row) ? 'var(--tracker-status-selected, #e0f7fa)' : 'var(--tracker-status-bg, #f8fafc)',
+                        }}>
                           <span style={{ fontSize:9, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', color:'hsl(var(--muted-foreground))', whiteSpace:'nowrap' }}>
                             {statusRowLbl}
                           </span>
                         </td>
-                        <td style={isMobile ? { ...CELL_BASE, width: curCol.PLAN, minWidth: curCol.PLAN, maxWidth: curCol.PLAN, background:'hsl(var(--secondary))' } : STATUS_CELL_STICKY(curL.PLAN, curCol.PLAN)}/>
+                        <td style={{
+                          ...(isMobile ? { ...CELL_BASE, width: curCol.PLAN, minWidth: curCol.PLAN, maxWidth: curCol.PLAN, background:'var(--tracker-status-bg, #f8fafc)' } : STATUS_CELL_STICKY(curL.PLAN, curCol.PLAN)),
+                          backgroundColor: isSelected(row) ? 'var(--tracker-status-selected, #e0f7fa)' : 'var(--tracker-status-bg, #f8fafc)',
+                        }}/>
                         {dayHeaders.map(({d, sun, isToday}) => {
                           const cell = row.days.find(dc => dc.day===d) || {};
                           const rawSt = cell[statusField] || 'todo';
@@ -1890,10 +1937,13 @@ const SMMOnePageTracker = () => {
                             </td>
                           );
                         })}
-                        <td style={isMobile
-                          ? { ...CELL_BASE, width: curCol.DONE, minWidth: curCol.DONE, maxWidth: curCol.DONE, background:'hsl(var(--secondary))' }
-                          : { ...STATUS_CELL_STICKY('auto', curCol.DONE), right:0, left:'auto', zIndex:15, background:'hsl(var(--secondary))', boxShadow:'-2px 0 6px -2px rgba(0,0,0,0.08)' }
-                        }/>
+                        <td style={{
+                          ...(isMobile
+                            ? { ...CELL_BASE, width: curCol.DONE, minWidth: curCol.DONE, maxWidth: curCol.DONE, background:'var(--tracker-status-bg, #f8fafc)' }
+                            : { ...STATUS_CELL_STICKY('auto', curCol.DONE), right:0, left:'auto', zIndex:15, boxShadow:'-2px 0 6px -2px rgba(0,0,0,0.08)' }
+                          ),
+                          backgroundColor: isSelected(row) ? 'var(--tracker-status-selected, #e0f7fa)' : 'var(--tracker-status-bg, #f8fafc)',
+                        }}/>
                       </tr>
 
                     </React.Fragment>

@@ -60,7 +60,8 @@ export const decryptData = (encryptedText) => {
   try {
     const parts = encryptedText.split(':');
     if (parts.length !== 2) {
-      throw new Error('Invalid encrypted data format');
+      // Legacy or unencrypted string
+      return encryptedText;
     }
     
     const iv = Buffer.from(parts[0], 'hex');
@@ -73,7 +74,8 @@ export const decryptData = (encryptedText) => {
     
     return decrypted;
   } catch (error) {
-    console.error('Decryption error:', error);
-    throw new Error('Failed to decrypt data');
+    console.warn('Decryption error handled gracefully:', error.message);
+    // Return masked fallback instead of crashing HTTP 500
+    return '••••••••';
   }
 };

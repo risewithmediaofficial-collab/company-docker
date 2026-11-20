@@ -39,11 +39,19 @@
 
     --radius: 0.75rem;
     --tracker-status-sticky: #f8fafc;
+    --tracker-cell-bg: #ffffff;
+    --tracker-cell-selected: #ecfeff;
+    --tracker-status-bg: #f8fafc;
+    --tracker-status-selected: #e0f7fa;
   }
 
   .dark {
     color-scheme: dark;
     --tracker-status-sticky: #111827;
+    --tracker-cell-bg: #111827;
+    --tracker-cell-selected: #083344;
+    --tracker-status-bg: #182232;
+    --tracker-status-selected: #0e3f54;
     --background: 222 47% 8%;
     --foreground: 210 40% 98%;
 

@@ -308,8 +308,6 @@ const WebsiteLaunchLoader = () => {
       className={`website-launch-loader ${isFading ? 'is-fading' : ''}`}
       aria-hidden="true"
       role="presentation"
-      onTouchMove={(e) => e.preventDefault()}
-      onWheel={(e) => e.preventDefault()}
     >
       <div className="website-launch-loader__inner">
         <canvas
