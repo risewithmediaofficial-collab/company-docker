@@ -181,10 +181,10 @@ const PublicLayout = ({
         {children}
       </main>
 
-      {/* ── FLOATING OVERLAPPING CTA BANNER (Attached Above Footer) ── */}
+      {/* ── FLOATING OVERLAPPING CTA BANNER (Centered across the white/dark boundary) ── */}
       {!hideCta && (
-        <section className="relative z-20 -mb-16 sm:-mb-24 max-w-6xl mx-auto px-3.5 sm:px-8 w-full">
-          <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#0284c7] p-6 sm:p-10 lg:p-14 shadow-2xl shadow-[#12B7D4]/30 text-white flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 sm:gap-8 border border-white/20 relative overflow-hidden">
+        <section className="relative z-20 -mb-28 sm:-mb-24 lg:-mb-24 max-w-6xl mx-auto px-3.5 sm:px-8 w-full">
+          <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#0284c7] p-6 sm:p-10 lg:p-12 shadow-2xl shadow-[#12B7D4]/30 text-white flex flex-col lg:flex-row items-start md:items-center justify-between gap-6 sm:gap-8 border border-white/20 relative overflow-hidden">
             
             {/* Subtle Inner Glow Shapes */}
             <div className="absolute -top-20 -right-20 w-72 h-72 bg-white/15 rounded-full blur-2xl pointer-events-none" />
@@ -222,7 +222,7 @@ const PublicLayout = ({
       )}
 
       {/* ── DARK RICH FOOTER (Attached directly behind the floating banner) ── */}
-      <footer className="relative z-10 bg-slate-950 text-slate-400 border-t border-slate-800 pt-24 sm:pt-36 pb-12 mt-10 sm:mt-16">
+      <footer className="relative z-10 bg-slate-950 text-slate-400 border-t border-slate-800 pt-32 sm:pt-36 lg:pt-40 pb-12 mt-0">
         <div className="max-w-6xl mx-auto px-4 sm:px-8">
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 items-start pb-12 border-b border-slate-800/80">
