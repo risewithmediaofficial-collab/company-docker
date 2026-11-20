@@ -22,7 +22,8 @@ import {
   TrendingUp,
   Sparkles,
   Smartphone,
-  Activity
+  Activity,
+  Building2,
 } from '@/components/ui/muiIcons';
 import { toggleDarkMode, toggleSidebar } from '../../store/slices/uiSlice';
 import { logout } from '../../store/slices/authSlice';
@@ -120,6 +121,7 @@ const getBreadcrumbs = (pathname, role) => {
     '/assets': [{ label: 'Knowledge', path: '/assets' }, { label: 'Asset Library', path: '/assets' }],
 
     '/reports': [{ label: 'System', path: '/reports' }, { label: 'Reports & Analytics', path: '/reports' }],
+    '/branches': [{ label: 'System', path: '/branches' }, { label: 'Branches & Locations', path: '/branches' }],
     '/settings': [{ label: 'System', path: '/settings' }, { label: 'Settings', path: '/settings' }],
 
     '/client/proposals': [{ label: 'Client Portal', path: '/' }, { label: 'Proposals', path: '/client/proposals' }],
@@ -432,6 +434,10 @@ function NavbarComponent({ onOpenSearch, currentPath }) {
                 <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => setCreateLeadOpen(true)}>
                   <TrendingUp size={14} className="text-primary" />
                   <span>Add Lead</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => navigate('/branches?create=true')}>
+                  <Building2 size={14} className="text-primary" />
+                  <span>Create Branch</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -900,6 +900,7 @@ const Projects = () => {
                 selectedCategory={categoryFilter}
                 onSelectCategory={setCategoryFilter}
                 title="Project Category Index"
+                counts={categoryCounts}
               />
 
               <div ref={projectsBoardRef} className="w-full overflow-x-auto pb-4 custom-scrollbar responsive-table-container">

@@ -272,6 +272,7 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
         title: 'SYSTEM & SETTINGS',
         items: [
           { name: 'Reports & Analytics', icon: BarChart3, path: '/reports' },
+          { name: 'Branches & Locations', icon: Building2, path: '/branches' },
           ...(role === 'superAdmin' || role === 'admin' || role === 'manager' ? [
             { name: 'Audit Logs', icon: ShieldCheck, path: '/audit-logs' },
             { name: 'Recycle Bin', icon: Trash2, path: '/recycle-bin' },

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Bell,
@@ -72,7 +73,18 @@ const Settings = () => {
   const uploadProfileAvatar = useUploadProfileAvatar();
   const updatePreferences = useUpdatePreferences();
   const changePassword = useChangePassword();
-  const [activeSection, setActiveSection] = useState('profile');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlSection = searchParams.get('section');
+  const [activeSection, setActiveSection] = useState(() => {
+    return urlSection && sections.some((s) => s.id === urlSection) ? urlSection : 'profile';
+  });
+
+  useEffect(() => {
+    const s = searchParams.get('section');
+    if (s && sections.some((sec) => sec.id === s)) {
+      setActiveSection(s);
+    }
+  }, [searchParams]);
   // Payment modal removed: purchases are disabled in this build.
 
   const settings = data?.settings;
@@ -679,7 +691,7 @@ const Settings = () => {
                     Manage your company's headquarters, regional branch offices, managers in-charge, and attendance geofencing.
                   </p>
                 </div>
-                <BranchManager />
+                <BranchManager autoOpenAdd={searchParams.get('create') === 'true'} />
               </div>
             )}
 

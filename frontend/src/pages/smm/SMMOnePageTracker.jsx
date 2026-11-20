@@ -67,7 +67,7 @@ const HDR_STICKY = (left, width) => ({
   ...HDR_BASE,
   position: 'sticky',
   left,
-  zIndex: 30,
+  zIndex: 35,
   width,
   minWidth: width,
   maxWidth: width,
@@ -98,7 +98,7 @@ const CELL_STICKY = (left, width) => ({
   ...CELL_BASE,
   position: 'sticky',
   left,
-  zIndex: 15,
+  zIndex: 25,
   width,
   minWidth: width,
   maxWidth: width,
@@ -111,7 +111,7 @@ const STATUS_CELL_STICKY = (left, width) => ({
   background: 'var(--tracker-status-bg, #f8fafc)',
   backgroundColor: 'var(--tracker-status-bg, #f8fafc)',
   padding: '4px 4px',
-  zIndex: 15,
+  zIndex: 25,
   boxShadow: left === L.PLAN ? '2px 0 6px -2px rgba(0,0,0,0.08)' : undefined,
 });
 const DAY_CELL = (sun, isToday) => ({
@@ -320,7 +320,48 @@ const StatusBadge = ({ status, items = [], onClick, onSelectStatus, onOpenDrawer
   );
 };
 
-// ── Interactive Day Cell Slot (Supports multiple deliverables + '+' button) ──
+// ── Helper: parse tag ("R1", "POST", etc.) and scheduled posting time ("6:30P") ──
+const extractTagAndTime = (rawVal = '', item = null, defaultType = 'post') => {
+  let label = String(rawVal || item?.label || '').trim();
+  let time = item?.time || '';
+
+  // Extract embedded time if present in label e.g. "R1 6:30P", "REEL 2 7:00 PM", "POST 18:30", "P1 1P"
+  if (label) {
+    const timeRegex = /\b((?:1[0-2]|0?[1-9])(?::[0-5][0-9])?\s*(?:AM|PM|am|pm|[apAP])|(?:[01]?[0-9]|2[0-3]):[0-5][0-9])\b/;
+    const m = label.match(timeRegex);
+    if (m) {
+      if (!time) {
+        time = m[1].trim().toUpperCase();
+      }
+      label = label.replace(m[0], '').replace(/[•·\-_,]+$/, '').trim();
+    }
+  }
+
+  let tag = label;
+  if (!tag) {
+    const itType = item?.type || defaultType;
+    if (itType === 'reel' || itType === 'video') tag = 'R';
+    else if (itType === 'story') tag = 'S';
+    else tag = 'POST';
+  }
+
+  // Normalize REEL / POST into clean, compact badges (e.g. "REEL 2" -> "R2", "REEL" -> "R", "POST 1" -> "P1")
+  const upper = tag.toUpperCase();
+  if (upper.startsWith('REEL')) {
+    const numMatch = upper.match(/REEL\s*#?\s*(\d+)/);
+    tag = numMatch ? `R${numMatch[1]}` : 'R';
+  } else if (upper.startsWith('POST')) {
+    const numMatch = upper.match(/POST\s*#?\s*(\d+)/);
+    tag = numMatch ? `P${numMatch[1]}` : 'POST';
+  } else if (upper.startsWith('STORY')) {
+    const numMatch = upper.match(/STORY\s*#?\s*(\d+)/);
+    tag = numMatch ? `S${numMatch[1]}` : 'S';
+  }
+
+  return { tag: tag || '—', time: time || '' };
+};
+
+// ── Interactive Day Cell Slot (Supports multiple deliverables + outside post details & time) ──
 const DayCellDeliverableSlot = ({
   cell = {},
   field = 'postLabel',
@@ -340,7 +381,6 @@ const DayCellDeliverableSlot = ({
   const hasMultiple = relevantItems.length > 1;
   const primaryItem = relevantItems[0];
   const displayVal = primaryItem ? primaryItem.label : (cell[field] || '');
-  const extraCount = relevantItems.length - 1;
 
   useEffect(() => {
     if (editing) ref.current?.focus();
@@ -384,49 +424,75 @@ const DayCellDeliverableSlot = ({
     );
   }
 
+  const { tag, time } = extractTagAndTime(displayVal, primaryItem, section === 'stories' ? 'story' : 'reel');
+  const isNotEmpty = Boolean(displayVal || primaryItem);
+  const isReel = isNotEmpty && ((primaryItem?.type === 'reel') || tag.startsWith('R') || tag.startsWith('REEL'));
+  const isStory = isNotEmpty && ((section === 'stories') || (primaryItem?.type === 'story') || tag.startsWith('S') || tag.startsWith('STORY'));
+  const isPost = isNotEmpty && (!isReel && !isStory) && (primaryItem?.type === 'post' || tag.startsWith('P') || tag.startsWith('POST'));
+
+  const badgeTheme = !isNotEmpty
+    ? 'text-muted-foreground font-normal'
+    : isReel
+    ? 'font-black text-cyan-700 dark:text-cyan-300 bg-cyan-500/15 border border-cyan-500/35'
+    : isStory
+    ? 'font-black text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/35'
+    : isPost
+    ? 'font-black text-sky-700 dark:text-sky-300 bg-sky-500/15 border border-sky-500/35'
+    : 'font-bold text-foreground bg-secondary/80 border border-border';
+
   return (
     <div
-      className="group/cell flex items-center justify-center w-full min-h-[24px] px-1 py-0.5 rounded cursor-pointer hover:bg-secondary/80 hover:ring-1 hover:ring-border transition-colors select-none"
+      className="group/cell flex items-center justify-center w-full min-h-[26px] px-0.5 py-0.5 rounded cursor-pointer hover:bg-secondary/80 hover:ring-1 hover:ring-border transition-colors select-none"
       onClick={() => onOpenDrawer()}
       title={
         hasMultiple
-          ? `${relevantItems.length} deliverables on this date (${relevantItems.map((i) => i.title ? `${i.label} - ${i.title}` : i.label || i.type).join(', ')}). Click to open sidebar & add more!`
+          ? `${relevantItems.length} deliverables on this date (${relevantItems.map((i) => i.title ? `${i.label} - ${i.title}` : i.label || i.type).join(', ')}). Click to open sidebar & manage`
           : primaryItem?.title
-          ? `${primaryItem.label ? primaryItem.label + ' • ' : ''}${primaryItem.title} (Click to open sidebar)`
-          : displayVal
-          ? `${displayVal} (Click to open sidebar)`
-          : 'Click to open sidebar & add Reel, Post, or Story'
+          ? `${tag}${time ? ' • ' + time : ''} — ${primaryItem.title} (Click to open sidebar)`
+          : isNotEmpty
+          ? `${tag}${time ? ' (' + time + ')' : ''} (Click to open sidebar)`
+          : 'Click to open sidebar & schedule Reel, Post, or Story'
       }
     >
       {hasMultiple ? (
         <div className="flex flex-col items-center justify-center w-full leading-tight py-0.5 gap-0.5">
-          {relevantItems.slice(0, 2).map((it, idx) => (
-            <span
-              key={it.id || idx}
-              className="truncate max-w-full text-[9px] font-bold text-foreground bg-secondary px-1 py-0.5 rounded block text-center w-full"
-            >
-              {it.label || `${it.type.toUpperCase()}${idx + 1}`}
-            </span>
-          ))}
+          {relevantItems.slice(0, 2).map((it, idx) => {
+            const parsed = extractTagAndTime(it.label, it, it.type);
+            const itReel = it.type === 'reel' || parsed.tag.startsWith('R');
+            return (
+              <span
+                key={it.id || idx}
+                className={`truncate max-w-full text-[9px] font-bold px-1 py-0.5 rounded block text-center w-full ${
+                  itReel
+                    ? 'text-cyan-700 dark:text-cyan-300 bg-cyan-500/15 border border-cyan-500/30'
+                    : 'text-sky-700 dark:text-sky-300 bg-sky-500/15 border border-sky-500/30'
+                }`}
+              >
+                {parsed.tag}{parsed.time ? ` ${parsed.time}` : ''}
+              </span>
+            );
+          })}
           {relevantItems.length > 2 && (
             <span className="text-[8px] font-black text-muted-foreground tabular-nums">
               +{relevantItems.length - 2} more
             </span>
           )}
         </div>
+      ) : isNotEmpty ? (
+        <div className={`w-full py-0.5 px-1 rounded flex flex-col items-center justify-center leading-none ${badgeTheme}`}>
+          <span className="text-[10px] font-black uppercase tracking-tight truncate max-w-full">
+            {tag}
+          </span>
+          {time && (
+            <span className="text-[8px] font-extrabold opacity-90 mt-0.5 tabular-nums truncate max-w-full flex items-center justify-center gap-0.5">
+              <Clock size={8} className="shrink-0 opacity-75" />
+              <span>{time}</span>
+            </span>
+          )}
+        </div>
       ) : (
-        <span
-          className={`truncate text-[10px] block w-full text-center ${
-            displayVal
-              ? displayVal.startsWith('REEL')
-                ? 'font-extrabold text-cyan-700 dark:text-cyan-300 bg-cyan-500/15 py-0.5 px-1 rounded border border-cyan-500/30'
-                : displayVal.startsWith('POST')
-                ? 'font-extrabold text-sky-700 dark:text-sky-300 bg-sky-500/15 py-0.5 px-1 rounded border border-sky-500/30'
-                : 'font-bold text-foreground'
-              : 'text-muted-foreground font-normal'
-          }`}
-        >
-          {displayVal || '—'}
+        <span className="truncate text-[10px] text-muted-foreground font-normal block w-full text-center">
+          —
         </span>
       )}
     </div>
@@ -1904,7 +1970,7 @@ const SMMOnePageTracker = () => {
                         <td style={{
                           ...(isMobile
                             ? { ...CELL_BASE, width: curCol.DONE, minWidth: curCol.DONE, maxWidth: curCol.DONE }
-                            : { ...CELL_STICKY('auto', curCol.DONE), right:0, left:'auto', zIndex:15, boxShadow:'-2px 0 6px -2px rgba(0,0,0,0.08)' }
+                            : { ...CELL_STICKY('auto', curCol.DONE), right:0, left:'auto', zIndex:25, boxShadow:'-2px 0 6px -2px rgba(0,0,0,0.08)' }
                           ),
                           backgroundColor: isSelected(row) ? 'var(--tracker-cell-selected, #ecfeff)' : 'var(--tracker-cell-bg, #ffffff)',
                         }}>
@@ -1964,7 +2030,7 @@ const SMMOnePageTracker = () => {
                         <td style={{
                           ...(isMobile
                             ? { ...CELL_BASE, width: curCol.DONE, minWidth: curCol.DONE, maxWidth: curCol.DONE, background:'var(--tracker-status-bg, #f8fafc)' }
-                            : { ...STATUS_CELL_STICKY('auto', curCol.DONE), right:0, left:'auto', zIndex:15, boxShadow:'-2px 0 6px -2px rgba(0,0,0,0.08)' }
+                            : { ...STATUS_CELL_STICKY('auto', curCol.DONE), right:0, left:'auto', zIndex:25, boxShadow:'-2px 0 6px -2px rgba(0,0,0,0.08)' }
                           ),
                           backgroundColor: isSelected(row) ? 'var(--tracker-status-selected, #e0f7fa)' : 'var(--tracker-status-bg, #f8fafc)',
                         }}/>

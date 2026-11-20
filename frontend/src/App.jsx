@@ -51,6 +51,7 @@ const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
 const RecycleBin = lazy(() => import('./pages/admin/RecycleBin'));
 const AssetsLibrary = lazy(() => import('./pages/assets/AssetsLibrary'));
 const Settings = lazy(() => import('./pages/Settings'));
+const BranchesPage = lazy(() => import('./pages/BranchesPage'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const PortalDashboard = lazy(() => import('./pages/portal/sections/PortalDashboard'));
 const PortalInvoices = lazy(() => import('./pages/portal/sections/PortalInvoices'));
@@ -441,8 +442,9 @@ const App = () => {
             </ProtectedRoute>
           } />
 
-          {/* Settings — any authenticated user */}
+          {/* Settings & Branches — any authenticated user */}
           <Route path="/settings" element={<Settings />} />
+          <Route path="/branches" element={<BranchesPage />} />
 
           {/* Social Media & Ads - One-Page Tracker Only */}
           <Route path="/smm" element={

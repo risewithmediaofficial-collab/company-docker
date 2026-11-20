@@ -182,30 +182,55 @@ const resolveClientForUser = async (user) => {
 export const formatShortTime = (timeStr) => {
   if (!timeStr) return '';
   if (timeStr instanceof Date) {
-    let h = timeStr.getHours();
-    const m = String(timeStr.getMinutes()).padStart(2, '0');
+    const h = timeStr.getHours();
+    const m = timeStr.getMinutes();
+    // Ignore midnight 00:00:00 (pure date without explicit scheduled time)
+    if (h === 0 && m === 0 && timeStr.getSeconds() === 0) {
+      return '';
+    }
+    const ampm = h >= 12 ? 'P' : 'A';
+    const h12 = h % 12 || 12;
+    const mStr = String(m).padStart(2, '0');
+    return mStr === '00' ? `${h12}${ampm}` : `${h12}:${mStr}${ampm}`;
+  }
+  const str = String(timeStr).trim();
+  if (!str) return '';
+
+  if (str.includes('T')) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      const h = d.getHours();
+      const m = d.getMinutes();
+      if (h === 0 && m === 0 && d.getSeconds() === 0) {
+        return '';
+      }
+      const ampm = h >= 12 ? 'P' : 'A';
+      const h12 = h % 12 || 12;
+      const mStr = String(m).padStart(2, '0');
+      return mStr === '00' ? `${h12}${ampm}` : `${h12}:${mStr}${ampm}`;
+    }
+  }
+
+  // 12-hour format e.g. "6:30 PM", "7pm", "08:30 AM", "6P"
+  const match12 = str.match(/^(\d{1,2})(?::(\d{2}))?\s*([ap]m|[ap])$/i);
+  if (match12) {
+    const h = parseInt(match12[1], 10);
+    const m = match12[2] || '00';
+    const ap = match12[3].toUpperCase().startsWith('P') ? 'P' : 'A';
+    return m === '00' ? `${h}${ap}` : `${h}:${m}${ap}`;
+  }
+
+  // 24-hour format e.g. "18:30", "09:00"
+  const match24 = str.match(/^(\d{1,2}):(\d{2})/);
+  if (match24) {
+    let h = parseInt(match24[1], 10);
+    const m = match24[2];
     const ampm = h >= 12 ? 'P' : 'A';
     h = h % 12 || 12;
     return m === '00' ? `${h}${ampm}` : `${h}:${m}${ampm}`;
   }
-  const str = String(timeStr);
-  if (str.includes('T')) {
-    const d = new Date(str);
-    if (!isNaN(d.getTime())) {
-      let h = d.getHours();
-      const m = String(d.getMinutes()).padStart(2, '0');
-      const ampm = h >= 12 ? 'P' : 'A';
-      h = h % 12 || 12;
-      return m === '00' ? `${h}${ampm}` : `${h}:${m}${ampm}`;
-    }
-  }
-  const match = str.match(/^(\d{1,2}):(\d{2})/);
-  if (!match) return str;
-  let h = parseInt(match[1], 10);
-  const m = match[2];
-  const ampm = h >= 12 ? 'P' : 'A';
-  h = h % 12 || 12;
-  return m === '00' ? `${h}${ampm}` : `${h}:${m}${ampm}`;
+
+  return str;
 };
 
 // ── Helper: classify task content type (Reel vs Post vs Story) ───────────────
@@ -334,24 +359,39 @@ export const mergeTasksIntoDays = (
 
     const cType = classifyTaskContentType(task);
     const status = mapTaskStatusToCellStatus(task);
-    const timeStr = formatShortTime(task.publishingTime || task.postingScheduleDate || pDate);
+
+    // Look for explicit time or scheduled posting time
+    const explicitTime = task.publishingTime || task.dueTime;
+    let timeStr = explicitTime
+      ? formatShortTime(explicitTime)
+      : formatShortTime(task.postingScheduleDate || task.publishingDate);
+
+    // If still no time, check title for time e.g. "Reel #2 at 6:30 PM"
+    if (!timeStr && task.title) {
+      const titleTimeMatch = task.title.match(/\b((?:1[0-2]|0?[1-9])(?::[0-5][0-9])?\s*(?:AM|PM|am|pm|[apAP])|(?:[01]?[0-9]|2[0-3]):[0-5][0-9])\b/i);
+      if (titleTimeMatch) {
+        timeStr = formatShortTime(titleTimeMatch[1]);
+      }
+    }
 
     // Extract reel/post/story number from title if present (e.g. "Reel #1: ...", "Post 2 - ...")
-    let label = '';
     const reelMatch = (task.title || '').match(/reel\s*#?\s*(\d+)/i);
     const postMatch = (task.title || '').match(/post\s*#?\s*(\d+)/i);
     const storyMatch = (task.title || '').match(/story\s*#?\s*(\d+)/i);
 
+    let tag = '';
     if (cType === 'reel') {
       const num = reelMatch ? parseInt(reelMatch[1], 10) : reelIdx++;
-      label = num > 1 ? `REEL ${num}` : 'REEL';
+      tag = num > 1 ? `R${num}` : 'R';
     } else if (cType === 'story') {
       const num = storyMatch ? parseInt(storyMatch[1], 10) : storyIdx++;
-      label = num > 1 ? `STORY ${num}` : 'STORY';
+      tag = num > 1 ? `S${num}` : 'S';
     } else {
       const num = postMatch ? parseInt(postMatch[1], 10) : postIdx++;
-      label = num > 1 ? `POST ${num}` : 'POST';
+      tag = num > 1 ? `P${num}` : 'POST';
     }
+
+    const label = timeStr ? `${tag} ${timeStr}` : tag;
 
     if (!Array.isArray(dayCell.items)) {
       dayCell.items = [];
@@ -384,6 +424,7 @@ export const mergeTasksIntoDays = (
     if (cType === 'reel' || cType === 'post') {
       if (!hasPosterContent(dayCell.postLabel)) {
         dayCell.postLabel = label;
+        dayCell.postTime = timeStr;
         dayCell.postStatus = status;
         modified = true;
       } else if (status === 'done' && dayCell.postStatus !== 'done') {
@@ -395,6 +436,7 @@ export const mergeTasksIntoDays = (
     if (cType === 'story') {
       if (!hasPosterContent(dayCell.storyLabel)) {
         dayCell.storyLabel = label;
+        dayCell.storyTime = timeStr;
         dayCell.storyStatus = status;
         modified = true;
       } else if (status === 'done' && dayCell.storyStatus !== 'done') {
@@ -1432,7 +1474,8 @@ export const syncTasksWithTracker = async (req, res) => {
         if (storiesTarget === 0 && sTaskCount > 0) storiesTarget = sTaskCount;
       }
 
-      const plan = `${reelsTarget}R + ${postsTarget}P`;
+      const totalQuota = (reelsTarget || 0) + (postsTarget || 0);
+      const plan = totalQuota > 0 ? String(totalQuota) : (clientTasks.length > 0 ? String(clientTasks.length) : '');
       const storyPlan = `${storiesTarget || 30} STORIES`;
 
       let tracker = await SmmMonthlyTracker.findOne({ client: client._id, month, year });

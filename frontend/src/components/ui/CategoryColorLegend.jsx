@@ -33,10 +33,10 @@ export const BOARD_CATEGORY_DEFINITIONS = [
     label: 'Website / Web Dev',
     description: 'Web development, redesigns, landing pages & CMS',
     icon: Globe,
-    dotColor: 'bg-zinc-900 dark:bg-zinc-100',
-    borderClass: 'border-l-zinc-900 dark:border-l-zinc-100',
-    badgeClass: 'bg-zinc-900/10 text-zinc-900 dark:text-zinc-100 border-zinc-900/25 dark:border-zinc-200/25',
-    swatchClass: 'bg-zinc-900 dark:bg-zinc-100',
+    dotColor: 'bg-indigo-500',
+    borderClass: 'border-l-indigo-500',
+    badgeClass: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
+    swatchClass: 'bg-indigo-500',
   },
   {
     key: 'social_media',
@@ -50,10 +50,10 @@ export const BOARD_CATEGORY_DEFINITIONS = [
         <FacebookIcon size={13} />
       </span>
     ),
-    dotColor: 'bg-zinc-700 dark:bg-zinc-300',
-    borderClass: 'border-l-zinc-700 dark:border-l-zinc-300',
-    badgeClass: 'bg-zinc-500/10 text-zinc-800 dark:text-zinc-200 border-zinc-500/30',
-    swatchClass: 'bg-zinc-700 dark:bg-zinc-300',
+    dotColor: 'bg-cyan-500',
+    borderClass: 'border-l-cyan-500',
+    badgeClass: 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30',
+    swatchClass: 'bg-cyan-500',
   },
   {
     key: 'video_content',
@@ -66,10 +66,10 @@ export const BOARD_CATEGORY_DEFINITIONS = [
         <YouTubeIcon size={14} />
       </span>
     ),
-    dotColor: 'bg-zinc-600 dark:bg-zinc-400',
-    borderClass: 'border-l-zinc-600 dark:border-l-zinc-400',
-    badgeClass: 'bg-zinc-500/10 text-zinc-800 dark:text-zinc-200 border-zinc-500/30',
-    swatchClass: 'bg-zinc-600 dark:bg-zinc-400',
+    dotColor: 'bg-purple-500',
+    borderClass: 'border-l-purple-500',
+    badgeClass: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30',
+    swatchClass: 'bg-purple-500',
   },
   {
     key: 'branding',
@@ -77,10 +77,10 @@ export const BOARD_CATEGORY_DEFINITIONS = [
     label: 'Branding & Design',
     description: 'Logos, brand identities, graphic designs & posters',
     icon: Palette,
-    dotColor: 'bg-zinc-500 dark:bg-zinc-400',
-    borderClass: 'border-l-zinc-500 dark:border-l-zinc-400',
-    badgeClass: 'bg-zinc-500/10 text-zinc-800 dark:text-zinc-200 border-zinc-500/30',
-    swatchClass: 'bg-zinc-500 dark:bg-zinc-400',
+    dotColor: 'bg-pink-500',
+    borderClass: 'border-l-pink-500',
+    badgeClass: 'bg-pink-500/15 text-pink-700 dark:text-pink-300 border-pink-500/30',
+    swatchClass: 'bg-pink-500',
   },
   {
     key: 'paid_ads',
@@ -91,13 +91,13 @@ export const BOARD_CATEGORY_DEFINITIONS = [
     customIcon: () => (
       <span className="inline-flex items-center gap-1 shrink-0">
         <FacebookIcon size={13} />
-        <Megaphone size={12} className="text-muted-foreground group-hover:text-foreground" />
+        <Megaphone size={12} className="text-amber-500" />
       </span>
     ),
-    dotColor: 'bg-neutral-800 dark:bg-neutral-200',
-    borderClass: 'border-l-neutral-800 dark:border-l-neutral-200',
-    badgeClass: 'bg-neutral-500/10 text-neutral-800 dark:text-neutral-200 border-neutral-500/30',
-    swatchClass: 'bg-neutral-800 dark:bg-neutral-200',
+    dotColor: 'bg-amber-500',
+    borderClass: 'border-l-amber-500',
+    badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    swatchClass: 'bg-amber-500',
   },
   {
     key: 'seo',
@@ -105,10 +105,10 @@ export const BOARD_CATEGORY_DEFINITIONS = [
     label: 'SEO & Search Optimization',
     description: 'Keywords, backlinks, audits & Google search rankings',
     icon: Search,
-    dotColor: 'bg-neutral-600 dark:bg-neutral-400',
-    borderClass: 'border-l-neutral-600 dark:border-l-neutral-400',
-    badgeClass: 'bg-neutral-500/10 text-neutral-800 dark:text-neutral-200 border-neutral-500/30',
-    swatchClass: 'bg-neutral-600 dark:bg-neutral-400',
+    dotColor: 'bg-emerald-500',
+    borderClass: 'border-l-emerald-500',
+    badgeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+    swatchClass: 'bg-emerald-500',
   },
   {
     key: 'saas_product',
@@ -116,10 +116,10 @@ export const BOARD_CATEGORY_DEFINITIONS = [
     label: 'SaaS Platform / Software',
     description: 'In-house SaaS products, web portals & engineering',
     icon: Rocket,
-    dotColor: 'bg-zinc-800 dark:bg-zinc-200',
-    borderClass: 'border-l-zinc-800 dark:border-l-zinc-200',
-    badgeClass: 'bg-zinc-500/10 text-zinc-800 dark:text-zinc-200 border-zinc-500/30',
-    swatchClass: 'bg-zinc-800 dark:bg-zinc-200',
+    dotColor: 'bg-blue-500',
+    borderClass: 'border-l-blue-500',
+    badgeClass: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30',
+    swatchClass: 'bg-blue-500',
   },
   {
     key: 'content',
@@ -127,10 +127,10 @@ export const BOARD_CATEGORY_DEFINITIONS = [
     label: 'Content Writing & Scripts',
     description: 'Scriptwriting, blogs, copy & caption drafting',
     icon: FileText,
-    dotColor: 'bg-zinc-400 dark:bg-zinc-500',
-    borderClass: 'border-l-zinc-400 dark:border-l-zinc-500',
-    badgeClass: 'bg-zinc-500/10 text-zinc-700 dark:text-zinc-300 border-zinc-500/30',
-    swatchClass: 'bg-zinc-400 dark:bg-zinc-500',
+    dotColor: 'bg-teal-500',
+    borderClass: 'border-l-teal-500',
+    badgeClass: 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30',
+    swatchClass: 'bg-teal-500',
   },
 ];
 
@@ -142,6 +142,7 @@ export const CategoryColorLegend = ({
   selectedCategory = 'all',
   onSelectCategory,
   title = 'Board Category Guide',
+  counts = {},
   className = '',
   collapsible = true,
   defaultExpanded = true,
@@ -149,7 +150,7 @@ export const CategoryColorLegend = ({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   return (
-    <div className={`rounded-2xl bg-card p-3 sm:p-3.5 space-y-2.5 transition-colors ${className}`}>
+    <div className={`rounded-2xl bg-card p-3 sm:p-3.5 space-y-2.5 transition-colors border border-border/60 ${className}`}>
       {/* Header Bar */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
@@ -195,27 +196,35 @@ export const CategoryColorLegend = ({
             const isSelected =
               selectedCategory === item.key ||
               (item.aliases && item.aliases.includes(selectedCategory));
+            const countVal = counts && counts[item.key] !== undefined ? counts[item.key] : null;
+
             return (
               <div
                 key={item.key}
                 onClick={() => onSelectCategory?.(isSelected ? 'all' : item.key)}
-                className={`p-2.5 rounded-xl transition-colors cursor-pointer flex flex-col justify-between space-y-1.5 group select-none ${
+                className={`p-2.5 rounded-xl transition-all cursor-pointer flex flex-col justify-between space-y-1.5 group select-none border border-border/40 hover:border-border ${
                   isSelected
-                    ? 'bg-secondary ring-2 ring-primary/40 font-bold text-foreground'
+                    ? 'bg-secondary ring-2 ring-primary/40 font-bold text-foreground shadow-xs'
                     : 'bg-background hover:bg-secondary/75 text-foreground'
                 }`}
                 title={`${item.label}: ${item.description}`}
               >
                 <div className="flex items-center justify-between gap-1">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className={`h-2.5 w-2.5 rounded-full ${item.dotColor} shrink-0`} />
+                    <span className={`h-2.5 w-2.5 rounded-full ${item.dotColor} shadow-xs shrink-0`} />
                     {item.customIcon ? (
                       <item.customIcon />
                     ) : (
                       <Icon size={12} className="shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
                     )}
                   </div>
-                  <span className={`h-1.5 w-4 rounded-full ${item.swatchClass} opacity-80`} />
+                  {countVal !== null ? (
+                    <span className="text-[10px] font-black text-muted-foreground group-hover:text-foreground tabular-nums px-1.5 py-0.2 rounded-full bg-secondary">
+                      {countVal}
+                    </span>
+                  ) : (
+                    <span className={`h-2 w-2 rounded-full ${item.dotColor} opacity-90 shadow-xs`} />
+                  )}
                 </div>
                 <div className="space-y-0.5 min-w-0">
                   <span className="text-[11px] font-bold tracking-tight block truncate leading-tight">

@@ -65,7 +65,7 @@ const parseOperatingHoursRange = (rangeStr) => {
   return { start: '09:30', end: '18:30' };
 };
 
-export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) => {
+export const BranchManager = ({ companyId, companyName, isSuperAdmin = false, autoOpenAdd = false }) => {
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -136,6 +136,12 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false }) 
   useEffect(() => {
     fetchBranches();
   }, [companyId]);
+
+  useEffect(() => {
+    if (autoOpenAdd) {
+      handleOpenAdd();
+    }
+  }, [autoOpenAdd]);
 
   // Sync clock time changes to formData.operatingHours
   const updateTimes = (newStart, newEnd) => {

@@ -38,6 +38,7 @@ import {
 } from '../../components/ui/NotionDetailTemplate';
 import { formatINR } from '../../utils/currency';
 import { getProjectCategoryMeta } from '../../utils/projectCategories';
+import { getCategoryTheme } from '../../utils/categoryColors';
 import { useCredential, useCreateCredential, useDeleteCredential } from '../../hooks/useClientCredentials';
 import { useClientProposals } from '../../hooks/useProposals';
 import { useDeleteClient } from '../../hooks/useClients';
@@ -661,26 +662,31 @@ const ClientDetails = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {projects.map((proj) => {
                 const catMeta = getProjectCategoryMeta(proj.category);
+                const catTheme = getCategoryTheme(proj.category);
                 const CatIcon = catMeta.icon;
                 const projStatus = String(proj.status || 'Planning').replace(/_/g, ' ');
                 const sLower = projStatus.toLowerCase();
                 const isDoneStatus = sLower === 'completed' || sLower === 'done';
-                const isActiveStatus = sLower === 'in progress' || sLower === 'active';
+                const isActiveStatus = sLower === 'in progress' || sLower === 'active' || sLower === 'ongoing';
                 const isPendingStatus = sLower === 'planning' || sLower === 'pending';
                 const isOnHold = sLower === 'on hold' || sLower === 'on_hold';
                 const isCancelled = sLower === 'cancelled' || sLower === 'canceled';
 
                 const badgeClass = isDoneStatus
-                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold'
+                  ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 font-extrabold shadow-xs'
                   : isPendingStatus
-                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold'
+                  ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40 font-extrabold shadow-xs'
                   : isActiveStatus
-                  ? 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#12B7D4] border border-cyan-500/30 font-bold'
+                  ? 'bg-cyan-500/20 text-[#0d99b2] dark:text-[#12B7D4] border border-cyan-500/40 font-extrabold shadow-xs'
                   : isOnHold
-                  ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30 font-bold'
+                  ? 'bg-orange-500/20 text-orange-800 dark:text-orange-300 border border-orange-500/40 font-extrabold shadow-xs'
                   : isCancelled
-                  ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-bold line-through'
-                  : 'bg-secondary text-foreground';
+                  ? 'bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/40 font-extrabold line-through'
+                  : 'bg-secondary text-foreground font-bold';
+
+                const catBadgeClass = catTheme?.badgeClass || catMeta?.badgeClass || 'bg-secondary text-foreground border border-border';
+                const accentBorder = catTheme?.accentBorder || 'border-l-primary';
+
                 const pTotal = proj.totalTasks || 0;
                 const pOngoing = proj.ongoingTasks || 0;
                 const pCompleted = proj.completedTasks ?? proj.doneTasks ?? 0;
@@ -692,12 +698,12 @@ const ClientDetails = () => {
                   <Link
                     key={proj._id}
                     to={`/projects/${proj._id}`}
-                    className="bg-card rounded-3xl p-5 sm:p-6 hover:bg-secondary/40 transition-all flex flex-col justify-between gap-4 group"
+                    className={`bg-card rounded-3xl p-5 sm:p-6 hover:bg-secondary/40 transition-all flex flex-col justify-between gap-4 group border border-border/70 border-l-4 ${accentBorder} shadow-xs hover:shadow-md`}
                   >
                     {/* Header: Type, Project Status & Title */}
                     <div className="space-y-2.5">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-secondary text-foreground">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold ${catBadgeClass}`}>
                           <CatIcon size={12} className="shrink-0" />
                           <span>{catMeta.shortLabel || catMeta.label}</span>
                         </span>
