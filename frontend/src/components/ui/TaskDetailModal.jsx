@@ -61,6 +61,7 @@ import {
   Laptop,
   Link2,
 } from '@/components/ui/muiIcons';
+import { SocialIcon } from './SocialIcons';
 import {
   formatTaskTypeLabel,
   isWebsiteTaskType,
@@ -1398,8 +1399,9 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                           <span className="text-[10px] font-bold uppercase text-muted-foreground block">Target Social Platforms</span>
                           <div className="flex flex-wrap gap-1">
                             {task.targetSocialPlatforms.map((plat, i) => (
-                              <Badge key={i} variant="outline" className="text-[10px] font-semibold text-foreground">
-                                {plat}
+                              <Badge key={i} variant="outline" className="inline-flex items-center gap-1 text-[10px] font-semibold text-foreground">
+                                <SocialIcon platform={plat} size={12} />
+                                <span>{plat}</span>
                               </Badge>
                             ))}
                           </div>

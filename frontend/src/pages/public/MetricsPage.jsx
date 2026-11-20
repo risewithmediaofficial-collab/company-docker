@@ -75,19 +75,19 @@ export const MetricsPage = () => {
       {/* ── 3. FOUR MEASURABLE OUTCOMES (CARDS GRID) ── */}
       <section className="py-14 sm:py-20 px-4 sm:px-8 max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
-          <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">
+          <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] mb-2">
             Proven ROI
           </p>
-          <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight mt-1">
+          <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
             What Happens When Chaos Disappears
           </h2>
-          <p className="text-xs sm:text-sm text-slate-600 font-medium mt-2 leading-relaxed">
+          <p className="text-sm sm:text-base text-slate-600 font-medium mt-2.5 leading-relaxed max-w-xl mx-auto">
             Eliminating scattered group chats and disconnected apps translates to immediate, measurable gains.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-2 hover:border-[#12B7D4]/40 transition-all">
+          <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-2 hover:border-[#12B7D4]/40 transition-all">
             <span className="text-3xl sm:text-4xl font-black text-[#12B7D4] block">12+ Hrs</span>
             <h3 className="font-bold text-slate-900 text-sm">Saved Weekly Per Manager</h3>
             <p className="text-xs text-slate-500 font-medium leading-relaxed">
@@ -95,7 +95,7 @@ export const MetricsPage = () => {
             </p>
           </div>
 
-          <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-2 hover:border-emerald-400 transition-all">
+          <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-2 hover:border-emerald-400 transition-all">
             <span className="text-3xl sm:text-4xl font-black text-emerald-600 block">99.8%</span>
             <h3 className="font-bold text-slate-900 text-sm">On-Time Deliverables</h3>
             <p className="text-xs text-slate-500 font-medium leading-relaxed">
@@ -103,7 +103,7 @@ export const MetricsPage = () => {
             </p>
           </div>
 
-          <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-2 hover:border-indigo-400 transition-all">
+          <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-2 hover:border-indigo-400 transition-all">
             <span className="text-3xl sm:text-4xl font-black text-indigo-600 block">3.2x</span>
             <h3 className="font-bold text-slate-900 text-sm">Faster Client Approvals</h3>
             <p className="text-xs text-slate-500 font-medium leading-relaxed">
@@ -111,7 +111,7 @@ export const MetricsPage = () => {
             </p>
           </div>
 
-          <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-2 hover:border-purple-400 transition-all">
+          <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-2 hover:border-purple-400 transition-all">
             <span className="text-3xl sm:text-4xl font-black text-purple-600 block">0%</span>
             <h3 className="font-bold text-slate-900 text-sm">Lost Client Credentials</h3>
             <p className="text-xs text-slate-500 font-medium leading-relaxed">
@@ -124,19 +124,19 @@ export const MetricsPage = () => {
       {/* ── 4. ENTERPRISE DATA ISOLATION & SPEED SHOWCASE (UNIQUE ARCHITECTURE CARDS) ── */}
       <div className="space-y-0">
         
-        {/* Showcase 01: Multi-Tenant Database Security (Slate Tint BG) */}
-        <section className="py-14 sm:py-20 px-4 sm:px-8 bg-slate-50/70 border-y border-slate-200/80">
+        {/* Showcase 01: Multi-Tenant Database Security (Slate Tint BG, Borderless) ── */}
+        <section className="py-14 sm:py-20 px-4 sm:px-8 bg-slate-50/70">
           <div className="max-w-6xl mx-auto">
             <ScrollReveal>
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
                 
                 {/* Left: Text & Features (Neatly Constrained with Card Bullets) */}
                 <div className="lg:col-span-7 space-y-4 text-left">
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">
+                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
                     Security & Compliance
                   </p>
 
-                  <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
+                  <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                     Your Agency Data
                     <span className="text-[#12B7D4] block mt-1">
                       Stays 100% Private.
@@ -182,7 +182,7 @@ export const MetricsPage = () => {
 
                 {/* Right: Unique Enterprise Tenant Security Visual Card (NO PHONE MOCKUP DUPLICATION) */}
                 <div className="lg:col-span-5 flex justify-center">
-                  <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200/90 shadow-xl p-6 space-y-4">
+                  <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
                     <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                       <div className="flex items-center gap-2">
                         <ShieldCheck size={16} className="text-emerald-600" />
@@ -243,15 +243,15 @@ export const MetricsPage = () => {
           </div>
         </section>
 
-        {/* Showcase 02: Performance & Speed (White BG) */}
-        <section className="py-14 sm:py-20 px-4 sm:px-8 bg-white border-b border-slate-200/80">
+        {/* Showcase 02: Performance & Speed (White BG, Borderless) ── */}
+        <section className="py-14 sm:py-20 px-4 sm:px-8 bg-white">
           <div className="max-w-6xl mx-auto">
             <ScrollReveal>
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
                 
                 {/* Left: Speed Visual Card (Alternating Side - NO PHONE MOCKUP DUPLICATION) */}
                 <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
-                  <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200/90 shadow-xl p-6 space-y-4">
+                  <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
                     <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                       <div className="flex items-center gap-2">
                         <Activity size={16} className="text-[#12B7D4]" />
@@ -299,11 +299,11 @@ export const MetricsPage = () => {
 
                 {/* Right: Text & Features */}
                 <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">
+                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
                     Speed & Reliability
                   </p>
 
-                  <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
+                  <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                     Sub-Second Page Loads.
                     <span className="text-[#12B7D4] block mt-1">
                       Smooth on Any Smartphone.
@@ -359,7 +359,7 @@ export const MetricsPage = () => {
           <ScrollReveal>
             <div className="text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8">
               <div className="space-y-2 max-w-2xl">
-                <span className="text-xs font-black uppercase tracking-widest text-[#12B7D4] block">
+                <span className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] block">
                   Enterprise Agency Cloud
                 </span>
                 <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">

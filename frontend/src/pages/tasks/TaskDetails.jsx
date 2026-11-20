@@ -58,6 +58,7 @@ import { KanbanCreateTaskModal } from '../../components/tasks/KanbanCreateTaskMo
 import { ProgressUpdateForm } from '../../components/ui/ProgressUpdateForm';
 import { TaskCountdownTimer } from '../../components/tasks/TaskCountdownTimer';
 import { TaskSubmitModal } from '../../components/tasks/TaskSubmitModal';
+import { SocialIcon } from '../../components/ui/SocialIcons';
 import { useAddCompletedFiles, useTask, useUpdateTaskStatus, useDeleteTask } from '../../hooks/useTasks';
 import {
   formatTaskTypeLabel,
@@ -748,8 +749,9 @@ export const TaskDetails = () => {
             <div className="pt-2 flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold text-muted-foreground">Target Channels:</span>
               {task.postingPlatforms.map((platform, idx) => (
-                <span key={idx} className="px-2.5 py-1 rounded-xl bg-secondary text-xs font-semibold text-foreground ">
-                  {platform}
+                <span key={idx} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-secondary text-xs font-semibold text-foreground">
+                  <SocialIcon platform={platform} size={14} />
+                  <span>{platform}</span>
                 </span>
               ))}
             </div>

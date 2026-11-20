@@ -21,7 +21,7 @@ export const AboutPage = () => {
       ctaSubtitle="Get your agency workspace set up in 2 minutes. Free 14-day trial, no credit card required."
     >
       {/* ── 1. HERO HEADER ── */}
-      <section className="relative overflow-hidden pt-14 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-8 text-left sm:text-center">
+      <section className="relative overflow-hidden pt-12 sm:pt-20 pb-12 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
         <HeroPattern />
         
         <div className="relative z-10 max-w-3xl mx-auto">
@@ -64,16 +64,16 @@ export const AboutPage = () => {
       </section>
 
       {/* ── 2. THE 3 PAIN POINTS THAT SPARKED RISEWITHMEDIA OS ── */}
-      <section className="py-16 sm:py-24 px-4 sm:px-8 max-w-6xl mx-auto">
+      <section className="py-14 sm:py-20 px-4 sm:px-8 max-w-6xl mx-auto">
         <ScrollReveal delay={0}>
-          <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">
+          <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] mb-2">
               Why We Exist
             </p>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight mt-1.5">
+            <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
               The Three Agency Traps We <span className="marker-highlight">Eliminated</span>
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-2 max-w-lg mx-auto">
+            <p className="text-sm sm:text-base text-slate-600 font-medium mt-2.5 leading-relaxed max-w-xl mx-auto">
               What breaks when an agency scales past 5 clients — and how we solved each trap.
             </p>
           </div>
@@ -156,7 +156,7 @@ export const AboutPage = () => {
       </section>
 
       {/* ── 3. THE 4-STEP AGENCY OPERATING RHYTHM ── */}
-      <section className="py-16 sm:py-24 px-4 sm:px-8 bg-slate-50/70">
+      <section className="py-14 sm:py-20 px-4 sm:px-8 bg-slate-50/70">
         <div className="max-w-6xl mx-auto">
           <ScrollReveal>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
@@ -251,18 +251,18 @@ export const AboutPage = () => {
 
               {/* Right Column: Clean Minimalist Steps */}
               <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
-                <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">
+                <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
                   The Agency Rhythm
                 </p>
 
-                <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[38px] text-slate-950 tracking-tight leading-[1.2]">
+                <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                   How We Designed
                   <span className="block mt-1">
                     The <span className="marker-highlight">Modern Agency Flow</span>.
                   </span>
                 </h2>
 
-                <p className="text-sm text-slate-600 font-medium leading-relaxed max-w-xl">
+                <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-xl">
                   Built strictly around recurring agency retainers — eliminating back-and-forth noise.
                 </p>
 
@@ -298,16 +298,16 @@ export const AboutPage = () => {
       </section>
 
       {/* ── 4. OUR THREE NON-NEGOTIABLE CORE VALUES (IMAGE 1 TARGET) ── */}
-      <section className="py-16 sm:py-24 px-4 sm:px-8 max-w-6xl mx-auto">
+      <section className="py-14 sm:py-20 px-4 sm:px-8 max-w-6xl mx-auto">
         <ScrollReveal delay={0}>
-          <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">
+          <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] mb-2">
               Our Guiding Principles
             </p>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight mt-1.5">
+            <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
               Built for <span className="marker-highlight">Real Humans</span>, Not Bureaucrats
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-2 max-w-lg mx-auto">
+            <p className="text-sm sm:text-base text-slate-600 font-medium mt-2.5 leading-relaxed max-w-xl mx-auto">
               Three core pillars engineered for agency productivity, privacy, and speed.
             </p>
           </div>
@@ -395,7 +395,7 @@ export const AboutPage = () => {
           <ScrollReveal>
             <div className="text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8">
               <div className="space-y-2 max-w-2xl">
-                <span className="text-xs font-black uppercase tracking-widest text-[#12B7D4] block">
+                <span className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] block">
                   Experience the Difference
                 </span>
                 <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">

@@ -183,7 +183,7 @@ const PublicLayout = ({
 
       {/* ── FLOATING OVERLAPPING CTA BANNER (Centered across the white/dark boundary) ── */}
       {!hideCta && (
-        <section className="relative z-20 -mb-28 sm:-mb-24 lg:-mb-24 max-w-6xl mx-auto px-3.5 sm:px-8 w-full">
+        <section className="relative z-20 -mb-28 sm:-mb-24 lg:-mb-24 max-w-6xl mx-auto px-4 sm:px-8 w-full">
           <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#0284c7] p-6 sm:p-10 lg:p-12 text-white flex flex-col lg:flex-row items-start md:items-center justify-between gap-6 sm:gap-8 border border-white/20 relative overflow-hidden">
             
             {/* Subtle Inner Glow Shapes */}

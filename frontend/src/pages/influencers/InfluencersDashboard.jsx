@@ -42,6 +42,7 @@ import {
 import { AddEditInfluencerModal } from '../../components/modals/AddEditInfluencerModal';
 import { InfluencerDetailModal } from '../../components/modals/InfluencerDetailModal';
 import { formatINR } from '../../utils/currency';
+import { SocialIcon } from '../../components/ui/SocialIcons';
 
 const PLATFORMS = ['all', 'Instagram', 'YouTube', 'Facebook', 'Moj', 'Josh', 'X', 'Multi-platform'];
 const CATEGORIES = [
@@ -111,8 +112,9 @@ const InfluencersDashboard = () => {
       key: 'platform',
       label: 'Platform',
       render: (item) => (
-        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-secondary text-foreground ">
-          {item.platform}
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-secondary text-foreground">
+          <SocialIcon platform={item.platform} size={14} />
+          <span>{item.platform}</span>
         </span>
       ),
     },
@@ -194,8 +196,9 @@ const InfluencersDashboard = () => {
   const renderCard = (item) => (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-secondary text-foreground uppercase tracking-wider">
-          {item.platform}
+        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-secondary text-foreground">
+          <SocialIcon platform={item.platform} size={13} />
+          <span>{item.platform}</span>
         </span>
         <span className="text-xs font-bold text-foreground tabular-nums">
           {item.commercialRate ? formatINR(item.commercialRate) : 'Negotiable'}

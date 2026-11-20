@@ -26,6 +26,7 @@ import {
 import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
 import { Button } from '../../../components/ui/button';
+import { SocialIcon } from '../../../components/ui/SocialIcons';
 
 const KPICard = ({ label, value, icon: Icon, sub }) => (
   <div
@@ -1595,7 +1596,10 @@ export default function PortalDashboard({ user, setPendingCount }) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
-                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Instagram Handle</label>
+                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 flex items-center gap-1.5">
+                      <SocialIcon platform="instagram" size={13} />
+                      <span>Instagram Handle</span>
+                    </label>
                     <Input
                       value={onboardingForm.socialMedia?.instagram || ''}
                       onChange={(e) =>
@@ -1609,7 +1613,10 @@ export default function PortalDashboard({ user, setPendingCount }) {
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Facebook Page</label>
+                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 flex items-center gap-1.5">
+                      <SocialIcon platform="facebook" size={13} />
+                      <span>Facebook Page</span>
+                    </label>
                     <Input
                       value={onboardingForm.socialMedia?.facebook || ''}
                       onChange={(e) =>
@@ -1623,7 +1630,10 @@ export default function PortalDashboard({ user, setPendingCount }) {
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">LinkedIn Page</label>
+                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 flex items-center gap-1.5">
+                      <SocialIcon platform="linkedin" size={13} />
+                      <span>LinkedIn Page</span>
+                    </label>
                     <Input
                       value={onboardingForm.socialMedia?.linkedin || ''}
                       onChange={(e) =>
@@ -1637,7 +1647,10 @@ export default function PortalDashboard({ user, setPendingCount }) {
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">YouTube Channel</label>
+                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 flex items-center gap-1.5">
+                      <SocialIcon platform="youtube" size={13} />
+                      <span>YouTube Channel</span>
+                    </label>
                     <Input
                       value={onboardingForm.socialMedia?.youtube || ''}
                       onChange={(e) =>

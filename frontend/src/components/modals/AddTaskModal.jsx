@@ -33,6 +33,7 @@ import { useProjects } from '../../hooks/useProjects';
 import { useUsers } from '../../hooks/useUsers';
 import { useClients } from '../../hooks/useClients';
 import { ProjectTaskTargetsBanner } from '../projects/ProjectTaskTargetsBanner';
+import { SocialIcon } from '../ui/SocialIcons';
 import {
   BRANDING_AVAILABILITY_OPTIONS,
   CONTENT_AVAILABILITY_OPTIONS,
@@ -1707,12 +1708,13 @@ export const AddTaskModal = ({
                           key={plat.value}
                           type="button"
                           onClick={() => togglePlatform(plat.value)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${isSelected
-                              ? 'bg-primary text-primary-foreground '
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${isSelected
+                              ? 'bg-primary text-primary-foreground shadow-xs'
                               : 'bg-background text-muted-foreground hover:bg-secondary'
                             }`}
                         >
-                          {plat.label}
+                          <SocialIcon platform={plat.value} size={15} />
+                          <span>{plat.label}</span>
                         </button>
                       );
                     })}

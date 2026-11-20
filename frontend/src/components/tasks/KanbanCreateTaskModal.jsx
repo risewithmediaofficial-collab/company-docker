@@ -32,13 +32,19 @@ import {
   Music,
   MapPin,
   Check,
-  Instagram,
-  Youtube,
   Briefcase,
   Users,
   Globe,
   FolderKanban,
 } from '@/components/ui/muiIcons';
+import {
+  InstagramIcon,
+  FacebookIcon,
+  XIcon,
+  YouTubeIcon,
+  LinkedInIcon,
+  TikTokIcon,
+} from '../ui/SocialIcons';
 import { useCreateTask } from '../../hooks/useTasks';
 import { useClients } from '../../hooks/useClients';
 import { useProjects } from '../../hooks/useProjects';
@@ -73,12 +79,12 @@ export {
 };
 
 export const PLATFORM_OPTIONS = [
-  { id: 'Instagram', label: 'Instagram', Icon: Instagram },
-  { id: 'YouTube', label: 'YouTube', Icon: Youtube },
-  { id: 'LinkedIn', label: 'LinkedIn', Icon: Briefcase },
-  { id: 'Facebook', label: 'Facebook', Icon: Users },
-  { id: 'Twitter', label: 'X / Twitter', Icon: Globe },
-  { id: 'TikTok', label: 'TikTok', Icon: Music },
+  { id: 'Instagram', label: 'Instagram', Icon: InstagramIcon },
+  { id: 'YouTube', label: 'YouTube', Icon: YouTubeIcon },
+  { id: 'LinkedIn', label: 'LinkedIn', Icon: LinkedInIcon },
+  { id: 'Facebook', label: 'Facebook', Icon: FacebookIcon },
+  { id: 'Twitter', label: 'X (Twitter)', Icon: XIcon },
+  { id: 'TikTok', label: 'TikTok', Icon: TikTokIcon },
 ];
 
 export const CONTENT_TYPE_OPTIONS = [
@@ -2241,7 +2247,7 @@ export const KanbanCreateTaskModal = ({
                               : ' bg-card text-muted-foreground hover:bg-muted/40 hover:text-foreground'
                           }`}
                         >
-                          <PlatIcon className="h-3.5 w-3.5 shrink-0" />
+                          <PlatIcon size={16} className="shrink-0" />
                           <span>{plat.label}</span>
                         </button>
                       );

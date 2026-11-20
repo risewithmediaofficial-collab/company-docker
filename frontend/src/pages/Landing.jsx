@@ -7,6 +7,13 @@ import ScrollReveal from '../components/public/ScrollReveal';
 import SectionShowcase from '../components/public/SectionShowcase';
 import StatsBanner from '../components/public/StatsBanner';
 import SoftwareComparison from '../components/public/SoftwareComparison';
+import {
+  InstagramIcon,
+  FacebookIcon,
+  LinkedInIcon,
+  YouTubeIcon,
+  XIcon,
+} from '../components/ui/SocialIcons';
 
 export const Landing = () => {
   return (
@@ -85,11 +92,11 @@ export const Landing = () => {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
                 {/* Left: Text & Features (Neatly Constrained with Card Bullets) */}
                 <div className="lg:col-span-7 space-y-4 text-left">
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">
+                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
                     Sales & Client Acquisition
                   </p>
 
-                  <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
+                  <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                     Capture Every Lead.
                     <span className="text-[#12B7D4] block mt-1">
                       Close Deals Without Friction.
@@ -143,8 +150,8 @@ export const Landing = () => {
           </div>
         </section>
 
-        {/* ── PILLAR 2: Creative Execution & Content Calendar (Subtle Slate Tint BG) ── */}
-        <section className="py-14 sm:py-20 px-4 sm:px-8 bg-slate-50/70 border-y border-slate-200/80">
+        {/* ── PILLAR 2: Creative Execution & Content Calendar (Subtle Slate Tint BG, Borderless) ── */}
+        <section className="py-14 sm:py-20 px-4 sm:px-8 bg-slate-50/70">
           <div className="max-w-6xl mx-auto">
             <ScrollReveal>
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
@@ -155,11 +162,11 @@ export const Landing = () => {
 
                 {/* Right: Text & Features */}
                 <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">
+                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
                     Creative & Social Media
                   </p>
 
-                  <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
+                  <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                     Agile Content Calendar.
                     <span className="text-[#12B7D4] block mt-1">
                       1-Tap Client Approvals on Phone.
@@ -179,6 +186,28 @@ export const Landing = () => {
                       <div>
                         <h3 className="font-bold text-slate-900 text-sm leading-snug">Multi-Platform Visual Grid</h3>
                         <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Plan and stage reels, carousels, and stories across Instagram, LinkedIn, Facebook, and X.</p>
+                        <div className="flex items-center gap-1.5 flex-wrap pt-2">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-bold text-slate-800">
+                            <InstagramIcon size={13} />
+                            <span>Instagram</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-bold text-slate-800">
+                            <FacebookIcon size={13} />
+                            <span>Facebook</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-bold text-slate-800">
+                            <LinkedInIcon size={13} />
+                            <span>LinkedIn</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-bold text-slate-800">
+                            <YouTubeIcon size={13} />
+                            <span>YouTube</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-bold text-slate-800">
+                            <XIcon size={13} />
+                            <span>𝕏</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -215,11 +244,11 @@ export const Landing = () => {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
                 {/* Left: Text & Features */}
                 <div className="lg:col-span-7 space-y-4 text-left">
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">
+                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
                     Finance, Billing & Operations
                   </p>
 
-                  <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
+                  <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                     GST Invoices in 30 Seconds.
                     <span className="text-[#12B7D4] block mt-1">
                       Live Agency Profit & Loss.
@@ -281,7 +310,7 @@ export const Landing = () => {
           <ScrollReveal>
             <div className="text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8">
               <div className="space-y-2 max-w-2xl">
-                <span className="text-xs font-black uppercase tracking-widest text-[#12B7D4] block">
+                <span className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] block">
                   Ready to Upgrade Your Agency?
                 </span>
                 <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">

@@ -41,6 +41,7 @@ import { getProjectCategoryMeta } from '../../utils/projectCategories';
 import { useCredential, useCreateCredential, useDeleteCredential } from '../../hooks/useClientCredentials';
 import { useClientProposals } from '../../hooks/useProposals';
 import { useDeleteClient } from '../../hooks/useClients';
+import { SocialIcon } from '../../components/ui/SocialIcons';
 
 const PLATFORM_MAP = {
   instagram: { label: 'Instagram', code: 'IG' },
@@ -1173,8 +1174,10 @@ const ClientDetails = () => {
                             <span className="flex items-center gap-1.5">
                               <AtSign size={13} className="text-foreground shrink-0" />
                               <span className="tabular-nums">{accounts.length} Platform Account{accounts.length > 1 ? 's' : ''}</span>
-                              <span className="text-muted-foreground font-mono text-[10px] ml-1 uppercase">
-                                {accounts.map((a) => getPlatformMeta(a.platform).code).join(' · ')}
+                              <span className="flex items-center gap-1 ml-1.5">
+                                {accounts.map((a, i) => (
+                                  <SocialIcon key={i} platform={a.platform} size={13} />
+                                ))}
                               </span>
                             </span>
                             {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -1197,7 +1200,7 @@ const ClientDetails = () => {
                                   >
                                     <div className="flex items-center justify-between font-bold text-foreground">
                                       <span className="flex items-center gap-1.5">
-                                        <span className="px-1.5 py-0.5 rounded bg-secondary text-[9px] font-mono">{meta.code}</span>
+                                        <SocialIcon platform={acc.platform} size={16} />
                                         <span>{acc.platformLabel || meta.label}</span>
                                       </span>
                                       {acc.pages && acc.pages.length > 0 && (

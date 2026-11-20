@@ -22,37 +22,45 @@ import PublicLayout from '../../components/public/PublicLayout';
 import HeroPattern from '../../components/public/HeroPattern';
 import ScrollReveal from '../../components/public/ScrollReveal';
 import SectionShowcase from '../../components/public/SectionShowcase';
+import {
+  InstagramIcon,
+  FacebookIcon,
+  LinkedInIcon,
+  YouTubeIcon,
+  XIcon,
+} from '../../components/ui/SocialIcons';
 
 // ── Reusable zig-zag feature keyword row ────────────────────────────────────
-const KwRow = ({ label, text }) => (
+const KwRow = ({ label, text, icons }) => (
   <div className="flex items-start gap-3">
     <div className="h-6 w-6 rounded-lg bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
       <Check size={13} className="stroke-[3]" />
     </div>
-    <p className="text-sm text-slate-700 leading-snug font-medium">
+    <div className="text-sm text-slate-700 leading-snug font-medium">
       <span className="font-black text-slate-900">{label}</span>
       {text ? ` — ${text}` : ''}
-    </p>
+      {icons && <div className="flex items-center gap-1.5 flex-wrap pt-1.5">{icons}</div>}
+    </div>
   </div>
 );
 
 // ── Zig-zag pillar section ───────────────────────────────────────────────────
 const Pillar = ({ overline, headline, highlight, body, features, showcase, flip, bg }) => (
-  <section className={`py-14 sm:py-20 px-4 sm:px-8 ${bg || 'bg-white'} border-t border-slate-200/80`}>
+  <section className={`py-14 sm:py-20 px-4 sm:px-8 ${bg || 'bg-white'}`}>
     <div className="max-w-6xl mx-auto">
       <ScrollReveal>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
           {/* Text side */}
-          <div className={`lg:col-span-7 space-y-5 text-left ${flip ? 'order-1 lg:order-2' : ''}`}>
-            <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">{overline}</p>
-            <h2 className="font-extrabold text-2xl sm:text-3xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
+          <div className={`lg:col-span-7 space-y-4 text-left ${flip ? 'order-1 lg:order-2' : ''}`}>
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">{overline}</p>
+            <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
               {headline}
               <span className="text-[#12B7D4] block mt-1">{highlight}</span>
             </h2>
             <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-xl">{body}</p>
-            <div className="space-y-3 pt-1 max-w-xl">
+            <div className="space-y-3 pt-2 max-w-xl">
               {features.map((f, i) => (
-                <KwRow key={i} label={f.label} text={f.text} />
+                <KwRow key={i} label={f.label} text={f.text} icons={f.icons} />
               ))}
             </div>
           </div>
@@ -162,7 +170,34 @@ export const CapabilitiesPage = () => {
           bg="bg-slate-50/70"
           flip
           features={[
-            { label: 'Multi-Platform Visual Grid', text: 'Instagram, Facebook, LinkedIn, YouTube & X in one unified calendar view' },
+            {
+              label: 'Multi-Platform Visual Grid',
+              text: 'Instagram, Facebook, LinkedIn, YouTube & X in one unified calendar view',
+              icons: (
+                <>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-800">
+                    <InstagramIcon size={13} />
+                    <span>Instagram</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-800">
+                    <FacebookIcon size={13} />
+                    <span>Facebook</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-800">
+                    <LinkedInIcon size={13} />
+                    <span>LinkedIn</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-800">
+                    <YouTubeIcon size={13} />
+                    <span>YouTube</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-800">
+                    <XIcon size={13} />
+                    <span>𝕏</span>
+                  </span>
+                </>
+              ),
+            },
             { label: 'SMM Deliverable Quotas', text: 'Real-time per-client quota counters (Posts, Reels, Carousels, Stories)' },
             { label: 'Color-Coded Status Pills', text: 'Draft → In Review → Approved → Published — instant progress at a glance' },
             { label: 'Influencer Campaign CRM', text: 'Creator profiles, barter vs. paid deals, draft review stages, payout logs' },
@@ -244,16 +279,16 @@ export const CapabilitiesPage = () => {
       </div>
 
       {/* ── 3. ROLE PERSONA STRIP ── */}
-      <section className="py-14 sm:py-20 px-4 sm:px-8 bg-slate-950 border-t border-slate-800">
+      <section className="py-14 sm:py-20 px-4 sm:px-8 bg-slate-950">
         <div className="max-w-6xl mx-auto">
           <ScrollReveal>
             <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
-              <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4] mb-2">Role-Based Governance</p>
-              <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight">
+              <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] mb-2">Role-Based Governance</p>
+              <h2 className="text-2xl sm:text-4xl lg:text-[40px] font-extrabold text-white tracking-tight leading-[1.2]">
                 Every Person Sees Exactly
-                <span className="text-[#12B7D4] block">What They Need.</span>
+                <span className="text-[#12B7D4] block mt-1">What They Need.</span>
               </h2>
-              <p className="text-xs sm:text-sm text-slate-400 font-medium mt-3 leading-relaxed">
+              <p className="text-sm sm:text-base text-slate-400 font-medium mt-3 leading-relaxed max-w-xl mx-auto">
                 Zero clutter. Each team member only sees the tools relevant to their role. Founders retain 360° governance over everything.
               </p>
             </div>
@@ -313,7 +348,7 @@ export const CapabilitiesPage = () => {
           <ScrollReveal>
             <div className="text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8">
               <div className="space-y-2 max-w-2xl">
-                <span className="text-xs font-black uppercase tracking-widest text-[#12B7D4] block">
+                <span className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] block">
                   Instant 14-Day Free Access
                 </span>
                 <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">

@@ -19,6 +19,7 @@ import {
   ThumbsUp,
   CheckCircle2,
 } from 'lucide-react';
+import { InstagramIcon, WhatsAppIcon, SocialIcon } from '../ui/SocialIcons';
 
 /**
  * 16-point smooth wavy scalloped seal path in 100x100 viewBox
@@ -59,7 +60,11 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
               </div>
               <div className="text-left min-w-0">
                 <p className="text-xs font-bold text-slate-900 leading-tight truncate">Rohit Sharma</p>
-                <p className="text-[10px] text-emerald-600 font-semibold truncate">Online • WhatsApp</p>
+                <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-semibold truncate">
+                  <span>Online •</span>
+                  <WhatsAppIcon size={12} />
+                  <span>WhatsApp</span>
+                </div>
               </div>
             </div>
             <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 whitespace-nowrap shrink-0">
@@ -90,8 +95,8 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
 
     calendar: {
       personType: 'standing',
-      topBadgeIcon: Instagram,
-      topBadgeBg: 'bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600',
+      topBadgeIcon: InstagramIcon,
+      topBadgeBg: 'bg-transparent',
       topBadgeBorder: 'border-pink-300',
       chatBadgeIcon: Calendar,
       chatBadgeBg: 'bg-[#12B7D4]',
@@ -110,7 +115,11 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
               </div>
               <div className="text-left min-w-0">
                 <p className="text-xs font-bold text-slate-900 leading-tight truncate">FreshBites Cafe</p>
-                <p className="text-[10px] text-slate-400 font-semibold truncate">Sponsored • Instagram</p>
+                <div className="flex items-center gap-1 text-[10px] text-slate-400 font-semibold truncate">
+                  <span>Sponsored •</span>
+                  <InstagramIcon size={12} />
+                  <span>Instagram</span>
+                </div>
               </div>
             </div>
             <span className="text-[10px] bg-cyan-50 text-cyan-700 font-bold px-2 py-0.5 rounded-full border border-cyan-200 whitespace-nowrap shrink-0">
@@ -166,8 +175,10 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
           </div>
 
           <div className="rounded-2xl border-2 border-dashed border-[#12B7D4]/40 bg-[#12B7D4]/5 p-2.5 sm:p-3 text-center space-y-1 sm:space-y-1.5">
-            <Sparkles size={16} className="text-[#12B7D4] mx-auto" />
-            <p className="text-xs font-bold text-slate-900 leading-snug">Instagram Ad Carousel Preview</p>
+            <div className="flex items-center justify-center gap-1.5">
+              <InstagramIcon size={16} />
+              <p className="text-xs font-bold text-slate-900 leading-snug">Instagram Ad Carousel Preview</p>
+            </div>
             <p className="text-[10px] text-slate-500">Staged for Friday, 6:00 PM</p>
           </div>
 

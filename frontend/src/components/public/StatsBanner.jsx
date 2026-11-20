@@ -38,7 +38,7 @@ const StatsBanner = ({
   ],
 }) => {
   return (
-    <section className="py-6 sm:py-12 px-3 sm:px-8 max-w-7xl mx-auto">
+    <section className="py-6 sm:py-12 px-4 sm:px-8 max-w-6xl mx-auto">
       <div className="rounded-2xl sm:rounded-[32px] bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-cyan-50/80 border border-emerald-100/80 p-5 sm:p-10 lg:p-12 shadow-xs">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-center">
           
@@ -47,7 +47,7 @@ const StatsBanner = ({
             <h2 className="font-extrabold text-xl sm:text-3xl lg:text-[32px] text-slate-950 tracking-tight leading-snug">
               {title}
             </h2>
-            <p className="text-xs sm:text-base text-slate-600 font-medium leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
               {subtitle}
             </p>
           </div>

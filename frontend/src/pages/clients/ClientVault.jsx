@@ -39,6 +39,7 @@ import { Textarea } from '../../components/ui/textarea';
 import WorkspacePage from '../../components/ui/WorkspacePage';
 import DatabaseView from '../../components/ui/DatabaseView';
 import SelectDropdown from '../../components/ui/SelectDropdown';
+import { SocialIcon } from '../../components/ui/SocialIcons';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -147,8 +148,8 @@ const SocialAccountRow = ({
       {/* Row header */}
       <div className="flex items-center justify-between px-4 py-3 bg-secondary/25">
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
-          <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-secondary text-[11px] font-bold text-foreground leading-none shrink-0">
-            {platform.code}
+          <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-card border border-border shrink-0 shadow-2xs">
+            <SocialIcon platform={account.platform} size={18} />
           </span>
           <div className="w-48 sm:w-56 shrink-0">
             <SelectDropdown
@@ -957,18 +958,19 @@ export default function ClientVault() {
         const accounts = item.socialAccounts || [];
         if (accounts.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
         return (
-          <div className="flex items-center gap-1 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
             {accounts.slice(0, 5).map((acc, i) => (
               <span
                 key={i}
-                className="px-1.5 py-0.5 rounded bg-secondary text-[10px] font-bold text-foreground"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-secondary text-[11px] font-bold text-foreground"
                 title={getPlatform(acc.platform).label}
               >
-                {getPlatform(acc.platform).code}
+                <SocialIcon platform={acc.platform} size={13} />
+                <span>{getPlatform(acc.platform).label}</span>
               </span>
             ))}
             {accounts.length > 5 && (
-              <span className="text-[10px] text-muted-foreground tabular-nums">+{accounts.length - 5}</span>
+              <span className="text-[10px] text-muted-foreground tabular-nums font-semibold">+{accounts.length - 5}</span>
             )}
           </div>
         );

@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Sparkles, IndianRupee, MapPin, User, Globe, Phone, X } from '@/components/ui/muiIcons';
+import { SocialIcon } from '../ui/SocialIcons';
 import { useCreateInfluencer, useUpdateInfluencer } from '../../hooks/useInfluencers';
 
 const optionalNumber = z.preprocess((val) => {
@@ -259,7 +260,10 @@ export const AddEditInfluencerModal = ({ open, onOpenChange, influencer = null, 
                         <SelectContent>
                           {PLATFORMS.map((p) => (
                             <SelectItem key={p} value={p}>
-                              {p}
+                              <span className="flex items-center gap-2">
+                                <SocialIcon platform={p} size={15} />
+                                <span>{p}</span>
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectContent>

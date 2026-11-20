@@ -59,6 +59,7 @@ import {
   PenTool,
 } from '@/components/ui/muiIcons';
 import { useSelector } from 'react-redux';
+import { SocialIcon } from '../ui/SocialIcons';
 import {
   useUpdateTaskStatus,
   useUpdateTaskChecklist,
@@ -1370,9 +1371,10 @@ export const TaskWorkflowDrawer = ({ task, isOpen, onClose, onOpenTaskDetail }) 
                     {task.targetSocialPlatforms.map((plat, idx) => (
                       <span
                         key={idx}
-                        className="px-2 py-0.5 rounded-md bg-secondary text-foreground font-bold text-[11px] "
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-secondary text-foreground font-bold text-[11px]"
                       >
-                        {plat}
+                        <SocialIcon platform={plat} size={13} />
+                        <span>{plat}</span>
                       </span>
                     ))}
                   </div>
