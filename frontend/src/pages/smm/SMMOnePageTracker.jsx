@@ -416,8 +416,14 @@ const DayCellDeliverableSlot = ({
         </div>
       ) : (
         <span
-          className={`truncate text-[10.5px] block w-full text-center ${
-            displayVal ? 'font-bold text-foreground' : 'text-muted-foreground font-normal'
+          className={`truncate text-[10px] block w-full text-center ${
+            displayVal
+              ? displayVal.startsWith('REEL')
+                ? 'font-extrabold text-cyan-700 dark:text-cyan-300 bg-cyan-500/15 py-0.5 px-1 rounded border border-cyan-500/30'
+                : displayVal.startsWith('POST')
+                ? 'font-extrabold text-sky-700 dark:text-sky-300 bg-sky-500/15 py-0.5 px-1 rounded border border-sky-500/30'
+                : 'font-bold text-foreground'
+              : 'text-muted-foreground font-normal'
           }`}
         >
           {displayVal || '—'}
@@ -532,7 +538,12 @@ const SMMOnePageTracker = () => {
   const [bulkDeleteMode, setBulkDeleteMode] = useState('month'); // 'month' | 'permanent'
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
-  const getRowId = (row) => row.client?._id?.toString() || row._id?.toString() || row.projectName || String(row.client?.companyName);
+  const getRowId = (row) => {
+    if (row._id) return row._id.toString();
+    const cId = row.client?._id?.toString() || (typeof row.client === 'string' ? row.client : (row.client?.companyName || 'client'));
+    const pId = row.project?._id?.toString() || (typeof row.project === 'string' ? row.project : (row.projectName || 'default'));
+    return `${cId}_${pId}`;
+  };
   const isSelected = (row) => selectedIds.includes(getRowId(row));
 
   const handleToggleSelectRow = (row) => {
@@ -1020,7 +1031,17 @@ const SMMOnePageTracker = () => {
 
   const ensureRow = async (row) => {
     if (row._id) return row;
-    const res = await smmApi.upsertTracker({ clientId:row.client._id, month, year, plan:row.plan, storyPlan:row.storyPlan, team:row.team, days:row.days });
+    const res = await smmApi.upsertTracker({
+      clientId: row.client._id,
+      projectId: row.project?._id || row.project || undefined,
+      projectName: row.projectName || row.project?.name || undefined,
+      month,
+      year,
+      plan: row.plan,
+      storyPlan: row.storyPlan,
+      team: row.team,
+      days: row.days,
+    });
     return res.data?.data || row;
   };
 
@@ -1185,7 +1206,10 @@ const SMMOnePageTracker = () => {
 
   const calcProgress = (row, sf) => {
     const lf = sf === 'postStatus' ? 'postLabel' : 'storyLabel';
-    const total = row.days.filter(d => d[lf]).length || daysInMonth;
+    const planVal = parseInt(row[planField], 10);
+    const total = (!isNaN(planVal) && planVal > 0)
+      ? planVal
+      : (row.planQuota > 0 ? row.planQuota : (row.days.filter(d => d[lf]).length || daysInMonth));
     const done  = row.days.filter(d => d[sf] === 'done').length;
     return { done, total };
   };
@@ -1205,7 +1229,7 @@ const SMMOnePageTracker = () => {
   const statusField   = section === 'posts' ? 'postStatus' : 'storyStatus';
   const statusRowLbl  = section === 'posts' ? 'TASK STATUS' : 'STORY STATUS';
   const planField     = section === 'posts' ? 'plan'       : 'storyPlan';
-  const planPH        = section === 'posts' ? 'e.g. 15R + 2P' : '30 STORIES';
+  const planPH        = section === 'posts' ? 'e.g. 10' : '30 STORIES';
 
   const curCol = isMobile ? COL_MOBILE : COL_DESKTOP;
   const curL = isMobile
@@ -1514,7 +1538,7 @@ const SMMOnePageTracker = () => {
 
               return (
                 <div
-                  key={row.client?._id || rowIdx}
+                  key={getRowId(row) || rowIdx}
                   className={`bg-card rounded-2xl p-3.5 sm:p-4 space-y-3 transition-colors ${
                     isSelected(row) ? 'ring-2 ring-brand/40 bg-brand/5' : ''
                   }`}
@@ -1786,7 +1810,7 @@ const SMMOnePageTracker = () => {
                   const pctColor = pct===100 ? 'hsl(var(--foreground))' : pct>=60 ? '#52525b' : '#a1a1aa';
 
                   return (
-                    <React.Fragment key={row.client?._id || rowIdx}>
+                    <React.Fragment key={getRowId(row) || rowIdx}>
 
                       {/* Content row */}
                       <tr style={{ backgroundColor: isSelected(row) ? 'rgba(6, 182, 212, 0.07)' : undefined }}>

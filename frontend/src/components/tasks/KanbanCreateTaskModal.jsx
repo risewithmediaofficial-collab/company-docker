@@ -747,11 +747,14 @@ export const KanbanCreateTaskModal = ({
 
     let tasksToSubmit = [...queuedTasks];
 
-    // If user has a title typed in current form, include it too!
+    // If user has a title typed in current form, include it too (unless already in queue)
     if (title.trim()) {
-      const currentItem = buildCurrentTaskItem();
-      if (!currentItem) return;
-      tasksToSubmit.push(currentItem);
+      const isAlreadyQueued = queuedTasks.some((t) => t.title?.trim() === title.trim());
+      if (!isAlreadyQueued) {
+        const currentItem = buildCurrentTaskItem();
+        if (!currentItem) return;
+        tasksToSubmit.push(currentItem);
+      }
     }
 
     if (tasksToSubmit.length === 0) {

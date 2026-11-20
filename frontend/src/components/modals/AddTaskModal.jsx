@@ -631,7 +631,7 @@ export const AddTaskModal = ({
           videographerAssigned: sanitizeId(data.videographerAssigned),
           editorAssigned: sanitizeId(data.editorAssigned),
           publisherAssigned: sanitizeId(data.publisherAssigned),
-          duplicateCount: Math.max(1, Number(data.duplicateCount) || 1),
+          duplicateCount: batchTasks.length > 0 ? 1 : Math.max(1, Number(data.duplicateCount) || 1),
         };
 
         const allTasksToCreate = [primaryTask];

@@ -105,9 +105,15 @@ const smmMonthlyTrackerSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// One tracker doc per client per month/year
-smmMonthlyTrackerSchema.index({ client: 1, month: 1, year: 1 }, { unique: true });
+// One tracker doc per client + project per month/year
+smmMonthlyTrackerSchema.index({ client: 1, project: 1, month: 1, year: 1 }, { unique: true });
 smmMonthlyTrackerSchema.index({ month: 1, year: 1 });
 
 const SmmMonthlyTracker = mongoose.model('SmmMonthlyTracker', smmMonthlyTrackerSchema);
+
+// Safe cleanup of legacy single-project unique index
+try {
+  SmmMonthlyTracker.collection.dropIndex('client_1_month_1_year_1').catch(() => {});
+} catch (_) {}
+
 export default SmmMonthlyTracker;

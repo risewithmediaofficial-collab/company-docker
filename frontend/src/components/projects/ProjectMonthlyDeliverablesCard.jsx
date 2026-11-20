@@ -92,9 +92,9 @@ export const getDeliverableColorStyle = (contentType) => {
   };
 };
 
-export const getDeliverableDemoTitles = (contentType, targetQuantity = 10) => {
+export const getDeliverableDemoTitles = (contentType, targetQuantity = 1) => {
   const norm = (contentType || '').toLowerCase().trim();
-  const count = Math.max(1, targetQuantity);
+  const count = Math.max(1, Number(targetQuantity) || 1);
 
   const reelThemes = [
     'Hook & Brand Introduction',
@@ -196,8 +196,10 @@ export const ProjectMonthlyDeliverablesCard = ({
   // Prepare slots for each deliverable target
   const deliverableSlots = React.useMemo(() => {
     return deliverables.flatMap((item) => {
-      const demoList = getDeliverableDemoTitles(item.contentType, Math.max(10, item.targetQuantity || 10));
+      const targetQty = Number(item.targetQuantity) || 0;
       const existingTasks = Array.isArray(item.tasks) ? item.tasks : [];
+      const slotCount = Math.max(targetQty || 1, existingTasks.length);
+      const demoList = getDeliverableDemoTitles(item.contentType, slotCount);
 
       return demoList.map((demo, idx) => {
         const assignedTask = existingTasks[idx] || null;

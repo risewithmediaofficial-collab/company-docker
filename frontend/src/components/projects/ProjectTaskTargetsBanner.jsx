@@ -53,8 +53,10 @@ export const ProjectTaskTargetsBanner = ({
   // Prepare deliverable slots list
   const deliverableSlots = useMemo(() => {
     return deliverables.flatMap((item) => {
-      const demoList = getDeliverableDemoTitles(item.contentType, Math.max(10, item.targetQuantity || 10));
+      const targetQty = Number(item.targetQuantity) || 0;
       const existingTasks = Array.isArray(item.tasks) ? item.tasks : [];
+      const slotCount = Math.max(targetQty || 1, existingTasks.length);
+      const demoList = getDeliverableDemoTitles(item.contentType, slotCount);
 
       return demoList.map((demo, idx) => {
         const assignedTask = existingTasks[idx] || null;

@@ -991,8 +991,8 @@ export const createTask = async (req, res) => {
   try {
     const tasksData = Array.isArray(req.body.tasks)
       ? req.body.tasks.map(taskItem => ({
-          ...req.body,
           ...taskItem,
+          duplicateCount: Math.max(1, Number(taskItem.duplicateCount) || 1),
         }))
       : [req.body];
 
