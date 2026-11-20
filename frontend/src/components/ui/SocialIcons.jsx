@@ -15,30 +15,40 @@ import React from 'react';
  * - Pinterest (Official #E60023 circular 'P')
  */
 
-export const InstagramIcon = ({ size = 20, className = '' }) => (
-  <svg
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-    className={`shrink-0 inline-block align-middle ${className}`}
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <defs>
-      <radialGradient id="rwm-ig-grad" cx="20%" cy="105%" r="120%">
-        <stop offset="0%" stopColor="#fdf497" />
-        <stop offset="10%" stopColor="#fdf497" />
-        <stop offset="45%" stopColor="#fd5949" />
-        <stop offset="60%" stopColor="#d6249f" />
-        <stop offset="90%" stopColor="#285AEB" />
-      </radialGradient>
-    </defs>
-    <rect x="2" y="2" width="20" height="20" rx="5.5" fill="url(#rwm-ig-grad)" />
-    <rect x="4.5" y="4.5" width="15" height="15" rx="4" fill="none" stroke="#ffffff" strokeWidth="1.6" />
-    <circle cx="12" cy="12" r="3.7" fill="none" stroke="#ffffff" strokeWidth="1.6" />
-    <circle cx="16.5" cy="7.5" r="1.1" fill="#ffffff" />
-  </svg>
-);
+export const InstagramIcon = ({ size = 20, className = '' }) => {
+  const rawId = React.useId ? React.useId() : 'ig';
+  const gradId = typeof rawId === 'string' ? rawId.replace(/[^a-zA-Z0-9]/g, '') : 'ig';
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      className={`shrink-0 inline-block align-middle ${className}`}
+      style={{
+        background: 'radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%) #E1306C',
+        borderRadius: '24%',
+        flexShrink: 0,
+      }}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <linearGradient id={`ig-grad-${gradId}`} x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stopColor="#f09433" />
+          <stop offset="25%" stopColor="#e6683c" />
+          <stop offset="50%" stopColor="#dc2743" />
+          <stop offset="75%" stopColor="#cc2366" />
+          <stop offset="100%" stopColor="#bc1888" />
+        </linearGradient>
+      </defs>
+      <rect x="1.5" y="1.5" width="21" height="21" rx="5.5" fill={`url(#ig-grad-${gradId})`} />
+      <rect x="4.5" y="4.5" width="15" height="15" rx="4" fill="none" stroke="#ffffff" strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="3.7" fill="none" stroke="#ffffff" strokeWidth="1.8" />
+      <circle cx="16.5" cy="7.5" r="1.1" fill="#ffffff" />
+    </svg>
+  );
+};
 
 export const FacebookIcon = ({ size = 20, className = '' }) => (
   <svg

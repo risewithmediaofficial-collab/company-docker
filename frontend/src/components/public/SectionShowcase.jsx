@@ -95,8 +95,8 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
 
     calendar: {
       personType: 'standing',
-      topBadgeIcon: InstagramIcon,
-      topBadgeBg: 'bg-transparent',
+      topBadgeIcon: Instagram,
+      topBadgeBg: 'bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600',
       topBadgeBorder: 'border-pink-300',
       chatBadgeIcon: Calendar,
       chatBadgeBg: 'bg-[#12B7D4]',
