@@ -657,13 +657,30 @@ const ClientDetails = () => {
           </div>
 
           {projects.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="max-h-[520px] overflow-y-auto pr-1.5 custom-scrollbar overscroll-contain">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {projects.map((proj) => {
                 const catMeta = getProjectCategoryMeta(proj.category);
                 const CatIcon = catMeta.icon;
                 const projStatus = String(proj.status || 'Planning').replace(/_/g, ' ');
-                const isDoneStatus = projStatus.toLowerCase() === 'completed';
-                const isActiveStatus = projStatus.toLowerCase() === 'in progress' || projStatus.toLowerCase() === 'active';
+                const sLower = projStatus.toLowerCase();
+                const isDoneStatus = sLower === 'completed' || sLower === 'done';
+                const isActiveStatus = sLower === 'in progress' || sLower === 'active';
+                const isPendingStatus = sLower === 'planning' || sLower === 'pending';
+                const isOnHold = sLower === 'on hold' || sLower === 'on_hold';
+                const isCancelled = sLower === 'cancelled' || sLower === 'canceled';
+
+                const badgeClass = isDoneStatus
+                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold'
+                  : isPendingStatus
+                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold'
+                  : isActiveStatus
+                  ? 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#12B7D4] border border-cyan-500/30 font-bold'
+                  : isOnHold
+                  ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30 font-bold'
+                  : isCancelled
+                  ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-bold line-through'
+                  : 'bg-secondary text-foreground';
                 const pTotal = proj.totalTasks || 0;
                 const pOngoing = proj.ongoingTasks || 0;
                 const pCompleted = proj.completedTasks ?? proj.doneTasks ?? 0;
@@ -685,15 +702,7 @@ const ClientDetails = () => {
                           <span>{catMeta.shortLabel || catMeta.label}</span>
                         </span>
                         <div className="flex items-center gap-2">
-                          <span
-                            className={`px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase tracking-wider ${
-                              isActiveStatus
-                                ? 'bg-primary text-primary-foreground'
-                                : isDoneStatus
-                                ? 'bg-secondary text-foreground'
-                                : 'bg-muted text-muted-foreground'
-                            }`}
-                          >
+                          <span className={`px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase tracking-wider ${badgeClass}`}>
                             {projStatus}
                           </span>
                           {(user?.role === 'superAdmin' || user?.role === 'admin' || user?.role === 'manager') && (
@@ -753,33 +762,40 @@ const ClientDetails = () => {
 
                       <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-primary rounded-full transition-all duration-300"
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            pProgress === 100
+                              ? 'bg-emerald-500'
+                              : pProgress > 0
+                              ? 'bg-[#12B7D4]'
+                              : 'bg-muted-foreground/30'
+                          }`}
                           style={{ width: `${Math.min(pProgress, 100)}%` }}
                         />
                       </div>
 
                       <div className="grid grid-cols-4 gap-2 pt-0.5 text-center">
-                        <div className="rounded-xl bg-card p-2">
-                          <div className="text-[10px] font-medium text-muted-foreground">Available</div>
+                        <div className="rounded-xl bg-card p-2 border border-border/40">
+                          <div className="text-[10px] font-semibold text-muted-foreground">Available</div>
                           <div className="text-sm font-bold text-foreground mt-0.5">{pTotal}</div>
                         </div>
-                        <div className="rounded-xl bg-card p-2">
-                          <div className="text-[10px] font-medium text-muted-foreground">Ongoing</div>
-                          <div className="text-sm font-bold text-foreground mt-0.5">{pOngoing}</div>
+                        <div className="rounded-xl bg-cyan-500/10 p-2 border border-cyan-500/20">
+                          <div className="text-[10px] font-bold text-[#0d99b2] dark:text-[#12B7D4]">Ongoing</div>
+                          <div className="text-sm font-black text-[#0d99b2] dark:text-[#12B7D4] mt-0.5">{pOngoing}</div>
                         </div>
-                        <div className="rounded-xl bg-card p-2">
-                          <div className="text-[10px] font-medium text-muted-foreground">Pending</div>
-                          <div className="text-sm font-bold text-foreground mt-0.5">{pPending}</div>
+                        <div className="rounded-xl bg-amber-500/10 p-2 border border-amber-500/20">
+                          <div className="text-[10px] font-bold text-amber-700 dark:text-amber-400">Pending</div>
+                          <div className="text-sm font-black text-amber-700 dark:text-amber-400 mt-0.5">{pPending}</div>
                         </div>
-                        <div className="rounded-xl bg-card p-2">
-                          <div className="text-[10px] font-medium text-muted-foreground">Done</div>
-                          <div className="text-sm font-bold text-foreground mt-0.5">{pCompleted}</div>
+                        <div className="rounded-xl bg-emerald-500/10 p-2 border border-emerald-500/20">
+                          <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Completed</div>
+                          <div className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{pCompleted}</div>
                         </div>
                       </div>
                     </div>
                   </Link>
                 );
               })}
+              </div>
             </div>
           ) : (
             <div className="bg-card rounded-3xl p-12 text-center space-y-3">

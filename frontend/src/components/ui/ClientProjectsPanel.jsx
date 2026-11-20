@@ -13,16 +13,32 @@ const ClientProjectsPanel = ({ clientId, clientName, onAddProject }) => {
   const { data: projects = [], isLoading } = useProjects({ client: clientId, limit: 50 });
 
   const statusColor = {
-    planning: 'bg-secondary text-foreground',
-    Planning: 'bg-secondary text-foreground',
-    active: 'bg-primary text-primary-foreground',
-    'In Progress': 'bg-primary text-primary-foreground',
-    on_hold: 'bg-muted text-foreground',
-    'On Hold': 'bg-muted text-foreground',
-    completed: 'bg-secondary/80 text-foreground',
-    Completed: 'bg-secondary/80 text-foreground',
-    cancelled: 'bg-muted text-muted-foreground line-through',
-    Cancelled: 'bg-muted text-muted-foreground line-through',
+    // Completed -> Green
+    completed: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold',
+    Completed: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold',
+    done: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold',
+    Done: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold',
+
+    // Pending / Planning -> Yellow
+    pending: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold',
+    Pending: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold',
+    planning: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold',
+    Planning: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold',
+
+    // In Progress / Active -> Cyan / Teal
+    active: 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#12B7D4] border border-cyan-500/30 font-bold',
+    Active: 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#12B7D4] border border-cyan-500/30 font-bold',
+    'In Progress': 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#12B7D4] border border-cyan-500/30 font-bold',
+    'in progress': 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#12B7D4] border border-cyan-500/30 font-bold',
+    in_progress: 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#12B7D4] border border-cyan-500/30 font-bold',
+
+    // On Hold -> Orange
+    on_hold: 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30 font-bold',
+    'On Hold': 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30 font-bold',
+
+    // Cancelled -> Rose
+    cancelled: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-bold line-through',
+    Cancelled: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-bold line-through',
   };
 
   const totalTasks = projects.reduce((sum, p) => sum + (p.totalTasks || 0), 0);
@@ -66,25 +82,25 @@ const ClientProjectsPanel = ({ clientId, clientName, onAddProject }) => {
 
       {/* Task Pipeline Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 tabular-nums">
-        <div className="p-3.5 rounded-2xl bg-background">
-          <div className="text-xs font-medium text-muted-foreground mb-1">Tasks Available</div>
+        <div className="p-3.5 rounded-2xl bg-background border border-border/60">
+          <div className="text-xs font-semibold text-muted-foreground mb-1">Tasks Available</div>
           <div className="text-2xl font-bold text-foreground">{totalTasks}</div>
         </div>
-        <div className="p-3.5 rounded-2xl bg-background">
-          <div className="text-xs font-medium text-muted-foreground mb-1">Ongoing</div>
-          <div className="text-2xl font-bold text-foreground">{ongoingTasks}</div>
+        <div className="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/20">
+          <div className="text-xs font-bold text-[#0d99b2] dark:text-[#12B7D4] mb-1">Ongoing</div>
+          <div className="text-2xl font-black text-[#0d99b2] dark:text-[#12B7D4]">{ongoingTasks}</div>
         </div>
-        <div className="p-3.5 rounded-2xl bg-background">
-          <div className="text-xs font-medium text-muted-foreground mb-1">Pending</div>
-          <div className="text-2xl font-bold text-foreground">{pendingTasks}</div>
+        <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25">
+          <div className="text-xs font-bold text-amber-700 dark:text-amber-400 mb-1">Pending</div>
+          <div className="text-2xl font-black text-amber-700 dark:text-amber-400">{pendingTasks}</div>
         </div>
-        <div className="p-3.5 rounded-2xl bg-background">
-          <div className="text-xs font-medium text-muted-foreground mb-1">Completed</div>
-          <div className="text-2xl font-bold text-foreground">{completedTasks}</div>
+        <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25">
+          <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mb-1">Completed</div>
+          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{completedTasks}</div>
         </div>
       </div>
 
-      {/* Projects List */}
+      {/* Projects List with Inline Scroll */}
       {projects.length === 0 ? (
         <div className="py-12 text-center">
           <FolderOpen size={40} className="mx-auto mb-3 text-muted-foreground/30" />
@@ -94,74 +110,87 @@ const ClientProjectsPanel = ({ clientId, clientName, onAddProject }) => {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-          {projects.map((project) => {
-            const catMeta = getProjectCategoryMeta(project.category);
-            const CatIcon = catMeta.icon;
-            const pTotal = project.totalTasks || 0;
-            const pOngoing = project.ongoingTasks || 0;
-            const pCompleted = project.completedTasks ?? project.doneTasks ?? 0;
-            const pPending = project.pendingTasks ?? Math.max(0, pTotal - pOngoing - pCompleted);
-            const pProgress = project.progress || 0;
-            const endDateVal = project.endDate || project.dueDate;
+        <div className="max-h-[460px] overflow-y-auto pr-1.5 custom-scrollbar overscroll-contain">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {projects.map((project) => {
+              const catMeta = getProjectCategoryMeta(project.category);
+              const CatIcon = catMeta.icon;
+              const pTotal = project.totalTasks || 0;
+              const pOngoing = project.ongoingTasks || 0;
+              const pCompleted = project.completedTasks ?? project.doneTasks ?? 0;
+              const pPending = project.pendingTasks ?? Math.max(0, pTotal - pOngoing - pCompleted);
+              const pProgress = project.progress || 0;
+              const endDateVal = project.endDate || project.dueDate;
 
-            return (
-              <button
-                key={project._id}
-                type="button"
-                onClick={() => navigate(`/projects/${project._id}`)}
-                className="w-full p-4 rounded-2xl bg-background hover:bg-secondary/70 transition-colors text-left space-y-3 cursor-pointer group"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-secondary text-foreground">
-                        <CatIcon size={11} className="shrink-0" />
-                        <span>{catMeta.shortLabel || catMeta.label}</span>
-                      </span>
-                      <Badge className={statusColor[project.status] || 'bg-secondary text-foreground'}>
-                        {String(project.status || 'Planning').replace('_', ' ')}
-                      </Badge>
+              return (
+                <button
+                  key={project._id}
+                  type="button"
+                  onClick={() => navigate(`/projects/${project._id}`)}
+                  className="w-full p-4 rounded-2xl bg-background hover:bg-secondary/70 transition-colors text-left space-y-3 cursor-pointer group border border-border/50 hover:border-border"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-secondary text-foreground">
+                          <CatIcon size={11} className="shrink-0" />
+                          <span>{catMeta.shortLabel || catMeta.label}</span>
+                        </span>
+                        <Badge className={statusColor[project.status] || 'bg-secondary text-foreground'}>
+                          {String(project.status || 'Planning').replace('_', ' ')}
+                        </Badge>
+                      </div>
+                      <h4 className="font-bold text-sm text-foreground truncate pt-0.5">{project.name}</h4>
                     </div>
-                    <h4 className="font-bold text-sm text-foreground truncate pt-0.5">{project.name}</h4>
+                    <ArrowRight size={15} className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0 mt-1" />
                   </div>
-                  <ArrowRight size={15} className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0 mt-1" />
-                </div>
 
-                {/* Dates */}
-                <div className="flex items-center gap-4 text-[11px] text-muted-foreground tabular-nums flex-wrap">
-                  <span className="inline-flex items-center gap-1">
-                    <Calendar size={11} className="shrink-0" />
+                  {/* Dates */}
+                  <div className="flex items-center gap-4 text-[11px] text-muted-foreground tabular-nums flex-wrap">
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar size={11} className="shrink-0" />
+                      <span>
+                        Start: <strong className="text-foreground font-semibold">{project.startDate ? new Date(project.startDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</strong>
+                      </span>
+                    </span>
                     <span>
-                      Start: <strong className="text-foreground font-semibold">{project.startDate ? new Date(project.startDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</strong>
+                      End: <strong className="text-foreground font-semibold">{endDateVal ? new Date(endDateVal).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'Ongoing'}</strong>
                     </span>
-                  </span>
-                  <span>
-                    End: <strong className="text-foreground font-semibold">{endDateVal ? new Date(endDateVal).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'Ongoing'}</strong>
-                  </span>
-                </div>
+                  </div>
 
-                {/* Task Completion & Breakdown */}
-                <div className="space-y-1.5 pt-0.5 tabular-nums">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="inline-flex items-center gap-1 font-semibold text-foreground">
-                      <ListChecks size={12} className="text-muted-foreground shrink-0" />
-                      <span>{pTotal} {pTotal === 1 ? 'task' : 'tasks'}</span>
-                    </span>
-                    <span className="text-muted-foreground font-medium">
-                      {pOngoing} ongoing · {pPending} pending · {pCompleted} done ({pProgress}%)
-                    </span>
+                  {/* Task Completion & Breakdown with Semantic Status Colors */}
+                  <div className="space-y-1.5 pt-0.5 tabular-nums">
+                    <div className="flex items-center justify-between text-[11px] flex-wrap gap-1">
+                      <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+                        <ListChecks size={12} className="text-muted-foreground shrink-0" />
+                        <span>{pTotal} {pTotal === 1 ? 'task' : 'tasks'}</span>
+                      </span>
+                      <span className="text-[11px] font-medium flex items-center gap-1.5">
+                        <span className="text-[#0d99b2] dark:text-[#12B7D4] font-bold">{pOngoing} ongoing</span>
+                        <span className="text-muted-foreground/40">·</span>
+                        <span className="text-amber-600 dark:text-amber-400 font-bold">{pPending} pending</span>
+                        <span className="text-muted-foreground/40">·</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">{pCompleted} done</span>
+                        <span className="text-muted-foreground font-semibold">({pProgress}%)</span>
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          pProgress === 100
+                            ? 'bg-emerald-500'
+                            : pProgress > 0
+                            ? 'bg-[#12B7D4]'
+                            : 'bg-muted-foreground/20'
+                        }`}
+                        style={{ width: `${Math.min(pProgress, 100)}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-foreground transition-all duration-300"
-                      style={{ width: `${Math.min(pProgress, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
