@@ -610,41 +610,55 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false, au
         </div>
       )}
 
-      {/* ── CREATE / EDIT BRANCH MODAL (Normal / Light Colors) ── */}
+      {/* ── CREATE / EDIT BRANCH SLIDE-OVER SIDEBAR DRAWER ── */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 z-50 overflow-hidden">
+            {/* Backdrop Overlay */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-3xl p-6 shadow-2xl text-slate-900 space-y-6 max-h-[90vh] overflow-y-auto"
-            >
-              {/* Modal Header */}
-              <div className="flex items-start justify-between border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
-                    <Building2 size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900">
-                      {editingBranch ? `Edit Branch: ${editingBranch.name}` : 'Add New Branch Location'}
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      {companyName ? `Assigning to ${companyName}` : 'Configure company branch, manager, and location'}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-all"
-                >
-                  <X size={18} />
-                </button>
-              </div>
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setIsModalOpen(false)}
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity cursor-pointer"
+            />
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10 z-50 pointer-events-none">
+              <motion.div
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+                className="w-screen max-w-2xl bg-white border-l border-slate-200 shadow-2xl flex flex-col h-full pointer-events-auto overflow-hidden"
+              >
+                {/* Drawer Sticky Header */}
+                <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
+                      <Building2 size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                        {editingBranch ? `Edit Branch: ${editingBranch.name}` : 'Add New Branch Location'}
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        {companyName ? `Assigning to ${companyName}` : 'Configure company branch, manager, and location'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-all cursor-pointer"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Form Body - Scrollable */}
+                <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+                  <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
                 {/* Basic Branch Info */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="sm:col-span-2 space-y-1">
@@ -965,26 +979,29 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false, au
                   />
                 </div>
 
-                {/* Submit Actions */}
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-all"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition-all disabled:opacity-50 shadow-md shadow-indigo-600/20"
-                  >
-                    <Building2 size={16} />
-                    <span>{submitting ? 'Saving...' : editingBranch ? 'Update Branch' : 'Create Branch'}</span>
-                  </button>
-                </div>
-              </form>
-            </motion.div>
+                  </div>
+
+                  {/* Drawer Sticky Footer Actions */}
+                  <div className="shrink-0 flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/80">
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition-all disabled:opacity-50 shadow-md shadow-indigo-600/20 cursor-pointer"
+                    >
+                      <Building2 size={16} />
+                      <span>{submitting ? 'Saving...' : editingBranch ? 'Update Branch' : 'Create Branch'}</span>
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
           </div>
         )}
       </AnimatePresence>

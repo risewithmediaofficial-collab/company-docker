@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Users,
@@ -32,8 +34,10 @@ import {
   Sparkles,
   Video,
   ChevronRight,
+  ChevronDown,
   UserCheck,
   Building2,
+  MapPin,
   FolderKanban,
   FolderOpen,
   Check,
@@ -102,6 +106,78 @@ const Dashboard = () => {
 
   const socket = useSocket();
   const isAdminOrManager = ['superAdmin', 'admin', 'organizationOwner', 'manager'].includes(user?.role);
+  const isSuperAdminOrOwner = ['superAdmin', 'admin', 'organizationOwner'].includes(user?.role);
+
+  // Branch Switching State for Superadmin & Owner
+  const [branches, setBranches] = useState([]);
+  const [selectedBranchId, setSelectedBranchId] = useState(() => {
+    try {
+      return localStorage.getItem('rwm_active_branch_id') || 'all';
+    } catch {
+      return 'all';
+    }
+  });
+  const [branchSelectorOpen, setBranchSelectorOpen] = useState(false);
+  const [branchSearch, setBranchSearch] = useState('');
+  const branchMenuRef = useRef(null);
+
+  // Close branch menu on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (branchMenuRef.current && !branchMenuRef.current.contains(event.target)) {
+        setBranchSelectorOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Pre-load company branches for switcher
+  useEffect(() => {
+    if (isSuperAdminOrOwner) {
+      api.get('/branches')
+        .then((res) => {
+          if (res.data?.branches && Array.isArray(res.data.branches)) {
+            setBranches(res.data.branches);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isSuperAdminOrOwner]);
+
+  // Active branch details object
+  const activeBranch = useMemo(() => {
+    if (!selectedBranchId || selectedBranchId === 'all') return null;
+    return branches.find((b) => String(b._id) === String(selectedBranchId)) || data?.selectedBranch || null;
+  }, [selectedBranchId, branches, data?.selectedBranch]);
+
+  // Filtered branches for search inside dropdown
+  const filteredBranches = useMemo(() => {
+    if (!branchSearch.trim()) return branches;
+    const q = branchSearch.toLowerCase();
+    return branches.filter(
+      (b) =>
+        b.name?.toLowerCase().includes(q) ||
+        b.code?.toLowerCase().includes(q) ||
+        b.city?.toLowerCase().includes(q) ||
+        b.managerName?.toLowerCase().includes(q)
+    );
+  }, [branches, branchSearch]);
+
+  const handleSwitchBranch = (branchId) => {
+    setSelectedBranchId(branchId);
+    try {
+      localStorage.setItem('rwm_active_branch_id', branchId);
+    } catch {}
+    setBranchSelectorOpen(false);
+    fetchStats(false, branchId);
+    const targetBranch = branches.find((b) => String(b._id) === String(branchId));
+    toast.success(
+      branchId === 'all'
+        ? 'Switched to All Branches (Global Overview)'
+        : `Switched active branch to ${targetBranch?.name || 'Branch'}`
+    );
+  };
 
   // Queries for manager and employee EOD views
   const { data: eodData } = useEodReports(
@@ -129,7 +205,7 @@ const Dashboard = () => {
     return name.includes(query) || dept.includes(query) || summary.includes(query);
   });
 
-  const fetchStats = async (showLoader = true) => {
+  const fetchStats = async (showLoader = true, branchOverride = undefined) => {
     if (showLoader) setLoading(true);
     setIsRefreshing(true);
     try {
@@ -141,12 +217,19 @@ const Dashboard = () => {
             ? '/referrals'
             : '/reports/employee';
 
+      const currentBranch = branchOverride !== undefined ? branchOverride : selectedBranchId;
       const params = { period: period || 'this_month' };
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
+      if (currentBranch && currentBranch !== 'all') {
+        params.branchId = currentBranch;
+      }
 
       const res = await api.get(endpoint, { params });
       setData(res.data);
+      if (res.data?.branches && Array.isArray(res.data.branches)) {
+        setBranches(res.data.branches);
+      }
       setLastSynced(new Date());
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
@@ -159,7 +242,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user?.role) return;
     fetchStats(true);
-  }, [user?.role, period, startDate, endDate]);
+  }, [user?.role, period, startDate, endDate, selectedBranchId]);
 
   // Controlled background fallback polling (3 minutes) - real-time updates are pushed instantaneously via WebSocket
   useEffect(() => {
@@ -170,7 +253,7 @@ const Dashboard = () => {
       }
     }, 180000);
     return () => clearInterval(interval);
-  }, [user?.role, period, startDate, endDate]);
+  }, [user?.role, period, startDate, endDate, selectedBranchId]);
 
   // Live Real-Time Socket Event Listeners for All Users (with 800ms debounce to prevent burst-flooding)
   useEffect(() => {
@@ -271,6 +354,187 @@ const Dashboard = () => {
 
             {/* Top Quick Actions */}
             <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {/* Branch Selector & Switcher (for Superadmin & Owner) */}
+              {isSuperAdminOrOwner && (
+                <div className="relative" ref={branchMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setBranchSelectorOpen((prev) => !prev)}
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-semibold transition-all min-h-[36px] sm:min-h-[38px] cursor-pointer border ${
+                      selectedBranchId !== 'all'
+                        ? 'bg-indigo-50/90 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 shadow-xs'
+                        : 'bg-background hover:bg-secondary text-foreground border-border shadow-2xs'
+                    }`}
+                    title="Switch Branch Location"
+                  >
+                    <Building2 size={15} className={selectedBranchId !== 'all' ? 'text-indigo-600 dark:text-indigo-400' : 'text-primary'} />
+                    <div className="flex items-center gap-1.5 text-left">
+                      <span className="text-[11px] text-muted-foreground hidden sm:inline">Branch:</span>
+                      <span className="font-bold truncate max-w-[120px] sm:max-w-[170px]">
+                        {activeBranch ? activeBranch.name : 'All Branches'}
+                      </span>
+                    </div>
+                    {activeBranch?.isHeadquarters && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                        HQ
+                      </span>
+                    )}
+                    <ChevronDown size={14} className={`text-muted-foreground transition-transform duration-200 ${branchSelectorOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  <AnimatePresence>
+                    {branchSelectorOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-card border border-border shadow-2xl z-50 overflow-hidden text-foreground"
+                      >
+                        {/* Dropdown Header */}
+                        <div className="p-3.5 border-b border-border bg-secondary/30 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Building2 size={16} className="text-primary" />
+                            <span className="text-xs font-bold text-foreground">Select / Switch Branch</span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full bg-secondary text-[10px] font-semibold text-muted-foreground">
+                            {branches.length} {branches.length === 1 ? 'Location' : 'Locations'}
+                          </span>
+                        </div>
+
+                        {/* Search if branches > 2 */}
+                        {branches.length > 2 && (
+                          <div className="p-2 border-b border-border bg-background">
+                            <div className="relative">
+                              <Search size={13} className="absolute left-2.5 top-2.5 text-muted-foreground" />
+                              <input
+                                type="text"
+                                placeholder="Filter branch by name or city..."
+                                value={branchSearch}
+                                onChange={(e) => setBranchSearch(e.target.value)}
+                                className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary/50 rounded-lg border border-border focus:outline-none focus:border-primary text-foreground placeholder:text-muted-foreground"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="max-h-64 overflow-y-auto p-1.5 space-y-1 custom-scrollbar">
+                          {/* Option 1: All Branches (Company-wide) */}
+                          <button
+                            type="button"
+                            onClick={() => handleSwitchBranch('all')}
+                            className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-colors cursor-pointer ${
+                              selectedBranchId === 'all'
+                                ? 'bg-primary/10 text-primary font-bold'
+                                : 'hover:bg-secondary text-foreground'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                selectedBranchId === 'all' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+                              }`}>
+                                <Building2 size={15} />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-xs font-semibold truncate flex items-center gap-1.5">
+                                  <span>All Branches (Global Overview)</span>
+                                </div>
+                                <div className="text-[11px] text-muted-foreground truncate">
+                                  Consolidated operational stats across all offices
+                                </div>
+                              </div>
+                            </div>
+                            {selectedBranchId === 'all' && (
+                              <Check size={16} className="text-primary shrink-0 ml-2" />
+                            )}
+                          </button>
+
+                          {/* Specific Branches */}
+                          {filteredBranches.map((branch) => {
+                            const isSelected = String(branch._id) === String(selectedBranchId);
+                            return (
+                              <button
+                                key={branch._id}
+                                type="button"
+                                onClick={() => handleSwitchBranch(branch._id)}
+                                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-colors cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-primary/10 text-primary font-bold'
+                                    : 'hover:bg-secondary text-foreground'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                    isSelected
+                                      ? 'bg-primary text-primary-foreground'
+                                      : branch.isHeadquarters
+                                      ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400'
+                                      : 'bg-secondary text-muted-foreground'
+                                  }`}>
+                                    <MapPin size={15} />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="text-xs font-semibold truncate flex items-center gap-1.5">
+                                      <span className="truncate">{branch.name}</span>
+                                      {branch.isHeadquarters && (
+                                        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0">
+                                          HQ
+                                        </span>
+                                      )}
+                                      {branch.code && (
+                                        <span className="px-1 py-0.2 rounded text-[10px] font-mono text-muted-foreground bg-secondary shrink-0">
+                                          {branch.code}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-[11px] text-muted-foreground truncate flex items-center gap-2">
+                                      <span>{branch.city || 'Office'}{branch.state ? `, ${branch.state}` : ''}</span>
+                                      {branch.employeeCount !== undefined && (
+                                        <span>• {branch.employeeCount} Staff</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                {isSelected && (
+                                  <Check size={16} className="text-primary shrink-0 ml-2" />
+                                )}
+                              </button>
+                            );
+                          })}
+
+                          {filteredBranches.length === 0 && (
+                            <div className="p-4 text-center text-xs text-muted-foreground">
+                              No matching branches found.
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Dropdown Footer */}
+                        <div className="p-2.5 border-t border-border bg-secondary/20 flex items-center justify-between">
+                          <Link
+                            to="/branches"
+                            onClick={() => setBranchSelectorOpen(false)}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                          >
+                            <span>Manage All Branches</span>
+                            <ArrowRight size={11} />
+                          </Link>
+                          <Link
+                            to="/branches?create=true"
+                            onClick={() => setBranchSelectorOpen(false)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-semibold transition-colors"
+                          >
+                            <Plus size={11} />
+                            <span>Add Branch</span>
+                          </Link>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={() => setCreateTaskOpen(true)}
@@ -337,6 +601,77 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Active Branch Context Banner (when a specific branch is selected) */}
+        {isSuperAdminOrOwner && activeBranch && (
+          <div className="rounded-2xl border border-indigo-200/80 dark:border-indigo-900/60 bg-gradient-to-r from-indigo-50/90 via-sky-50/40 to-indigo-50/90 dark:from-indigo-950/30 dark:via-background dark:to-indigo-950/30 p-4 shadow-xs">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-600/20">
+                  <Building2 size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm sm:text-base font-bold text-foreground">
+                      {activeBranch.name}
+                    </h3>
+                    {activeBranch.code && (
+                      <span className="px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-mono text-[11px] font-bold">
+                        {activeBranch.code}
+                      </span>
+                    )}
+                    {activeBranch.isHeadquarters && (
+                      <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 text-[11px] font-bold">
+                        Headquarters (HQ)
+                      </span>
+                    )}
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold">
+                      Filtered Branch View
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
+                    {activeBranch.city && (
+                      <span className="flex items-center gap-1">
+                        <MapPin size={12} className="text-muted-foreground" />
+                        {activeBranch.city}{activeBranch.state ? `, ${activeBranch.state}` : ''}
+                      </span>
+                    )}
+                    {activeBranch.managerName && (
+                      <span className="flex items-center gap-1">
+                        <Users size={12} className="text-muted-foreground" />
+                        Manager: <strong className="text-foreground font-medium">{activeBranch.managerName}</strong>
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Clock size={12} className="text-muted-foreground" />
+                      {activeBranch.operatingHours || '9:30 AM - 6:30 PM'}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-[11px] font-semibold">
+                      {activeBranch.employeeCount || 0} Staff Assigned
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                <button
+                  type="button"
+                  onClick={() => handleSwitchBranch('all')}
+                  className="px-3 py-1.5 rounded-xl bg-background hover:bg-secondary border border-border text-xs font-semibold text-foreground transition-all cursor-pointer"
+                >
+                  Reset to All Branches
+                </button>
+                <Link
+                  to="/branches"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-all cursor-pointer"
+                >
+                  <span>Branch Settings</span>
+                  <ArrowRight size={12} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* - TAB 1: FULL DATA-DRIVEN COMMAND CENTER - */}
         {activeTab === 'command' && (

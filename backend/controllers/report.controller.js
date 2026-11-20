@@ -11,6 +11,7 @@ import CallHistory from '../models/callHistory.model.js';
 import SOP from '../models/sop.model.js';
 import ActivityLog from '../models/activityLog.model.js';
 import ProjectMonthlyDeliverable from '../models/projectMonthlyDeliverable.model.js';
+import Branch from '../models/branch.model.js';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -28,9 +29,9 @@ export const getAdminDashboard = async (req, res) => {
     const isManager = req.user?.role === 'manager';
     const now = new Date();
     const period = req.query.period || 'monthly';
-    const { startDate: qStartDate, endDate: qEndDate } = req.query;
+    const { startDate: qStartDate, endDate: qEndDate, branchId: qBranchId } = req.query;
 
-    const cacheKey = `${req.user?.organizationId || 'default'}:${req.user?.role || 'user'}:${period}:${qStartDate || ''}:${qEndDate || ''}`;
+    const cacheKey = `${req.user?.organizationId || 'default'}:${req.user?.role || 'user'}:${period}:${qStartDate || ''}:${qEndDate || ''}:${qBranchId || 'all'}`;
     const cached = dashboardCache.get(cacheKey);
 
     if (cached && Date.now() - cached.timestamp < DASHBOARD_CACHE_TTL) {
@@ -113,8 +114,26 @@ export const getAdminDashboard = async (req, res) => {
     const orgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
     const orgFilter = orgId ? { organizationId: orgId } : {};
 
+    // Branch filtering for superadmin, admin, organizationOwner
+    let selectedBranchDoc = null;
+    let branchUserIds = null;
+    if (qBranchId && qBranchId !== 'all') {
+      try {
+        selectedBranchDoc = await Branch.findById(qBranchId).lean();
+        if (selectedBranchDoc) {
+          const branchUsers = await User.find({ branchId: qBranchId, ...(orgId ? { organizationId: orgId } : {}) }).select('_id').lean();
+          branchUserIds = branchUsers.map((u) => u._id);
+        }
+      } catch (err) {
+        console.warn('Branch resolution error in admin report:', err.message);
+      }
+    }
+
     const isBoundedPeriod = Boolean(periodStart && periodEnd && period !== 'allTime');
     const taskPeriodFilter = { parent: null, ...orgFilter };
+    if (branchUserIds) {
+      taskPeriodFilter.assignedTo = { $in: branchUserIds };
+    }
     if (isBoundedPeriod) {
       taskPeriodFilter.$or = [
         { dueDate: { $gte: periodStart, $lte: periodEnd } },
@@ -157,7 +176,7 @@ export const getAdminDashboard = async (req, res) => {
       Project.countDocuments(orgFilter),
       Project.countDocuments({ ...orgFilter, status: { $in: ['active', 'In Progress'] } }),
       Task.countDocuments(taskPeriodFilter),
-      Task.countDocuments({ parent: null, ...orgFilter, dueDate: { $lt: now }, status: { $nin: ['done', 'approved', 'Completed', 'Approved'] } }),
+      Task.countDocuments({ parent: null, ...orgFilter, ...(branchUserIds ? { assignedTo: { $in: branchUserIds } } : {}), dueDate: { $lt: now }, status: { $nin: ['done', 'approved', 'Completed', 'Approved'] } }),
       Invoice.aggregate([{ $match: { ...orgFilter, status: 'paid', paidDate: { $gte: periodStart, $lte: periodEnd } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
       Invoice.aggregate([{ $match: { ...orgFilter, status: 'paid', paidDate: { $gte: priorPeriodStart, $lte: priorPeriodEnd } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
       Invoice.aggregate([{ $match: { ...orgFilter, status: 'paid' } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
@@ -171,7 +190,9 @@ export const getAdminDashboard = async (req, res) => {
           },
         },
       ]),
-      User.countDocuments({ isActive: true, ...(orgId ? { organizationId: orgId } : { role: { $ne: 'organizationOwner' } }) }),
+      branchUserIds
+        ? branchUserIds.length
+        : User.countDocuments({ isActive: true, ...(orgId ? { organizationId: orgId } : { role: { $ne: 'organizationOwner' } }) }),
       DomainRenewal.find({
         ...(orgId ? { organizationId: orgId } : {}),
         expiryDate: { $gte: now, $lte: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59, 999) },
@@ -198,7 +219,17 @@ export const getAdminDashboard = async (req, res) => {
       Project.find(orgFilter, 'name status priority startDate dueDate endDate progress budget client').populate('client', 'name company').lean(),
       Task.find(taskPeriodFilter, 'title taskTitle status priority dueDate taskCategory postingPlatforms shootStatus editingStatus reviewStatus postingStatus assignedTo').populate('assignedTo', 'name email avatar role department').lean(),
       Client.find(orgFilter, 'name company status monthlyRetainer service createdAt').lean(),
-      User.find({ isActive: true, ...(orgId ? { organizationId: orgId } : { role: { $ne: 'organizationOwner' } }) }, 'name email role department avatar position').lean(),
+      User.find(
+        {
+          isActive: true,
+          ...(branchUserIds
+            ? { _id: { $in: branchUserIds } }
+            : orgId
+            ? { organizationId: orgId }
+            : { role: { $ne: 'organizationOwner' } }),
+        },
+        'name email role department avatar position branchId'
+      ).lean(),
       Lead.find(orgFilter, 'name company stage value createdAt source').lean(),
     ]);
 
@@ -500,6 +531,33 @@ export const getAdminDashboard = async (req, res) => {
       renewals: expiringRenewals,
       activityLogs: recentActivityLogs,
     };
+
+    // Fetch all active company branches for the switcher
+    try {
+      const rawBranches = await Branch.find(orgFilter).sort({ isHeadquarters: -1, name: 1 }).lean();
+      const bIds = rawBranches.map((b) => b._id);
+      const branchUserCounts = await User.aggregate([
+        { $match: { branchId: { $in: bIds } } },
+        { $group: { _id: '$branchId', count: { $sum: 1 } } },
+      ]);
+      const countMap = {};
+      branchUserCounts.forEach((c) => {
+        countMap[String(c._id)] = c.count;
+      });
+      responsePayload.branches = rawBranches.map((b) => ({
+        ...b,
+        employeeCount: countMap[String(b._id)] || 0,
+      }));
+      responsePayload.selectedBranch = selectedBranchDoc
+        ? {
+            ...selectedBranchDoc,
+            employeeCount: branchUserIds ? branchUserIds.length : (countMap[String(selectedBranchDoc._id)] || 0),
+          }
+        : null;
+      responsePayload.activeBranchId = qBranchId || 'all';
+    } catch (bErr) {
+      console.warn('Error fetching company branches for overview:', bErr.message);
+    }
 
     if (dashboardCache.size >= MAX_DASHBOARD_CACHE_ENTRIES) {
       const oldestKey = dashboardCache.keys().next().value;
