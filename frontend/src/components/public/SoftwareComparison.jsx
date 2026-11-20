@@ -89,11 +89,11 @@ export const SoftwareComparison = () => {
         </div>
       </ScrollReveal>
 
-      {/* ── VIEW 1: COMPACT SIDE-BY-SIDE CARDS (SHORTENED & CLEAN) ── */}
+      {/* ── VIEW 1: COMPACT SIDE-BY-SIDE CARDS (SHORTENED & CLEAN, ZERO SHADOW) ── */}
       {viewMode === 'split' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch animate-fade-up">
           {/* ── CARD 1: THE FRAGMENTED STACK ── */}
-          <div className="p-6 sm:p-7 rounded-3xl bg-slate-50/70 border border-slate-200/90 shadow-2xs flex flex-col justify-between transition-all hover:border-rose-200 scroll-stack-card">
+          <div className="p-6 sm:p-7 rounded-3xl bg-slate-50/70 border border-slate-200 flex flex-col justify-between">
             <div>
               {/* Header Topline */}
               <div className="flex items-center justify-between gap-2 mb-3">
@@ -147,7 +147,7 @@ export const SoftwareComparison = () => {
           </div>
 
           {/* ── CARD 2: RISEWITHMEDIA OS ── */}
-          <div className="p-6 sm:p-7 rounded-3xl bg-white border-2 border-[#12B7D4]/40 shadow-xl shadow-[#12B7D4]/10 flex flex-col justify-between relative overflow-hidden transition-all scroll-stack-card">
+          <div className="p-6 sm:p-7 rounded-3xl bg-white border border-[#12B7D4]/40 flex flex-col justify-between relative overflow-hidden">
             {/* Subtle Gradient Glow */}
             <div className="absolute top-0 right-0 w-44 h-44 bg-[#12B7D4]/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -207,7 +207,7 @@ export const SoftwareComparison = () => {
               </span>
               <Link
                 to="/register-company"
-                className="px-5 py-2 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs font-bold shadow-md shadow-[#12B7D4]/25 transition-all flex items-center justify-center gap-1.5 hover:-translate-y-0.5 cursor-pointer"
+                className="px-5 py-2 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span>Get Started Free</span>
                 <ArrowRight size={13} />
@@ -223,7 +223,7 @@ export const SoftwareComparison = () => {
           {COMPARISON_ITEMS.map((item, idx) => (
             <div
               key={idx}
-              className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-md transition-all grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 items-center"
+              className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 items-center"
             >
               {/* Category Pill */}
               <div className="md:col-span-2 text-left">

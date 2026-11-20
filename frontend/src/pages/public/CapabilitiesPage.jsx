@@ -307,31 +307,33 @@ export const CapabilitiesPage = () => {
         </div>
       </section>
 
-      {/* ── 4. FINAL CTA ── */}
-      <section className="py-14 sm:py-20 px-4 sm:px-8 max-w-6xl mx-auto">
-        <ScrollReveal>
-          <div className="p-8 sm:p-14 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white relative overflow-hidden shadow-2xl text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8">
-            <div className="space-y-2 max-w-2xl">
-              <span className="text-xs font-black uppercase tracking-widest text-[#12B7D4] block">
-                Instant 14-Day Free Access
-              </span>
-              <h3 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
-                Stop juggling 6 different tools.
-                <span className="text-[#12B7D4] block">Run your agency like a well-oiled machine.</span>
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed pt-1">
-                Set up your agency workspace in under 2 minutes. No credit card required. Full team access included.
-              </p>
+      {/* ── 4. FINAL CTA (Clean White Fill, Seamless Borderless) ── */}
+      <section className="w-full bg-white text-slate-900 py-16 sm:py-20 px-4 sm:px-8">
+        <div className="max-w-6xl mx-auto">
+          <ScrollReveal>
+            <div className="text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8">
+              <div className="space-y-2 max-w-2xl">
+                <span className="text-xs font-black uppercase tracking-widest text-[#12B7D4] block">
+                  Instant 14-Day Free Access
+                </span>
+                <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
+                  Stop juggling 6 different tools.
+                  <span className="text-[#12B7D4] block mt-1">Run your agency like a well-oiled machine.</span>
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed pt-1">
+                  Set up your agency workspace in under 2 minutes. No credit card required. Full team access included.
+                </p>
+              </div>
+              <Link
+                to="/register-company"
+                className="px-8 py-4 bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base border border-[#12B7D4] transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
+              >
+                <span>Start 14-Day Free Trial</span>
+                <ArrowRight size={16} />
+              </Link>
             </div>
-            <Link
-              to="/register-company"
-              className="px-8 py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#12B7D4]/30 transition-all flex items-center gap-2 shrink-0 cursor-pointer"
-            >
-              <span>Start 14-Day Free Trial</span>
-              <ArrowRight size={16} />
-            </Link>
-          </div>
-        </ScrollReveal>
+          </ScrollReveal>
+        </div>
       </section>
     </PublicLayout>
   );

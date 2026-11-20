@@ -79,11 +79,11 @@ export const AboutPage = () => {
           </div>
         </ScrollReveal>
 
-        {/* Multi-column grid with user's corner-badge cards & scroll stack entrance */}
+        {/* Multi-column grid with user's corner-badge cards (Minimal flat border, zero shadow) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
           {/* Card 01 */}
           <ScrollReveal delay={0} className="h-full">
-            <div className="h-full bg-white rounded-3xl border border-slate-200/80 shadow-[0px_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0px_16px_36px_rgba(0,0,0,0.1)] p-8 sm:p-9 space-y-4 relative overflow-hidden transition-all duration-300 scroll-stack-card flex flex-col justify-between">
+            <div className="h-full bg-white rounded-3xl border border-slate-200 p-8 sm:p-9 space-y-4 relative overflow-hidden flex flex-col justify-between">
               {/* Circular Corner Badge */}
               <div className="w-24 h-24 bg-rose-500 rounded-full absolute -right-5 -top-7 shadow-inner">
                 <p className="absolute bottom-6 left-7 text-white font-extrabold text-2xl tracking-tight">01</p>
@@ -107,7 +107,7 @@ export const AboutPage = () => {
 
           {/* Card 02 */}
           <ScrollReveal delay={120} className="h-full">
-            <div className="h-full bg-white rounded-3xl border border-slate-200/80 shadow-[0px_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0px_16px_36px_rgba(0,0,0,0.1)] p-8 sm:p-9 space-y-4 relative overflow-hidden transition-all duration-300 scroll-stack-card flex flex-col justify-between">
+            <div className="h-full bg-white rounded-3xl border border-slate-200 p-8 sm:p-9 space-y-4 relative overflow-hidden flex flex-col justify-between">
               {/* Circular Corner Badge */}
               <div className="w-24 h-24 bg-amber-500 rounded-full absolute -right-5 -top-7 shadow-inner">
                 <p className="absolute bottom-6 left-7 text-white font-extrabold text-2xl tracking-tight">02</p>
@@ -131,7 +131,7 @@ export const AboutPage = () => {
 
           {/* Card 03 */}
           <ScrollReveal delay={240} className="h-full">
-            <div className="h-full bg-white rounded-3xl border border-slate-200/80 shadow-[0px_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0px_16px_36px_rgba(0,0,0,0.1)] p-8 sm:p-9 space-y-4 relative overflow-hidden transition-all duration-300 scroll-stack-card flex flex-col justify-between">
+            <div className="h-full bg-white rounded-3xl border border-slate-200 p-8 sm:p-9 space-y-4 relative overflow-hidden flex flex-col justify-between">
               {/* Circular Corner Badge */}
               <div className="w-24 h-24 bg-[#12B7D4] rounded-full absolute -right-5 -top-7 shadow-inner">
                 <p className="absolute bottom-6 left-7 text-white font-extrabold text-2xl tracking-tight">03</p>
@@ -163,7 +163,7 @@ export const AboutPage = () => {
               
               {/* Left Column: Visual Canvas */}
               <div className="lg:col-span-5 order-2 lg:order-1 flex justify-center">
-                <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden p-6 space-y-4 scroll-stack-card">
+                <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 overflow-hidden p-6 space-y-4">
                   {/* Card Header with Mac Dots */}
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                     <div className="flex items-center gap-1.5">
@@ -313,11 +313,11 @@ export const AboutPage = () => {
           </div>
         </ScrollReveal>
 
-        {/* Multi-column grid with user's card code structure & scroll stack animation */}
+        {/* Multi-column grid with user's card code structure (Minimal flat border, zero shadow) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
           {/* Card 01: Retainer-First Mindset */}
           <ScrollReveal delay={0} className="h-full">
-            <div className="h-full bg-white rounded-3xl border border-slate-200/80 shadow-[0px_4px_24px_rgba(0,0,0,0.06)] hover:shadow-[0px_16px_36px_rgba(0,0,0,0.1)] p-8 sm:p-9 space-y-4 relative overflow-hidden transition-all duration-300 scroll-stack-card flex flex-col justify-between">
+            <div className="h-full bg-white rounded-3xl border border-slate-200 p-8 sm:p-9 space-y-4 relative overflow-hidden flex flex-col justify-between">
               {/* Circular Corner Badge */}
               <div className="w-24 h-24 bg-[#12B7D4] rounded-full absolute -right-5 -top-7 shadow-inner">
                 <p className="absolute bottom-6 left-7 text-white font-extrabold text-2xl tracking-tight">01</p>
@@ -341,7 +341,7 @@ export const AboutPage = () => {
 
           {/* Card 02: Radical Financial Privacy */}
           <ScrollReveal delay={120} className="h-full">
-            <div className="h-full bg-white rounded-3xl border border-slate-200/80 shadow-[0px_4px_24px_rgba(0,0,0,0.06)] hover:shadow-[0px_16px_36px_rgba(0,0,0,0.1)] p-8 sm:p-9 space-y-4 relative overflow-hidden transition-all duration-300 scroll-stack-card flex flex-col justify-between">
+            <div className="h-full bg-white rounded-3xl border border-slate-200 p-8 sm:p-9 space-y-4 relative overflow-hidden flex flex-col justify-between">
               {/* Circular Corner Badge */}
               <div className="w-24 h-24 bg-emerald-500 rounded-full absolute -right-5 -top-7 shadow-inner">
                 <p className="absolute bottom-6 left-7 text-white font-extrabold text-2xl tracking-tight">02</p>
@@ -365,7 +365,7 @@ export const AboutPage = () => {
 
           {/* Card 03: Client Clarity Without Noise */}
           <ScrollReveal delay={240} className="h-full">
-            <div className="h-full bg-white rounded-3xl border border-slate-200/80 shadow-[0px_4px_24px_rgba(0,0,0,0.06)] hover:shadow-[0px_16px_36px_rgba(0,0,0,0.1)] p-8 sm:p-9 space-y-4 relative overflow-hidden transition-all duration-300 scroll-stack-card flex flex-col justify-between">
+            <div className="h-full bg-white rounded-3xl border border-slate-200 p-8 sm:p-9 space-y-4 relative overflow-hidden flex flex-col justify-between">
               {/* Circular Corner Badge */}
               <div className="w-24 h-24 bg-violet-500 rounded-full absolute -right-5 -top-7 shadow-inner">
                 <p className="absolute bottom-6 left-7 text-white font-extrabold text-2xl tracking-tight">03</p>
@@ -389,30 +389,32 @@ export const AboutPage = () => {
         </div>
       </section>
 
-      {/* ── 5. FINAL ACTION BANNER ── */}
-      <section className="pb-16 sm:pb-24 px-4 sm:px-8 max-w-6xl mx-auto">
-        <ScrollReveal>
-          <div className="p-8 sm:p-14 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white relative overflow-hidden shadow-2xl text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8 scroll-stack-card">
-            <div className="space-y-2 max-w-2xl">
-              <span className="text-xs font-black uppercase tracking-widest text-[#12B7D4] block">
-                Experience the Difference
-              </span>
-              <h3 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
-                Give your team the <span className="marker-highlight text-white">operating system</span> they deserve.
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed pt-1">
-                Zero setup headaches. 14-day free trial. Unlimited team members included.
-              </p>
+      {/* ── 5. FINAL ACTION BANNER (Clean White Fill, Seamless Borderless) ── */}
+      <section className="w-full bg-white text-slate-900 py-16 sm:py-20 px-4 sm:px-8">
+        <div className="max-w-6xl mx-auto">
+          <ScrollReveal>
+            <div className="text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8">
+              <div className="space-y-2 max-w-2xl">
+                <span className="text-xs font-black uppercase tracking-widest text-[#12B7D4] block">
+                  Experience the Difference
+                </span>
+                <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
+                  Give your team the <span className="marker-highlight">operating system</span> they deserve.
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed pt-1">
+                  Zero setup headaches. 14-day free trial. Unlimited team members included.
+                </p>
+              </div>
+              <Link
+                to="/register-company"
+                className="px-8 py-4 bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base border border-[#12B7D4] transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
+              >
+                <span>Get Started Free</span>
+                <ArrowRight size={16} />
+              </Link>
             </div>
-            <Link
-              to="/register-company"
-              className="px-8 py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#12B7D4]/30 hover:shadow-[#12B7D4]/50 hover:-translate-y-0.5 transition-all flex items-center gap-2 shrink-0 cursor-pointer"
-            >
-              <span>Get Started Free</span>
-              <ArrowRight size={16} />
-            </Link>
-          </div>
-        </ScrollReveal>
+          </ScrollReveal>
+        </div>
       </section>
     </PublicLayout>
   );
