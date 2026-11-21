@@ -1629,39 +1629,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Live Employee Metric Badges */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <div className="p-4 sm:p-5 rounded-2xl bg-card space-y-1 sm:space-y-1.5 min-w-0">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate block">My Active Tasks</span>
-            <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums leading-none truncate">{pendingTasks.length}</div>
-            <div className="text-[11px] text-muted-foreground font-medium truncate">Priority Queue</div>
-          </div>
-
-          <div className="p-4 sm:p-5 rounded-2xl bg-card space-y-1 sm:space-y-1.5 min-w-0">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate block">In Progress</span>
-            <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums leading-none truncate">{data?.inProgressTasks || 0}</div>
-            <div className="text-[11px] text-muted-foreground truncate">Currently Producing</div>
-          </div>
-
-          <div className="p-4 sm:p-5 rounded-2xl bg-card space-y-1 sm:space-y-1.5 min-w-0">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate block">Completed (Week)</span>
-            <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums leading-none truncate">{data?.completedThisWeek || 0}</div>
-            <div className="text-[11px] text-muted-foreground font-medium inline-flex items-center gap-1 truncate">
-              <Check size={10} className="shrink-0" />
-              <span className="truncate">Delivered</span>
-            </div>
-          </div>
-
-          <div className="p-4 sm:p-5 rounded-2xl bg-card space-y-1 sm:space-y-1.5 min-w-0">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate block">Over-Target Tasks</span>
-            <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums leading-none truncate">{data?.overTargetTasks || 0}</div>
-            <div className="text-[11px] text-muted-foreground font-semibold truncate">Over Quota</div>
-          </div>
-        </div>
-
-        {/* Employee Daily Work Tasks with Live Timers */}
-        <DailyTasksWidget currentUser={user} isManagerOrAdmin={false} />
-
+        {/* ── TOP SECTION: TODAY'S ATTENDANCE & TODAY'S TASKS ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           <div className="lg:col-span-1 min-w-0">
             <AttendanceWidget todayRecord={data?.todayAttendance} user={user} />
@@ -1671,9 +1639,9 @@ const Dashboard = () => {
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <CheckSquare size={16} className="text-foreground shrink-0" />
-                <h2 className="text-sm font-bold text-foreground truncate">My Assigned Tasks ({pendingTasks.length})</h2>
+                <h2 className="text-sm font-bold text-foreground truncate">Today's Tasks ({pendingTasks.length})</h2>
               </div>
-              <Link to="/tasks" className="text-xs font-semibold text-foreground hover:underline shrink-0">View All Tasks →</Link>
+              <Link to="/tasks" className="text-xs font-semibold text-primary hover:underline shrink-0">View All Tasks →</Link>
             </div>
 
             <div className="space-y-2">
@@ -1744,12 +1712,45 @@ const Dashboard = () => {
                 ))
               ) : (
                 <div className="py-8 text-center text-xs text-muted-foreground">
-                  You are all caught up! No pending tasks assigned.
+                  You are all caught up! No pending tasks assigned for today.
                 </div>
               )}
             </div>
           </div>
         </div>
+
+        {/* Live Employee Metric Badges */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="p-4 sm:p-5 rounded-2xl bg-card space-y-1 sm:space-y-1.5 min-w-0">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate block">My Active Tasks</span>
+            <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums leading-none truncate">{pendingTasks.length}</div>
+            <div className="text-[11px] text-muted-foreground font-medium truncate">Priority Queue</div>
+          </div>
+
+          <div className="p-4 sm:p-5 rounded-2xl bg-card space-y-1 sm:space-y-1.5 min-w-0">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate block">In Progress</span>
+            <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums leading-none truncate">{data?.inProgressTasks || 0}</div>
+            <div className="text-[11px] text-muted-foreground truncate">Currently Producing</div>
+          </div>
+
+          <div className="p-4 sm:p-5 rounded-2xl bg-card space-y-1 sm:space-y-1.5 min-w-0">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate block">Completed (Week)</span>
+            <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums leading-none truncate">{data?.completedThisWeek || 0}</div>
+            <div className="text-[11px] text-muted-foreground font-medium inline-flex items-center gap-1 truncate">
+              <Check size={10} className="shrink-0" />
+              <span className="truncate">Delivered</span>
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-5 rounded-2xl bg-card space-y-1 sm:space-y-1.5 min-w-0">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate block">Over-Target Tasks</span>
+            <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums leading-none truncate">{data?.overTargetTasks || 0}</div>
+            <div className="text-[11px] text-muted-foreground font-semibold truncate">Over Quota</div>
+          </div>
+        </div>
+
+        {/* Employee Daily Work Tasks with Live Timers */}
+        <DailyTasksWidget currentUser={user} isManagerOrAdmin={false} />
 
         {/* Employee Weekly Todos & Personal Goals */}
         <WeeklyTodosWidget isManagerOrAdmin={false} user={user} />
