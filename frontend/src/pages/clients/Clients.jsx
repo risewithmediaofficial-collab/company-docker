@@ -129,6 +129,17 @@ export const CLIENT_SORT_OPTIONS = [
   { value: 'oldest', label: 'Oldest Added' },
 ];
 
+export const normalizeClientStatus = (status) => {
+  if (!status) return 'Prospect';
+  const s = String(status).trim().toLowerCase();
+  if (s === 'active') return 'Active';
+  if (s === 'prospect' || s === 'onboarding' || s === 'lead') return 'Prospect';
+  if (s === 'renew' || s === 'renewal') return 'Renew';
+  if (s === 'inactive' || s === 'paused') return 'Inactive';
+  if (s === 'churned' || s === 'cancelled' || s === 'lost') return 'Churned';
+  return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
 const AVATAR_PALETTES = [
   'bg-secondary text-foreground ',
   'bg-muted text-foreground ',
@@ -226,7 +237,7 @@ const Clients = () => {
 
     // Status Filter
     if (statusFilter) {
-      result = result.filter((c) => (c.status || 'Prospect') === statusFilter);
+      result = result.filter((c) => normalizeClientStatus(c.status) === statusFilter);
     }
 
     // Service Dropdown Filter
@@ -300,8 +311,8 @@ const Clients = () => {
   const deleteClientMutation = useDeleteClient();
   const updateClientMutation = useUpdateClient();
 
-  const activeClients = clients.filter((client) => client.status === 'Active').length;
-  const prospectClients = clients.filter((client) => client.status === 'Prospect').length;
+  const activeClients = clients.filter((client) => normalizeClientStatus(client.status) === 'Active').length;
+  const prospectClients = clients.filter((client) => normalizeClientStatus(client.status) === 'Prospect').length;
   const totalClientTasks = clients.reduce((sum, c) => sum + (c.totalTasks || 0), 0);
 
   const columns = [
@@ -403,11 +414,14 @@ const Clients = () => {
     {
       key: 'status',
       label: 'Status',
-      render: (row) => (
-        <StatusBadge tone={clientStatusTone[row.status] || 'neutral'}>
-          {row.status}
-        </StatusBadge>
-      ),
+      render: (row) => {
+        const norm = normalizeClientStatus(row.status);
+        return (
+          <StatusBadge tone={clientStatusTone[norm] || 'neutral'}>
+            {norm}
+          </StatusBadge>
+        );
+      },
     },
     {
       key: 'timeline',
@@ -590,7 +604,13 @@ const Clients = () => {
             <div ref={clientsBoardRef} className="w-full overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory responsive-table-container">
               <div className="grid w-max min-w-full auto-cols-[minmax(270px,85vw)] sm:auto-cols-[minmax(315px,360px)] grid-flow-col gap-4">
                 {STATUS_COLUMNS.map((status) => {
-                  const statusClients = displayedClients.filter((c) => (c.status || 'Prospect') === status);
+                  const statusClients = displayedClients.filter((c) => {
+                    const norm = normalizeClientStatus(c.status);
+                    if (STATUS_COLUMNS.includes(norm)) {
+                      return norm === status;
+                    }
+                    return status === 'Prospect';
+                  });
                   const isColActive = dragOverStatus === status;
                   const conf = STATUS_CONFIG[status] || STATUS_CONFIG.Prospect;
                   const ColIcon = conf.icon;

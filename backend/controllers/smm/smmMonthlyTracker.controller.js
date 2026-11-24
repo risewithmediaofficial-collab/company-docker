@@ -657,11 +657,16 @@ export const getMonthlyTrackers = async (req, res) => {
       }
     });
 
-    // 2. Fetch all active clients from BOTH CRM Client and SMM Client within scope
-    const clientFilter = withWorkspaceScope(req, { status: { $regex: /^active$/i } });
+    // 2. Fetch all active/onboarding/renew clients from BOTH CRM Client and SMM Client within scope
+    const clientFilter = withWorkspaceScope(req, {
+      status: { $nin: ['churned', 'inactive', 'Churned', 'Inactive'] },
+    });
+    const smmFilter = withWorkspaceScope(req, {
+      status: { $nin: ['churned', 'inactive', 'Churned', 'Inactive'] },
+    });
     const [crmClients, smmClientsList] = await Promise.all([
       Client.find(clientFilter).sort({ company: 1, name: 1 }).lean(),
-      SmmClient.find(withWorkspaceScope(req, { status: { $regex: /^active$/i } })).sort({ companyName: 1 }).lean(),
+      SmmClient.find(smmFilter).sort({ companyName: 1 }).lean(),
     ]);
 
     // Build unified active client map
@@ -989,6 +994,23 @@ export const getMonthlyTrackers = async (req, res) => {
               team: 'RWM',
               plan: clientMonthTasks.length > 0 ? String(clientMonthTasks.length) : '',
               planQuota: clientMonthTasks.length,
+              storyPlan: '30 STORIES',
+              month,
+              year,
+              days: scaffoldDays,
+              _scaffold: true,
+            });
+          } else if (!existing || !existing.isExcluded) {
+            // Scaffold client row so all active clients are visible on the tracker
+            const scaffoldDays = buildEmptyDays(year, month);
+            rows.push({
+              _id: null,
+              client: clientObj,
+              projectName: '',
+              project: null,
+              team: 'RWM',
+              plan: '',
+              planQuota: 0,
               storyPlan: '30 STORIES',
               month,
               year,

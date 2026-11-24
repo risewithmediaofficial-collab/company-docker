@@ -11,7 +11,10 @@ export const getSmmClients = async (req, res) => {
   try {
     const { search, status, page = 1, limit = 100 } = req.query;
     const query = {};
-    if (status) query.status = status;
+    if (status) {
+      const lower = status.toLowerCase();
+      query.status = { $in: [status, lower, lower === 'active' ? 'Active' : lower] };
+    }
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -117,6 +120,7 @@ export const createSmmClient = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Company or client name is required' });
     }
 
+    const orgId = req.user?.organizationId || null;
     const smmClient = await SmmClient.create({
       companyName,
       email: req.body.email || '',
@@ -125,6 +129,7 @@ export const createSmmClient = async (req, res) => {
       brandLogo: req.body.brandLogo || '',
       industry: req.body.industry || 'General',
       status: 'Active',
+      ...(orgId ? { organizationId: orgId } : {}),
     });
 
     let assignedClientId = req.body.clientId || null;
@@ -138,6 +143,7 @@ export const createSmmClient = async (req, res) => {
         website: req.body.website,
         logo: req.body.brandLogo,
         status: 'active',
+        ...(orgId ? { organizationId: orgId } : {}),
         ...(assignedClientId ? { clientId: assignedClientId } : {}),
       });
       if (crmClient && crmClient.email) {

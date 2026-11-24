@@ -7,6 +7,7 @@
 import Client from '../models/client.model.js';
 import SmmClient from '../models/smm/smmClient.model.js';
 import Counter, { getNextSequence } from '../models/counter.model.js';
+import Organization from '../models/organization.model.js';
 
 export const backfillClientIds = async () => {
   try {
@@ -98,6 +99,57 @@ export const backfillClientIds = async () => {
           );
         }
       }
+    }
+
+    // 4. Two-way sync: Ensure every SmmClient also exists in CRM Client
+    const defaultOrg = await Organization.findOne().sort({ createdAt: 1 }).select('_id').lean();
+    const allSmmClients = await SmmClient.find({}).lean();
+    for (const smm of allSmmClients) {
+      const crmExists = await Client.findOne({
+        $or: [
+          { _id: smm._id },
+          ...(smm.clientId ? [{ clientId: smm.clientId }] : []),
+          ...(smm.email ? [{ email: smm.email.toLowerCase().trim() }] : []),
+          ...(smm.companyName ? [{ company: smm.companyName.trim() }] : []),
+        ],
+      });
+
+      if (!crmExists && smm.companyName) {
+        try {
+          await Client.create({
+            _id: smm._id,
+            clientId: smm.clientId || undefined,
+            name: smm.companyName,
+            company: smm.companyName,
+            email: smm.email || '',
+            phone: smm.phone || '',
+            website: smm.website || '',
+            logo: smm.brandLogo || '',
+            status: smm.status?.toLowerCase() === 'active' ? 'active' : 'inactive',
+            organizationId: smm.organizationId || defaultOrg?._id || undefined,
+          });
+          console.log(`[ClientMigration] Synced SMM client '${smm.companyName}' into CRM Client collection.`);
+        } catch (syncErr) {
+          // Ignore duplicate key errors if already created concurrently
+        }
+      } else if (crmExists && !crmExists.organizationId && (smm.organizationId || defaultOrg?._id)) {
+        await Client.updateOne(
+          { _id: crmExists._id },
+          { $set: { organizationId: smm.organizationId || defaultOrg?._id } }
+        );
+      }
+    }
+
+    // 5. Backfill missing organizationId on any remaining CRM clients
+    if (defaultOrg?._id) {
+      await Client.updateMany(
+        { $or: [{ organizationId: { $exists: false } }, { organizationId: null }] },
+        { $set: { organizationId: defaultOrg._id } }
+      );
+      await SmmClient.updateMany(
+        { $or: [{ organizationId: { $exists: false } }, { organizationId: null }] },
+        { $set: { organizationId: defaultOrg._id } }
+      );
     }
   } catch (err) {
     console.error('[ClientMigration] Error during clientId backfill:', err.message);

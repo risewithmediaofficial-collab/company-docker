@@ -25,13 +25,18 @@ const statusMap = {
 
 const serializeClient = (client) => {
   const item = client.toObject ? client.toObject() : client;
+  const rawStatus = (item.status || 'active').toString().toLowerCase().trim();
   const label = {
     active: 'Active',
     inactive: 'Inactive',
     onboarding: 'Prospect',
+    prospect: 'Prospect',
+    lead: 'Prospect',
     churned: 'Churned',
     renew: 'Renew',
-  }[item.status] || item.status;
+    renewal: 'Renew',
+    paused: 'Inactive',
+  }[rawStatus] || (item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Active');
 
   return { ...item, status: label };
 };
@@ -120,28 +125,52 @@ export const getClients = async (req, res) => {
       if (userClientId) clientConditions.push({ _id: userClientId });
       if (req.user.email) clientConditions.push({ email: req.user.email.toLowerCase().trim() });
       filter.$and = [{ $or: clientConditions }];
-    } else if (['employee', 'intern'].includes(req.user.role)) {
-      // Employees/interns see assigned clients or unassigned organization clients
-      filter.$or = [
-        ...(filter.$or || []),
+    } else if (['employee', 'intern', 'editor', 'designer', 'adsManager'].includes(req.user.role)) {
+      // Team members see clients in their organization or where they are assigned to team/manager/project/task
+      const employeeProjects = await Project.find({ team: req.user._id }).select('client').lean();
+      const projectClientIds = employeeProjects.map((p) => p.client).filter(Boolean);
+      const employeeTasks = await Task.find({
+        $or: [
+          { assignedTo: req.user._id },
+          { scriptWriterAssigned: req.user._id },
+          { voiceArtistAssigned: req.user._id },
+        ],
+      }).select('client').lean();
+      const taskClientIds = employeeTasks.map((t) => t.client).filter(Boolean);
+      const relevantClientIds = [...new Set([...projectClientIds, ...taskClientIds])];
+
+      const employeeScopeOr = [
         { assignedTeam: req.user._id },
         { assignedManager: req.user._id },
+        { _id: { $in: relevantClientIds } },
         { assignedTeam: { $size: 0 } },
         { assignedTeam: { $exists: false } },
       ];
+      // Team member with organization assigned sees all clients within their organization
+      if (req.user.organizationId) {
+        employeeScopeOr.push({ organizationId: req.user.organizationId });
+      }
+
+      if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, { $or: employeeScopeOr }];
+        delete filter.$or;
+      } else {
+        filter.$or = employeeScopeOr;
+      }
     }
 
-    // ── STRICT TENANT ISOLATION ──
-    // Tenant users see ONLY their exact organizationId — no null/missing fallback
+    // ── STRICT TENANT ISOLATION (with legacy null-org fallback) ──
     const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
     const targetOrgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
     if (targetOrgId) {
-      // Strict: only exact match — no null fallback
+      const orgFilter = { $in: [targetOrgId, null] };
       if (filter.$or) {
-        filter.$and = [{ $or: filter.$or }, { organizationId: targetOrgId }];
+        filter.$and = [{ $or: filter.$or }, { organizationId: orgFilter }];
         delete filter.$or;
+      } else if (filter.$and) {
+        filter.$and.push({ organizationId: orgFilter });
       } else {
-        filter.organizationId = targetOrgId;
+        filter.organizationId = orgFilter;
       }
     }
 
