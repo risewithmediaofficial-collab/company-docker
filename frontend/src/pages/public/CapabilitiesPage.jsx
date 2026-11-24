@@ -99,22 +99,22 @@ const IconBlock = ({ icon: Icon, overline, headline, highlight, features }) => (
 export const CapabilitiesPage = () => {
   return (
     <PublicLayout
-      ctaTitle="Ready to Run Your Agency on a Single System?"
-      ctaSubtitle="Register your agency in 2 minutes. Eliminate 6+ subscriptions and give your team pure operational clarity."
+      ctaTitle="Ready to Run Your Entire Agency in One Place?"
+      ctaSubtitle="Register your agency in 2 minutes. Replace 6 separate apps and give your team complete peace of mind."
     >
       {/* ── 1. HERO ── */}
       <section className="relative overflow-hidden pt-12 sm:pt-20 pb-12 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
         <HeroPattern />
         <div className="relative z-10 max-w-4xl mx-auto">
           <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#12B7D4] uppercase mb-3 sm:mb-4">
-            22 Verified Agency Capabilities
+            22 Simple Tools for Your Agency
           </p>
           <h1 className="font-extrabold text-3xl sm:text-5xl lg:text-[58px] text-slate-950 tracking-tight leading-[1.15]">
-            Every Feature Built For
-            <span className="text-[#12B7D4] block mt-1 pb-1">Marketing Agency Growth.</span>
+            Everything Built to Help Your
+            <span className="text-[#12B7D4] block mt-1 pb-1">Marketing Agency Grow.</span>
           </h1>
           <p className="mt-4 sm:mt-5 text-base sm:text-lg text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
-            From inbound leads and social media staging to automated invoicing and GPS attendance — one unified OS for your entire agency.
+            From finding new leads and scheduling social posts to sending invoices and tracking staff attendance — all in one simple system.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
             <Link
@@ -146,33 +146,33 @@ export const CapabilitiesPage = () => {
 
         {/* PILLAR A — CRM & Leads (text left, visual right) */}
         <Pillar
-          overline="CRM & Client Acquisition"
+          overline="Finding & Managing Clients"
           headline="Never Lose a Lead."
-          highlight="Close Deals Without Friction."
-          body="Stop letting hot inquiries die in WhatsApp. Track every prospect from first hello to signed contract — then convert them in one click."
+          highlight="Win Deals Faster."
+          body="Never let new inquiries get lost in WhatsApp. Track every prospective client from first hello to signed agreement — then start their project in one click."
           bg="bg-white"
           features={[
-            { label: 'Visual Sales Pipeline', text: 'New Lead → Contacted → Discovery Call → Proposal Sent → Won/Lost' },
-            { label: '1-Click Client & Project Setup', text: 'Win a deal → instant client profile + linked project created automatically' },
-            { label: 'Proposals & Digital Contracts', text: 'Line-item quotes, shareable review links, and branded PDF export' },
-            { label: 'Encrypted Client Vault', text: 'Store social logins, WordPress admin, hosting & API keys with role-based access' },
-            { label: 'Churn Prevention Alerts', text: 'Auto-notify account managers when a client hasn\'t been contacted in 14+ days' },
+            { label: 'Simple Lead Board', text: 'Track leads step-by-step: New Lead → Contacted → First Call → Proposal Sent → Won' },
+            { label: '1-Click Client & Project Setup', text: 'When you win a deal, one click creates the client profile and project tasks' },
+            { label: 'Proposals & Agreements', text: 'Clear price quotes, easy review links for clients, and neat PDF downloads' },
+            { label: 'Safe Password Vault', text: 'Store client website logins, Instagram passwords, and keys safely in one place' },
+            { label: 'Client Check-in Reminders', text: 'Get alerted if a client hasn\'t heard from your team in 14 days so they stay happy' },
           ]}
           showcase={<SectionShowcase type="leads" />}
         />
 
         {/* PILLAR B — Content Calendar (visual left, text right) */}
         <Pillar
-          overline="Creative & Social Media"
-          headline="Agile Content Calendar."
-          highlight="1-Tap Client Approvals on Phone."
-          body="Coordinate writers, designers, and video editors without chaotic group chats. Clients preview and approve creatives directly on their phone."
+          overline="Content & Social Media"
+          headline="Easy Content Calendar."
+          highlight="1-Tap Client Approvals on Mobile."
+          body="Keep your writers, designers, and video editors in sync without messy group chats. Clients preview posts on their phone and approve in one tap."
           bg="bg-slate-50/70"
           flip
           features={[
             {
-              label: 'Multi-Platform Visual Grid',
-              text: 'Instagram, Facebook, LinkedIn, YouTube & X in one unified calendar view',
+              label: 'All Social Media in One Calendar',
+              text: 'Instagram, Facebook, LinkedIn, YouTube, and X in one simple grid',
               icons: (
                 <>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-800">
@@ -198,80 +198,80 @@ export const CapabilitiesPage = () => {
                 </>
               ),
             },
-            { label: 'SMM Deliverable Quotas', text: 'Real-time per-client quota counters (Posts, Reels, Carousels, Stories)' },
-            { label: 'Color-Coded Status Pills', text: 'Draft → In Review → Approved → Published — instant progress at a glance' },
-            { label: 'Influencer Campaign CRM', text: 'Creator profiles, barter vs. paid deals, draft review stages, payout logs' },
-            { label: '1-Click Mobile Review Links', text: 'Clients approve creatives on phone with verified timestamp sign-off' },
+            { label: 'Monthly Post & Video Targets', text: 'Track monthly targets for each client (Posts, Reels, Carousels, Stories)' },
+            { label: 'Clear Status Colors', text: 'Draft → In Review → Approved → Published — see progress at a glance' },
+            { label: 'Influencer Campaign Tracker', text: 'Creator profiles, free product or paid deals, post reviews, and payment records' },
+            { label: 'Fast Mobile Approvals', text: 'Clients check designs and videos on their phone and approve with a single tap' },
           ]}
           showcase={<SectionShowcase type="calendar" />}
         />
 
         {/* PILLAR C — Kanban & Team Tasks (text left, visual right) */}
         <Pillar
-          overline="Operations & Task Workflow"
-          headline="Agile Kanban Boards."
-          highlight="Daily Accountability Built In."
-          body="From drag-and-drop task management to morning checklists and EOD reports — your entire team operates with zero ambiguity every single day."
+          overline="Daily Tasks & Team Work"
+          headline="Visual Task Boards."
+          highlight="Keep Everyone on the Same Page."
+          body="From simple drag-and-drop task boards to morning checklists and daily wrap-ups — your entire team knows exactly what to do every day."
           bg="bg-white"
           features={[
-            { label: 'Visual Kanban Board', text: 'To Do → In Progress → Review/Approval → Completed with drag-and-drop' },
-            { label: 'Manager Task Oversight', text: 'Filter by member or client, spot bottlenecks, approve completed work instantly' },
-            { label: 'Daily Focus & EOD Reports', text: 'Morning priority lists + 60-sec end-of-day accountability submissions' },
-            { label: 'Standard Operating Procedures', text: 'Company playbook: Ad setup, brand guidelines, QA checklists by department' },
-            { label: 'Software Dev Agile Sprints', text: '2-week sprint boards, story points, backlog, code reviews & release manager' },
+            { label: 'Easy Drag-and-Drop Board', text: 'To Do → In Progress → Review → Completed' },
+            { label: 'Manager Overview', text: 'Check tasks by team member or client, fix delays, and approve finished work' },
+            { label: 'Morning To-Do & Daily Wrap-Up', text: 'Morning priorities and a 1-minute daily summary from each team member' },
+            { label: 'Step-by-Step Team Guides', text: 'Easy checklists for running ads, brand guidelines, and quality checks' },
+            { label: 'Software Project Boards', text: 'Task lists, backlogs, code reviews, and launch milestones for tech projects' },
           ]}
           showcase={<SectionShowcase type="billing" />}
         />
 
         {/* PILLAR D — Finance & Billing (visual left, text right) */}
         <Pillar
-          overline="Finance, Billing & Payroll"
-          headline="Client Invoices in 30 Seconds."
-          highlight="Live Agency Profit & Loss."
-          body="Eliminate spreadsheet accounting. Automated billing, tax splits, staff payroll, GPS attendance — all under one secure PIN-protected finance roof."
+          overline="Money, Invoicing & Payroll"
+          headline="Send Invoices in 30 Seconds."
+          highlight="See Your Real Profit & Loss."
+          body="Stop doing manual math on spreadsheets. Automatic tax calculations, staff payroll, and GPS attendance — all locked behind your secret PIN."
           bg="bg-slate-50/70"
           flip
           features={[
-            { label: 'Automated Tax Invoices', text: 'Sequential numbering, automated tax splits, UPI QR codes, PDF download' },
-            { label: 'Real-Time Agency P&L', text: 'Revenue, expenses, net margins & client LTV — PIN-gated for founder privacy' },
-            { label: 'Overdue Payment Reminders', text: 'WhatsApp & email templates auto-triggered when invoices are past due' },
-            { label: 'Staff Payroll & SaaS Tracker', text: 'Monthly salaries, bonuses, freelance payables & unused subscription audit' },
-            { label: 'Loans & EMI Scheduler', text: 'Agency loan records with interest calculations and repayment tracking' },
+            { label: 'Fast Invoices & Receipts', text: 'Automatic bill numbers, easy tax calculations, UPI QR codes, and PDF downloads' },
+            { label: 'Live Profit & Loss', text: 'See your income, expenses, profit margins, and client spending — locked with your PIN' },
+            { label: 'Late Payment Reminders', text: 'Friendly automatic WhatsApp and email reminders when bills are overdue' },
+            { label: 'Staff Salaries & App Bills', text: 'Monthly pay, freelance fees, and alerts for unused software you are paying for' },
+            { label: 'Loan & EMI Tracker', text: 'Keep track of company loans, monthly EMIs, and upcoming payments' },
           ]}
           showcase={<SectionShowcase type="leads" />}
         />
 
         {/* PILLAR E — HR, Attendance & Security (text left, visual right) */}
         <Pillar
-          overline="HR, Attendance & Security"
+          overline="Team Attendance & Office Tools"
           headline="GPS Punch Clock."
-          highlight="Zero Buddy Punching."
-          body="Smart mobile attendance verified by GPS office radius. Work-from-home toggles, leave approvals, domain watchdogs, and physical asset tracking."
+          highlight="No Fake Check-Ins."
+          body="Smart attendance verified by your office location. Easy work-from-home switches, leave requests, website expiry alerts, and equipment tracking."
           bg="bg-white"
           features={[
-            { label: 'Geofenced GPS Clock In/Out', text: '1-tap office attendance verified by physical GPS radius — no faking' },
-            { label: 'Remote WFH Toggle', text: 'Pre-approved remote work status with manager confirmation workflow' },
-            { label: 'Domain & SSL Renewal Watchdog', text: 'Auto-alerts 30, 15 & 7 days before client domain or SSL certificate expires' },
-            { label: 'Physical Asset Custody', text: 'Track laptops, cameras, microphones — know exactly who holds what device' },
-            { label: 'Team Directory & Leave Manager', text: 'Emergency contacts, joined dates, leave balances & department routing' },
+            { label: 'GPS Office Attendance', text: 'Staff tap to check in only when they are physically at the office — no faking' },
+            { label: 'Work-From-Home Switch', text: 'Simple option for staff to request and log approved remote work days' },
+            { label: 'Website & Domain Expiry Alerts', text: 'Get automatic warnings 30, 15, and 7 days before client domains expire' },
+            { label: 'Company Equipment Tracker', text: 'Know exactly which team member is holding each laptop, camera, or phone' },
+            { label: 'Team Directory & Leave Requests', text: 'Contact details, holiday balances, and quick leave approvals' },
           ]}
           showcase={<SectionShowcase type="calendar" />}
         />
 
         {/* PILLAR F — Client Portal & SaaS (visual left, text right) */}
         <Pillar
-          overline="Client Portal & Multi-Tenant SaaS"
-          headline="Client VIP Portal."
-          highlight="Zero Support Calls Needed."
-          body="Give clients a branded private login — they see live project progress, ad budgets, creative approvals, and invoices without pinging you on WhatsApp."
+          overline="Client Portal & Privacy"
+          headline="VIP Client Portal."
+          highlight="No Need for Endless Status Calls."
+          body="Give your clients a clean private link — they can check work progress, ad budgets, approve designs, and download invoices without texting you for updates."
           bg="bg-slate-50/70"
           flip
           features={[
-            { label: 'Live Task Tracker', text: 'Clients see real-time deliverable milestones without asking for updates' },
-            { label: 'Transparent Ad Spend', text: 'Live Meta & Google Ads budget view — no confusing agency jargon' },
-            { label: '1-Tap Creative Approvals', text: 'Review Instagram posts on phone and stamp approval in seconds' },
-            { label: 'Invoice Downloads', text: 'Clients access billing history and download past tax invoices anytime' },
-            { label: 'Multi-Tenant SaaS Platform', text: 'Self-service 14-day trial, agency tenant isolation & super admin dashboard' },
+            { label: 'Live Work Tracker', text: 'Clients see progress on their deliverables without having to ask for updates' },
+            { label: 'Clear Ad Spend View', text: 'Simple view of Meta & Google Ads budgets in plain rupees — zero confusing jargon' },
+            { label: '1-Tap Mobile Approvals', text: 'Clients review Instagram posts on their phone and approve in seconds' },
+            { label: 'Download Invoices Anytime', text: 'Clients can see past bills and download payment receipts whenever they need' },
+            { label: '100% Private & Safe Platform', text: '14-day free trial, completely separate space for each agency, and full owner control' },
           ]}
           showcase={<SectionShowcase type="billing" />}
         />
@@ -283,13 +283,13 @@ export const CapabilitiesPage = () => {
         <div className="max-w-6xl mx-auto">
           <ScrollReveal>
             <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
-              <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] mb-2">Role-Based Governance</p>
+              <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] mb-2">Simple Roles for Everyone</p>
               <h2 className="text-2xl sm:text-4xl lg:text-[40px] font-extrabold text-white tracking-tight leading-[1.2]">
                 Every Person Sees Exactly
                 <span className="text-[#12B7D4] block mt-1">What They Need.</span>
               </h2>
               <p className="text-sm sm:text-base text-slate-400 font-medium mt-3 leading-relaxed max-w-xl mx-auto">
-                Zero clutter. Each team member only sees the tools relevant to their role. Founders retain 360° governance over everything.
+                No clutter. Each team member only sees the tools they need for their job. Agency owners keep complete control over everything.
               </p>
             </div>
 
@@ -299,25 +299,25 @@ export const CapabilitiesPage = () => {
                   tag: 'Agency Founder',
                   Icon: TrendingUp,
                   color: 'text-[#12B7D4]',
-                  features: ['P&L Dashboard', 'Staff Payroll', 'Manager Oversight', 'Client Vault'],
+                  features: ['Live Profit & Loss', 'Staff Payroll', 'Manager Oversight', 'Password Vault'],
                 },
                 {
                   tag: 'Project Manager',
                   Icon: Layers,
                   color: 'text-emerald-400',
-                  features: ['Kanban Boards', 'Content Calendar', 'SMM Quotas', 'EOD Reports'],
+                  features: ['Task Boards', 'Content Calendar', 'Monthly Targets', 'Daily Wrap-Up'],
                 },
                 {
                   tag: 'Creative / Staff',
                   Icon: Clock,
                   color: 'text-amber-400',
-                  features: ['Daily Task List', 'GPS Clock-In', 'Asset Uploads', '60-Sec EOD'],
+                  features: ['Today\'s Tasks', 'GPS Attendance', 'Upload Files', '1-Minute Daily Summary'],
                 },
                 {
                   tag: 'Agency Client',
                   Icon: Shield,
                   color: 'text-purple-400',
-                  features: ['VIP Client Portal', 'Live Progress', 'Ad Budget View', 'Invoice Downloads'],
+                  features: ['VIP Client Portal', 'Live Progress', 'Ad Budgets', 'Download Invoices'],
                 },
               ].map(({ tag, Icon, color, features }) => (
                 <div key={tag} className="p-6 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all">
@@ -353,10 +353,10 @@ export const CapabilitiesPage = () => {
                 </span>
                 <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
                   Stop juggling 6 different tools.
-                  <span className="text-[#12B7D4] block mt-1">Run your agency like a well-oiled machine.</span>
+                  <span className="text-[#12B7D4] block mt-1">Run your agency smoothly and without stress.</span>
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed pt-1">
-                  Set up your agency workspace in under 2 minutes. No credit card required. Full team access included.
+                  Set up your agency workspace in under 2 minutes. No credit card required. Invite your entire team.
                 </p>
               </div>
               <Link

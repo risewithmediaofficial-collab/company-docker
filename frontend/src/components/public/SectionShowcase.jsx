@@ -313,17 +313,17 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
       chatBadgeIcon: Building2,
       chatBadgeBg: 'bg-emerald-600',
       chatBadgeBorder: 'border-emerald-300',
-      notificationTag: 'Company Tenant',
-      notificationTitle: 'Dedicated Agency DB',
-      notificationDesc: 'Zero data bleed between agencies.',
+      notificationTag: 'Agency Space',
+      notificationTitle: 'Your Private Database',
+      notificationDesc: 'Your client data is 100% private and protected.',
       btnText: 'Security Spec',
       btnSecondary: 'Backups',
       renderPhoneScreen: () => (
         <div className="space-y-3 text-left">
           <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-200">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">TENANT SECURITY</p>
-              <p className="text-xs font-bold text-slate-900 truncate">Isolated Workspace Space</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">DATA PRIVACY</p>
+              <p className="text-xs font-bold text-slate-900 truncate">Your Own Private Space</p>
             </div>
             <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 whitespace-nowrap shrink-0">
               Active
@@ -332,15 +332,15 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
 
           <div className="p-2.5 rounded-xl bg-slate-100 space-y-1 text-[11px] font-medium text-slate-700">
             <p className="font-bold text-slate-900">workspace.risewithmedia.com</p>
-            <p className="text-[10px] text-slate-500">Strict Multi-Tenant Database Partition</p>
+            <p className="text-[10px] text-slate-500">Completely Separate from Other Agencies</p>
             <div className="pt-1 flex items-center gap-1.5 text-emerald-600 font-bold text-[10px]">
               <Check size={12} className="stroke-[3]" />
-              <span>Client Records 100% Protected</span>
+              <span>Client Records 100% Safe</span>
             </div>
           </div>
 
           <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-800 flex justify-between">
-            <span>Daily Encrypted Backups</span>
+            <span>Automatic Daily Backups</span>
             <span>24/7 Monitored</span>
           </div>
         </div>
@@ -355,36 +355,36 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
       chatBadgeIcon: Smartphone,
       chatBadgeBg: 'bg-[#12B7D4]',
       chatBadgeBorder: 'border-cyan-300',
-      notificationTag: 'Edge Performance',
-      notificationTitle: 'Instant Mobile Load',
-      notificationDesc: 'Optimized lightweight bundles on 4G & WiFi.',
+      notificationTag: 'Fast & Lightweight',
+      notificationTitle: 'Opens Instantly on Phone',
+      notificationDesc: 'Works super fast on 4G mobile and office WiFi.',
       btnText: 'View Metrics',
       btnSecondary: 'CDN Ping',
       renderPhoneScreen: () => (
         <div className="space-y-3 text-left">
           <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-200">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">INFRASTRUCTURE</p>
-              <p className="text-xs font-bold text-slate-900 truncate">Global Edge Network</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">APP SPEED</p>
+              <p className="text-xs font-bold text-slate-900 truncate">Fast Cloud Speed</p>
             </div>
             <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 whitespace-nowrap shrink-0">
-              99.98% Up
+              Always Online
             </span>
           </div>
 
           <div className="p-3 rounded-2xl bg-gradient-to-br from-[#12B7D4]/10 via-cyan-50 to-white border border-[#12B7D4]/30 text-center space-y-1">
             <p className="text-2xl font-black text-slate-950 tracking-tight">0.38s</p>
-            <p className="text-[10px] font-bold text-[#12B7D4] uppercase tracking-wider">Full Interactive Time</p>
+            <p className="text-[10px] font-bold text-[#12B7D4] uppercase tracking-wider">Opens in a Blink</p>
           </div>
 
           <div className="space-y-1 text-[10px] font-medium text-slate-600">
             <div className="flex justify-between">
-              <span>Client Portal Response</span>
-              <span className="font-bold text-emerald-600">12ms</span>
+              <span>Client Portal Speed</span>
+              <span className="font-bold text-emerald-600">Instant (12ms)</span>
             </div>
             <div className="flex justify-between">
-              <span>Mobile 4G Performance</span>
-              <span className="font-bold text-emerald-600">Grade A+</span>
+              <span>Mobile 4G Speed</span>
+              <span className="font-bold text-emerald-600">Super Fast</span>
             </div>
           </div>
         </div>
@@ -399,17 +399,17 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
       chatBadgeIcon: CheckCheck,
       chatBadgeBg: 'bg-emerald-500',
       chatBadgeBorder: 'border-emerald-300',
-      notificationTag: 'Agency Rhythm',
+      notificationTag: 'Daily Agency Rhythm',
       notificationTitle: 'Morning To Evening',
-      notificationDesc: 'Leads, schedule, approvals, and client billing.',
+      notificationDesc: 'Leads, schedules, approvals, and invoices.',
       btnText: 'Start Flow',
       btnSecondary: 'Overview',
       renderPhoneScreen: () => (
         <div className="space-y-2.5 text-left">
           <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-200">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">OPERATING RHYTHM</p>
-              <p className="text-xs font-bold text-slate-900 truncate">4 Connected Steps</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">DAILY WORKFLOW</p>
+              <p className="text-xs font-bold text-slate-900 truncate">4 Simple Steps</p>
             </div>
             <span className="text-[10px] bg-[#12B7D4]/15 text-[#0e7490] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
               Seamless
@@ -426,11 +426,11 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
               <Check size={12} className="stroke-[3]" />
             </div>
             <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-between">
-              <span>3. 1-Tap Client Review</span>
+              <span>3. 1-Tap Client Approval</span>
               <Check size={12} className="stroke-[3]" />
             </div>
             <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-between">
-              <span>4. Generate Invoice Bill</span>
+              <span>4. Send Bill & Get Paid</span>
               <Check size={12} className="stroke-[3]" />
             </div>
           </div>

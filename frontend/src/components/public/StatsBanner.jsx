@@ -12,13 +12,13 @@ import { ThumbsUp, CheckCircle2, Receipt, ShieldCheck, Star } from 'lucide-react
  * - 100% Private / SAFE FOR YOUR TEAM
  */
 const StatsBanner = ({
-  title = 'We are proud of our works',
-  subtitle = 'We bring solutions to make life easier for our customers.',
+  title = 'Built for Everyday Agency Life',
+  subtitle = 'Simple tools designed to keep your team organized, fast, and stress-free.',
   stats = [
     {
       iconType: 'thumbsUp',
       value: 'All-in-One',
-      label: 'No More Scattered Apps',
+      label: 'No More Messy Apps',
     },
     {
       iconType: 'checkCircle',
@@ -28,7 +28,7 @@ const StatsBanner = ({
     {
       iconType: 'receipt',
       value: 'Invoices',
-      label: 'Ready in 1-Click',
+      label: 'Bills in 1-Click',
     },
     {
       iconType: 'shield',

@@ -25,21 +25,21 @@ export const Landing = () => {
         <div className="relative z-10 max-w-4xl mx-auto">
           {/* Plain Text Section Title (No Rounded Pill Effect) */}
           <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#12B7D4] uppercase mb-3 sm:mb-4">
-            All-in-One Agency CRM & Operating System
+            All-in-One Workspace for Digital Agencies
           </p>
 
           {/* Main Headline */}
           <h1 className="font-extrabold text-3xl sm:text-5xl lg:text-[62px] text-slate-950 tracking-tight leading-[1.15]">
             Manage Your Entire Agency.
             <span className="text-[#12B7D4] block mt-1 sm:mt-2 pb-1">
-              In One Simple, Unified Flow.
+              All in One Easy Place.
             </span>
           </h1>
 
           {/* Subtitle */}
           <p className="mt-4 sm:mt-5 text-base sm:text-xl text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
-            Stop switching between scattered spreadsheets, lost WhatsApp chats, and disconnected tools.
-            Leads, client tasks, social media calendars, and automated invoices — all in one place.
+            No more switching between messy spreadsheets, lost WhatsApp messages, and confusing tools.
+            Manage new leads, client tasks, social media calendars, and bills — all in one simple screen.
           </p>
 
           {/* CTA Buttons */}
@@ -93,18 +93,18 @@ export const Landing = () => {
                 {/* Left: Text & Features (Neatly Constrained with Card Bullets) */}
                 <div className="lg:col-span-7 space-y-4 text-left">
                   <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
-                    Sales & Client Acquisition
+                    Getting & Managing Clients
                   </p>
 
                   <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
-                    Capture Every Lead.
+                    Never Miss a Lead.
                     <span className="text-[#12B7D4] block mt-1">
-                      Close Deals Without Friction.
+                      Win Clients Faster.
                     </span>
                   </h2>
 
                   <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-xl">
-                    Never let an inquiry get lost in unorganized WhatsApp chats. Track deal value, generate professional proposals, and store credentials safely.
+                    Never lose client inquiries in messy WhatsApp chats. Track deal amounts, send neat proposals in minutes, and store client logins safely.
                   </p>
 
                   {/* Clean Feature Mini-Cards (Perfect Text Alignment) */}
@@ -114,8 +114,8 @@ export const Landing = () => {
                         <Check size={14} className="stroke-[3]" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Visual Sales Pipeline</h3>
-                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Move deals smoothly from New Lead → Contacted → Discovery Call → Proposal Sent → Won.</p>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Simple Lead Board</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Track every deal step-by-step: New Lead → Contacted → First Call → Proposal Sent → Deal Won.</p>
                       </div>
                     </div>
 
@@ -124,8 +124,8 @@ export const Landing = () => {
                         <Check size={14} className="stroke-[3]" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm leading-snug">1-Click Client & Project Creation</h3>
-                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">When a deal is won, 1 click instantly sets up their client directory profile with linked project tasks.</p>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">1-Click Client & Project Setup</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">When you win a deal, one click instantly creates the client profile and sets up their project tasks.</p>
                       </div>
                     </div>
 
@@ -134,8 +134,8 @@ export const Landing = () => {
                         <Check size={14} className="stroke-[3]" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Encrypted Client Vault</h3>
-                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Securely store website admin logins, social media passwords, and API keys with role-based access.</p>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Safe Password Vault</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Store client website logins, Instagram passwords, and keys safely so only the right team members can see them.</p>
                       </div>
                     </div>
                   </div>
@@ -163,18 +163,18 @@ export const Landing = () => {
                 {/* Right: Text & Features */}
                 <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
                   <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
-                    Creative & Social Media
+                    Content & Social Media
                   </p>
 
                   <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
-                    Agile Content Calendar.
+                    Simple Content Calendar.
                     <span className="text-[#12B7D4] block mt-1">
-                      1-Tap Client Approvals on Phone.
+                      1-Tap Approvals on Mobile.
                     </span>
                   </h2>
 
                   <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-xl">
-                    Coordinate writers, graphic designers, and video editors without chaotic meetings. Clients preview creatives directly on their phone and approve in 1 tap.
+                    Keep your writers, graphic designers, and video editors on track without endless meetings. Clients view posts right on their phone and approve in 1 tap.
                   </p>
 
                   {/* Clean Feature Mini-Cards */}
@@ -184,8 +184,8 @@ export const Landing = () => {
                         <Check size={14} className="stroke-[3]" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Multi-Platform Visual Grid</h3>
-                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Plan and stage reels, carousels, and stories across Instagram, LinkedIn, Facebook, and X.</p>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">All Social Media in One Grid</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Plan and schedule reels, carousels, and stories across Instagram, LinkedIn, Facebook, and X.</p>
                         <div className="flex items-center gap-1.5 flex-wrap pt-2">
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-bold text-slate-800">
                             <InstagramIcon size={13} />
@@ -216,8 +216,8 @@ export const Landing = () => {
                         <Check size={14} className="stroke-[3]" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm leading-snug">SMM Deliverable Quotas</h3>
-                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Real-time quota counters per client (e.g. 15 Posts, 8 Reels, 4 Carousels) so monthly targets are always hit.</p>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Monthly Post & Video Targets</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Track targets for each client (e.g. 15 Posts, 8 Reels, 4 Carousels) so you never miss a monthly promise.</p>
                       </div>
                     </div>
 
@@ -226,8 +226,8 @@ export const Landing = () => {
                         <Check size={14} className="stroke-[3]" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm leading-snug">1-Tap Client Review Links</h3>
-                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Clients review mockups on their mobile screen with zero login friction, recording verified sign-off timestamps.</p>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Quick Mobile Approval Links</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Clients check designs and videos on their phone with no login required, approving in seconds.</p>
                       </div>
                     </div>
                   </div>
@@ -245,18 +245,18 @@ export const Landing = () => {
                 {/* Left: Text & Features */}
                 <div className="lg:col-span-7 space-y-4 text-left">
                   <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
-                    Finance, Billing & Operations
+                    Money, Billing & Team
                   </p>
 
                   <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
-                    Client Invoices in 30 Seconds.
+                    Send Invoices in 30 Seconds.
                     <span className="text-[#12B7D4] block mt-1">
-                      Live Agency Profit & Loss.
+                      See Your Real Profit & Loss.
                     </span>
                   </h2>
 
                   <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-xl">
-                    Eliminate spreadsheet accounting. Automatic tax calculations, payment tracking, staff payroll, and GPS attendance under one secure roof.
+                    Stop doing manual math on spreadsheets. Calculate taxes automatically, track payments, run team payroll, and check staff attendance in one place.
                   </p>
 
                   {/* Clean Feature Mini-Cards */}
@@ -266,8 +266,8 @@ export const Landing = () => {
                         <Check size={14} className="stroke-[3]" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Automated Tax Invoices & PDF</h3>
-                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Sequential tax numbering, automated tax splits, UPI QR codes, and 1-click printable PDF receipts.</p>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Instant Invoices & PDF Receipts</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Automatic invoice numbers, easy tax calculations, UPI QR codes for fast payments, and 1-click printable PDFs.</p>
                       </div>
                     </div>
 
@@ -276,8 +276,8 @@ export const Landing = () => {
                         <Check size={14} className="stroke-[3]" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Real-Time Agency P&L</h3>
-                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Monitor incoming client revenue, operational tool subscriptions, and net margins protected by a PIN gate.</p>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Live Income & Expense Tracker</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">See your total earnings, monthly tool bills, and net profit — locked with a secret PIN so only you can see it.</p>
                       </div>
                     </div>
 
@@ -286,8 +286,8 @@ export const Landing = () => {
                         <Check size={14} className="stroke-[3]" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Geofenced GPS Punch Clock</h3>
-                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Staff mark office attendance verified by GPS radius, with an approved remote WFH toggle.</p>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">GPS Office Attendance</h3>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Staff mark attendance on their phone when they reach the office, with a simple switch for work-from-home days.</p>
                       </div>
                     </div>
                   </div>
@@ -315,10 +315,10 @@ export const Landing = () => {
                 </span>
                 <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
                   Stop juggling 6 different tools.
-                  <span className="text-[#12B7D4] block mt-1">Run your agency like a well-oiled machine.</span>
+                  <span className="text-[#12B7D4] block mt-1">Run your agency smoothly and without stress.</span>
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed pt-1">
-                  Set up your agency workspace in under 2 minutes. No credit card required. Full team access included.
+                  Set up your agency workspace in under 2 minutes. No credit card required. Invite your entire team.
                 </p>
               </div>
               <Link

@@ -70,7 +70,7 @@ const PublicLayout = ({
                 RiseWithMedia
               </span>
               <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden sm:block -mt-0.5">
-                Digital Marketing OS
+                Digital Marketing App
               </span>
             </div>
           </Link>
@@ -243,16 +243,16 @@ const PublicLayout = ({
                     RiseWithMedia
                   </span>
                   <span className="text-[11px] font-bold text-[#12B7D4] uppercase tracking-wider">
-                    Agency Operating System
+                    Agency Workspace
                   </span>
                 </div>
               </div>
               <p className="text-xs sm:text-sm text-slate-400 font-medium leading-relaxed max-w-sm">
-                Unified workspace built exclusively for digital marketing agencies. Automate lead follow-ups, client approvals, and automated invoicing in one place.
+                A simple, all-in-one workspace made for digital marketing agencies. Follow up on leads, get quick client approvals, and send bills in one easy place.
               </p>
               <div className="pt-1 flex items-center gap-2 text-[11px] font-semibold text-slate-400">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span>100% Private Isolated Multi-Tenant Architecture</span>
+                <span>100% Private & Safe for Every Agency</span>
               </div>
             </div>
 
@@ -276,11 +276,11 @@ const PublicLayout = ({
                 Platform Solutions
               </p>
               <ul className="space-y-2.5 text-xs sm:text-sm font-medium">
-                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Lead Pipeline & Deals</Link></li>
-                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Content Calendar & SMM</Link></li>
-                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">1-Tap Client Review</Link></li>
-                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Automated Invoices</Link></li>
-                <li><Link to="/our-impact" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Tenant Privacy & Backups</Link></li>
+                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Leads & Deals</Link></li>
+                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Social Media Calendar</Link></li>
+                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">1-Tap Client Approvals</Link></li>
+                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Invoices & Billing</Link></li>
+                <li><Link to="/our-impact" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Private Data & Backups</Link></li>
               </ul>
             </div>
 

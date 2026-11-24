@@ -31,7 +31,7 @@ export const HeroPipelineShowcase = () => {
       <div className="hidden md:flex absolute -top-5 -right-4 z-20 items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#12B7D4]/30 shadow-lg shadow-[#12B7D4]/15 text-xs font-bold text-slate-800">
         <Sparkles size={14} className="text-[#12B7D4]" />
         <span className="text-[#12B7D4] font-extrabold">Instant:</span>
-        <span>Client & Project Auto-Created</span>
+        <span>Client & Project Created in 1-Click</span>
       </div>
 
       {/* ── MAIN BROWSER APPLICATION SHELL ── */}
@@ -235,10 +235,10 @@ export const HeroPipelineShowcase = () => {
         <div className="px-4 py-2.5 bg-slate-900 text-white text-[11px] font-semibold flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span>AI Predictive Lead Scoring & Automatic Task Sync active</span>
+            <span>Automatic Lead Tracking & Live Task Updates Active</span>
           </div>
           <span className="text-slate-400 text-[10px]">
-            Drag & drop deals between columns to trigger stage automations
+            Drag & drop deals between stages to update your team instantly
           </span>
         </div>
 

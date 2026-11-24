@@ -27,7 +27,7 @@ export const AboutPage = () => {
         <div className="relative z-10 max-w-3xl mx-auto">
           <ScrollReveal delay={0}>
             <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#12B7D4] uppercase mb-3 sm:mb-4 animate-fade-up">
-              The Agency Founder's Story
+              Our Story
             </p>
 
             <h1 className="font-extrabold text-3xl sm:text-5xl lg:text-[58px] text-slate-950 tracking-tight leading-[1.15] animate-fade-up">
@@ -39,8 +39,8 @@ export const AboutPage = () => {
 
             {/* Reduced, clean Apple-style body text */}
             <p className="mt-4 sm:mt-5 text-base sm:text-lg text-slate-600 font-medium leading-relaxed max-w-xl mx-auto animate-fade-up">
-              After 6 years running creative retainers, we built the{' '}
-              <span className="marker-highlight text-slate-900 font-bold">operating system</span> we needed on{' '}
+              After 6 years of running a digital marketing agency, we built the{' '}
+              <span className="marker-highlight text-slate-900 font-bold">simple system</span> we wished we had on{' '}
               <span className="marker-highlight text-slate-900 font-bold">Day 1</span>.
             </p>
 
@@ -56,7 +56,7 @@ export const AboutPage = () => {
                 to="/what-we-do"
                 className="px-7 sm:px-9 py-3.5 sm:py-4 rounded-full bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-bold text-sm sm:text-base transition-all flex items-center justify-center shadow-2xs hover:-translate-y-0.5"
               >
-                Explore 22 Capabilities
+                Explore All 22 Features
               </Link>
             </div>
           </ScrollReveal>
@@ -68,13 +68,13 @@ export const AboutPage = () => {
         <ScrollReveal delay={0}>
           <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
             <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] mb-2">
-              Why We Exist
+              Why We Built This
             </p>
             <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
-              The Three Agency Traps We <span className="marker-highlight">Eliminated</span>
+              The Three Common Agency Headaches We <span className="marker-highlight">Fixed</span>
             </h2>
             <p className="text-sm sm:text-base text-slate-600 font-medium mt-2.5 leading-relaxed max-w-xl mx-auto">
-              What breaks when an agency scales past 5 clients — and how we solved each trap.
+              What breaks when an agency grows past 5 clients — and how we make everyday work simple.
             </p>
           </div>
         </ScrollReveal>
@@ -88,14 +88,14 @@ export const AboutPage = () => {
                 <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center">
                   <MessageSquare size={24} />
                 </div>
-                <h3 className="font-bold text-xl text-slate-950 tracking-tight">The WhatsApp Black Hole</h3>
+                <h3 className="font-bold text-xl text-slate-950 tracking-tight">The WhatsApp Chaos</h3>
                 <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                  Briefs and revisions lost in midnight group chats with zero team accountability.
+                  Client requests and corrections get lost in late-night WhatsApp groups with no clear ownership.
                 </p>
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center gap-1.5 text-xs font-bold text-rose-600">
-                <span>✓ Solved with 1-Tap Client Review Portals</span>
+                <span>✓ Solved with Simple 1-Tap Client Review Links</span>
               </div>
             </div>
           </ScrollReveal>
@@ -107,14 +107,14 @@ export const AboutPage = () => {
                 <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center">
                   <Layers size={24} />
                 </div>
-                <h3 className="font-bold text-xl text-slate-950 tracking-tight">The 6-App Subscription Tax</h3>
+                <h3 className="font-bold text-xl text-slate-950 tracking-tight">Paying for 6 Different Apps</h3>
                 <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                  Paying ₹25,000+/mo across disjointed tools just to duplicate the same client details.
+                  Spending ₹25,000+ every month on separate apps just to type the same client details again and again.
                 </p>
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center gap-1.5 text-xs font-bold text-amber-600">
-                <span>✓ Solved with One Shared Agency Cockpit</span>
+                <span>✓ Solved with One Simple Shared Workspace</span>
               </div>
             </div>
           </ScrollReveal>
@@ -126,14 +126,14 @@ export const AboutPage = () => {
                 <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-[#12B7D4] flex items-center justify-center">
                   <Receipt size={24} />
                 </div>
-                <h3 className="font-bold text-xl text-slate-950 tracking-tight">The Sunday Invoice Panic</h3>
+                <h3 className="font-bold text-xl text-slate-950 tracking-tight">The Weekend Invoicing Stress</h3>
                 <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                  Manual Word templates, tax math, and chasing late wire transfers over weekends.
+                  Typing manual bills in Word, doing tax math by hand, and chasing late bank transfers on weekends.
                 </p>
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center gap-1.5 text-xs font-bold text-[#0ea5c6]">
-                <span>✓ Solved with Automated Tax Receipts in 30s</span>
+                <span>✓ Solved with Instant Invoices & Receipts in 30 Seconds</span>
               </div>
             </div>
           </ScrollReveal>
@@ -237,43 +237,43 @@ export const AboutPage = () => {
               {/* Right Column: Clean Minimalist Steps */}
               <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
                 <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
-                  The Agency Rhythm
+                  The Daily Agency Flow
                 </p>
 
                 <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
-                  How We Designed
+                  How Work Moves Forward
                   <span className="block mt-1">
-                    The <span className="marker-highlight">Modern Agency Flow</span>.
+                    Naturally <span className="marker-highlight">Every Day</span>.
                   </span>
                 </h2>
 
                 <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-xl">
-                  Built strictly around recurring agency retainers — eliminating back-and-forth noise.
+                  Built specifically for marketing agencies with monthly clients — removing all the confusing back-and-forth.
                 </p>
 
                 <div className="space-y-2.5 pt-2 max-w-xl">
                   <div className="p-3 rounded-2xl bg-white border border-slate-200/80 space-y-0.5 hover:border-slate-300 transition-all">
-                    <span className="text-[10px] font-black uppercase text-[#12B7D4] tracking-wider">Step 1 — Inbound Leads</span>
-                    <h4 className="font-bold text-slate-900 text-sm">WhatsApp & Form Leads Synced</h4>
-                    <p className="text-xs text-slate-500 font-medium">Log budget, contact details, and client scope in 1 tap.</p>
+                    <span className="text-[10px] font-black uppercase text-[#12B7D4] tracking-wider">Step 1 — New Leads</span>
+                    <h4 className="font-bold text-slate-900 text-sm">WhatsApp & Website Leads Saved</h4>
+                    <p className="text-xs text-slate-500 font-medium">Record budget, phone numbers, and client goals in 1 tap.</p>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-white border border-slate-200/80 space-y-0.5 hover:border-slate-300 transition-all">
-                    <span className="text-[10px] font-black uppercase text-[#12B7D4] tracking-wider">Step 2 — Content Staging</span>
-                    <h4 className="font-bold text-slate-900 text-sm">Visual Calendar & Retainer Quotas</h4>
-                    <p className="text-xs text-slate-500 font-medium">Assign video editors, copywriters, and designers seamlessly.</p>
+                    <span className="text-[10px] font-black uppercase text-[#12B7D4] tracking-wider">Step 2 — Monthly Planning</span>
+                    <h4 className="font-bold text-slate-900 text-sm">Easy Calendar & Monthly Targets</h4>
+                    <p className="text-xs text-slate-500 font-medium">Assign video editors, copywriters, and designers in seconds.</p>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-white border border-slate-200/80 space-y-0.5 hover:border-slate-300 transition-all">
                     <span className="text-[10px] font-black uppercase text-[#12B7D4] tracking-wider">Step 3 — Client Approvals</span>
-                    <h4 className="font-bold text-slate-900 text-sm">Instant Phone Previews</h4>
-                    <p className="text-xs text-slate-500 font-medium">Clients review creatives and sign off with zero login barriers.</p>
+                    <h4 className="font-bold text-slate-900 text-sm">Quick Phone Previews</h4>
+                    <p className="text-xs text-slate-500 font-medium">Clients review graphics and videos on their phone and approve without logging in.</p>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-white border border-slate-200/80 space-y-0.5 hover:border-slate-300 transition-all">
-                    <span className="text-[10px] font-black uppercase text-[#12B7D4] tracking-wider">Step 4 — Automated Invoicing</span>
+                    <span className="text-[10px] font-black uppercase text-[#12B7D4] tracking-wider">Step 4 — Getting Paid</span>
                     <h4 className="font-bold text-slate-900 text-sm">Instant PDF Invoices</h4>
-                    <p className="text-xs text-slate-500 font-medium">Instant compliant tax invoice generation with payment QR.</p>
+                    <p className="text-xs text-slate-500 font-medium">Create clean PDF invoices with UPI payment QR codes in 30 seconds.</p>
                   </div>
                 </div>
               </div>
@@ -290,10 +290,10 @@ export const AboutPage = () => {
               Our Guiding Principles
             </p>
             <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
-              Built for <span className="marker-highlight">Real Humans</span>, Not Bureaucrats
+              Built for <span className="marker-highlight">Real Humans</span>, Plain and Simple
             </h2>
             <p className="text-sm sm:text-base text-slate-600 font-medium mt-2.5 leading-relaxed max-w-xl mx-auto">
-              Three core pillars engineered for agency productivity, privacy, and speed.
+              Three simple rules we follow to keep your agency fast, organized, and private.
             </p>
           </div>
         </ScrollReveal>
@@ -307,14 +307,14 @@ export const AboutPage = () => {
                 <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-[#12B7D4] flex items-center justify-center">
                   <Zap size={24} />
                 </div>
-                <h3 className="font-bold text-xl text-slate-950 tracking-tight">Retainer-First Mindset</h3>
+                <h3 className="font-bold text-xl text-slate-950 tracking-tight">Made for Monthly Clients</h3>
                 <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                  Engineered strictly around recurring monthly deliverables — not one-off software tickets.
+                  Designed specifically for monthly retainers (like 15 posts and 8 reels) — not confusing tech tickets.
                 </p>
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center gap-1.5 text-xs font-bold text-[#0ea5c6]">
-                <span>✓ Recurring Deliverables Architecture</span>
+                <span>✓ Monthly Target Tracking</span>
               </div>
             </div>
           </ScrollReveal>
@@ -326,14 +326,14 @@ export const AboutPage = () => {
                 <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                   <Shield size={24} />
                 </div>
-                <h3 className="font-bold text-xl text-slate-950 tracking-tight">Radical Financial Privacy</h3>
+                <h3 className="font-bold text-xl text-slate-950 tracking-tight">Total Money Privacy</h3>
                 <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                  Staff execute daily tasks while secondary PIN gates keep agency profits completely confidential.
+                  Your team works on daily tasks, but your profits, salaries, and bank numbers are locked with a secret PIN.
                 </p>
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center gap-1.5 text-xs font-bold text-emerald-600">
-                <span>✓ Secondary PIN Gate Security</span>
+                <span>✓ Secret PIN Protection</span>
               </div>
             </div>
           </ScrollReveal>
@@ -345,14 +345,14 @@ export const AboutPage = () => {
                 <div className="w-12 h-12 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center">
                   <Users size={24} />
                 </div>
-                <h3 className="font-bold text-xl text-slate-950 tracking-tight">Client Clarity Without Noise</h3>
+                <h3 className="font-bold text-xl text-slate-950 tracking-tight">Clear & Simple for Clients</h3>
                 <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                  One frictionless portal to review live ad metrics, approve creatives, and download tax invoices.
+                  One simple link for clients to see ad results, approve posts, and download past bills.
                 </p>
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center gap-1.5 text-xs font-bold text-violet-600">
-                <span>✓ 1-Tap Client Transparency</span>
+                <span>✓ 1-Tap Client Approvals</span>
               </div>
             </div>
           </ScrollReveal>
@@ -369,10 +369,10 @@ export const AboutPage = () => {
                   Experience the Difference
                 </span>
                 <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
-                  Give your team the <span className="marker-highlight">operating system</span> they deserve.
+                  Give your team the <span className="marker-highlight">simple workspace</span> they deserve.
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed pt-1">
-                  Zero setup headaches. 14-day free trial. Unlimited team members included.
+                  Easy 2-minute setup. 14-day free trial. Invite as many team members as you want.
                 </p>
               </div>
               <Link

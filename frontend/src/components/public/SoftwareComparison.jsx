@@ -94,7 +94,7 @@ const FragmentedStackIllustration = () => (
           <polygon points="0,18 2.5,23 5,18" fill="#0F172A" />
         </g>
         {/* Label */}
-        <text x="25" y="58" textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="700" fontFamily="sans-serif">
+        <text x="25" y="58" textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="700" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           Spreadsheets
         </text>
       </g>
@@ -115,15 +115,15 @@ const FragmentedStackIllustration = () => (
         />
         {/* Tax Tag */}
         <rect x="8" y="9" width="30" height="15" rx="4" fill="#FEE2E2" stroke="#F43F5E" strokeWidth="1.3" />
-        <text x="23" y="20" textAnchor="middle" fill="#E11D48" fontSize="9" fontWeight="900" fontFamily="sans-serif">
+        <text x="23" y="20" textAnchor="middle" fill="#E11D48" fontSize="9" fontWeight="900" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           TAX
         </text>
         {/* Skeleton lines */}
         <line x1="9" y1="31" x2="37" y2="31" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
         <line x1="9" y1="38" x2="28" y2="38" stroke="#CBD5E1" strokeWidth="1.5" strokeLinecap="round" />
         {/* Label */}
-        <text x="23" y="68" textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="700" fontFamily="sans-serif">
-          Manual Billing
+        <text x="23" y="68" textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="700" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
+          Manual Bills
         </text>
       </g>
 
@@ -148,7 +148,7 @@ const FragmentedStackIllustration = () => (
           strokeWidth="1.5"
           strokeLinejoin="round"
         />
-        <text x="24" y="52" textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="700" fontFamily="sans-serif">
+        <text x="24" y="52" textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="700" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           Lost Chats
         </text>
       </g>
@@ -170,7 +170,7 @@ const FragmentedStackIllustration = () => (
         <line x1="26" y1="26" x2="26" y2="13" stroke="#0F172A" strokeWidth="2" strokeLinecap="round" />
         <line x1="26" y1="26" x2="35" y2="28" stroke="#F43F5E" strokeWidth="2" strokeLinecap="round" />
         {/* Label */}
-        <text x="26" y="66" textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="700" fontFamily="sans-serif">
+        <text x="26" y="66" textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="700" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           Deadlines
         </text>
       </g>
@@ -190,12 +190,12 @@ const FragmentedStackIllustration = () => (
           filter="url(#frag-shadow)"
         />
         <circle cx="24" cy="17" r="9" fill="#ECFDF5" stroke="#10B981" strokeWidth="1.5" />
-        <text x="24" y="21" textAnchor="middle" fill="#059669" fontSize="11" fontWeight="900" fontFamily="sans-serif">
+        <text x="24" y="21" textAnchor="middle" fill="#059669" fontSize="11" fontWeight="900" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           ₹
         </text>
         {/* Label */}
-        <text x="24" y="50" textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="700" fontFamily="sans-serif">
-          SaaS Waste
+        <text x="24" y="50" textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="700" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
+          Wasted Tool Bills
         </text>
       </g>
 
@@ -218,8 +218,8 @@ const FragmentedStackIllustration = () => (
         <line x1="8" y1="20" x2="26" y2="20" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
         <line x1="8" y1="28" x2="36" y2="28" stroke="#CBD5E1" strokeWidth="1.5" strokeLinecap="round" />
         {/* Label */}
-        <text x="22" y="64" textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="700" fontFamily="sans-serif">
-          Unsafe Logins
+        <text x="22" y="64" textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="700" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
+          Shared Passwords
         </text>
       </g>
     </svg>
@@ -322,7 +322,7 @@ const UnifiedFlowIllustration = () => (
           strokeLinejoin="round"
         />
         <path d="M 22 24 L 37 12" stroke="#0F172A" strokeWidth="1.5" />
-        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           Proposals
         </text>
       </g>
@@ -345,7 +345,7 @@ const UnifiedFlowIllustration = () => (
         <line x1="9" y1="18" x2="24" y2="18" stroke="#94A3B8" strokeWidth="1.6" strokeLinecap="round" />
         <line x1="9" y1="26" x2="38" y2="26" stroke="#CBD5E1" strokeWidth="1.6" strokeLinecap="round" />
         <line x1="9" y1="33" x2="28" y2="33" stroke="#CBD5E1" strokeWidth="1.6" strokeLinecap="round" />
-        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           Contracts
         </text>
       </g>
@@ -363,7 +363,7 @@ const UnifiedFlowIllustration = () => (
         <circle cx="24" cy="27" r="7" fill="#FEF3C7" stroke="#F59E0B" strokeWidth="1.4" />
         <rect x="22" y="26" width="4" height="5" rx="1" fill="#0F172A" />
         <path d="M 21.5 26 C 21.5 23.5 26.5 23.5 26.5 26" fill="none" stroke="#0F172A" strokeWidth="1.3" />
-        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           Client Vault
         </text>
       </g>
@@ -392,7 +392,7 @@ const UnifiedFlowIllustration = () => (
         {/* Milestone Tracks */}
         <line x1="28" y1="24" x2="41" y2="24" stroke="#0F172A" strokeWidth="1.6" strokeLinecap="round" />
         <line x1="28" y1="31" x2="38" y2="31" stroke="#94A3B8" strokeWidth="1.4" strokeLinecap="round" />
-        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           Projects
         </text>
       </g>
@@ -417,7 +417,7 @@ const UnifiedFlowIllustration = () => (
         <rect x="19.5" y="16" width="9" height="9" rx="1.5" fill="#F59E0B" />
         <rect x="32" y="9" width="9" height="28" rx="2" fill="#F1F5F9" />
         <rect x="32" y="10" width="9" height="15" rx="1.5" fill="#10B981" />
-        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           Tasks
         </text>
       </g>
@@ -445,7 +445,7 @@ const UnifiedFlowIllustration = () => (
         {/* Approved badge */}
         <circle cx="34" cy="28" r="6.5" fill="#10B981" stroke="#0F172A" strokeWidth="1.4" />
         <path d="M 31.5 28 L 33.5 30 L 36.5 26" fill="none" stroke="#FFFFFF" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           Content & SMM
         </text>
       </g>
@@ -468,10 +468,10 @@ const UnifiedFlowIllustration = () => (
         />
         <path d="M 0 11 L 24 28 L 48 11" stroke="#0F172A" strokeWidth="1.6" fill="none" />
         <circle cx="24" cy="24" r="9" fill="#10B981" stroke="#0F172A" strokeWidth="1.5" />
-        <text x="24" y="28" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="900" fontFamily="sans-serif">
+        <text x="24" y="28" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="900" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           ₹
         </text>
-        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           Invoices
         </text>
       </g>
@@ -487,11 +487,11 @@ const UnifiedFlowIllustration = () => (
           filter="url(#uni-shadow)"
         />
         <circle cx="24" cy="17" r="7.5" fill="#ECFDF5" stroke="#10B981" strokeWidth="1.5" />
-        <text x="24" y="21" textAnchor="middle" fill="#059669" fontSize="9" fontWeight="900" fontFamily="sans-serif">
+        <text x="24" y="21" textAnchor="middle" fill="#059669" fontSize="9" fontWeight="900" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           ₹
         </text>
         <line x1="10" y1="28" x2="38" y2="28" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
-        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           Expenses
         </text>
       </g>
@@ -518,7 +518,7 @@ const UnifiedFlowIllustration = () => (
         <path d="M 10 27 L 11.5 28.5 L 14 25.5" stroke="#FFFFFF" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
         <line x1="20" y1="27" x2="34" y2="27" stroke="#0F172A" strokeWidth="1.5" strokeLinecap="round" />
         <path d="M 26 37 L 34 32 L 38 35 L 43 28" fill="none" stroke="#10B981" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif">
           Accounting
         </text>
       </g>
@@ -552,20 +552,20 @@ export const SoftwareComparison = () => {
             {/* Header Topline */}
             <div className="flex items-center justify-between gap-2 h-5 mb-3">
               <span className="text-[11px] font-black uppercase tracking-wider text-rose-600">
-                The Fragmented Stack
+                The Messy Way
               </span>
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                What They Have
+                Without RiseWithMedia
               </span>
             </div>
 
             {/* Title & Disconnected Tool Stack */}
             <div className="min-h-[58px] flex flex-col justify-start">
               <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">
-                5 to 8 Disconnected Apps
+                5 to 8 Different Apps
               </h3>
               <p className="text-xs text-slate-500 font-medium mt-1 leading-normal">
-                Trello • WhatsApp • HubSpot • QuickBooks • Spreadsheets
+                WhatsApp • Spreadsheets • Trello • Separate Invoicing
               </p>
             </div>
 
@@ -573,7 +573,7 @@ export const SoftwareComparison = () => {
             <div className="mt-3.5 px-4 py-2.5 min-h-[42px] rounded-xl bg-rose-50/90 flex items-center justify-between text-xs font-bold text-rose-600">
               <span className="flex items-center gap-1.5 text-rose-600">
                 <AlertTriangle size={13} className="text-rose-500 shrink-0" />
-                <span>Cost Penalty:</span>
+                <span>Wasted Cost:</span>
               </span>
               <span className="font-extrabold text-rose-700">₹25,000 – ₹45,000/mo • 12 hrs lost/wk</span>
             </div>
@@ -586,7 +586,7 @@ export const SoftwareComparison = () => {
 
           {/* Bottom Summary */}
           <div className="pt-3 mt-2 min-h-[42px] flex items-center justify-center text-center text-xs font-bold text-slate-400">
-            Result: Lost client deals, data leaks & endless tool switching
+            Result: Lost client deals, forgotten tasks & wasting money on too many tools
           </div>
         </div>
 
@@ -596,20 +596,20 @@ export const SoftwareComparison = () => {
             {/* Header Topline */}
             <div className="flex items-center justify-between gap-2 h-5 mb-3">
               <span className="text-[11px] font-black uppercase tracking-wider text-[#12B7D4]">
-                All-in-One Operating System
+                The Simple All-in-One Way
               </span>
               <span className="text-[11px] font-bold text-[#12B7D4] uppercase tracking-wider">
-                What We Do
+                With RiseWithMedia
               </span>
             </div>
 
             {/* Title & Core Modules */}
             <div className="min-h-[58px] flex flex-col justify-start">
               <h3 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-tight">
-                RiseWithMedia OS
+                RiseWithMedia
               </h3>
               <p className="text-xs text-slate-500 font-medium mt-1 leading-normal">
-                Proposals • Contracts • Vault • Projects • Tasks • SMM • Invoices • P&L
+                Proposals • Agreements • Vault • Projects • Tasks • Social Posts • Bills • Profit
               </p>
             </div>
 
@@ -619,7 +619,7 @@ export const SoftwareComparison = () => {
                 <Zap size={13} className="fill-[#12B7D4] shrink-0" />
                 <span>14-Day Free Trial:</span>
               </span>
-              <span className="font-extrabold text-slate-950">Zero Credit Card • Complete Access</span>
+              <span className="font-extrabold text-slate-950">No Credit Card Needed • Full Access</span>
             </div>
 
             {/* THE SERPENTINE PIPELINE ILLUSTRATION (NO TEXT PARAGRAPHS) */}
