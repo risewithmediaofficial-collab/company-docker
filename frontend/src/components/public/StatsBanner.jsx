@@ -8,7 +8,7 @@ import { ThumbsUp, CheckCircle2, Receipt, ShieldCheck, Star } from 'lucide-react
  * featuring the agency platform pillars:
  * - All-in-One / NO MORE SCATTERED APPS
  * - Fast Approvals / ZERO CONFUSING EMAILS
- * - GST Bills / READY IN 1-CLICK
+ * - Invoices / READY IN 1-CLICK
  * - 100% Private / SAFE FOR YOUR TEAM
  */
 const StatsBanner = ({
@@ -27,7 +27,7 @@ const StatsBanner = ({
     },
     {
       iconType: 'receipt',
-      value: 'GST Bills',
+      value: 'Invoices',
       label: 'Ready in 1-Click',
     },
     {
@@ -86,7 +86,7 @@ const StatsBanner = ({
               </span>
             </div>
 
-            {/* Stat 3: Receipt -> GST Bills */}
+            {/* Stat 3: Receipt -> Invoices */}
             <div className="flex flex-col items-center">
               <div className="mb-2 flex items-center justify-center">
                 <Receipt size={30} className="text-emerald-600 stroke-[2.2]" />

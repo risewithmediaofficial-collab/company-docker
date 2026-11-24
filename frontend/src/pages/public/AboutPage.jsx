@@ -128,7 +128,7 @@ export const AboutPage = () => {
                 </div>
                 <h3 className="font-bold text-xl text-slate-950 tracking-tight">The Sunday Invoice Panic</h3>
                 <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                  Manual Word templates, GST math, and chasing late wire transfers over weekends.
+                  Manual Word templates, tax math, and chasing late wire transfers over weekends.
                 </p>
               </div>
 
@@ -213,7 +213,7 @@ export const AboutPage = () => {
                           04
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-slate-900 leading-tight">GST Invoice & Payments</p>
+                          <p className="text-xs font-bold text-slate-900 leading-tight">Invoicing & Payments</p>
                           <p className="text-[10px] text-slate-500 font-medium">Auto PDF receipt with QR</p>
                         </div>
                       </div>
@@ -272,7 +272,7 @@ export const AboutPage = () => {
 
                   <div className="p-3 rounded-2xl bg-white border border-slate-200/80 space-y-0.5 hover:border-slate-300 transition-all">
                     <span className="text-[10px] font-black uppercase text-[#12B7D4] tracking-wider">Step 4 — Automated Invoicing</span>
-                    <h4 className="font-bold text-slate-900 text-sm">18% GST PDF Receipts</h4>
+                    <h4 className="font-bold text-slate-900 text-sm">Instant PDF Invoices</h4>
                     <p className="text-xs text-slate-500 font-medium">Instant compliant tax invoice generation with payment QR.</p>
                   </div>
                 </div>

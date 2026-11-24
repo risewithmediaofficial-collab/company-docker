@@ -248,7 +248,7 @@ const PublicLayout = ({
                 </div>
               </div>
               <p className="text-xs sm:text-sm text-slate-400 font-medium leading-relaxed max-w-sm">
-                Unified workspace built exclusively for digital marketing agencies. Automate lead follow-ups, client approvals, and GST invoicing in one place.
+                Unified workspace built exclusively for digital marketing agencies. Automate lead follow-ups, client approvals, and automated invoicing in one place.
               </p>
               <div className="pt-1 flex items-center gap-2 text-[11px] font-semibold text-slate-400">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
@@ -279,7 +279,7 @@ const PublicLayout = ({
                 <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Lead Pipeline & Deals</Link></li>
                 <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Content Calendar & SMM</Link></li>
                 <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">1-Tap Client Review</Link></li>
-                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Automated GST Invoices</Link></li>
+                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Automated Invoices</Link></li>
                 <li><Link to="/our-impact" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Tenant Privacy & Backups</Link></li>
               </ul>
             </div>

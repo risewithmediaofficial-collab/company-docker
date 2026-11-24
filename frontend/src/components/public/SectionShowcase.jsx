@@ -204,9 +204,9 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
       chatBadgeIcon: Zap,
       chatBadgeBg: 'bg-[#12B7D4]',
       chatBadgeBorder: 'border-cyan-300',
-      notificationTag: 'GST Tax Invoice',
+      notificationTag: 'Tax Invoice',
       notificationTitle: 'Invoice #RWM-2026-089',
-      notificationDesc: 'Auto CGST (9%) + SGST (9%) calculated.',
+      notificationDesc: 'Auto tax calculations & discounts.',
       btnText: 'Download PDF',
       btnSecondary: 'View Bill',
       renderPhoneScreen: () => (
@@ -227,11 +227,11 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
               <span className="font-bold text-slate-900">₹50,000.00</span>
             </div>
             <div className="flex justify-between text-[10px] text-slate-500">
-              <span>CGST (9.0%)</span>
+              <span>Tax (9.0%)</span>
               <span>₹4,500.00</span>
             </div>
             <div className="flex justify-between text-[10px] text-slate-500">
-              <span>SGST (9.0%)</span>
+              <span>Service Tax (9.0%)</span>
               <span>₹4,500.00</span>
             </div>
             <div className="border-t border-slate-300/80 pt-1 flex justify-between font-extrabold text-xs text-slate-950">
@@ -401,7 +401,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
       chatBadgeBorder: 'border-emerald-300',
       notificationTag: 'Agency Rhythm',
       notificationTitle: 'Morning To Evening',
-      notificationDesc: 'Leads, schedule, approvals, and GST billing.',
+      notificationDesc: 'Leads, schedule, approvals, and client billing.',
       btnText: 'Start Flow',
       btnSecondary: 'Overview',
       renderPhoneScreen: () => (
@@ -430,7 +430,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
               <Check size={12} className="stroke-[3]" />
             </div>
             <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-between">
-              <span>4. Generate GST Bill</span>
+              <span>4. Generate Invoice Bill</span>
               <Check size={12} className="stroke-[3]" />
             </div>
           </div>

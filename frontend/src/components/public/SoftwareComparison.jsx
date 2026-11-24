@@ -13,8 +13,8 @@ import ScrollReveal from './ScrollReveal';
 const FragmentedStackIllustration = () => (
   <div className="w-full py-2 flex items-center justify-center select-none">
     <svg
-      viewBox="0 0 500 310"
-      className="w-full h-auto max-h-[310px] overflow-visible"
+      viewBox="0 0 500 330"
+      className="w-full h-auto max-h-[330px] overflow-visible"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -123,7 +123,7 @@ const FragmentedStackIllustration = () => (
         <line x1="9" y1="38" x2="28" y2="38" stroke="#CBD5E1" strokeWidth="1.5" strokeLinecap="round" />
         {/* Label */}
         <text x="23" y="68" textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="700" fontFamily="sans-serif">
-          Manual GST
+          Manual Billing
         </text>
       </g>
 
@@ -228,23 +228,17 @@ const FragmentedStackIllustration = () => (
 
 /**
  * UnifiedFlowIllustration
- * Recreates the clean, serpentine connected pipeline from the reference design:
- * - A smooth, continuous S-curve connecting line in RiseWithMedia Logo Cyan (#12B7D4)
- * - Ordered milestone icons:
- *   1. Proposals (Paper airplane with cyan shadow accent)
- *   2. Contracts (Document with green ribbon bookmark)
- *   3. Client Vault (Folder with green ribbon bookmark)
- *   4. GST Invoices (Envelope with green currency seal)
- *   5. Expenses (Receipt with green currency coin)
- *   6. Tasks (Kanban board columns)
- *   7. Accounting (Ledger checklist with verified stamps)
- * - Concise, Apple minimalist one-word labels beneath each icon
+ * Clean, organized 9-node serpentine agency operating system workflow:
+ * - Tier 1 (Acquisition & Onboarding: Left -> Right): Proposals -> Contracts -> Client Vault
+ * - Tier 2 (Fulfillment & Execution: Right -> Left): Projects -> Tasks -> Content & SMM
+ * - Tier 3 (Billing & Financial Health: Left -> Right): Invoices -> Expenses -> Accounting / P&L
+ * - Connected via continuous #12B7D4 line with directional flow arrows and Apple-minimalist styling
  */
 const UnifiedFlowIllustration = () => (
   <div className="w-full py-2 flex items-center justify-center select-none">
     <svg
-      viewBox="0 0 500 310"
-      className="w-full h-auto max-h-[310px] overflow-visible"
+      viewBox="0 0 540 330"
+      className="w-full h-auto max-h-[330px] overflow-visible"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -257,204 +251,274 @@ const UnifiedFlowIllustration = () => (
         </filter>
       </defs>
 
-      {/* ── 1. THE SMOOTH SERPENTINE CONNECTING PIPELINE (LOGO CYAN #12B7D4) ── */}
-      {/* Top Tier (Left -> Right: Proposals -> Contracts -> Client Vault) */}
-      <line x1="120" y1="42" x2="225" y2="42" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
-      <line x1="295" y1="42" x2="390" y2="42" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
+      {/* ── 1. THE CONTINUOUS SERPENTINE CONNECTING PIPELINE (LOGO CYAN #12B7D4) ── */}
+      {/* Tier 1: Proposals -> Contracts -> Client Vault */}
+      <line x1="104" y1="45" x2="246" y2="45" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
+      <line x1="294" y1="45" x2="436" y2="45" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
 
-      {/* Right Curve Downward from Tier 1 to Tier 2 */}
+      {/* Directional Flow Arrows: Tier 1 (Left -> Right) */}
+      <polygon points="172,41 179,45 172,49" fill="#12B7D4" />
+      <polygon points="362,41 369,45 362,49" fill="#12B7D4" />
+
+      {/* Right Curve Downward: Tier 1 to Tier 2 (Client Vault -> Projects) */}
       <path
-        d="M 450 42 C 485 42 485 142 445 142"
+        d="M 484 45 C 528 45 528 155 484 155"
         stroke="#12B7D4"
         strokeWidth="2.4"
         strokeLinecap="round"
       />
+      {/* Directional Arrow on Right Curve */}
+      <polygon points="518,96 523,103 527,96" fill="#12B7D4" />
 
-      {/* Middle Tier (Right -> Left: Client Vault -> Invoices -> Expenses) */}
-      <line x1="390" y1="142" x2="295" y2="142" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
-      <line x1="225" y1="142" x2="125" y2="142" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
+      {/* Tier 2: Projects -> Tasks -> Content & SMM (Right -> Left) */}
+      <line x1="436" y1="155" x2="294" y2="155" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
+      <line x1="246" y1="155" x2="104" y2="155" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
 
-      {/* Left Curve Downward from Tier 2 to Tier 3 */}
+      {/* Directional Flow Arrows: Tier 2 (Right -> Left) */}
+      <polygon points="369,151 362,155 369,159" fill="#12B7D4" />
+      <polygon points="179,151 172,155 179,159" fill="#12B7D4" />
+
+      {/* Left Curve Downward: Tier 2 to Tier 3 (Content & SMM -> Invoices) */}
       <path
-        d="M 75 142 C 30 142 30 242 85 242"
+        d="M 56 155 C 12 155 12 265 56 265"
         stroke="#12B7D4"
         strokeWidth="2.4"
         strokeLinecap="round"
       />
+      {/* Directional Arrow on Left Curve */}
+      <polygon points="13,206 17,213 22,206" fill="#12B7D4" />
 
-      {/* Bottom Tier (Left -> Right: Tasks -> Accounting / P&L) */}
-      <line x1="150" y1="242" x2="290" y2="242" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
+      {/* Tier 3: Invoices -> Expenses -> Accounting / P&L (Left -> Right) */}
+      <line x1="104" y1="265" x2="246" y2="265" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
+      <line x1="294" y1="265" x2="436" y2="265" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
 
-      {/* Directional Flow Accent Dots along the line */}
-      <circle cx="172" cy="42" r="3" fill="#12B7D4" />
-      <circle cx="342" cy="42" r="3" fill="#12B7D4" />
-      <circle cx="342" cy="142" r="3" fill="#12B7D4" />
-      <circle cx="172" cy="142" r="3" fill="#12B7D4" />
-      <circle cx="220" cy="242" r="3" fill="#12B7D4" />
+      {/* Directional Flow Arrows: Tier 3 (Left -> Right) */}
+      <polygon points="172,261 179,265 172,269" fill="#12B7D4" />
+      <polygon points="362,261 369,265 362,269" fill="#12B7D4" />
 
-      {/* ── 2. THE ORDERED ICONS & LABELS (MATCHING IMAGE 2 RIGHT SIDE) ── */}
+      {/* ── 2. THE 9 ORGANIZED FLOW MILESTONE NODES ── */}
 
-      {/* NODE 1: Proposals (Paper Airplane with Cyan Accent) */}
-      <g transform="translate(60, 20)">
-        <rect x="0" y="0" width="46" height="46" rx="12" fill="#FFFFFF" filter="url(#uni-shadow)" />
-        {/* Folded paper plane like reference */}
-        <path
-          d="M 10 22 L 36 12 L 25 34 L 21 24 Z"
-          fill="#12B7D4"
-          stroke="#0F172A"
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-        />
-        <path d="M 21 24 L 36 12" stroke="#0F172A" strokeWidth="1.5" />
-        <text x="23" y="63" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
-          Proposals
-        </text>
-      </g>
+      {/* ── TIER 1: ACQUISITION & ONBOARDING ── */}
 
-      {/* NODE 2: Contracts (Document with Bookmark Ribbon & Signature) */}
-      <g transform="translate(235, 18)">
-        {/* Cyan backdrop shadow block like reference */}
-        <rect x="3" y="3" width="40" height="48" rx="6" fill="#BAE6FD" />
+      {/* NODE 1: Proposals (x=56, y=22) */}
+      <g transform="translate(56, 22)">
+        <rect x="3" y="3" width="48" height="46" rx="8" fill="#E0F2FE" />
         <rect
           x="0"
           y="0"
-          width="40"
-          height="48"
-          rx="6"
-          fill="#FFFFFF"
-          stroke="#0F172A"
-          strokeWidth="1.8"
-          filter="url(#uni-shadow)"
-        />
-        {/* Bookmark ribbon */}
-        <path d="M 24 0 L 24 14 L 28 10 L 32 14 L 32 0 Z" fill="#10B981" stroke="#0F172A" strokeWidth="1.4" />
-        {/* Document lines */}
-        <line x1="8" y1="18" x2="20" y2="18" stroke="#94A3B8" strokeWidth="1.6" strokeLinecap="round" />
-        <line x1="8" y1="26" x2="32" y2="26" stroke="#CBD5E1" strokeWidth="1.6" strokeLinecap="round" />
-        <line x1="8" y1="33" x2="25" y2="33" stroke="#CBD5E1" strokeWidth="1.6" strokeLinecap="round" />
-        <text x="20" y="65" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
-          Contracts
-        </text>
-      </g>
-
-      {/* NODE 3: Client Vault / Directory (Folder with Bookmark) */}
-      <g transform="translate(400, 18)">
-        {/* Cyan backdrop block */}
-        <rect x="3" y="3" width="46" height="44" rx="6" fill="#BAE6FD" />
-        {/* Folder tab */}
-        <path
-          d="M 0 6 C 0 3 3 0 6 0 L 18 0 C 20 0 22 2 24 4 L 27 7 L 40 7 C 43 7 46 9 46 12 L 46 38 C 46 41 43 44 40 44 L 6 44 C 3 44 0 41 0 38 Z"
-          fill="#FFFFFF"
-          stroke="#0F172A"
-          strokeWidth="1.8"
-          filter="url(#uni-shadow)"
-        />
-        {/* Bookmark ribbon hanging from folder */}
-        <path d="M 30 7 L 30 20 L 34 16 L 38 20 L 38 7 Z" fill="#10B981" stroke="#0F172A" strokeWidth="1.4" />
-        <text x="23" y="65" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
-          Client Vault
-        </text>
-      </g>
-
-      {/* NODE 4: GST Invoices (Envelope with Green Coin Seal) */}
-      <g transform="translate(400, 118)">
-        <rect x="3" y="3" width="46" height="44" rx="7" fill="#CCFBF1" />
-        <rect
-          x="0"
-          y="0"
-          width="46"
-          height="44"
-          rx="7"
-          fill="#FFFFFF"
-          stroke="#0F172A"
-          strokeWidth="1.8"
-          filter="url(#uni-shadow)"
-        />
-        {/* Envelope open flap */}
-        <path d="M 0 10 L 23 26 L 46 10" stroke="#0F172A" strokeWidth="1.6" fill="none" />
-        {/* Green coin / seal with rupee symbol */}
-        <circle cx="23" cy="22" r="9" fill="#10B981" stroke="#0F172A" strokeWidth="1.5" />
-        <text x="23" y="26" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="900" fontFamily="sans-serif">
-          ₹
-        </text>
-        <text x="23" y="65" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
-          Invoices
-        </text>
-      </g>
-
-      {/* NODE 5: Expenses / SaaS Tracker (Receipt with Zigzag Bottom) */}
-      <g transform="translate(235, 118)">
-        <rect x="3" y="3" width="40" height="46" rx="6" fill="#CCFBF1" />
-        {/* Receipt with zigzag bottom edge */}
-        <path
-          d="M 0 6 C 0 3 3 0 6 0 L 34 0 C 37 0 40 3 40 6 L 40 40 L 35 36 L 30 40 L 25 36 L 20 40 L 15 36 L 10 40 L 5 36 L 0 40 Z"
-          fill="#FFFFFF"
-          stroke="#0F172A"
-          strokeWidth="1.8"
-          filter="url(#uni-shadow)"
-        />
-        {/* Currency badge */}
-        <circle cx="20" cy="16" r="7" fill="#ECFDF5" stroke="#10B981" strokeWidth="1.5" />
-        <text x="20" y="20" textAnchor="middle" fill="#059669" fontSize="9" fontWeight="900" fontFamily="sans-serif">
-          ₹
-        </text>
-        <line x1="8" y1="28" x2="32" y2="28" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
-        <text x="20" y="65" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
-          Expenses
-        </text>
-      </g>
-
-      {/* NODE 6: Kanban Tasks Board */}
-      <g transform="translate(90, 218)">
-        <rect x="3" y="3" width="46" height="42" rx="7" fill="#BAE6FD" />
-        <rect
-          x="0"
-          y="0"
-          width="46"
-          height="42"
-          rx="7"
-          fill="#FFFFFF"
-          stroke="#0F172A"
-          strokeWidth="1.8"
-          filter="url(#uni-shadow)"
-        />
-        {/* Kanban 3 vertical columns with mini task cards */}
-        <rect x="6" y="8" width="8" height="26" rx="2" fill="#E2E8F0" />
-        <rect x="6" y="10" width="8" height="10" rx="1.5" fill="#12B7D4" />
-        <rect x="19" y="8" width="8" height="26" rx="2" fill="#E2E8F0" />
-        <rect x="19" y="14" width="8" height="8" rx="1.5" fill="#F59E0B" />
-        <rect x="32" y="8" width="8" height="26" rx="2" fill="#E2E8F0" />
-        <rect x="32" y="8" width="8" height="14" rx="1.5" fill="#10B981" />
-        <text x="23" y="63" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
-          Tasks
-        </text>
-      </g>
-
-      {/* NODE 7: Accounting / Live P&L (Checklist with Verified Stamp) */}
-      <g transform="translate(300, 218)">
-        <rect x="3" y="3" width="46" height="44" rx="8" fill="#CCFBF1" />
-        <rect
-          x="0"
-          y="0"
-          width="46"
-          height="44"
+          width="48"
+          height="46"
           rx="8"
           fill="#FFFFFF"
           stroke="#0F172A"
           strokeWidth="1.8"
           filter="url(#uni-shadow)"
         />
-        {/* Clip top */}
-        <rect x="15" y="0" width="16" height="5" rx="2" fill="#0F172A" />
-        {/* Checkmark 1 */}
+        <path
+          d="M 11 23 L 37 12 L 26 34 L 22 24 Z"
+          fill="#12B7D4"
+          stroke="#0F172A"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+        <path d="M 22 24 L 37 12" stroke="#0F172A" strokeWidth="1.5" />
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+          Proposals
+        </text>
+      </g>
+
+      {/* NODE 2: Contracts (x=246, y=22) */}
+      <g transform="translate(246, 22)">
+        <rect x="3" y="3" width="48" height="46" rx="8" fill="#BAE6FD" />
+        <rect
+          x="0"
+          y="0"
+          width="48"
+          height="46"
+          rx="8"
+          fill="#FFFFFF"
+          stroke="#0F172A"
+          strokeWidth="1.8"
+          filter="url(#uni-shadow)"
+        />
+        <path d="M 30 0 L 30 14 L 34 10 L 38 14 L 38 0 Z" fill="#10B981" stroke="#0F172A" strokeWidth="1.4" />
+        <line x1="9" y1="18" x2="24" y2="18" stroke="#94A3B8" strokeWidth="1.6" strokeLinecap="round" />
+        <line x1="9" y1="26" x2="38" y2="26" stroke="#CBD5E1" strokeWidth="1.6" strokeLinecap="round" />
+        <line x1="9" y1="33" x2="28" y2="33" stroke="#CBD5E1" strokeWidth="1.6" strokeLinecap="round" />
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+          Contracts
+        </text>
+      </g>
+
+      {/* NODE 3: Client Vault (x=436, y=22) */}
+      <g transform="translate(436, 22)">
+        <rect x="3" y="3" width="48" height="46" rx="8" fill="#BAE6FD" />
+        <path
+          d="M 0 6 C 0 3 3 0 6 0 L 19 0 C 21 0 23 2 25 4 L 28 7 L 42 7 C 45 7 48 9 48 12 L 48 40 C 48 43 45 46 42 46 L 6 46 C 3 46 0 43 0 40 Z"
+          fill="#FFFFFF"
+          stroke="#0F172A"
+          strokeWidth="1.8"
+          filter="url(#uni-shadow)"
+        />
+        <circle cx="24" cy="27" r="7" fill="#FEF3C7" stroke="#F59E0B" strokeWidth="1.4" />
+        <rect x="22" y="26" width="4" height="5" rx="1" fill="#0F172A" />
+        <path d="M 21.5 26 C 21.5 23.5 26.5 23.5 26.5 26" fill="none" stroke="#0F172A" strokeWidth="1.3" />
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+          Client Vault
+        </text>
+      </g>
+
+      {/* ── TIER 2: FULFILLMENT & EXECUTION (INCL. PROJECTS) ── */}
+
+      {/* NODE 4: Projects (x=436, y=132) */}
+      <g transform="translate(436, 132)">
+        <rect x="3" y="3" width="48" height="46" rx="8" fill="#E0F2FE" />
+        <rect
+          x="0"
+          y="0"
+          width="48"
+          height="46"
+          rx="8"
+          fill="#FFFFFF"
+          stroke="#0F172A"
+          strokeWidth="1.8"
+          filter="url(#uni-shadow)"
+        />
+        {/* Project Header Bar */}
+        <rect x="6" y="8" width="36" height="6" rx="2" fill="#0284C7" />
+        {/* Milestone Circular Progress */}
+        <circle cx="16" cy="28" r="8" fill="#F0F9FF" stroke="#0284C7" strokeWidth="1.8" strokeDasharray="38 12" />
+        <circle cx="16" cy="28" r="3" fill="#10B981" />
+        {/* Milestone Tracks */}
+        <line x1="28" y1="24" x2="41" y2="24" stroke="#0F172A" strokeWidth="1.6" strokeLinecap="round" />
+        <line x1="28" y1="31" x2="38" y2="31" stroke="#94A3B8" strokeWidth="1.4" strokeLinecap="round" />
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+          Projects
+        </text>
+      </g>
+
+      {/* NODE 5: Tasks Database (x=246, y=132) */}
+      <g transform="translate(246, 132)">
+        <rect x="3" y="3" width="48" height="46" rx="8" fill="#BAE6FD" />
+        <rect
+          x="0"
+          y="0"
+          width="48"
+          height="46"
+          rx="8"
+          fill="#FFFFFF"
+          stroke="#0F172A"
+          strokeWidth="1.8"
+          filter="url(#uni-shadow)"
+        />
+        <rect x="7" y="9" width="9" height="28" rx="2" fill="#F1F5F9" />
+        <rect x="7" y="11" width="9" height="11" rx="1.5" fill="#12B7D4" />
+        <rect x="19.5" y="9" width="9" height="28" rx="2" fill="#F1F5F9" />
+        <rect x="19.5" y="16" width="9" height="9" rx="1.5" fill="#F59E0B" />
+        <rect x="32" y="9" width="9" height="28" rx="2" fill="#F1F5F9" />
+        <rect x="32" y="10" width="9" height="15" rx="1.5" fill="#10B981" />
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+          Tasks
+        </text>
+      </g>
+
+      {/* NODE 6: Content & SMM (x=56, y=132) */}
+      <g transform="translate(56, 132)">
+        <rect x="3" y="3" width="48" height="46" rx="8" fill="#FEF3C7" />
+        <rect
+          x="0"
+          y="0"
+          width="48"
+          height="46"
+          rx="8"
+          fill="#FFFFFF"
+          stroke="#0F172A"
+          strokeWidth="1.8"
+          filter="url(#uni-shadow)"
+        />
+        {/* Calendar top binder rings */}
+        <line x1="14" y1="0" x2="14" y2="7" stroke="#0F172A" strokeWidth="1.8" strokeLinecap="round" />
+        <line x1="34" y1="0" x2="34" y2="7" stroke="#0F172A" strokeWidth="1.8" strokeLinecap="round" />
+        <rect x="0" y="6" width="48" height="6" fill="#F43F5E" />
+        {/* Reels Play Triangle */}
+        <polygon points="15,22 15,34 25,28" fill="#8B5CF6" stroke="#0F172A" strokeWidth="1.4" strokeLinejoin="round" />
+        {/* Approved badge */}
+        <circle cx="34" cy="28" r="6.5" fill="#10B981" stroke="#0F172A" strokeWidth="1.4" />
+        <path d="M 31.5 28 L 33.5 30 L 36.5 26" fill="none" stroke="#FFFFFF" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+          Content & SMM
+        </text>
+      </g>
+
+      {/* ── TIER 3: BILLING & FINANCIAL HEALTH ── */}
+
+      {/* NODE 7: Invoices (x=56, y=242) */}
+      <g transform="translate(56, 242)">
+        <rect x="3" y="3" width="48" height="46" rx="8" fill="#CCFBF1" />
+        <rect
+          x="0"
+          y="0"
+          width="48"
+          height="46"
+          rx="8"
+          fill="#FFFFFF"
+          stroke="#0F172A"
+          strokeWidth="1.8"
+          filter="url(#uni-shadow)"
+        />
+        <path d="M 0 11 L 24 28 L 48 11" stroke="#0F172A" strokeWidth="1.6" fill="none" />
+        <circle cx="24" cy="24" r="9" fill="#10B981" stroke="#0F172A" strokeWidth="1.5" />
+        <text x="24" y="28" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="900" fontFamily="sans-serif">
+          ₹
+        </text>
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+          Invoices
+        </text>
+      </g>
+
+      {/* NODE 8: Expenses (x=246, y=242) */}
+      <g transform="translate(246, 242)">
+        <rect x="3" y="3" width="48" height="46" rx="8" fill="#CCFBF1" />
+        <path
+          d="M 0 6 C 0 3 3 0 6 0 L 42 0 C 45 0 48 3 48 6 L 48 40 L 42 36 L 36 40 L 30 36 L 24 40 L 18 36 L 12 40 L 6 36 L 0 40 Z"
+          fill="#FFFFFF"
+          stroke="#0F172A"
+          strokeWidth="1.8"
+          filter="url(#uni-shadow)"
+        />
+        <circle cx="24" cy="17" r="7.5" fill="#ECFDF5" stroke="#10B981" strokeWidth="1.5" />
+        <text x="24" y="21" textAnchor="middle" fill="#059669" fontSize="9" fontWeight="900" fontFamily="sans-serif">
+          ₹
+        </text>
+        <line x1="10" y1="28" x2="38" y2="28" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+          Expenses
+        </text>
+      </g>
+
+      {/* NODE 9: Accounting / Live P&L (x=436, y=242) */}
+      <g transform="translate(436, 242)">
+        <rect x="3" y="3" width="48" height="46" rx="8" fill="#CCFBF1" />
+        <rect
+          x="0"
+          y="0"
+          width="48"
+          height="46"
+          rx="8"
+          fill="#FFFFFF"
+          stroke="#0F172A"
+          strokeWidth="1.8"
+          filter="url(#uni-shadow)"
+        />
+        <rect x="16" y="0" width="16" height="5" rx="2" fill="#0F172A" />
         <circle cx="12" cy="17" r="4" fill="#10B981" />
         <path d="M 10 17 L 11.5 18.5 L 14 15.5" stroke="#FFFFFF" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-        <line x1="20" y1="17" x2="36" y2="17" stroke="#0F172A" strokeWidth="1.5" strokeLinecap="round" />
-        {/* Checkmark 2 */}
-        <circle cx="12" cy="28" r="4" fill="#10B981" />
-        <path d="M 10 28 L 11.5 29.5 L 14 26.5" stroke="#FFFFFF" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-        <line x1="20" y1="28" x2="32" y2="28" stroke="#0F172A" strokeWidth="1.5" strokeLinecap="round" />
-        <text x="23" y="65" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
+        <line x1="20" y1="17" x2="38" y2="17" stroke="#0F172A" strokeWidth="1.5" strokeLinecap="round" />
+        <circle cx="12" cy="27" r="4" fill="#10B981" />
+        <path d="M 10 27 L 11.5 28.5 L 14 25.5" stroke="#FFFFFF" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+        <line x1="20" y1="27" x2="34" y2="27" stroke="#0F172A" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M 26 37 L 34 32 L 38 35 L 43 28" fill="none" stroke="#10B981" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <text x="24" y="62" textAnchor="middle" fill="#334155" fontSize="11" fontWeight="800" fontFamily="sans-serif">
           Accounting
         </text>
       </g>
@@ -545,7 +609,7 @@ export const SoftwareComparison = () => {
                 RiseWithMedia OS
               </h3>
               <p className="text-xs text-slate-500 font-medium mt-1 leading-normal">
-                CRM • Content Calendar • 1-Tap Approvals • GST • Vault
+                Proposals • Contracts • Vault • Projects • Tasks • SMM • Invoices • P&L
               </p>
             </div>
 

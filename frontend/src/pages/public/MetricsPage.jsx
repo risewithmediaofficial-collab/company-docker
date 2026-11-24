@@ -91,7 +91,7 @@ export const MetricsPage = () => {
             <span className="text-3xl sm:text-4xl font-black text-[#12B7D4] block">12+ Hrs</span>
             <h3 className="font-bold text-slate-900 text-sm">Saved Weekly Per Manager</h3>
             <p className="text-xs text-slate-500 font-medium leading-relaxed">
-              Automated client reminder alerts, instant 18% GST invoicing, and EOD work reporting replace hours of manual status checks.
+              Automated client reminder alerts, instant automated invoicing, and EOD work reporting replace hours of manual status checks.
             </p>
           </div>
 

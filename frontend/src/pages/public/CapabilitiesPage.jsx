@@ -114,7 +114,7 @@ export const CapabilitiesPage = () => {
             <span className="text-[#12B7D4] block mt-1 pb-1">Marketing Agency Growth.</span>
           </h1>
           <p className="mt-4 sm:mt-5 text-base sm:text-lg text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
-            From inbound leads and social media staging to GST invoicing and GPS attendance — one unified OS for your entire agency.
+            From inbound leads and social media staging to automated invoicing and GPS attendance — one unified OS for your entire agency.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
             <Link
@@ -226,13 +226,13 @@ export const CapabilitiesPage = () => {
         {/* PILLAR D — Finance & Billing (visual left, text right) */}
         <Pillar
           overline="Finance, Billing & Payroll"
-          headline="GST Invoices in 30 Seconds."
+          headline="Client Invoices in 30 Seconds."
           highlight="Live Agency Profit & Loss."
-          body="Eliminate spreadsheet accounting. Auto CGST/SGST splits, staff payroll, GPS attendance — all under one secure PIN-protected finance roof."
+          body="Eliminate spreadsheet accounting. Automated billing, tax splits, staff payroll, GPS attendance — all under one secure PIN-protected finance roof."
           bg="bg-slate-50/70"
           flip
           features={[
-            { label: 'Auto GST Tax Invoices', text: 'Sequential numbering, CGST/SGST/IGST splits, UPI QR codes, PDF download' },
+            { label: 'Automated Tax Invoices', text: 'Sequential numbering, automated tax splits, UPI QR codes, PDF download' },
             { label: 'Real-Time Agency P&L', text: 'Revenue, expenses, net margins & client LTV — PIN-gated for founder privacy' },
             { label: 'Overdue Payment Reminders', text: 'WhatsApp & email templates auto-triggered when invoices are past due' },
             { label: 'Staff Payroll & SaaS Tracker', text: 'Monthly salaries, bonuses, freelance payables & unused subscription audit' },
@@ -270,7 +270,7 @@ export const CapabilitiesPage = () => {
             { label: 'Live Task Tracker', text: 'Clients see real-time deliverable milestones without asking for updates' },
             { label: 'Transparent Ad Spend', text: 'Live Meta & Google Ads budget view — no confusing agency jargon' },
             { label: '1-Tap Creative Approvals', text: 'Review Instagram posts on phone and stamp approval in seconds' },
-            { label: 'GST Invoice Downloads', text: 'Clients access billing history and download past tax invoices anytime' },
+            { label: 'Invoice Downloads', text: 'Clients access billing history and download past tax invoices anytime' },
             { label: 'Multi-Tenant SaaS Platform', text: 'Self-service 14-day trial, agency tenant isolation & super admin dashboard' },
           ]}
           showcase={<SectionShowcase type="billing" />}

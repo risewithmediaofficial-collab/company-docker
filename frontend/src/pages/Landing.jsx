@@ -39,7 +39,7 @@ export const Landing = () => {
           {/* Subtitle */}
           <p className="mt-4 sm:mt-5 text-base sm:text-xl text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
             Stop switching between scattered spreadsheets, lost WhatsApp chats, and disconnected tools.
-            Leads, client tasks, social media calendars, and GST invoices — all in one place.
+            Leads, client tasks, social media calendars, and automated invoices — all in one place.
           </p>
 
           {/* CTA Buttons */}
@@ -249,14 +249,14 @@ export const Landing = () => {
                   </p>
 
                   <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
-                    GST Invoices in 30 Seconds.
+                    Client Invoices in 30 Seconds.
                     <span className="text-[#12B7D4] block mt-1">
                       Live Agency Profit & Loss.
                     </span>
                   </h2>
 
                   <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-xl">
-                    Eliminate spreadsheet accounting. Automatic CGST (9%) and SGST (9%) tax calculations, staff payroll, and GPS attendance under one secure roof.
+                    Eliminate spreadsheet accounting. Automatic tax calculations, payment tracking, staff payroll, and GPS attendance under one secure roof.
                   </p>
 
                   {/* Clean Feature Mini-Cards */}
@@ -266,7 +266,7 @@ export const Landing = () => {
                         <Check size={14} className="stroke-[3]" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Auto GST Tax Invoices & PDF</h3>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">Automated Tax Invoices & PDF</h3>
                         <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">Sequential tax numbering, automated tax splits, UPI QR codes, and 1-click printable PDF receipts.</p>
                       </div>
                     </div>

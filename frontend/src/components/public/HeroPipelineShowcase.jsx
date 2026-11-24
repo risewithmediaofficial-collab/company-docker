@@ -212,7 +212,7 @@ export const HeroPipelineShowcase = () => {
                     <CheckCircle2 size={10} />
                     <span>Project Created</span>
                   </span>
-                  <span>GST Paid</span>
+                  <span>Invoice Paid</span>
                 </div>
               </div>
 
