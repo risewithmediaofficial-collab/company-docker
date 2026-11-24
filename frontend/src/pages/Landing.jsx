@@ -7,6 +7,7 @@ import ScrollReveal from '../components/public/ScrollReveal';
 import SectionShowcase from '../components/public/SectionShowcase';
 import StatsBanner from '../components/public/StatsBanner';
 import SoftwareComparison from '../components/public/SoftwareComparison';
+import HeroStickers from '../components/public/HeroStickers';
 import {
   InstagramIcon,
   FacebookIcon,
@@ -21,6 +22,7 @@ export const Landing = () => {
       {/* ── 1. HERO SECTION ── */}
       <section className="relative overflow-hidden pt-12 sm:pt-20 pb-12 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
         <HeroPattern />
+        <HeroStickers />
 
         <div className="relative z-10 max-w-4xl mx-auto">
           {/* Plain Text Section Title (No Rounded Pill Effect) */}
