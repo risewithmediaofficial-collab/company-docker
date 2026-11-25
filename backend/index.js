@@ -22,10 +22,6 @@ import { initSocket } from './config/socket.js';
 import { initCronJobs } from './services/cron.service.js';
 import User from './models/user.model.js';
 import mongoose from 'mongoose';
-import { syncAllClientUsers } from './controllers/client.controller.js';
-import { migrateDevTasksFromTasksCollection } from './utils/devTaskMigration.js';
-import { migrateLegacyOrganizationData } from './utils/legacyOrgMigration.js';
-import { backfillClientIds } from './utils/clientMigration.js';
 
 // Route imports
 import authRoutes from './routes/auth.routes.js';
@@ -121,18 +117,6 @@ const runDatabaseStartupTasks = async () => {
   } catch (err) {
     console.error('[Dev Bootstrap Error]', err.message);
   }
-
-  // Background sync client portal user accounts without delaying HTTP server readiness
-  syncAllClientUsers().catch((err) => console.error('[Sync Error]', err.message));
-
-  // Background migration to strictly separate dev tasks from tasks collection
-  migrateDevTasksFromTasksCollection().catch((err) => console.error('[DevTask Migration Error]', err.message));
-
-  // Background migration to ensure legacy documents are associated with primary organization
-  migrateLegacyOrganizationData().catch((err) => console.error('[Legacy Org Migration Error]', err.message));
-
-  // Background migration to ensure human-readable sequential Client IDs (CLT-0001, etc.)
-  backfillClientIds().catch((err) => console.error('[Client ID Migration Error]', err.message));
 };
 
 mongoose.connection.on('connected', () => {

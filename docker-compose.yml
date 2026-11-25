@@ -11,7 +11,7 @@ services:
     container_name: agency_crm_mongodb
     restart: unless-stopped
     ports:
-      - "27019:27017"   # Host port 27019 → container port 27017
+      - "127.0.0.1:27019:27017"   # Bound to loopback only for security
     volumes:
       - mongodb_data:/data/db
     networks:
@@ -27,16 +27,16 @@ services:
     environment:
       NODE_ENV: production
       PORT: 5001
-      # MongoDB connection uses the service name "mongodb" as hostname
-      MONGO_URI: mongodb://mongodb:27017/agency_crm
-      CLIENT_URL: ${CLIENT_URL:-http://localhost}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      # Primary production database
+      MONGO_URI: ${MONGO_URI:-mongodb://company-crm-mongodb:27017/company_crm}
+      CLIENT_URL: ${CLIENT_URL:-https://company.risewithmedia.com}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
       JWT_SECRET: ${JWT_SECRET:-changeme_strong_jwt_secret_32chars}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-changeme_strong_refresh_secret}
       JWT_EXPIRE: ${JWT_EXPIRE:-15m}
       JWT_REFRESH_EXPIRE: ${JWT_REFRESH_EXPIRE:-7d}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-changeme_32byte_encryption_key!!}
-      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-dinesh123}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-}
       # Cloudinary (optional - for file uploads)
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}

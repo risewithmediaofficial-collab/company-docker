@@ -189,38 +189,15 @@ export const getClients = async (req, res) => {
       }
     }
 
-    // ── STRICT TENANT ISOLATION (with legacy null-org fallback & migration support) ──
+    // ── STRICT TENANT ISOLATION (read-only query scoping) ──
     const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
     const targetOrgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
     let otherOrgIds = [];
     if (targetOrgId) {
-      // Find all OTHER known active organizations in this database
       const otherOrgs = await Organization.find({ _id: { $ne: targetOrgId } }).select('_id').lean();
       otherOrgIds = otherOrgs.map((o) => o._id);
 
-      // Backfill any orphan or migrated clients before querying so migrated rows are immediately visible
-      try {
-        if (otherOrgIds.length === 0) {
-          // Single-organization environment: adopt all clients with missing, null, or foreign migrated orgId
-          await Promise.all([
-            Client.updateMany({ organizationId: { $ne: targetOrgId } }, { $set: { organizationId: targetOrgId } }),
-            SmmClient.updateMany({ organizationId: { $ne: targetOrgId } }, { $set: { organizationId: targetOrgId } }),
-          ]);
-        } else {
-          // Multi-tenant: adopt clients whose organizationId does not belong to any valid existing organization
-          const allOrgs = await Organization.find({}).select('_id').lean();
-          const allOrgIds = allOrgs.map((o) => o._id);
-          const orphanFilter = {
-            $or: [{ organizationId: { $nin: allOrgIds } }, { organizationId: null }, { organizationId: { $exists: false } }],
-          };
-          await Promise.all([
-            Client.updateMany(orphanFilter, { $set: { organizationId: targetOrgId } }),
-            SmmClient.updateMany(orphanFilter, { $set: { organizationId: targetOrgId } }),
-          ]);
-        }
-      } catch (_) {}
-
-      // Multi-tenant isolation: only exclude documents explicitly owned by another valid organization
+      // Multi-tenant isolation: exclude records explicitly owned by another valid organization
       if (otherOrgIds.length > 0) {
         const orgFilter = { $nin: otherOrgIds };
         if (filter.$or) {
@@ -234,59 +211,10 @@ export const getClients = async (req, res) => {
       }
     }
 
-    // Auto-sync any standalone SMM clients into CRM Client collection so all clients are visible in Clients 360
-    const uncreatedSmmClients = [];
     const isPortalClientUser = ['client', 'clientAdmin', 'clientMember'].includes(req.user.role);
-    if (!isPortalClientUser) {
-      try {
-        const smmScope = targetOrgId && otherOrgIds.length > 0 ? { organizationId: { $nin: otherOrgIds } } : {};
-        const allSmm = await SmmClient.find(smmScope).lean();
-        for (const smm of allSmm) {
-          const cName = (smm.companyName || smm.clientName || smm.primaryContact || smm.contactPerson || '').trim();
-          if (!cName) continue;
-          const crmExists = await Client.findOne({
-            $or: [
-              { _id: smm._id },
-              ...(smm.clientId ? [{ clientId: smm.clientId }] : []),
-              ...(smm.email ? [{ email: smm.email.toLowerCase().trim() }] : []),
-              { company: new RegExp(`^${cName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-            ],
-          }).select('_id').lean();
+    const smmScope = targetOrgId && otherOrgIds.length > 0 ? { organizationId: { $nin: otherOrgIds } } : {};
 
-          if (!crmExists) {
-            const payload = {
-              _id: smm._id,
-              clientId: smm.clientId || undefined,
-              name: smm.primaryContact || smm.contactPerson || cName,
-              company: cName,
-              email: smm.email || '',
-              phone: smm.phone || '',
-              website: smm.website || '',
-              logo: smm.brandLogo || '',
-              status: mapSmmStatusToClient(smm.status),
-              organizationId: targetOrgId || smm.organizationId || undefined,
-              services: ['Social Media Marketing'],
-            };
-            try {
-              await Client.create(payload);
-            } catch (syncErr) {
-              if (syncErr?.code === 11000) {
-                try {
-                  const { clientId: _dropId, ...retryPayload } = payload;
-                  await Client.create(retryPayload);
-                } catch (_) {
-                  uncreatedSmmClients.push(payload);
-                }
-              } else {
-                uncreatedSmmClients.push(payload);
-              }
-            }
-          }
-        }
-      } catch (_) {}
-    }
-
-    let [total, clients] = await Promise.all([
+    let [total, clients, allSmm, allCrmRefs] = await Promise.all([
       Client.countDocuments(filter),
       Client.find(filter)
         .populate(clientPopulate)
@@ -294,27 +222,77 @@ export const getClients = async (req, res) => {
         .skip(skip)
         .limit(limit)
         .lean(),
+      !isPortalClientUser && page === 1 ? SmmClient.find(smmScope).lean() : Promise.resolve([]),
+      !isPortalClientUser && page === 1
+        ? Client.find(targetOrgId && otherOrgIds.length > 0 ? { organizationId: { $nin: otherOrgIds } } : {})
+            .select('_id clientId email company')
+            .lean()
+        : Promise.resolve([]),
     ]);
 
-    if (page === 1 && uncreatedSmmClients.length > 0) {
+    // Merge standalone SMM clients in memory (read-only) so all active SMM + CRM clients appear
+    if (!isPortalClientUser && page === 1 && allSmm.length > 0) {
+      const crmIdSet = new Set(allCrmRefs.map((c) => String(c._id)));
+      const crmClientIdSet = new Set(allCrmRefs.map((c) => c.clientId).filter(Boolean));
+      const crmEmailSet = new Set(allCrmRefs.map((c) => c.email?.toLowerCase().trim()).filter(Boolean));
+      const crmCompanySet = new Set(allCrmRefs.map((c) => c.company?.toLowerCase().trim()).filter(Boolean));
+
       const searchLower = search ? String(search).toLowerCase().trim() : '';
       const serviceLower = service ? String(service).toLowerCase().trim() : '';
       const targetStatusSet = status
         ? new Set((statusQueryMap[status] || [status]).map((s) => s.toLowerCase().trim()))
         : null;
+      const fromDate = createdFrom ? new Date(createdFrom) : null;
+      const toDate = createdTo ? new Date(`${createdTo}T23:59:59.999Z`) : null;
 
-      for (const fallback of uncreatedSmmClients) {
-        if (targetStatusSet && !targetStatusSet.has((fallback.status || 'active').toLowerCase())) continue;
-        if (serviceLower && !fallback.services.some((sv) => sv.toLowerCase().includes(serviceLower))) continue;
+      for (const smm of allSmm) {
+        const cName = (smm.companyName || smm.clientName || smm.primaryContact || smm.contactPerson || '').trim();
+        if (!cName) continue;
+        const emailNorm = smm.email ? smm.email.toLowerCase().trim() : '';
+        const companyNorm = cName.toLowerCase();
+
+        if (
+          crmIdSet.has(String(smm._id)) ||
+          (smm.clientId && crmClientIdSet.has(smm.clientId)) ||
+          (emailNorm && crmEmailSet.has(emailNorm)) ||
+          crmCompanySet.has(companyNorm)
+        ) {
+          continue;
+        }
+
+        const mappedStatus = mapSmmStatusToClient(smm.status);
+        const virtualClient = {
+          _id: smm._id,
+          clientId: smm.clientId || undefined,
+          name: smm.primaryContact || smm.contactPerson || cName,
+          company: cName,
+          email: smm.email || '',
+          phone: smm.phone || '',
+          website: smm.website || '',
+          logo: smm.brandLogo || '',
+          status: mappedStatus,
+          organizationId: smm.organizationId || targetOrgId || undefined,
+          services: ['Social Media Marketing'],
+          createdAt: smm.createdAt || null,
+        };
+
+        if (targetStatusSet && !targetStatusSet.has(mappedStatus)) continue;
+        if (serviceLower && !virtualClient.services.some((sv) => sv.toLowerCase().includes(serviceLower))) continue;
+        if ((fromDate || toDate) && virtualClient.createdAt) {
+          const dt = new Date(virtualClient.createdAt);
+          if (fromDate && dt < fromDate) continue;
+          if (toDate && dt > toDate) continue;
+        }
         if (
           searchLower &&
-          ![fallback.clientId, fallback.name, fallback.company, fallback.email, fallback.phone]
+          ![virtualClient.clientId, virtualClient.name, virtualClient.company, virtualClient.email, virtualClient.phone]
             .filter(Boolean)
             .some((v) => String(v).toLowerCase().includes(searchLower))
         ) {
           continue;
         }
-        clients.push(fallback);
+
+        clients.push(virtualClient);
         total += 1;
       }
     }
