@@ -36,6 +36,7 @@ import {
   Users,
   Globe,
   FolderKanban,
+  ArrowRight,
 } from '@/components/ui/muiIcons';
 import {
   InstagramIcon,
@@ -134,11 +135,6 @@ export const KanbanCreateTaskModal = ({
   onTaskCreated,
 }) => {
   const isModalOpen = isOpen !== undefined ? Boolean(isOpen) : Boolean(open);
-  const handleClose = () => {
-    setQueuedTasks([]);
-    if (onClose) onClose();
-    if (onOpenChange) onOpenChange(false);
-  };
 
   const createTaskMutation = useCreateTask({ suppressToast: true });
   const { data: clientsData = [] } = useClients();
@@ -308,6 +304,79 @@ export const KanbanCreateTaskModal = ({
     return { editors, videographers, smmMembers, designers, developers, scriptwriters };
   }, [users]);
 
+  // Collapsible Stages State (All Closed By Default - user can open whichever they want)
+  const [openStages, setOpenStages] = useState({
+    script: false,
+    shoot: false,
+    editor: false,
+    smm: false,
+    designer: false,
+  });
+
+  const toggleStage = (stageKey) => {
+    setOpenStages((prev) => ({
+      ...prev,
+      [stageKey]: !prev[stageKey],
+    }));
+  };
+
+  const handleExpandAllStages = () => {
+    setOpenStages({
+      script: true,
+      shoot: true,
+      editor: true,
+      smm: true,
+      designer: true,
+    });
+  };
+
+  const handleCollapseAllStages = () => {
+    setOpenStages({
+      script: false,
+      shoot: false,
+      editor: false,
+      smm: false,
+      designer: false,
+    });
+  };
+
+  // Next-Stage Follow-up Scheduling State
+  const [enableNextStageTask, setEnableNextStageTask] = useState(false);
+  const [nextStageType, setNextStageType] = useState('editor');
+  const [nextStageDaysOffset, setNextStageDaysOffset] = useState(3);
+  const [nextStageAssigneeId, setNextStageAssigneeId] = useState('');
+
+  const targetRoleUsers = useMemo(() => {
+    if (nextStageType === 'editor') {
+      return roleGroups.editors.length > 0 ? roleGroups.editors : users;
+    }
+    if (nextStageType === 'shoot') {
+      return roleGroups.videographers.length > 0 ? roleGroups.videographers : users;
+    }
+    if (nextStageType === 'smm') {
+      return roleGroups.smmMembers.length > 0 ? roleGroups.smmMembers : users;
+    }
+    if (nextStageType === 'designer') {
+      return roleGroups.designers.length > 0 ? roleGroups.designers : users;
+    }
+    return users;
+  }, [nextStageType, roleGroups, users]);
+
+  const handleClose = () => {
+    setQueuedTasks([]);
+    setEnableNextStageTask(false);
+    setNextStageAssigneeId('');
+    setOpenStages({
+      script: false,
+      shoot: false,
+      editor: false,
+      smm: false,
+      designer: false,
+    });
+    if (onClose) onClose();
+    if (onOpenChange) onOpenChange(false);
+  };
+
   // Keyboard listener for Escape
   useEffect(() => {
     if (!isModalOpen) return;
@@ -321,6 +390,30 @@ export const KanbanCreateTaskModal = ({
   // Reset or initialize when modal opens
   useEffect(() => {
     if (!isModalOpen) return;
+
+    // Reset next stage follow-up toggle
+    setEnableNextStageTask(false);
+    setNextStageAssigneeId('');
+
+    // Configure stage accordion (closed by default unless requested specifically)
+    if (initialValues?.initialStage && openStages[initialValues.initialStage] !== undefined) {
+      setOpenStages({
+        script: false,
+        shoot: false,
+        editor: false,
+        smm: false,
+        designer: false,
+        [initialValues.initialStage]: true,
+      });
+    } else {
+      setOpenStages({
+        script: false,
+        shoot: false,
+        editor: false,
+        smm: false,
+        designer: false,
+      });
+    }
 
     if (initialValues) {
       if (initialValues.client) {
@@ -351,6 +444,10 @@ export const KanbanCreateTaskModal = ({
       if (initialValues.allocatedHours !== undefined) setAllocatedHours(initialValues.allocatedHours ?? '');
       if (initialValues.allocatedMinutes !== undefined) setAllocatedMinutes(initialValues.allocatedMinutes ?? '');
       if (initialValues.dueTime) setDueTime(initialValues.dueTime);
+      if (initialValues.rawFootageLink) setRawFootageLink(initialValues.rawFootageLink);
+      if (initialValues.scriptLink) setScriptLink(initialValues.scriptLink);
+      if (initialValues.scriptText) setScriptText(initialValues.scriptText);
+      if (initialValues.contentHook) setContentHook(initialValues.contentHook);
       if (initialValues.taskCategory) {
         setTaskCategory(initialValues.taskCategory);
         if (initialValues.subType) {
@@ -401,22 +498,27 @@ export const KanbanCreateTaskModal = ({
         setTaskCategory('content');
         setSubType('reel');
         setEditorUserId(initialUser._id);
+        setOpenStages({ script: false, shoot: false, editor: true, smm: false, designer: false });
       } else if (userPos.includes('design')) {
         setTaskCategory('content');
         setSubType('poster');
         setDesignerUserId(initialUser._id);
+        setOpenStages({ script: false, shoot: false, editor: false, smm: false, designer: true });
       } else if (userDept.includes('smm') || userPos.includes('smm')) {
         setTaskCategory('content');
         setSubType('reel');
         setSmmUserId(initialUser._id);
+        setOpenStages({ script: false, shoot: false, editor: false, smm: true, designer: false });
       } else if (userPos.includes('video') || userDept.includes('shoot')) {
         setTaskCategory('content');
         setSubType('video_content');
         setVideographerUserId(initialUser._id);
+        setOpenStages({ script: false, shoot: true, editor: false, smm: false, designer: false });
       } else if (userPos.includes('script') || userPos.includes('writer') || userDept.includes('script')) {
         setTaskCategory('content');
         setSubType('content');
         setScriptWriterUserId(initialUser._id);
+        setOpenStages({ script: true, shoot: false, editor: false, smm: false, designer: false });
       } else {
         setTaskCategory('content');
         setSubType('reel');
@@ -639,15 +741,17 @@ export const KanbanCreateTaskModal = ({
       taskItem.designDueDate = designDueDate || undefined;
 
       // Auto-collect all assigned roles for task.assignedTo
-      const subIds = [
-        editorUserId,
+      // Prioritize specific role assignees if configured; fallback to generic selectedUserId only if none are picked
+      const roleAssigneeIds = [
+        scriptWriterUserId,
         videographerUserId,
         ...extraShootUserIds,
-        scriptWriterUserId,
-        designerUserId,
+        editorUserId,
         smmUserId,
-        selectedUserId,
+        designerUserId,
       ].filter(Boolean);
+
+      const subIds = roleAssigneeIds.length > 0 ? roleAssigneeIds : [selectedUserId].filter(Boolean);
       const uniqueSubIds = [...new Set(subIds)];
       taskItem.assignedTo = uniqueSubIds;
       taskItem.assignedPersonName = uniqueSubIds
@@ -725,7 +829,9 @@ export const KanbanCreateTaskModal = ({
         await createTaskMutation.mutateAsync({ tasks: regularTasks });
       }
 
-      if (devTasks.length > 0 && regularTasks.length === 0) {
+      if (enableNextStageTask) {
+        toast.success(`Initial task and follow-up next stage task scheduled successfully!`);
+      } else if (devTasks.length > 0 && regularTasks.length === 0) {
         toast.success(`Task assigned to Dev Team and routed directly to Development Board!`);
       } else if (devTasks.length > 0 && regularTasks.length > 0) {
         toast.success(`Tasks created! ${devTasks.length} routed to Dev Board, ${regularTasks.length} created in Tasks.`);
@@ -754,6 +860,88 @@ export const KanbanCreateTaskModal = ({
         const currentItem = buildCurrentTaskItem();
         if (!currentItem) return;
         tasksToSubmit.push(currentItem);
+
+        // Check if follow-up next stage task should also be scheduled
+        if (enableNextStageTask && singleClientId) {
+          const baseDueDateObj = dueDate ? new Date(dueDate) : new Date();
+          const nextDueDateObj = new Date(baseDueDateObj);
+          nextDueDateObj.setDate(nextDueDateObj.getDate() + (Number(nextStageDaysOffset) || 3));
+          const nextDueDateStr = nextDueDateObj.toISOString().split('T')[0];
+
+          const stageLabels = {
+            shoot: 'Shoot',
+            editor: 'Video Editing',
+            smm: 'SMM Publishing',
+            designer: 'Graphic Design',
+          };
+          const stagePrefix = stageLabels[nextStageType] || 'Next Stage';
+          const cleanTitle = (title.trim() || 'Deliverable').replace(/^\[(Script|Shoot|Edit|SMM|Design)[^\]]*\]\s*/i, '');
+          const nextTaskTitle = `[${stagePrefix}] ${cleanTitle}`;
+
+          const nextAssigneeObj = users.find((u) => u._id === nextStageAssigneeId);
+
+          const nextTaskItem = {
+            title: nextTaskTitle,
+            taskTitle: nextTaskTitle,
+            client: singleClientId,
+            project: singleProjectId || undefined,
+            priority: priority || 'medium',
+            dueDate: nextDueDateStr,
+            taskCategory: 'content',
+            subType: subType || 'reel',
+            contentType: 'videos',
+            status: 'To Do',
+            stage: 'todo',
+            source: 'kanban',
+            targetMonth: kanbanMonth,
+            targetYear: kanbanYear,
+            deliverableId: nfId || undefined,
+            allocatedTime: {
+              hours: Number(allocatedHours) || 0,
+              minutes: Number(allocatedMinutes) || 0,
+              totalMinutes: (Number(allocatedHours) || 0) * 60 + (Number(allocatedMinutes) || 0),
+            },
+            checklist: [...checklist],
+            assignedTo: nextStageAssigneeId ? [nextStageAssigneeId] : [],
+            assignedPersonName: nextAssigneeObj?.name || 'Unassigned',
+          };
+
+          if (nextStageType === 'editor') {
+            nextTaskItem.editorAssigned = nextStageAssigneeId || undefined;
+            nextTaskItem.editorName = nextAssigneeObj?.name || '';
+            nextTaskItem.editDueDate = nextDueDateStr;
+            nextTaskItem.editingStatus = 'pending';
+            nextTaskItem.rawFootageLink = rawFootageLink || videographerRawFootageLink || undefined;
+            nextTaskItem.driveLink = rawFootageLink || videographerRawFootageLink || undefined;
+            nextTaskItem.scriptLink = scriptLink || undefined;
+            nextTaskItem.voiceScriptText = scriptText || undefined;
+            nextTaskItem.fullScript = scriptText || undefined;
+            nextTaskItem.videoType = editorVideoType || 'Promotional';
+            nextTaskItem.videoFormat = editorVideoFormat || '9:16';
+          } else if (nextStageType === 'shoot') {
+            nextTaskItem.videographerAssigned = nextStageAssigneeId || undefined;
+            nextTaskItem.videographerName = nextAssigneeObj?.name || '';
+            nextTaskItem.shootDate = nextDueDateStr;
+            nextTaskItem.shootStatus = 'scheduled';
+            nextTaskItem.shootLocation = shootLocation || undefined;
+            nextTaskItem.equipmentRequired = [...equipmentRequired];
+          } else if (nextStageType === 'smm') {
+            nextTaskItem.publisherAssigned = nextStageAssigneeId || undefined;
+            nextTaskItem.publisherName = nextAssigneeObj?.name || '';
+            nextTaskItem.postingScheduleDate = nextDueDateStr;
+            nextTaskItem.publishingDate = nextDueDateStr;
+            nextTaskItem.postingStatus = 'content_pending';
+            nextTaskItem.postingPlatforms = [...selectedPlatforms];
+            nextTaskItem.caption = smmCaption || contentHook || undefined;
+            nextTaskItem.hashtags = smmHashtags || undefined;
+          } else if (nextStageType === 'designer') {
+            nextTaskItem.designerAssigned = nextStageAssigneeId || undefined;
+            nextTaskItem.designerName = nextAssigneeObj?.name || '';
+            nextTaskItem.designDueDate = nextDueDateStr;
+          }
+
+          tasksToSubmit.push(nextTaskItem);
+        }
       }
     }
 
@@ -1223,19 +1411,97 @@ export const KanbanCreateTaskModal = ({
             </div>
           ) : (
             /* CONTENT DELIVERABLE FORMS (5 TEAM FORMS) */
-            <div className="space-y-5">
-              {/* ────────────────────────────────────────────────────────── */}
-              {/* 1. SCRIPTWRITER DETAILS CARD */}
-              {/* ────────────────────────────────────────────────────────── */}
-              <div className="rounded-2xl bg-muted/40 p-4 sm:p-5 space-y-4">
-                <div className="flex items-center justify-between pb-1">
-                  <span className="text-sm font-bold text-foreground flex items-center gap-2">
-                    <FileText size={15} className="text-muted-foreground shrink-0" /> Scriptwriter Form
+            <div className="space-y-4">
+              {/* Stages Header with Expand / Collapse Controls */}
+              <div className="flex items-center justify-between pb-0.5 pt-0.5">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+                    Workflow Stages (Optional &amp; Independent)
                   </span>
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Hook, Language, Concept &amp; Full Script
+                  <span className="text-[11px] text-muted-foreground">
+                    Create only for the stage you need now (e.g. Scriptwriter only). Follow-up stages can be assigned later or auto-scheduled below.
                   </span>
                 </div>
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  <button
+                    type="button"
+                    onClick={handleExpandAllStages}
+                    className="text-[11px] font-semibold text-primary hover:underline px-2 py-1 rounded cursor-pointer"
+                  >
+                    Expand All
+                  </button>
+                  <span className="text-muted-foreground/30 text-xs">|</span>
+                  <button
+                    type="button"
+                    onClick={handleCollapseAllStages}
+                    className="text-[11px] font-semibold text-muted-foreground hover:text-foreground px-2 py-1 rounded cursor-pointer"
+                  >
+                    Collapse All
+                  </button>
+                </div>
+              </div>
+
+              {/* ────────────────────────────────────────────────────────── */}
+              {/* 1. SCRIPTWRITER DETAILS CARD (STAGE 1) */}
+              {/* ────────────────────────────────────────────────────────── */}
+              <div className="rounded-2xl border border-border/70 bg-card shadow-2xs overflow-hidden transition-all duration-200">
+                <button
+                  type="button"
+                  onClick={() => toggleStage('script')}
+                  className="w-full flex items-center justify-between p-4 sm:p-4.5 hover:bg-muted/40 transition-colors text-left cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold shrink-0 transition-colors ${
+                      scriptWriterUserId || contentHook || scriptText
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground'
+                    }`}>
+                      1
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                          <FileText size={15} className="text-primary shrink-0" /> Stage 1: Scriptwriter
+                        </span>
+                        {scriptWriterUserId ? (
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            Assigned: {users.find((u) => u._id === scriptWriterUserId)?.name || 'Member'}
+                          </span>
+                        ) : contentHook || scriptText ? (
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                            Drafted
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground font-medium">
+                            (Optional)
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        Hook, Language, Concept &amp; Full Script
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <span className="text-xs font-medium text-muted-foreground hidden sm:inline">
+                      {openStages.script ? 'Hide' : 'Open'}
+                    </span>
+                    <div className="p-1 rounded-lg text-muted-foreground">
+                      {openStages.script ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </div>
+                  </div>
+                </button>
+
+                {openStages.script && (
+                  <div className="p-4 sm:p-5 pt-2 sm:pt-2 border-t border-border/60 space-y-4 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between pb-1">
+                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                        Scriptwriter Configuration
+                      </span>
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Hook, Language, Concept &amp; Full Script
+                      </span>
+                    </div>
 
                 {/* Row 1: Scriptwriter & Script Status (Max 2 columns) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1424,19 +1690,70 @@ export const KanbanCreateTaskModal = ({
                   </div>
                 </div>
               </div>
+            )}
+          </div>
 
-              {/* ────────────────────────────────────────────────────────── */}
-              {/* 2. VIDEOGRAPHER DETAILS CARD */}
-              {/* ────────────────────────────────────────────────────────── */}
-              <div className="rounded-2xl bg-muted/40 p-4 sm:p-5 space-y-4">
-                <div className="flex items-center justify-between pb-1">
-                  <span className="text-sm font-bold text-foreground flex items-center gap-2">
-                    <Camera size={15} className="text-muted-foreground shrink-0" /> Videographer Form
-                  </span>
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Shoot Schedule, Location &amp; Equipment
-                  </span>
+            {/* ────────────────────────────────────────────────────────── */}
+            {/* 2. VIDEOGRAPHER DETAILS CARD (STAGE 2) */}
+            {/* ────────────────────────────────────────────────────────── */}
+            <div className="rounded-2xl border border-border/70 bg-card shadow-2xs overflow-hidden transition-all duration-200">
+              <button
+                type="button"
+                onClick={() => toggleStage('shoot')}
+                className="w-full flex items-center justify-between p-4 sm:p-4.5 hover:bg-muted/40 transition-colors text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold shrink-0 transition-colors ${
+                    videographerUserId || shootDate
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground'
+                  }`}>
+                    2
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                        <Camera size={15} className="text-primary shrink-0" /> Stage 2: Shoot (Videographer)
+                      </span>
+                      {videographerUserId ? (
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          Assigned: {users.find((u) => u._id === videographerUserId)?.name || 'Member'}
+                        </span>
+                      ) : shootDate ? (
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                          Date: {shootDate}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground font-medium">
+                          (Optional)
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      Shoot Schedule, Location &amp; Equipment
+                    </p>
+                  </div>
                 </div>
+                <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <span className="text-xs font-medium text-muted-foreground hidden sm:inline">
+                    {openStages.shoot ? 'Hide' : 'Open'}
+                  </span>
+                  <div className="p-1 rounded-lg text-muted-foreground">
+                    {openStages.shoot ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </div>
+                </div>
+              </button>
+
+              {openStages.shoot && (
+                <div className="p-4 sm:p-5 pt-2 sm:pt-2 border-t border-border/60 space-y-4 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between pb-1">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Shoot &amp; Videography Configuration
+                    </span>
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Shoot Schedule, Location &amp; Equipment
+                    </span>
+                  </div>
 
                 {/* Row 1: Videographer & Shoot Status (Max 2 columns) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1807,19 +2124,70 @@ export const KanbanCreateTaskModal = ({
                   </div>
                 </div>
               </div>
+            )}
+          </div>
 
-              {/* ────────────────────────────────────────────────────────── */}
-              {/* 3. VIDEO EDITOR DETAILS CARD */}
-              {/* ────────────────────────────────────────────────────────── */}
-              <div className="rounded-2xl bg-muted/40 p-4 sm:p-5 space-y-4">
-                <div className="flex items-center justify-between pb-1">
-                  <span className="text-sm font-bold text-foreground flex items-center gap-2">
-                    <Scissors size={15} className="text-muted-foreground shrink-0" /> Video Editor Form
-                  </span>
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Video &amp; Graphic Editing Schedule
-                  </span>
+            {/* ────────────────────────────────────────────────────────── */}
+            {/* 3. VIDEO EDITOR DETAILS CARD (STAGE 3) */}
+            {/* ────────────────────────────────────────────────────────── */}
+            <div className="rounded-2xl border border-border/70 bg-card shadow-2xs overflow-hidden transition-all duration-200">
+              <button
+                type="button"
+                onClick={() => toggleStage('editor')}
+                className="w-full flex items-center justify-between p-4 sm:p-4.5 hover:bg-muted/40 transition-colors text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold shrink-0 transition-colors ${
+                    editorUserId || editDueDate || rawFootageLink
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground'
+                  }`}>
+                    3
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                        <Scissors size={15} className="text-primary shrink-0" /> Stage 3: Video Editor
+                      </span>
+                      {editorUserId ? (
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          Assigned: {users.find((u) => u._id === editorUserId)?.name || 'Member'}
+                        </span>
+                      ) : editDueDate ? (
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                          Due: {editDueDate}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground font-medium">
+                          (Optional)
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      Footage Links, Video Format &amp; Cut Instructions
+                    </p>
+                  </div>
                 </div>
+                <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <span className="text-xs font-medium text-muted-foreground hidden sm:inline">
+                    {openStages.editor ? 'Hide' : 'Open'}
+                  </span>
+                  <div className="p-1 rounded-lg text-muted-foreground">
+                    {openStages.editor ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </div>
+                </div>
+              </button>
+
+              {openStages.editor && (
+                <div className="p-4 sm:p-5 pt-2 sm:pt-2 border-t border-border/60 space-y-4 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between pb-1">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Video Editing Configuration
+                    </span>
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Footage Links, Video Format &amp; Cut Instructions
+                    </span>
+                  </div>
 
                 {/* Row 1: Editor & Editor Status (Max 2 columns) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2067,14 +2435,65 @@ export const KanbanCreateTaskModal = ({
                   />
                 </div>
               </div>
+            )}
+          </div>
 
-              {/* ────────────────────────────────────────────────────────── */}
-              {/* 4. SMM TEAM FORM */}
-              {/* ────────────────────────────────────────────────────────── */}
-              <div className="rounded-2xl bg-muted/40 p-4 sm:p-5 space-y-4">
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* 4. SMM TEAM FORM (STAGE 4) */}
+          {/* ────────────────────────────────────────────────────────── */}
+          <div className="rounded-2xl border border-border/70 bg-card shadow-2xs overflow-hidden transition-all duration-200">
+            <button
+              type="button"
+              onClick={() => toggleStage('smm')}
+              className="w-full flex items-center justify-between p-4 sm:p-4.5 hover:bg-muted/40 transition-colors text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold shrink-0 transition-colors ${
+                  smmUserId || postDate
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground'
+                }`}>
+                  4
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                      <Share2 size={15} className="text-primary shrink-0" /> Stage 4: SMM Team (Posting)
+                    </span>
+                    {smmUserId ? (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        Assigned: {users.find((u) => u._id === smmUserId)?.name || 'Member'}
+                      </span>
+                    ) : postDate ? (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                        Post: {postDate}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground font-medium">
+                        (Optional)
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    Publishing, Platforms, Schedule &amp; Captions
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 ml-2">
+                <span className="text-xs font-medium text-muted-foreground hidden sm:inline">
+                  {openStages.smm ? 'Hide' : 'Open'}
+                </span>
+                <div className="p-1 rounded-lg text-muted-foreground">
+                  {openStages.smm ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </div>
+              </div>
+            </button>
+
+            {openStages.smm && (
+              <div className="p-4 sm:p-5 pt-2 sm:pt-2 border-t border-border/60 space-y-4 animate-in fade-in duration-200">
                 <div className="flex items-center justify-between pb-1">
-                  <span className="text-sm font-bold text-foreground flex items-center gap-2">
-                    <Share2 size={15} className="text-muted-foreground shrink-0" /> SMM Team Form
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    SMM &amp; Publishing Configuration
                   </span>
                   <span className="text-xs font-medium text-muted-foreground">
                     Publishing, Platforms, Schedule &amp; Captions
@@ -2286,14 +2705,65 @@ export const KanbanCreateTaskModal = ({
                   />
                 </div>
               </div>
+            )}
+          </div>
 
-              {/* ────────────────────────────────────────────────────────── */}
-              {/* 5. DESIGNER DETAILS CARD */}
-              {/* ────────────────────────────────────────────────────────── */}
-              <div className="rounded-2xl bg-muted/40 p-4 sm:p-5 space-y-4">
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* 5. DESIGNER DETAILS CARD (STAGE 5) */}
+          {/* ────────────────────────────────────────────────────────── */}
+          <div className="rounded-2xl border border-border/70 bg-card shadow-2xs overflow-hidden transition-all duration-200">
+            <button
+              type="button"
+              onClick={() => toggleStage('designer')}
+              className="w-full flex items-center justify-between p-4 sm:p-4.5 hover:bg-muted/40 transition-colors text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold shrink-0 transition-colors ${
+                  designerUserId || designDueDate
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground'
+                }`}>
+                  5
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                      <Palette size={15} className="text-primary shrink-0" /> Stage 5: Graphic Designer
+                    </span>
+                    {designerUserId ? (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        Assigned: {users.find((u) => u._id === designerUserId)?.name || 'Member'}
+                      </span>
+                    ) : designDueDate ? (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                        Due: {designDueDate}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground font-medium">
+                        (Optional)
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    Graphic, Thumbnail &amp; Creative Design
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 ml-2">
+                <span className="text-xs font-medium text-muted-foreground hidden sm:inline">
+                  {openStages.designer ? 'Hide' : 'Open'}
+                </span>
+                <div className="p-1 rounded-lg text-muted-foreground">
+                  {openStages.designer ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </div>
+              </div>
+            </button>
+
+            {openStages.designer && (
+              <div className="p-4 sm:p-5 pt-2 sm:pt-2 border-t border-border/60 space-y-4 animate-in fade-in duration-200">
                 <div className="flex items-center justify-between pb-1">
-                  <span className="text-sm font-bold text-foreground flex items-center gap-2">
-                    <Palette size={15} className="text-muted-foreground shrink-0" /> Graphic Designer Form
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Graphic Design Configuration
                   </span>
                   <span className="text-xs font-medium text-muted-foreground">
                     Graphic &amp; Thumbnail Design
@@ -2335,8 +2805,98 @@ export const KanbanCreateTaskModal = ({
                   </div>
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* AUTO-SCHEDULE NEXT STAGE HAND-OFF (OPTIONAL) */}
+          {/* ────────────────────────────────────────────────────────── */}
+          <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4 sm:p-5 space-y-3.5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <ArrowRight size={16} />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-sm font-bold text-foreground truncate">
+                    Auto-Schedule Next Stage (Hand-off)
+                  </h4>
+                  <p className="text-xs text-muted-foreground truncate">
+                    Automatically create the follow-up task (e.g. Video Editor or SMM) after a few days
+                  </p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={enableNextStageTask}
+                  onChange={(e) => setEnableNextStageTask(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
             </div>
-          )}
+
+            {enableNextStageTask && (
+              <div className="pt-3 border-t border-primary/20 grid grid-cols-1 sm:grid-cols-3 gap-3 animate-in fade-in duration-200">
+                {/* 1. Next Stage */}
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">
+                    Next Stage Deliverable
+                  </label>
+                  <select
+                    value={nextStageType}
+                    onChange={(e) => setNextStageType(e.target.value)}
+                    className="h-10 w-full rounded-xl bg-background border border-border px-3 text-xs font-medium text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
+                  >
+                    <option value="editor">Stage 3: Video Editor</option>
+                    <option value="shoot">Stage 2: Shoot (Videographer)</option>
+                    <option value="smm">Stage 4: SMM / Publishing</option>
+                    <option value="designer">Stage 5: Graphic Designer</option>
+                  </select>
+                </div>
+
+                {/* 2. Days Offset */}
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">
+                    Schedule Offset
+                  </label>
+                  <select
+                    value={nextStageDaysOffset}
+                    onChange={(e) => setNextStageDaysOffset(Number(e.target.value))}
+                    className="h-10 w-full rounded-xl bg-background border border-border px-3 text-xs font-medium text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
+                  >
+                    <option value={2}>+2 Days</option>
+                    <option value={3}>+3 Days (Recommended)</option>
+                    <option value={5}>+5 Days</option>
+                    <option value={7}>+7 Days (1 Week)</option>
+                    <option value={10}>+10 Days</option>
+                  </select>
+                </div>
+
+                {/* 3. Assign To */}
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">
+                    Assign Next Member
+                  </label>
+                  <select
+                    value={nextStageAssigneeId}
+                    onChange={(e) => setNextStageAssigneeId(e.target.value)}
+                    className="h-10 w-full rounded-xl bg-background border border-border px-3 text-xs font-medium text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
+                  >
+                    <option value="">Unassigned (Assign Later)</option>
+                    {targetRoleUsers.map((u) => (
+                      <option key={u._id} value={u._id}>
+                        {u.name} ({u.position || u.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
           {/* SECTION 4: DELIVERABLE CHECKLIST BUILDER */}
           <div className="rounded-2xl bg-muted/40 p-4 sm:p-5">

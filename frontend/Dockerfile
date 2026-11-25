@@ -17,6 +17,10 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Pass public VAPID key at build time
+ARG VITE_VAPID_PUBLIC_KEY=BKwkgrewQmAAflMVBGwXiK-MRe6MbZl6DNxH18aOwIU-mNTukiW3hLOTGcxdplps7T8NlcteaEVar_5zP6KlYMs
+ENV VITE_VAPID_PUBLIC_KEY=$VITE_VAPID_PUBLIC_KEY
+
 # Build the production bundle
 RUN npm run build
 

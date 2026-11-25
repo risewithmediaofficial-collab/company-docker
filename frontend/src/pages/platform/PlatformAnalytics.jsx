@@ -117,9 +117,6 @@ export default function PlatformAnalytics() {
             <span>Platform Intelligence</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">SaaS Platform Analytics</h1>
-          <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
-            Real-time multi-tenant health, feature adoption, and ecosystem performance
-          </p>
         </div>
 
         <button

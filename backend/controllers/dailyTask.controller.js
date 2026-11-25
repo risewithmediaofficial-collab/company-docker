@@ -7,6 +7,8 @@
 import DailyTask from '../models/dailyTask.model.js';
 import Task from '../models/task.model.js';
 import User from '../models/user.model.js';
+import Client from '../models/client.model.js';
+import Project from '../models/project.model.js';
 import Notification from '../models/notification.model.js';
 import { emitLiveEvent } from '../utils/socketEmitter.js';
 import { createActivityLog } from '../utils/activity.js';
@@ -366,7 +368,23 @@ export const addDailyTaskFromAssigned = async (req, res) => {
  */
 export const createQuickDailyTask = async (req, res) => {
   try {
-    const { title, userId, date, priority, allocatedHours, allocatedMinutes, notes, projectId, clientId } = req.body;
+    const {
+      title,
+      userId,
+      date,
+      priority,
+      allocatedHours,
+      allocatedMinutes,
+      startTime,
+      endTime,
+      category,
+      roleLabel,
+      checklist,
+      notes,
+      projectId,
+      clientId,
+      startImmediately,
+    } = req.body;
     if (!title || !title.trim()) {
       return res.status(400).json({ success: false, message: 'Task title is required' });
     }
@@ -375,6 +393,59 @@ export const createQuickDailyTask = async (req, res) => {
     const targetUserId = (isManagerOrAdmin && userId) ? userId : req.user._id;
     const normalizedDate = normalizeDate(date);
 
+    let totalMins = (Math.max(0, Number(allocatedHours) || 0) * 60) + Math.max(0, Number(allocatedMinutes) || 0);
+    const cleanStart = typeof startTime === 'string' ? startTime.trim() : '';
+    const cleanEnd = typeof endTime === 'string' ? endTime.trim() : '';
+
+    // Derive duration from clock window if duration was not explicitly given
+    if (totalMins === 0 && /^\d{2}:\d{2}$/.test(cleanStart) && /^\d{2}:\d{2}$/.test(cleanEnd)) {
+      const [sh, sm] = cleanStart.split(':').map(Number);
+      const [eh, em] = cleanEnd.split(':').map(Number);
+      let diff = (eh * 60 + em) - (sh * 60 + sm);
+      if (diff < 0) diff += 24 * 60;
+      if (diff > 0) totalMins = diff;
+    }
+
+    const finalHours = Math.floor(totalMins / 60);
+    const finalMinutes = totalMins % 60;
+
+    let resolvedClientName = '';
+    let resolvedProjectName = '';
+    if (clientId) {
+      const cDoc = await Client.findById(clientId).select('name company').lean();
+      if (cDoc) resolvedClientName = cDoc.company || cDoc.name || '';
+    }
+    if (projectId) {
+      const pDoc = await Project.findById(projectId).select('name').lean();
+      if (pDoc) resolvedProjectName = pDoc.name || '';
+    }
+
+    const sanitizedChecklist = Array.isArray(checklist)
+      ? checklist
+          .map((item) => ({
+            text: typeof item === 'string' ? item.trim() : (item?.text || '').trim(),
+            isCompleted: Boolean(item?.isCompleted),
+          }))
+          .filter((item) => item.text.length > 0)
+      : [];
+
+    const now = new Date();
+    const shouldStart = Boolean(startImmediately);
+    if (shouldStart) {
+      const runningTasks = await DailyTask.find({ user: targetUserId, timerRunning: true });
+      for (const r of runningTasks) {
+        if (r.timerStartedAt) {
+          const elapsed = Math.max(0, Math.floor((now.getTime() - new Date(r.timerStartedAt).getTime()) / 1000));
+          r.timeSpentSeconds = (r.timeSpentSeconds || 0) + elapsed;
+        }
+        r.timerRunning = false;
+        r.timerStartedAt = null;
+        await r.save();
+      }
+    }
+
+    const cleanCategory = (category || roleLabel || 'General').trim();
+
     const dailyTask = new DailyTask({
       organizationId: req.user.organizationId,
       brandId: req.user.brandId,
@@ -382,16 +453,25 @@ export const createQuickDailyTask = async (req, res) => {
       date: normalizedDate,
       title: title.trim(),
       priority: priority || 'medium',
-      status: 'todo',
-      allocatedHours: Number(allocatedHours) || 0,
-      allocatedMinutes: Number(allocatedMinutes) || 0,
+      status: shouldStart ? 'in_progress' : 'todo',
+      allocatedHours: finalHours,
+      allocatedMinutes: finalMinutes,
+      startTime: cleanStart,
+      endTime: cleanEnd,
+      category: cleanCategory,
+      roleLabel: cleanCategory,
+      checklist: sanitizedChecklist,
       isQuickTask: true,
+      timerRunning: shouldStart,
+      timerStartedAt: shouldStart ? now : null,
       assignedBy: req.user._id,
       assignedByName: req.user.name || '',
       project: projectId || null,
+      projectName: resolvedProjectName,
       client: clientId || null,
+      clientName: resolvedClientName,
       notes: notes || '',
-      dateLabel: 'Daily Quick Task',
+      dateLabel: cleanCategory === 'General' ? 'Quick Task' : cleanCategory,
     });
 
     await dailyTask.save();
@@ -406,6 +486,39 @@ export const createQuickDailyTask = async (req, res) => {
   } catch (error) {
     console.error('Error creating quick daily task:', error);
     res.status(500).json({ success: false, message: error.message || 'Failed to create quick daily task' });
+  }
+};
+
+/**
+ * PATCH /api/daily-tasks/:id/checklist
+ * Toggles completion of a quick task checklist item
+ */
+export const toggleDailyTaskChecklistItem = async (req, res) => {
+  try {
+    const { itemIndex } = req.body;
+    const dailyTask = await DailyTask.findById(req.params.id);
+    if (!dailyTask) {
+      return res.status(404).json({ success: false, message: 'Daily task not found' });
+    }
+
+    const isManagerOrAdmin = ['superAdmin', 'admin', 'manager', 'organizationOwner'].includes(req.user.role);
+    if (!isManagerOrAdmin && dailyTask.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    if (!Array.isArray(dailyTask.checklist) || itemIndex < 0 || itemIndex >= dailyTask.checklist.length) {
+      return res.status(400).json({ success: false, message: 'Invalid checklist item' });
+    }
+
+    dailyTask.checklist[itemIndex].isCompleted = !dailyTask.checklist[itemIndex].isCompleted;
+    await dailyTask.save();
+
+    emitLiveEvent('dailyTaskUpdated', { userId: dailyTask.user, taskId: dailyTask._id });
+
+    res.json({ success: true, dailyTask });
+  } catch (error) {
+    console.error('Error toggling daily task checklist:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to update checklist' });
   }
 };
 

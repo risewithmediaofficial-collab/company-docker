@@ -19,9 +19,6 @@ const BranchesPage = () => {
             <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
               Company Branches & Locations
             </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Manage your company headquarters, regional branch offices, managers in-charge, operating hours, and attendance geofencing.
-            </p>
           </div>
         </div>
       </div>

@@ -124,6 +124,22 @@ export const useUpdateDailyTaskStatus = () => {
   });
 };
 
+export const useToggleDailyTaskChecklist = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, itemIndex }) => {
+      const res = await api.patch(`/daily-tasks/${id}/checklist`, { itemIndex });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['daily-tasks'] });
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to update checklist item');
+    },
+  });
+};
+
 export const useDeleteDailyTask = () => {
   const queryClient = useQueryClient();
   return useMutation({

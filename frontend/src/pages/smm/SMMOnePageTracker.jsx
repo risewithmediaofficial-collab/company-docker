@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { smmApi } from '../../api/smm';
 import { useSocket } from '../../context/SocketContext';
 import { ClientCompletionDashboard } from '../../components/smm/ClientCompletionDashboard';
@@ -45,6 +45,24 @@ const STATUS_LABEL  = { todo:'TO POST', pending:'PENDING', done:'DONE', skip:'SK
 
 const getDayOfWeek = (y, m, d) => new Date(y, m - 1, d).getDay();
 const isSunday     = (y, m, d) => getDayOfWeek(y, m, d) === 0;
+
+export const parsePlanTotal = (planVal) => {
+  if (planVal == null || planVal === '') return 0;
+  if (typeof planVal === 'number') return planVal;
+  const str = String(planVal).trim();
+  const rMatch = str.match(/(\d+)\s*R/i);
+  const pMatch = str.match(/(\d+)\s*P/i);
+  if (rMatch || pMatch) {
+    const r = rMatch ? parseInt(rMatch[1], 10) : 0;
+    const p = pMatch ? parseInt(pMatch[1], 10) : 0;
+    return r + p;
+  }
+  const sMatch = str.match(/(\d+)\s*STOR/i);
+  if (sMatch) return parseInt(sMatch[1], 10);
+
+  const numMatch = str.match(/\b(\d+)\b/);
+  return numMatch ? parseInt(numMatch[1], 10) : 0;
+};
 
 // ── Shared cell styles ───────────────────────────────────────────────────────
 const HDR_BASE = {
@@ -1306,9 +1324,9 @@ const SMMOnePageTracker = () => {
 
   const calcProgress = (row, sf) => {
     const lf = sf === 'postStatus' ? 'postLabel' : 'storyLabel';
-    const planVal = parseInt(row[planField], 10);
-    const total = (!isNaN(planVal) && planVal > 0)
-      ? planVal
+    const parsedPlan = parsePlanTotal(row[planField]);
+    const total = parsedPlan > 0
+      ? parsedPlan
       : (row.planQuota > 0 ? row.planQuota : (row.days.filter(d => d[lf]).length || daysInMonth));
     const done  = row.days.filter(d => d[sf] === 'done').length;
     return { done, total };
@@ -1329,7 +1347,7 @@ const SMMOnePageTracker = () => {
   const statusField   = section === 'posts' ? 'postStatus' : 'storyStatus';
   const statusRowLbl  = section === 'posts' ? 'TASK STATUS' : 'STORY STATUS';
   const planField     = section === 'posts' ? 'plan'       : 'storyPlan';
-  const planPH        = section === 'posts' ? 'e.g. 10' : '30 STORIES';
+  const planPH        = section === 'posts' ? 'e.g. 15R + 10P' : '30 STORIES';
 
   const curCol = isMobile ? COL_MOBILE : COL_DESKTOP;
   const curL = isMobile
@@ -2141,7 +2159,11 @@ const SMMOnePageTracker = () => {
           rows={rows}
           daysInMonth={daysInMonth}
           onUpdatePlan={(rowIdx, newReels, newPosts) => {
-            const planStr = `${newReels}R + ${newPosts}P`;
+            let planStr = '';
+            if (newReels > 0 && newPosts > 0) planStr = `${newReels}R + ${newPosts}P`;
+            else if (newReels > 0) planStr = `${newReels}R`;
+            else if (newPosts > 0) planStr = `${newPosts}P`;
+            else planStr = '0P';
             handleMetaSave(rowIdx, 'plan', planStr);
           }}
           onUpdateStories={(rowIdx, newStories) => {

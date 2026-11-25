@@ -7,11 +7,38 @@ export const parseClientMetrics = (row, daysInMonth = 30) => {
 
   // Extract reels: e.g. "8R + 4P" -> 8
   const rMatch = plan.match(/(\d+)\s*R/i);
-  const reels = rMatch ? parseInt(rMatch[1], 10) : 0;
+  let reels = rMatch ? parseInt(rMatch[1], 10) : 0;
 
   // Extract posts: e.g. "8R + 4P" -> 4
   const pMatch = plan.match(/(\d+)\s*P/i);
-  const posts = pMatch ? parseInt(pMatch[1], 10) : 0;
+  let posts = pMatch ? parseInt(pMatch[1], 10) : 0;
+
+  // Fallback if legacy plan is a plain number without R/P notation
+  if (!rMatch && !pMatch && plan) {
+    const plainNum = parseInt(plan, 10);
+    if (!isNaN(plainNum) && plainNum > 0) {
+      let dayReels = 0;
+      let dayPosts = 0;
+      (row.days || []).forEach(d => {
+        if (Array.isArray(d.items) && d.items.length > 0) {
+          d.items.forEach(it => {
+            if (it.type === 'reel') dayReels++;
+            else if (it.type === 'post') dayPosts++;
+          });
+        } else if (d.postLabel) {
+          const lbl = String(d.postLabel).trim().toUpperCase();
+          if (lbl.startsWith('R') || lbl.includes('REEL')) dayReels++;
+          else if (lbl.startsWith('P') || lbl.startsWith('POST')) dayPosts++;
+        }
+      });
+      if (dayReels > 0 || dayPosts > 0) {
+        reels = dayReels;
+        posts = dayPosts;
+      } else {
+        posts = plainNum;
+      }
+    }
+  }
 
   // Extract stories: e.g. "30 STORIES" -> 30, default 30
   const storyPlan = row.storyPlan || '';

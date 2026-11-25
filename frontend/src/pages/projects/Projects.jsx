@@ -91,6 +91,67 @@ const projectPriorityTone = {
 
 const STATUS_COLUMNS = ['Planning', 'In Progress', 'On Hold', 'Completed', 'Cancelled'];
 
+const STATUS_COLUMN_CONFIG = {
+  Planning: {
+    dotColor: 'bg-sky-500',
+    badgeClass: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30',
+    surface: 'bg-sky-500/[0.04] dark:bg-sky-500/[0.08] border border-sky-500/20',
+  },
+  'In Progress': {
+    dotColor: 'bg-blue-500',
+    badgeClass: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30',
+    surface: 'bg-blue-500/[0.04] dark:bg-blue-500/[0.08] border border-blue-500/20',
+  },
+  'On Hold': {
+    dotColor: 'bg-amber-500',
+    badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+    surface: 'bg-amber-500/[0.04] dark:bg-amber-500/[0.08] border border-amber-500/20',
+  },
+  Completed: {
+    dotColor: 'bg-emerald-500',
+    badgeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30',
+    surface: 'bg-emerald-500/[0.04] dark:bg-emerald-500/[0.08] border border-emerald-500/20',
+  },
+  Cancelled: {
+    dotColor: 'bg-rose-500',
+    badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30',
+    surface: 'bg-rose-500/[0.04] dark:bg-rose-500/[0.08] border border-rose-500/20',
+  },
+};
+
+const CATEGORY_COLUMN_PALETTE = [
+  {
+    dotColor: 'bg-indigo-500',
+    badgeClass: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30',
+    surface: 'bg-indigo-500/[0.04] dark:bg-indigo-500/[0.08] border border-indigo-500/20',
+  },
+  {
+    dotColor: 'bg-cyan-500',
+    badgeClass: 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30',
+    surface: 'bg-cyan-500/[0.04] dark:bg-cyan-500/[0.08] border border-cyan-500/20',
+  },
+  {
+    dotColor: 'bg-purple-500',
+    badgeClass: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30',
+    surface: 'bg-purple-500/[0.04] dark:bg-purple-500/[0.08] border border-purple-500/20',
+  },
+  {
+    dotColor: 'bg-emerald-500',
+    badgeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30',
+    surface: 'bg-emerald-500/[0.04] dark:bg-emerald-500/[0.08] border border-emerald-500/20',
+  },
+  {
+    dotColor: 'bg-amber-500',
+    badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+    surface: 'bg-amber-500/[0.04] dark:bg-amber-500/[0.08] border border-amber-500/20',
+  },
+  {
+    dotColor: 'bg-rose-500',
+    badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30',
+    surface: 'bg-rose-500/[0.04] dark:bg-rose-500/[0.08] border border-rose-500/20',
+  },
+];
+
 export const PROJECT_SORT_OPTIONS = [
   { value: 'dueDate_asc', label: 'Due Date: Earliest First' },
   { value: 'dueDate_desc', label: 'Due Date: Latest First' },
@@ -400,19 +461,25 @@ const Projects = () => {
       const cols = Object.values(catMap);
       if (cols.length === 0) {
         return [
-          { key: 'web_development', label: 'Website / Dev', icon: Globe },
-          { key: 'social_media', label: 'Social Media', icon: Share2 },
-          { key: 'branding', label: 'Branding', icon: Sparkles },
-          { key: 'seo', label: 'SEO', icon: Search },
+          { key: 'web_development', label: 'Website / Dev', icon: Globe, ...CATEGORY_COLUMN_PALETTE[0] },
+          { key: 'social_media', label: 'Social Media', icon: Share2, ...CATEGORY_COLUMN_PALETTE[1] },
+          { key: 'branding', label: 'Branding', icon: Sparkles, ...CATEGORY_COLUMN_PALETTE[2] },
+          { key: 'seo', label: 'SEO', icon: Search, ...CATEGORY_COLUMN_PALETTE[3] },
         ];
       }
-      return cols.map((c) => ({ key: c.key, label: c.shortLabel || c.label, icon: c.icon }));
+      return cols.map((c, idx) => ({
+        key: c.key,
+        label: c.shortLabel || c.label,
+        icon: c.icon,
+        ...CATEGORY_COLUMN_PALETTE[idx % CATEGORY_COLUMN_PALETTE.length],
+      }));
     }
 
     // Default: Group by Status
     return STATUS_COLUMNS.map((status) => ({
       key: status,
       label: status,
+      ...(STATUS_COLUMN_CONFIG[status] || CATEGORY_COLUMN_PALETTE[0]),
     }));
   }, [boardGroupBy, filteredProjects, categoryFilter]);
 
@@ -952,25 +1019,26 @@ const Projects = () => {
                         setDragOverColumn(null);
                         setDragOverProjectIndex(null);
                       }}
-                      className={`flex flex-col min-h-[520px] max-h-[calc(100vh-320px)] rounded-2xl transition-all p-3 space-y-3 ${
+                      className={`flex flex-col min-h-[520px] max-h-[calc(100vh-320px)] rounded-2xl transition-all p-3 space-y-3 shadow-sm ${
                         boardGroupBy === 'status' && boardColumns.length <= 4
                           ? 'w-full'
                           : 'w-[300px] shrink-0'
-                      } ${
+                      } ${col.surface || 'bg-secondary/15 border border-border/50'} ${
                         isColActive
-                          ? ' bg-primary/5 ring-2 ring-primary/20'
-                          : ' bg-secondary/15'
+                          ? ' !bg-primary/10 ring-2 ring-primary/30 shadow-md'
+                          : ''
                       }`}
                     >
                       {/* Column Header */}
                       <div className="flex items-center justify-between px-1.5 pt-0.5">
                         <div className="flex items-center gap-2">
-                          {ColIcon && <ColIcon size={14} className="text-primary" />}
+                          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${col.dotColor || 'bg-primary'}`} />
+                          {ColIcon && <ColIcon size={14} className="text-muted-foreground" />}
                           <span className="text-xs font-black uppercase tracking-wider text-foreground">
                             {col.label}
                           </span>
                         </div>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-card text-foreground tabular-nums">
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold tabular-nums ${col.badgeClass || 'bg-card text-foreground'}`}>
                           {colProjects.length}
                         </span>
                       </div>
@@ -1027,10 +1095,10 @@ const Projects = () => {
                                   setDragOverProjectIndex(null);
                                 }}
                                 onClick={() => navigate(`/projects/${project._id}`)}
-                                className={`p-3.5 bg-card rounded-2xl ${catMeta.accentBorder} transition-all cursor-grab active:cursor-grabbing space-y-2.5 group ${
+                                className={`p-3.5 bg-card border border-border/75 shadow-sm rounded-2xl ${catMeta.accentBorder} transition-all duration-200 cursor-grab active:cursor-grabbing space-y-2.5 group hover:-translate-y-0.5 hover:shadow-md hover:border-primary/40 ${
                                   isBeingDragged
                                     ? 'opacity-30 scale-95 ring-1 ring-primary/40'
-                                    : ' hover:-translate-y-0.5'
+                                    : ''
                                 }`}
                               >
                                 {/* Compact Row 1: Name + Enlarge Button */}

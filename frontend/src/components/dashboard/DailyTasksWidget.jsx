@@ -29,16 +29,24 @@ import {
   RotateCcw,
   Square,
   CheckSquare,
+  ListChecks,
+  Minus,
+  Timer,
+  X,
+  Zap,
 } from '@/components/ui/muiIcons';
 import {
   useDailyTasks,
   useStartDailyTaskTimer,
   useStopDailyTaskTimer,
   useUpdateDailyTaskStatus,
+  useToggleDailyTaskChecklist,
   useDeleteDailyTask,
   useCreateQuickDailyTask,
 } from '../../hooks/useDailyTasks';
 import { useUsers } from '../../hooks/useUsers';
+import { useClients } from '../../hooks/useClients';
+import { useProjects } from '../../hooks/useProjects';
 import { AddDailyTaskModal } from './AddDailyTaskModal';
 import { SelectDropdown } from '../ui/SelectDropdown';
 import {
@@ -61,6 +69,53 @@ export const formatTimerDisplay = (totalSeconds = 0) => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
+const formatClock12h = (hhmm = '') => {
+  if (!/^\d{2}:\d{2}$/.test(hhmm)) return hhmm;
+  const [h, m] = hhmm.split(':').map(Number);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const hr12 = h % 12 || 12;
+  return `${hr12}:${m.toString().padStart(2, '0')} ${suffix}`;
+};
+
+const addMinutesToClock = (hhmm = '', deltaMins = 0) => {
+  if (!/^\d{2}:\d{2}$/.test(hhmm)) return '';
+  const [h, m] = hhmm.split(':').map(Number);
+  const total = ((h * 60 + m + deltaMins) % (24 * 60) + 24 * 60) % (24 * 60);
+  const nh = Math.floor(total / 60).toString().padStart(2, '0');
+  const nm = (total % 60).toString().padStart(2, '0');
+  return `${nh}:${nm}`;
+};
+
+const diffClockMinutes = (startHHMM = '', endHHMM = '') => {
+  if (!/^\d{2}:\d{2}$/.test(startHHMM) || !/^\d{2}:\d{2}$/.test(endHHMM)) return null;
+  const [sh, sm] = startHHMM.split(':').map(Number);
+  const [eh, em] = endHHMM.split(':').map(Number);
+  let diff = (eh * 60 + em) - (sh * 60 + sm);
+  if (diff < 0) diff += 24 * 60;
+  return diff;
+};
+
+const QUICK_CATEGORIES = [
+  'General',
+  'Video Edit',
+  'Shoot',
+  'SMM / Post',
+  'Design',
+  'Client Call',
+  'Dev / Fix',
+  'Admin',
+];
+
+const DURATION_PRESETS = [
+  { label: '15m', mins: 15 },
+  { label: '30m', mins: 30 },
+  { label: '45m', mins: 45 },
+  { label: '1h', mins: 60 },
+  { label: '1.5h', mins: 90 },
+  { label: '2h', mins: 120 },
+  { label: '4h', mins: 240 },
+];
+
 export const DailyTasksWidget = ({
   currentUser,
   isManagerOrAdmin = false,
@@ -74,8 +129,17 @@ export const DailyTasksWidget = ({
   const [showQuickModal, setShowQuickModal] = useState(false);
   const [quickTitle, setQuickTitle] = useState('');
   const [quickPriority, setQuickPriority] = useState('medium');
-  const [quickHours, setQuickHours] = useState('');
-  const [quickMinutes, setQuickMinutes] = useState('');
+  const [quickCategory, setQuickCategory] = useState('General');
+  const [quickHours, setQuickHours] = useState(0);
+  const [quickMinutes, setQuickMinutes] = useState(30);
+  const [quickStartTime, setQuickStartTime] = useState('');
+  const [quickEndTime, setQuickEndTime] = useState('');
+  const [quickClientId, setQuickClientId] = useState('');
+  const [quickProjectId, setQuickProjectId] = useState('');
+  const [quickAssigneeId, setQuickAssigneeId] = useState('');
+  const [quickChecklist, setQuickChecklist] = useState([]);
+  const [quickStepInput, setQuickStepInput] = useState('');
+  const [quickStartImmediately, setQuickStartImmediately] = useState(false);
   const [quickNotes, setQuickNotes] = useState('');
   const [selectedTaskDetailId, setSelectedTaskDetailId] = useState(null);
 
@@ -95,6 +159,19 @@ export const DailyTasksWidget = ({
     return list.filter((u) => u.role !== 'client');
   }, [usersData]);
 
+  const { data: clientsData = [] } = useClients({}, { enabled: showQuickModal });
+  const { data: projectsData = [] } = useProjects({}, { enabled: showQuickModal });
+
+  const clientsList = useMemo(() => {
+    return Array.isArray(clientsData) ? clientsData : clientsData?.clients || [];
+  }, [clientsData]);
+
+  const filteredQuickProjects = useMemo(() => {
+    const list = Array.isArray(projectsData) ? projectsData : projectsData?.projects || [];
+    if (!quickClientId) return list;
+    return list.filter((p) => (p.client?._id || p.client) === quickClientId);
+  }, [projectsData, quickClientId]);
+
   // Target user for query: either manager's selected user, or current user
   const effectiveUserId = isManagerOrAdmin && selectedUserId ? selectedUserId : currentUser?._id;
   const targetUserObj = useMemo(() => {
@@ -109,6 +186,7 @@ export const DailyTasksWidget = ({
   const startTimerMutation = useStartDailyTaskTimer();
   const stopTimerMutation = useStopDailyTaskTimer();
   const updateStatusMutation = useUpdateDailyTaskStatus();
+  const toggleChecklistMutation = useToggleDailyTaskChecklist();
   const deleteDailyTaskMutation = useDeleteDailyTask();
   const createQuickTaskMutation = useCreateQuickDailyTask();
 
@@ -153,24 +231,105 @@ export const DailyTasksWidget = ({
     });
   }, [selectedDate]);
 
+  const resetQuickForm = () => {
+    setQuickTitle('');
+    setQuickPriority('medium');
+    setQuickCategory('General');
+    setQuickHours(0);
+    setQuickMinutes(30);
+    setQuickStartTime('');
+    setQuickEndTime('');
+    setQuickClientId('');
+    setQuickProjectId('');
+    setQuickAssigneeId('');
+    setQuickChecklist([]);
+    setQuickStepInput('');
+    setQuickStartImmediately(false);
+    setQuickNotes('');
+  };
+
+  const applyTotalDurationMins = (totalMins, syncEndFromStart = true) => {
+    const safeTotal = Math.max(0, Math.min(24 * 60, Number(totalMins) || 0));
+    const h = Math.floor(safeTotal / 60);
+    const m = safeTotal % 60;
+    setQuickHours(h);
+    setQuickMinutes(m);
+    if (syncEndFromStart && quickStartTime && safeTotal > 0) {
+      setQuickEndTime(addMinutesToClock(quickStartTime, safeTotal));
+    }
+  };
+
+  const handleStartTimeChange = (newStart) => {
+    setQuickStartTime(newStart);
+    if (!newStart) return;
+    const curTotal = (Number(quickHours) || 0) * 60 + (Number(quickMinutes) || 0);
+    if (quickEndTime && curTotal === 0) {
+      const diff = diffClockMinutes(newStart, quickEndTime);
+      if (diff && diff > 0) applyTotalDurationMins(diff, false);
+    } else if (curTotal > 0) {
+      setQuickEndTime(addMinutesToClock(newStart, curTotal));
+    }
+  };
+
+  const handleEndTimeChange = (newEnd) => {
+    setQuickEndTime(newEnd);
+    if (quickStartTime && newEnd) {
+      const diff = diffClockMinutes(quickStartTime, newEnd);
+      if (diff !== null && diff > 0) {
+        applyTotalDurationMins(diff, false);
+      }
+    }
+  };
+
+  const handleSetClockNow = () => {
+    const now = new Date();
+    const hh = now.getHours().toString().padStart(2, '0');
+    const mm = now.getMinutes().toString().padStart(2, '0');
+    const nowClock = `${hh}:${mm}`;
+    setQuickStartTime(nowClock);
+    const curTotal = (Number(quickHours) || 0) * 60 + (Number(quickMinutes) || 0);
+    const mins = curTotal > 0 ? curTotal : 30;
+    if (curTotal === 0) {
+      setQuickHours(0);
+      setQuickMinutes(30);
+    }
+    setQuickEndTime(addMinutesToClock(nowClock, mins));
+  };
+
+  const handleAddQuickStep = () => {
+    const trimmed = quickStepInput.trim();
+    if (!trimmed) return;
+    setQuickChecklist((prev) => [...prev, { text: trimmed, isCompleted: false }]);
+    setQuickStepInput('');
+  };
+
   const handleQuickCreate = async (e) => {
     e.preventDefault();
     if (!quickTitle.trim()) return;
 
+    const pendingSteps = quickStepInput.trim()
+      ? [...quickChecklist, { text: quickStepInput.trim(), isCompleted: false }]
+      : quickChecklist;
+
     try {
       await createQuickTaskMutation.mutateAsync({
         title: quickTitle.trim(),
-        userId: effectiveUserId,
+        userId: (isManagerOrAdmin && quickAssigneeId) ? quickAssigneeId : effectiveUserId,
         date: selectedDate,
         priority: quickPriority,
+        category: quickCategory,
+        roleLabel: quickCategory,
         allocatedHours: Number(quickHours) || 0,
         allocatedMinutes: Number(quickMinutes) || 0,
+        startTime: quickStartTime,
+        endTime: quickEndTime,
+        clientId: quickClientId || null,
+        projectId: quickProjectId || null,
+        checklist: pendingSteps,
+        startImmediately: quickStartImmediately,
         notes: quickNotes,
       });
-      setQuickTitle('');
-      setQuickHours('');
-      setQuickMinutes('');
-      setQuickNotes('');
+      resetQuickForm();
       setShowQuickModal(false);
     } catch (err) {
       // handled in hook
@@ -205,9 +364,6 @@ export const DailyTasksWidget = ({
                 </span>
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Plan and track today's focused work from assigned tasks with live timer and progress updates.
-            </p>
           </div>
         </div>
 
@@ -468,13 +624,50 @@ export const DailyTasksWidget = ({
                         </span>
                       )}
 
+                      {(item.startTime || item.endTime) && (
+                        <span className="inline-flex items-center gap-1 font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded-md shrink-0">
+                          <Clock size={10} />
+                          <span>
+                            {item.startTime ? formatClock12h(item.startTime) : ''}
+                            {item.startTime && item.endTime ? ' – ' : ''}
+                            {item.endTime ? formatClock12h(item.endTime) : ''}
+                          </span>
+                        </span>
+                      )}
+
                       {(item.allocatedHours > 0 || item.allocatedMinutes > 0) && (
                         <span className="inline-flex items-center gap-1 font-semibold text-muted-foreground bg-secondary px-2 py-0.5 rounded-md shrink-0">
-                          <Clock size={10} />
+                          <Timer size={10} />
                           <span>Target: {item.allocatedHours || 0}h {item.allocatedMinutes || 0}m</span>
                         </span>
                       )}
                     </div>
+
+                    {item.notes && (
+                      <p className="text-[11px] text-muted-foreground/90 line-clamp-2 pt-0.5">
+                        {item.notes}
+                      </p>
+                    )}
+
+                    {Array.isArray(item.checklist) && item.checklist.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {item.checklist.map((step, sIdx) => (
+                          <button
+                            key={sIdx}
+                            type="button"
+                            onClick={() => toggleChecklistMutation.mutate({ id: item._id, itemIndex: sIdx })}
+                            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] border transition-colors cursor-pointer ${
+                              step.isCompleted
+                                ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-300 line-through opacity-75'
+                                : 'bg-secondary/40 border-border/50 text-foreground hover:bg-secondary'
+                            }`}
+                          >
+                            <Check size={10} className={step.isCompleted ? 'text-emerald-500' : 'text-muted-foreground/40'} />
+                            <span>{step.text}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -583,20 +776,31 @@ export const DailyTasksWidget = ({
 
       {/* Quick Task Modal */}
       {showQuickModal && (
-        <Dialog open={showQuickModal} onOpenChange={setShowQuickModal}>
-          <DialogContent size="md" className="p-6 rounded-3xl bg-card border border-border/40 shadow-2xl space-y-4">
-            <DialogHeader>
-              <DialogTitle className="text-base font-bold text-foreground">
-                Add Quick Daily Task
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground">
-                Create a quick one-off task for today's daily focus.
-              </DialogDescription>
+        <Dialog
+          open={showQuickModal}
+          onOpenChange={(open) => {
+            setShowQuickModal(open);
+            if (!open) resetQuickForm();
+          }}
+        >
+          <DialogContent size="lg" className="max-w-xl p-0 overflow-hidden rounded-3xl bg-card border border-border/40 shadow-2xl">
+            <DialogHeader className="px-6 pt-5 pb-4 border-b border-border/30 bg-secondary/15">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary shrink-0">
+                  <Zap size={20} />
+                </div>
+                <div>
+                  <DialogTitle className="text-base sm:text-lg font-bold text-foreground">
+                    Add Quick Daily Task
+                  </DialogTitle>
+                </div>
+              </div>
             </DialogHeader>
 
-            <form onSubmit={handleQuickCreate} className="space-y-3.5">
+            <form onSubmit={handleQuickCreate} className="p-5 sm:p-6 space-y-3.5 max-h-[82vh] overflow-y-auto custom-scrollbar">
+              {/* Title */}
               <div>
-                <label className="block text-xs font-bold text-foreground mb-1">
+                <label className="block text-xs font-bold text-foreground mb-1.5">
                   Task Title *
                 </label>
                 <input
@@ -605,11 +809,178 @@ export const DailyTasksWidget = ({
                   value={quickTitle}
                   onChange={(e) => setQuickTitle(e.target.value)}
                   required
-                  className="h-10 w-full rounded-xl bg-background px-3 text-xs text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
+                  autoFocus
+                  className="h-10 w-full rounded-xl bg-background border border-border/60 px-3.5 text-xs text-foreground focus:ring-2 focus:ring-primary/40 focus:border-primary focus:outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Focus Category Chips */}
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-1.5">
+                  Category / Focus Tag
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {QUICK_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setQuickCategory(cat)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer border ${
+                        quickCategory === cat
+                          ? 'bg-primary text-primary-foreground border-primary shadow-2xs'
+                          : 'bg-background text-muted-foreground border-border/60 hover:bg-secondary hover:text-foreground'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Clock & Time Allocation Block */}
+              <div className="rounded-2xl border border-border/60 bg-secondary/20 p-3.5 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} className="text-primary" />
+                    <span className="text-xs font-bold text-foreground">Schedule Clock &amp; Duration</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSetClockNow}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-bold transition-colors cursor-pointer"
+                  >
+                    <Timer size={11} />
+                    <span>Start Now</span>
+                  </button>
+                </div>
+
+                {/* Clock Start & End Pickers */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                      Start Time (Clock)
+                    </label>
+                    <input
+                      type="time"
+                      value={quickStartTime}
+                      onChange={(e) => handleStartTimeChange(e.target.value)}
+                      className="h-9 w-full rounded-xl bg-background border border-border/60 px-3 text-xs font-semibold text-foreground tabular-nums focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                      End Time (Clock)
+                    </label>
+                    <input
+                      type="time"
+                      value={quickEndTime}
+                      onChange={(e) => handleEndTimeChange(e.target.value)}
+                      className="h-9 w-full rounded-xl bg-background border border-border/60 px-3 text-xs font-semibold text-foreground tabular-nums focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Hours & Minutes Steppers */}
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                      Hours
+                    </label>
+                    <div className="flex items-center h-9 rounded-xl bg-background border border-border/60 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => applyTotalDurationMins(Math.max(0, ((Number(quickHours) || 0) - 1) * 60 + (Number(quickMinutes) || 0)))}
+                        className="h-full px-2.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                        title="Decrease hours"
+                      >
+                        <Minus size={12} />
+                      </button>
+                      <input
+                        type="number"
+                        min="0"
+                        max="24"
+                        value={quickHours}
+                        onChange={(e) => applyTotalDurationMins(Math.max(0, Math.min(24, Number(e.target.value) || 0)) * 60 + (Number(quickMinutes) || 0))}
+                        className="w-full text-center bg-transparent border-0 shadow-none text-xs font-bold text-foreground tabular-nums focus:outline-none focus:ring-0"
+                      />
+                      <span className="text-[11px] font-semibold text-muted-foreground pr-1">hr</span>
+                      <button
+                        type="button"
+                        onClick={() => applyTotalDurationMins(Math.min(24, (Number(quickHours) || 0) + 1) * 60 + (Number(quickMinutes) || 0))}
+                        className="h-full px-2.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                        title="Increase hours"
+                      >
+                        <Plus size={12} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                      Minutes
+                    </label>
+                    <div className="flex items-center h-9 rounded-xl bg-background border border-border/60 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => applyTotalDurationMins(Math.max(0, (Number(quickHours) || 0) * 60 + (Number(quickMinutes) || 0) - 5))}
+                        className="h-full px-2.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                        title="Decrease 5 minutes"
+                      >
+                        <Minus size={12} />
+                      </button>
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={quickMinutes}
+                        onChange={(e) => applyTotalDurationMins((Number(quickHours) || 0) * 60 + Math.max(0, Math.min(59, Number(e.target.value) || 0)))}
+                        className="w-full text-center bg-transparent border-0 shadow-none text-xs font-bold text-foreground tabular-nums focus:outline-none focus:ring-0"
+                      />
+                      <span className="text-[11px] font-semibold text-muted-foreground pr-1">min</span>
+                      <button
+                        type="button"
+                        onClick={() => applyTotalDurationMins((Number(quickHours) || 0) * 60 + (Number(quickMinutes) || 0) + 5)}
+                        className="h-full px-2.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                        title="Increase 5 minutes"
+                      >
+                        <Plus size={12} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Duration Presets */}
+                <div className="flex items-center justify-between flex-wrap gap-1.5 pt-0.5">
+                  <div className="flex flex-wrap items-center gap-1">
+                    {DURATION_PRESETS.map((preset) => {
+                      const active = ((Number(quickHours) || 0) * 60 + (Number(quickMinutes) || 0)) === preset.mins;
+                      return (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => applyTotalDurationMins(preset.mins)}
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-colors cursor-pointer border ${
+                            active
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-background text-muted-foreground border-border/50 hover:bg-secondary hover:text-foreground'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {(quickStartTime || quickEndTime || Number(quickHours) > 0 || Number(quickMinutes) > 0) && (
+                    <span className="text-[10px] font-bold text-primary tabular-nums">
+                      {quickStartTime ? `${formatClock12h(quickStartTime)}${quickEndTime ? ` – ${formatClock12h(quickEndTime)}` : ''} · ` : ''}
+                      {Number(quickHours) || 0}h {Number(quickMinutes) || 0}m
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Priority & Assignee */}
+              <div className={`grid gap-3 ${isManagerOrAdmin ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
                 <div>
                   <label className="block text-xs font-bold text-foreground mb-1">
                     Priority
@@ -625,53 +996,161 @@ export const DailyTasksWidget = ({
                     ]}
                     allowCustom={false}
                     className="w-full"
-                    buttonClassName="h-10 text-xs rounded-xl bg-background"
+                    buttonClassName="h-9 text-xs rounded-xl bg-background border border-border/60"
+                  />
+                </div>
+
+                {isManagerOrAdmin && (
+                  <div>
+                    <label className="block text-xs font-bold text-foreground mb-1">
+                      Assign To
+                    </label>
+                    <SelectDropdown
+                      value={quickAssigneeId || effectiveUserId}
+                      onChange={(val) => setQuickAssigneeId(val || '')}
+                      options={staffUsers.map((u) => ({ value: u._id, label: u.name }))}
+                      allowCustom={false}
+                      className="w-full"
+                      buttonClassName="h-9 text-xs rounded-xl bg-background border border-border/60"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Optional Client & Project */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1">
+                    Client (Optional)
+                  </label>
+                  <SelectDropdown
+                    value={quickClientId}
+                    onChange={(val) => {
+                      setQuickClientId(val || '');
+                      setQuickProjectId('');
+                    }}
+                    placeholder="No Client"
+                    options={[
+                      { value: '', label: 'No Client' },
+                      ...clientsList.map((c) => ({ value: c._id, label: c.company || c.name })),
+                    ]}
+                    allowCustom={false}
+                    className="w-full"
+                    buttonClassName="h-9 text-xs rounded-xl bg-background border border-border/60"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-foreground mb-1">
-                    Allocated Hours
+                    Project (Optional)
                   </label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="e.g. 2"
-                    value={quickHours}
-                    onChange={(e) => setQuickHours(e.target.value)}
-                    className="h-10 w-full rounded-xl bg-background px-3 text-xs text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
+                  <SelectDropdown
+                    value={quickProjectId}
+                    onChange={(val) => setQuickProjectId(val || '')}
+                    placeholder="No Project"
+                    options={[
+                      { value: '', label: 'No Project' },
+                      ...filteredQuickProjects.map((p) => ({ value: p._id, label: p.name })),
+                    ]}
+                    allowCustom={false}
+                    className="w-full"
+                    buttonClassName="h-9 text-xs rounded-xl bg-background border border-border/60"
                   />
                 </div>
               </div>
 
+              {/* Quick Subtasks / Checklist */}
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-bold text-foreground mb-1.5">
+                  <ListChecks size={13} className="text-primary" />
+                  <span>Quick Checklist (Optional)</span>
+                </label>
+                {quickChecklist.length > 0 && (
+                  <div className="space-y-1.5 mb-2">
+                    {quickChecklist.map((step, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-secondary/40 text-xs">
+                        <span className="truncate font-medium text-foreground">{idx + 1}. {step.text}</span>
+                        <button
+                          type="button"
+                          onClick={() => setQuickChecklist((prev) => prev.filter((_, i) => i !== idx))}
+                          className="text-muted-foreground hover:text-rose-500 cursor-pointer shrink-0"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Add step (press Enter)..."
+                    value={quickStepInput}
+                    onChange={(e) => setQuickStepInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddQuickStep();
+                      }
+                    }}
+                    className="h-9 flex-1 rounded-xl bg-background border border-border/60 px-3 text-xs text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddQuickStep}
+                    className="h-9 px-3 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground text-xs font-semibold cursor-pointer shrink-0"
+                  >
+                    Add Step
+                  </button>
+                </div>
+              </div>
+
+              {/* Notes */}
               <div>
                 <label className="block text-xs font-bold text-foreground mb-1">
                   Notes (Optional)
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Brief note or checklist..."
+                  placeholder="Brief note, links, or reminders..."
                   value={quickNotes}
                   onChange={(e) => setQuickNotes(e.target.value)}
-                  className="w-full rounded-xl bg-background p-3 text-xs text-foreground focus:ring-1 focus:ring-primary focus:outline-none resize-none"
+                  className="w-full rounded-xl bg-background border border-border/60 p-3 text-xs text-foreground focus:ring-1 focus:ring-primary focus:outline-none resize-none"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowQuickModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-secondary text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={createQuickTaskMutation.isPending}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer shadow-xs disabled:opacity-50"
-                >
-                  {createQuickTaskMutation.isPending ? 'Adding…' : 'Add Task'}
-                </button>
+              {/* Start Timer Toggle + Footer */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-border/30">
+                <label className="inline-flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={quickStartImmediately}
+                    onChange={(e) => setQuickStartImmediately(e.target.checked)}
+                    className="h-4 w-4 rounded accent-primary cursor-pointer"
+                  />
+                  <span>Start live timer immediately</span>
+                </label>
+
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetQuickForm();
+                      setShowQuickModal(false);
+                    }}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-secondary text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={createQuickTaskMutation.isPending}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                  >
+                    <Plus size={13} />
+                    <span>{createQuickTaskMutation.isPending ? 'Adding…' : 'Add Task'}</span>
+                  </button>
+                </div>
               </div>
             </form>
           </DialogContent>

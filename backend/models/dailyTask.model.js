@@ -38,6 +38,15 @@ const dailyTaskSchema = new mongoose.Schema(
     dateLabel: { type: String, default: '' }, // Formatted From Date - To Date string
     allocatedHours: { type: Number, default: 0 },
     allocatedMinutes: { type: Number, default: 0 },
+    startTime: { type: String, default: '' }, // e.g. "14:00"
+    endTime: { type: String, default: '' },   // e.g. "15:30"
+    category: { type: String, default: 'General', trim: true },
+    checklist: [
+      {
+        text: { type: String, trim: true, required: true },
+        isCompleted: { type: Boolean, default: false },
+      },
+    ],
     timeSpentSeconds: { type: Number, default: 0 },
     timerRunning: { type: Boolean, default: false },
     timerStartedAt: { type: Date, default: null },

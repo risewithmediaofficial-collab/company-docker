@@ -11,6 +11,7 @@ import {
   startDailyTaskTimer,
   stopDailyTaskTimer,
   updateDailyTaskStatus,
+  toggleDailyTaskChecklistItem,
   deleteDailyTask,
 } from '../controllers/dailyTask.controller.js';
 import { protect, authorize } from '../middleware/auth.middleware.js';
@@ -39,6 +40,7 @@ router.post('/quick', authorize(...INTERNAL_ROLES), createQuickDailyTask);
 router.post('/:id/start-timer', authorize(...INTERNAL_ROLES), startDailyTaskTimer);
 router.post('/:id/stop-timer', authorize(...INTERNAL_ROLES), stopDailyTaskTimer);
 router.patch('/:id/status', authorize(...INTERNAL_ROLES), updateDailyTaskStatus);
+router.patch('/:id/checklist', authorize(...INTERNAL_ROLES), toggleDailyTaskChecklistItem);
 router.delete('/:id', authorize(...INTERNAL_ROLES), deleteDailyTask);
 
 export default router;

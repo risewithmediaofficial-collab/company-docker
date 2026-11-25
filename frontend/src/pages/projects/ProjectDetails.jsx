@@ -1154,9 +1154,6 @@ const ProjectDetails = () => {
               </div>
               <div>
                 <h2 className="text-lg sm:text-xl font-bold text-foreground">Edit Project Budget</h2>
-                <p className="text-xs text-muted-foreground">
-                  Track client quote value, allocate deliverable costs, and manage collections.
-                </p>
               </div>
             </div>
 
@@ -1370,7 +1367,6 @@ const ProjectDetails = () => {
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-foreground">Project Budget & Finances</h2>
-              <p className="text-xs text-muted-foreground">Contract profitability, received client payments, and cost allocation.</p>
             </div>
           </div>
 
@@ -1707,9 +1703,6 @@ const ProjectDetails = () => {
                   <LayoutList size={18} className="text-primary" />
                   Project Overview & Properties
                 </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Notion-style property list displaying all project metadata, status, deliverables, budget & timeline
-                </p>
               </div>
               {(user?.role === 'superAdmin' || user?.role === 'admin' || user?.role === 'manager') && (
                 <button

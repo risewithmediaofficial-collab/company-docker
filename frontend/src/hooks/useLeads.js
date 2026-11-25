@@ -23,7 +23,7 @@ export const useLeadsKanban = () => {
     queryKey: ['leads-kanban'],
     queryFn: async () => {
       const response = await api.get('/leads/kanban');
-      return response.data.kanban;
+      return response.data.kanban ?? response.data.pipeline ?? {};
     },
   });
 };

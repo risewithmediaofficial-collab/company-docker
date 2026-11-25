@@ -347,9 +347,6 @@ const Dashboard = () => {
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-foreground truncate">
                 {getGreeting()}, {user.name}
               </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                Real-time operational health, active revenue flow, project progress, and content velocity across {organization?.name ? `${organization.name} + RWM` : 'RiseWithMedia'}.
-              </p>
             </div>
 
             {/* Top Quick Actions */}

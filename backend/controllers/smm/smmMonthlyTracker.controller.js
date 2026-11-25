@@ -330,6 +330,80 @@ export const classifyDeliverableType = (contentType) => {
   return 'post';
 };
 
+// ── Helper: format plan deliverables string (e.g. "15R + 10P", "15R", "10P") ──
+export const formatPlanDeliverables = ({
+  reels = 0,
+  posts = 0,
+  fallbackPlan = '',
+  tasks = [],
+  days = [],
+} = {}) => {
+  const r = Number(reels) || 0;
+  const p = Number(posts) || 0;
+
+  // 1. Quotas explicitly supplied (from ProjectMonthlyDeliverable)
+  if (r > 0 && p > 0) {
+    return `${r}R + ${p}P`;
+  }
+  if (r > 0) {
+    return `${r}R`;
+  }
+  if (p > 0) {
+    return `${p}P`;
+  }
+
+  // 2. If fallbackPlan was manually saved with R or P notation, preserve it
+  if (fallbackPlan && typeof fallbackPlan === 'string' && /[rp]/i.test(fallbackPlan)) {
+    return fallbackPlan.trim();
+  }
+
+  // 3. Detect from scheduled tasks
+  if (Array.isArray(tasks) && tasks.length > 0) {
+    let tReels = 0;
+    let tPosts = 0;
+    for (const t of tasks) {
+      const type = classifyTaskContentType(t);
+      if (type === 'reel') tReels++;
+      else if (type === 'post') tPosts++;
+    }
+    if (tReels > 0 && tPosts > 0) return `${tReels}R + ${tPosts}P`;
+    if (tReels > 0) return `${tReels}R`;
+    if (tPosts > 0) return `${tPosts}P`;
+  }
+
+  // 4. Detect from day cells items/postLabel
+  if (Array.isArray(days) && days.length > 0) {
+    let dayReels = 0;
+    let dayPosts = 0;
+    for (const d of days) {
+      if (Array.isArray(d.items) && d.items.length > 0) {
+        for (const it of d.items) {
+          if (it.type === 'reel') dayReels++;
+          else if (it.type === 'post') dayPosts++;
+        }
+      } else if (d.postLabel) {
+        const lbl = String(d.postLabel).trim().toUpperCase();
+        if (lbl.startsWith('R') || lbl.includes('REEL')) dayReels++;
+        else if (lbl.startsWith('P') || lbl.startsWith('POST')) dayPosts++;
+      }
+    }
+    if (dayReels > 0 && dayPosts > 0) return `${dayReels}R + ${dayPosts}P`;
+    if (dayReels > 0) return `${dayReels}R`;
+    if (dayPosts > 0) return `${dayPosts}P`;
+  }
+
+  // 5. If fallbackPlan is plain number or string, return it
+  if (fallbackPlan && typeof fallbackPlan === 'string' && fallbackPlan.trim()) {
+    return fallbackPlan.trim();
+  }
+
+  if (Array.isArray(tasks) && tasks.length > 0) {
+    return `${tasks.length}P`;
+  }
+
+  return '';
+};
+
 // ── Helper: map task workflow status to tracker cell status ───────────────────
 export const mapTaskStatusToCellStatus = (task) => {
   const pStatus = (task.postingStatus || '').toLowerCase();
@@ -644,7 +718,13 @@ export const getMonthlyTrackers = async (req, res) => {
 
           const projDeliv = deliverablesByProject.get(pIdStr);
           const quotaCount = projDeliv ? projDeliv.totalFeed : 0;
-          const plan = quotaCount > 0 ? String(quotaCount) : (projTasks.length > 0 ? String(projTasks.length) : (tracker?.plan || ''));
+          const plan = formatPlanDeliverables({
+            reels: projDeliv?.reels,
+            posts: projDeliv?.posts,
+            tasks: projTasks,
+            fallbackPlan: tracker?.plan,
+            days: tracker?.days,
+          });
           const storyPlan = (projDeliv?.stories && projDeliv.stories > 0) ? `${projDeliv.stories} STORIES` : (tracker?.storyPlan || '30 STORIES');
 
           if (tracker && !tracker.isExcluded) {
@@ -737,7 +817,11 @@ export const getMonthlyTrackers = async (req, res) => {
           projectIndex: 1,
           totalProjects: 1,
           team: tracker?.team || 'RWM',
-          plan: tracker?.plan || (clientTasks.length > 0 ? String(clientTasks.length) : ''),
+          plan: formatPlanDeliverables({
+            tasks: clientTasks,
+            fallbackPlan: tracker?.plan,
+            days: scaffoldDays,
+          }),
           planQuota: 0,
           storyPlan: tracker?.storyPlan || '30 STORIES',
           month,
@@ -1013,8 +1097,14 @@ export const getMonthlyTrackers = async (req, res) => {
           );
           const projDeliv = deliverablesByProject.get(pIdStr);
           const quotaCount = projDeliv ? projDeliv.totalFeed : 0;
-          // Show ONLY feed deliverables quota (posts + reels) as count in PLAN column
-          const plan = quotaCount > 0 ? String(quotaCount) : (projTasks.length > 0 ? String(projTasks.length) : (existing?.plan || ''));
+          // Show separated reels & posts quota (e.g. "15R + 10P", "15R", "10P") in PLAN column
+          const plan = formatPlanDeliverables({
+            reels: projDeliv?.reels,
+            posts: projDeliv?.posts,
+            tasks: projTasks,
+            fallbackPlan: existing?.plan,
+            days: existing?.days,
+          });
           const storyPlan = (projDeliv?.stories && projDeliv.stories > 0) ? `${projDeliv.stories} STORIES` : (existing?.storyPlan || '30 STORIES');
 
           if (existing && !existing.isExcluded) {
@@ -1149,7 +1239,10 @@ export const getMonthlyTrackers = async (req, res) => {
               client: clientObj,
               projectIndex: 1,
               totalProjects: 1,
-              plan: existing.plan || '',
+              plan: formatPlanDeliverables({
+                fallbackPlan: existing.plan,
+                days: updatedDays,
+              }),
               planQuota: 0,
               storyPlan: existing.storyPlan || '30 STORIES',
             });
@@ -1164,7 +1257,10 @@ export const getMonthlyTrackers = async (req, res) => {
               projectIndex: 1,
               totalProjects: 1,
               team: 'RWM',
-              plan: clientMonthTasks.length > 0 ? String(clientMonthTasks.length) : '',
+              plan: formatPlanDeliverables({
+                tasks: clientMonthTasks,
+                days: scaffoldDays,
+              }),
               planQuota: clientMonthTasks.length,
               storyPlan: '30 STORIES',
               month,
@@ -1204,7 +1300,10 @@ export const getMonthlyTrackers = async (req, res) => {
       rows.push({
         ...t,
         client: clientObj,
-        plan: t.plan || '',
+        plan: formatPlanDeliverables({
+          fallbackPlan: t.plan,
+          days: t.days,
+        }),
         planQuota: 0,
         storyPlan: t.storyPlan || '30 STORIES',
       });
@@ -1682,8 +1781,11 @@ export const syncTasksWithTracker = async (req, res) => {
         if (storiesTarget === 0 && sTaskCount > 0) storiesTarget = sTaskCount;
       }
 
-      const totalQuota = (reelsTarget || 0) + (postsTarget || 0);
-      const plan = totalQuota > 0 ? String(totalQuota) : (clientTasks.length > 0 ? String(clientTasks.length) : '');
+      const plan = formatPlanDeliverables({
+        reels: reelsTarget,
+        posts: postsTarget,
+        tasks: clientTasks,
+      });
       const storyPlan = `${storiesTarget || 30} STORIES`;
 
       let tracker = await SmmMonthlyTracker.findOne({ client: client._id, month, year });
@@ -1957,7 +2059,11 @@ export const syncContentWithTracker = async (req, res) => {
         }
       });
 
-      const plan = `${reelsCount}R + ${postsCount}P`;
+      const plan = formatPlanDeliverables({
+        reels: reelsCount,
+        posts: postsCount,
+        days,
+      });
       const storyPlan = `${storiesCount || 30} STORIES`;
 
       await SmmMonthlyTracker.findOneAndUpdate(

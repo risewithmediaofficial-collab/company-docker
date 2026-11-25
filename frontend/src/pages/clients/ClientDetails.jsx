@@ -438,7 +438,7 @@ const ClientDetails = () => {
                   className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all cursor-pointer shadow-xs"
                 >
                   <Plus size={15} />
-                  <span>+ Add New</span>
+                  <span>Add New</span>
                   <ChevronDown size={13} />
                 </button>
                 <div className="absolute right-0 top-full mt-1.5 w-48 rounded-2xl bg-card border border-border/60 shadow-xl p-1.5 hidden group-hover:flex group-focus-within:flex flex-col z-50 text-xs">
@@ -1388,7 +1388,6 @@ const ClientDetails = () => {
                     {invoices.length}
                   </span>
                 </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">Manage and track billing invoices for this client</p>
               </div>
             </div>
             {user?.role !== 'client' && (
@@ -1527,7 +1526,6 @@ const ClientDetails = () => {
                     {paymentNotes.length}
                   </span>
                 </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">Recorded payments, payment history, and receipts from this client</p>
               </div>
             </div>
             {user?.role !== 'client' && (
@@ -1616,7 +1614,6 @@ const ClientDetails = () => {
                     {callHistory.length}
                   </span>
                 </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">Logged calls and discussions with this client</p>
               </div>
             </div>
             {user?.role !== 'client' && (
@@ -1692,7 +1689,6 @@ const ClientDetails = () => {
                     {referrals.length}
                   </span>
                 </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">Leads and clients referred by or associated with this client</p>
               </div>
             </div>
             {user?.role !== 'client' && (

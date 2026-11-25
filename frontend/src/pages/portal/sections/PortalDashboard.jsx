@@ -853,9 +853,6 @@ export default function PortalDashboard({ user, setPendingCount }) {
             </div>
             <div>
               <h2 className="text-base font-bold text-foreground">Dedicated Credentials &amp; Access Vault</h2>
-              <p className="text-xs text-muted-foreground">
-                Securely encrypted logins, account keys, and credentials granted specifically to your portal.
-              </p>
             </div>
           </div>
           <span className="px-3 py-1 rounded-full text-xs font-bold bg-secondary text-foreground self-start sm:self-center">

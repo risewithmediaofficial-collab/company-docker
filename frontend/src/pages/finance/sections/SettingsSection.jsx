@@ -106,9 +106,6 @@ export default function SettingsSection({ onLockFinance }) {
               <h2 className="text-base font-bold text-foreground">
                 Finance Portal Security & Separate Login
               </h2>
-              <p className="text-xs text-muted-foreground">
-                Protect sensitive company financial records with a dedicated access password
-              </p>
             </div>
           </div>
 
@@ -221,9 +218,6 @@ export default function SettingsSection({ onLockFinance }) {
               <h2 className="text-base font-bold text-foreground">
                 Bank, Cash & UPI Accounts
               </h2>
-              <p className="text-xs text-muted-foreground">
-                Manage agency operating bank accounts, UPI handles and cash reserves
-              </p>
             </div>
           </div>
 

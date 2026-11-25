@@ -46,6 +46,10 @@ services:
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
+      # Web Push Notifications (VAPID)
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-BKwkgrewQmAAflMVBGwXiK-MRe6MbZl6DNxH18aOwIU-mNTukiW3hLOTGcxdplps7T8NlcteaEVar_5zP6KlYMs}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-RRqhBGqb0W0qOMRSfeHzP6a3wM6vrCBlpCdULj3Xjyo}
+      VAPID_EMAIL: ${VAPID_EMAIL:-mailto:risewithmediaofficial@gmail.com}
     volumes:
       - uploads_data:/app/uploads
     depends_on:
@@ -58,6 +62,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_VAPID_PUBLIC_KEY: ${VITE_VAPID_PUBLIC_KEY:-BKwkgrewQmAAflMVBGwXiK-MRe6MbZl6DNxH18aOwIU-mNTukiW3hLOTGcxdplps7T8NlcteaEVar_5zP6KlYMs}
     container_name: agency_crm_frontend
     restart: unless-stopped
     ports:

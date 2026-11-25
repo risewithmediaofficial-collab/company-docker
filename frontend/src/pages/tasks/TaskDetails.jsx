@@ -49,6 +49,7 @@ import {
   Paperclip,
   Laptop,
   AlertTriangle,
+  ArrowRight,
 } from '@/components/ui/muiIcons';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -146,6 +147,7 @@ export const TaskDetails = () => {
   const [activeTab, setActiveTab] = useState('brief');
   const [editing, setEditing] = useState(false);
   const [showAssignAnotherModal, setShowAssignAnotherModal] = useState(false);
+  const [assignAnotherInitialValues, setAssignAnotherInitialValues] = useState(null);
   const [completedFiles, setCompletedFiles] = useState([]);
   const [showCredentials, setShowCredentials] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -157,6 +159,51 @@ export const TaskDetails = () => {
   const deleteTaskMutation = useDeleteTask();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const allowedStatusOptions = isEmployee ? TEAM_STATUS_OPTIONS : TASK_STATUS_OPTIONS;
+
+  const handleOpenNextStage = () => {
+    if (!task) return;
+
+    let nextStage = 'editor';
+    const titleLower = (task.taskTitle || task.title || '').toLowerCase();
+    if (task.scriptWriterAssigned || titleLower.includes('script')) {
+      nextStage = task.videographerAssigned ? 'editor' : 'shoot';
+    } else if (task.videographerAssigned || titleLower.includes('shoot')) {
+      nextStage = 'editor';
+    } else if (task.editorAssigned || titleLower.includes('edit')) {
+      nextStage = 'smm';
+    } else if (task.designerAssigned || titleLower.includes('design')) {
+      nextStage = 'smm';
+    }
+
+    const baseDate = task.dueDate ? new Date(task.dueDate) : new Date();
+    const nextDateObj = new Date(baseDate);
+    nextDateObj.setDate(nextDateObj.getDate() + 3);
+    const nextDueDateStr = nextDateObj.toISOString().split('T')[0];
+
+    const stagePrefixMap = {
+      shoot: '[Shoot] ',
+      editor: '[Edit] ',
+      smm: '[SMM] ',
+      designer: '[Design] ',
+    };
+    const prefix = stagePrefixMap[nextStage] || '';
+    const cleanBaseTitle = (task.taskTitle || task.title || 'Deliverable').replace(/^\[(Script|Shoot|Edit|SMM|Design)[^\]]*\]\s*/i, '');
+    const nextTitle = `${prefix}${cleanBaseTitle}`;
+
+    setAssignAnotherInitialValues({
+      client: task.client?._id || task.client || '',
+      project: task.project?._id || task.project || '',
+      priority: task.priority || 'Medium',
+      title: nextTitle,
+      dueDate: nextDueDateStr,
+      initialStage: nextStage,
+      rawFootageLink: task.rawFootageLink || task.driveLink || '',
+      scriptLink: task.scriptLink || '',
+      scriptText: task.voiceScriptText || task.fullScript || task.scriptText || '',
+      contentHook: task.hookOpeningLine || task.contentIdea || '',
+    });
+    setShowAssignAnotherModal(true);
+  };
 
   const handleUploadCompleted = async () => {
     if (!completedFiles.length) return;
@@ -260,7 +307,21 @@ export const TaskDetails = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowAssignAnotherModal(true)}
+                onClick={handleOpenNextStage}
+                className="inline-flex items-center gap-1.5 rounded-xl text-xs font-bold text-primary border-primary/30 bg-primary/5 hover:bg-primary/10 cursor-pointer"
+                title="Create follow-up deliverable task for next stage (e.g. Editor / SMM)"
+              >
+                <ArrowRight size={13} />
+                <span>Next Stage</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setAssignAnotherInitialValues(null);
+                  setShowAssignAnotherModal(true);
+                }}
                 className="hidden sm:inline-flex items-center gap-1.5 rounded-xl text-xs font-bold text-foreground hover:bg-secondary cursor-pointer"
               >
                 <Plus size={13} />
@@ -1242,9 +1303,10 @@ export const TaskDetails = () => {
           isOpen={showAssignAnotherModal}
           onClose={() => {
             setShowAssignAnotherModal(false);
+            setAssignAnotherInitialValues(null);
             refetch();
           }}
-          initialValues={{
+          initialValues={assignAnotherInitialValues || {
             client: task.client?._id || task.client || '',
             project: task.project?._id || task.project || '',
             assignedTo: Array.isArray(task.assignedTo) ? task.assignedTo[0]?._id || task.assignedTo[0] || '' : task.assignedTo || '',

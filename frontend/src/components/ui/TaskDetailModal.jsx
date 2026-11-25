@@ -60,6 +60,7 @@ import {
   Target,
   Laptop,
   Link2,
+  ArrowRight,
 } from '@/components/ui/muiIcons';
 import { SocialIcon } from './SocialIcons';
 import {
@@ -162,6 +163,7 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
   const [completedFiles, setCompletedFiles] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [showAssignAnotherModal, setShowAssignAnotherModal] = useState(false);
+  const [assignAnotherInitialValues, setAssignAnotherInitialValues] = useState(null);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showCredentials, setShowCredentials] = useState(false);
 
@@ -176,6 +178,51 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
   const [equipmentChecklist, setEquipmentChecklist] = useState([]);
   const [isEditingPendingReason, setIsEditingPendingReason] = useState(false);
   const [pendingReasonText, setPendingReasonText] = useState('');
+
+  const handleOpenNextStage = () => {
+    if (!task) return;
+
+    let nextStage = 'editor';
+    const titleLower = (task.taskTitle || task.title || '').toLowerCase();
+    if (task.scriptWriterAssigned || titleLower.includes('script')) {
+      nextStage = task.videographerAssigned ? 'editor' : 'shoot';
+    } else if (task.videographerAssigned || titleLower.includes('shoot')) {
+      nextStage = 'editor';
+    } else if (task.editorAssigned || titleLower.includes('edit')) {
+      nextStage = 'smm';
+    } else if (task.designerAssigned || titleLower.includes('design')) {
+      nextStage = 'smm';
+    }
+
+    const baseDate = task.dueDate ? new Date(task.dueDate) : new Date();
+    const nextDateObj = new Date(baseDate);
+    nextDateObj.setDate(nextDateObj.getDate() + 3);
+    const nextDueDateStr = nextDateObj.toISOString().split('T')[0];
+
+    const stagePrefixMap = {
+      shoot: '[Shoot] ',
+      editor: '[Edit] ',
+      smm: '[SMM] ',
+      designer: '[Design] ',
+    };
+    const prefix = stagePrefixMap[nextStage] || '';
+    const cleanBaseTitle = (task.taskTitle || task.title || 'Deliverable').replace(/^\[(Script|Shoot|Edit|SMM|Design)[^\]]*\]\s*/i, '');
+    const nextTitle = `${prefix}${cleanBaseTitle}`;
+
+    setAssignAnotherInitialValues({
+      client: task.client?._id || task.client || '',
+      project: task.project?._id || task.project || '',
+      priority: task.priority || 'Medium',
+      title: nextTitle,
+      dueDate: nextDueDateStr,
+      initialStage: nextStage,
+      rawFootageLink: task.rawFootageLink || task.driveLink || '',
+      scriptLink: task.scriptLink || '',
+      scriptText: task.voiceScriptText || task.fullScript || task.scriptText || '',
+      contentHook: task.hookOpeningLine || task.contentIdea || '',
+    });
+    setShowAssignAnotherModal(true);
+  };
 
   useEffect(() => {
     if (task) {
@@ -309,15 +356,28 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                 </span>
               )}
               {canEdit && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setIsEditing(true)}
-                  className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-xl text-xs font-bold hover:bg-secondary inline-flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Edit size={12} />
-                  <span className="hidden sm:inline">Edit</span>
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleOpenNextStage}
+                    className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-xl text-xs font-bold text-primary border-primary/30 bg-primary/5 hover:bg-primary/10 inline-flex items-center gap-1.5 cursor-pointer"
+                    title="Create follow-up deliverable task for next stage (e.g. Editor / SMM)"
+                  >
+                    <ArrowRight size={12} />
+                    <span>Next Stage</span>
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIsEditing(true)}
+                    className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-xl text-xs font-bold hover:bg-secondary inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Edit size={12} />
+                    <span className="hidden sm:inline">Edit</span>
+                  </Button>
+                </>
               )}
               {canDelete && (
                 <Button
@@ -1941,9 +2001,10 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
             isOpen={showAssignAnotherModal}
             onClose={() => {
               setShowAssignAnotherModal(false);
+              setAssignAnotherInitialValues(null);
               refetch();
             }}
-            initialValues={{
+            initialValues={assignAnotherInitialValues || {
               client: task.client?._id || task.client || '',
               project: task.project?._id || task.project || '',
               assignedTo: Array.isArray(task.assignedTo) ? task.assignedTo[0]?._id || task.assignedTo[0] || '' : task.assignedTo || '',
