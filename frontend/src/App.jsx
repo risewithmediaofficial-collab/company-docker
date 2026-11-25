@@ -284,22 +284,22 @@ const App = () => {
 
           {/* Clients */}
           <Route path="/clients" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'organizationOwner', 'founder', 'manager', 'accountManager', 'employee', 'editor', 'designer', 'adsManager', 'financeManager', 'intern']}>
               <Clients />
             </ProtectedRoute>
           } />
           <Route path="/clients/:id" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'organizationOwner', 'founder', 'manager', 'accountManager', 'employee', 'client', 'clientAdmin', 'clientMember', 'editor', 'designer', 'adsManager', 'financeManager', 'intern']}>
               <ClientDetails />
             </ProtectedRoute>
           } />
           <Route path="/client-vault" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'organizationOwner', 'founder', 'manager', 'accountManager', 'employee', 'client', 'clientAdmin', 'clientMember', 'editor', 'designer', 'adsManager', 'financeManager', 'intern']}>
               <ClientVault />
             </ProtectedRoute>
           } />
           <Route path="/client-followups" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'organizationOwner', 'founder', 'manager', 'accountManager', 'employee']}>
               <ClientFollowups />
             </ProtectedRoute>
           } />

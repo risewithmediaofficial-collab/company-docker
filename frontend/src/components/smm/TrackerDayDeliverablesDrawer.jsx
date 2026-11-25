@@ -136,6 +136,8 @@ export const TrackerDayDeliverablesDrawer = ({
   isOpen,
   onClose,
   client,
+  projectNumber = null,
+  isMultiProject = false,
   projectName = '',
   dayNumber,
   monthName,
@@ -378,7 +380,8 @@ export const TrackerDayDeliverablesDrawer = ({
 
   if (!isOpen) return null;
 
-  const clientName = client?.companyName || client?.name || 'Client';
+  const companyName = client?.companyName || client?.name || 'Client';
+  const clientContact = client?.clientName || client?.contactName || '';
 
   return createPortal(
     <div
@@ -393,13 +396,18 @@ export const TrackerDayDeliverablesDrawer = ({
         <div className="flex items-center justify-between px-5 py-4 bg-secondary/40 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-sm">
-              {(projectName || clientName).charAt(0).toUpperCase()}
+              {companyName.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-extrabold text-foreground truncate" title={projectName || clientName}>
-                  {projectName || clientName}
+                <h2 className="text-base font-extrabold text-foreground truncate" title={companyName}>
+                  {companyName}
                 </h2>
+                {isMultiProject && projectNumber && (
+                  <span className="rounded-md bg-cyan-500/15 border border-cyan-500/30 px-1.5 py-0.5 text-[10px] font-black text-cyan-700 dark:text-cyan-300 tracking-wider shrink-0">
+                    #{projectNumber}
+                  </span>
+                )}
                 {isToday && (
                   <span className="rounded-md bg-primary px-1.5 py-0.5 text-[9px] font-black uppercase text-primary-foreground tracking-wider shrink-0">
                     TODAY LIVE
@@ -407,9 +415,9 @@ export const TrackerDayDeliverablesDrawer = ({
                 )}
               </div>
               <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground mt-0.5">
-                {projectName && clientName && (
-                  <span className="font-semibold text-foreground/80 truncate" title={`Client: ${clientName}`}>
-                    Client: {clientName} &nbsp;•&nbsp;
+                {clientContact && clientContact !== companyName && (
+                  <span className="font-semibold text-foreground/80 truncate" title={`Client: ${clientContact}`}>
+                    Client: {clientContact} &nbsp;•&nbsp;
                   </span>
                 )}
                 <span className="flex items-center gap-1.5 tabular-nums">

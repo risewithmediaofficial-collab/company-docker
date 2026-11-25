@@ -320,8 +320,8 @@ const Clients = () => {
       key: 'name',
       label: 'Client / Company',
       render: (row) => {
-        const displayName = row.company || row.name || 'Untitled Client';
-        const contactPerson = row.company ? row.name : null;
+        const displayName = row.company || row.name || row.clientName || 'Untitled Client';
+        const contactPerson = row.company ? (row.name || row.clientName || null) : null;
         const initials = getCompanyInitials(row.name, row.company);
         const avatarClass = getAvatarStyle(displayName);
 
@@ -588,7 +588,7 @@ const Clients = () => {
               data={displayedClients}
               columns={columns}
               loading={isLoading}
-              onRowClick={(client) => navigate(`/clients/${client._id}`)}
+              onRowClick={(client) => navigate(`/clients/${client._id || client.clientId || client.id}`)}
               onEdit={(client) => {
                 setSelectedClient(client);
                 setShowAddModal(true);
@@ -679,8 +679,8 @@ const Clients = () => {
                           const isBeingDragged = draggingClientId === client._id;
                           const showDropIndicatorBefore = isColActive && dragOverClientIndex === idx && !isBeingDragged;
 
-                          const displayName = client.company || client.name || 'Untitled Client';
-                          const contactPerson = client.company ? client.name : null;
+                          const displayName = client.company || client.name || client.clientName || 'Untitled Client';
+                          const contactPerson = client.company ? (client.name || client.clientName || null) : null;
                           const initials = getCompanyInitials(client.name, client.company);
                           const avatarClass = getAvatarStyle(displayName);
                           const startDateVal = client.projectStartDate || client.contractStartDate || client.createdAt;
@@ -736,7 +736,7 @@ const Clients = () => {
                                   setDragOverStatus(null);
                                   setDragOverClientIndex(null);
                                 }}
-                                onClick={() => navigate(`/clients/${client._id}`)}
+                                onClick={() => navigate(`/clients/${client._id || client.clientId || client.id}`)}
                                 className={`p-3.5 bg-card border border-border/75 shadow-sm rounded-2xl transition-all duration-200 cursor-grab active:cursor-grabbing space-y-2.5 group hover:-translate-y-0.5 hover:shadow-md hover:border-primary/40 active:scale-[0.98] ${conf.accentBorder} ${
                                   isBeingDragged
                                     ? 'opacity-30 scale-95 ring-2 ring-primary/30'

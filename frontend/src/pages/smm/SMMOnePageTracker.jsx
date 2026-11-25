@@ -632,12 +632,43 @@ const SMMOnePageTracker = () => {
   const [drawerState, setDrawerState] = useState({
     isOpen: false,
     client: null,
+    projectNumber: null,
+    isMultiProject: false,
     projectName: '',
     dayNumber: null,
     dayCell: null,
     trackerId: null,
     rowIdx: null,
   });
+
+  // Calculate project numbering for clients with multiple projects
+  const clientProjectMeta = useMemo(() => {
+    const counts = new Map();
+    rows.forEach((r) => {
+      const key = r.client?._id?.toString() || r.client?.companyName || 'unknown';
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+
+    const runningIndices = new Map();
+    const rowIndices = new Map();
+
+    rows.forEach((r, idx) => {
+      const key = r.client?._id?.toString() || r.client?.companyName || 'unknown';
+      const total = counts.get(key) || 1;
+      const current = (runningIndices.get(key) || 0) + 1;
+      runningIndices.set(key, current);
+
+      const isMulti = total > 1 || Boolean(r.totalProjects && r.totalProjects > 1);
+      const projNum = (r.projectIndex && isMulti) ? r.projectIndex : (isMulti ? current : null);
+
+      rowIndices.set(idx, {
+        projectNumber: projNum,
+        isMultiProject: isMulti,
+      });
+    });
+
+    return rowIndices;
+  }, [rows]);
 
   const isCurrentMonth = month === (now.getMonth() + 1) && year === now.getFullYear();
   const currentDayNumber = isCurrentMonth ? now.getDate() : null;
@@ -1195,9 +1226,12 @@ const SMMOnePageTracker = () => {
     const row = rows[rowIdx];
     if (!row) return;
     const cell = (row.days || []).find((d) => d.day === dayNum) || { day: dayNum, items: [] };
+    const rowMeta = clientProjectMeta.get(rowIdx);
     setDrawerState({
       isOpen: true,
       client: row.client,
+      projectNumber: rowMeta?.projectNumber || row.projectIndex || null,
+      isMultiProject: rowMeta?.isMultiProject || false,
       projectName: row.projectName || row.project?.name || '',
       dayNumber: dayNum,
       dayCell: cell,
@@ -1590,6 +1624,8 @@ const SMMOnePageTracker = () => {
           <div className="space-y-3">
             {rows.map((row, rowIdx) => {
               const name = row.client?.companyName || 'Unknown';
+              const clientContact = row.client?.clientName || row.client?.contactName || '';
+              const rowMeta = clientProjectMeta.get(rowIdx);
               const cell = (row.days || []).find((dc) => dc.day === focusedDay) || { day: focusedDay };
               const rawSt = cell[statusField] || 'todo';
               const st = resolveCellStatus(rawSt, cell[labelField], focusedDay, month, year);
@@ -1625,13 +1661,20 @@ const SMMOnePageTracker = () => {
                         </span>
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-bold text-sm text-foreground truncate" title={row.projectName || row.project?.name || name}>
-                          {row.projectName || row.project?.name || name}
-                        </h4>
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          {(row.projectName || row.project?.name) && (
-                            <span className="text-[11px] text-muted-foreground truncate" title={`Client: ${name}`}>
-                              Client: {name}
+                          <h4 className="font-bold text-sm text-foreground truncate" title={name}>
+                            {name}
+                          </h4>
+                          {rowMeta?.isMultiProject && rowMeta?.projectNumber && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30">
+                              #{rowMeta.projectNumber}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {clientContact && clientContact !== name && (
+                            <span className="text-[11px] text-muted-foreground truncate" title={`Client: ${clientContact}`}>
+                              Client: {clientContact}
                             </span>
                           )}
                           <span className="text-[10px] font-semibold text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
@@ -1871,6 +1914,8 @@ const SMMOnePageTracker = () => {
               <tbody>
                 {rows.map((row, rowIdx) => {
                   const name = row.client?.companyName || 'Unknown';
+                  const clientContact = row.client?.clientName || row.client?.contactName || '';
+                  const rowMeta = clientProjectMeta.get(rowIdx);
                   const { done, total } = calcProgress(row, statusField);
                   const pct = total > 0 ? Math.round((done/total)*100) : 0;
                   const pctColor = pct===100 ? 'hsl(var(--foreground))' : pct>=60 ? '#52525b' : '#a1a1aa';
@@ -1918,18 +1963,39 @@ const SMMOnePageTracker = () => {
                         }}>
                           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:3, minWidth:0 }}>
                             <div style={{ overflow:'hidden', minWidth:0, display:'flex', flexDirection:'column', lineHeight: 1.25 }}>
-                              <span
-                                style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontWeight:800, fontSize: isMobile ? 10 : 11.5, color:'hsl(var(--foreground))' }}
-                                title={row.projectName || row.project?.name || name}
-                              >
-                                {row.projectName || row.project?.name || name}
-                              </span>
-                              {(row.projectName || row.project?.name) && (
+                              <div style={{ display:'flex', alignItems:'center', gap:4, minWidth:0 }}>
                                 <span
-                                  style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontWeight:500, fontSize: isMobile ? 8.5 : 9.5, color:'hsl(var(--muted-foreground))' }}
-                                  title={`Client: ${name}`}
+                                  style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontWeight:800, fontSize: isMobile ? 10 : 11.5, color:'hsl(var(--foreground))' }}
+                                  title={name}
                                 >
                                   {name}
+                                </span>
+                                {rowMeta?.isMultiProject && rowMeta?.projectNumber && (
+                                  <span
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      padding: '0 4px',
+                                      borderRadius: 4,
+                                      fontWeight: 800,
+                                      fontSize: 9.5,
+                                      background: 'rgba(6, 182, 212, 0.15)',
+                                      color: '#0891b2',
+                                      border: '1px solid rgba(6, 182, 212, 0.3)',
+                                      flexShrink: 0,
+                                    }}
+                                    title={`Project #${rowMeta.projectNumber}`}
+                                  >
+                                    #{rowMeta.projectNumber}
+                                  </span>
+                                )}
+                              </div>
+                              {clientContact && clientContact !== name && (
+                                <span
+                                  style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontWeight:500, fontSize: isMobile ? 8.5 : 9.5, color:'hsl(var(--muted-foreground))' }}
+                                  title={`Client: ${clientContact}`}
+                                >
+                                  {clientContact}
                                 </span>
                               )}
                             </div>
@@ -2512,6 +2578,8 @@ const SMMOnePageTracker = () => {
         isOpen={drawerState.isOpen}
         onClose={() => setDrawerState((prev) => ({ ...prev, isOpen: false }))}
         client={drawerState.client}
+        projectNumber={drawerState.projectNumber}
+        isMultiProject={drawerState.isMultiProject}
         projectName={drawerState.projectName}
         dayNumber={drawerState.dayNumber}
         monthName={MONTHS[month - 1]}

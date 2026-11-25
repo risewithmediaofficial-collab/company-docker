@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import Project from '../models/project.model.js';
 import Task from '../models/task.model.js';
 import Client from '../models/client.model.js';
+import SmmClient from '../models/smm/smmClient.model.js';
 import ActivityLog from '../models/activityLog.model.js';
 import Proposal from '../models/proposal.model.js';
 import { createNotification } from '../utils/notification.js';
@@ -285,7 +286,44 @@ export const getProjects = async (req, res) => {
       }
     }
     if (priority) filter.priority = priorityMap[priority] || priority;
-    if (client) filter.client = client;
+    if (client) {
+      const clientLookupIds = [client];
+      try {
+        if (mongoose.Types.ObjectId.isValid(client)) {
+          const crmDoc = await Client.findById(client).select('clientId email company').lean();
+          if (crmDoc) {
+            const smmDoc = await SmmClient.findOne({
+              $or: [
+                { _id: client },
+                ...(crmDoc.clientId ? [{ clientId: crmDoc.clientId }] : []),
+                ...(crmDoc.email ? [{ email: crmDoc.email.toLowerCase().trim() }] : []),
+                ...(crmDoc.company ? [{ companyName: crmDoc.company.trim() }] : []),
+              ],
+            }).select('_id').lean();
+            if (smmDoc) clientLookupIds.push(smmDoc._id);
+          } else {
+            const smmDoc = await SmmClient.findById(client).select('clientId email companyName').lean();
+            if (smmDoc) {
+              const matchCrm = await Client.findOne({
+                $or: [
+                  { _id: client },
+                  ...(smmDoc.clientId ? [{ clientId: smmDoc.clientId }] : []),
+                  ...(smmDoc.email ? [{ email: smmDoc.email.toLowerCase().trim() }] : []),
+                  ...(smmDoc.companyName ? [{ company: smmDoc.companyName.trim() }] : []),
+                ],
+              }).select('_id').lean();
+              if (matchCrm) clientLookupIds.push(matchCrm._id);
+            }
+          }
+        } else {
+          const crmDoc = await Client.findOne({ clientId: client }).select('_id').lean();
+          if (crmDoc) clientLookupIds.push(crmDoc._id);
+          const smmDoc = await SmmClient.findOne({ clientId: client }).select('_id').lean();
+          if (smmDoc) clientLookupIds.push(smmDoc._id);
+        }
+      } catch (_) {}
+      filter.client = clientLookupIds.length > 1 ? { $in: clientLookupIds } : clientLookupIds[0];
+    }
     if (manager) filter.manager = manager;
     if (isInternal !== undefined && isInternal !== '') {
       filter.isInternal = isInternal === 'true' || isInternal === true;

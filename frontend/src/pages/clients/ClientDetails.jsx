@@ -260,12 +260,16 @@ const ClientDetails = () => {
 
       // If client was resolved and has a different _id than raw id param, ensure sub-resources load
       const toArray = (val) => (Array.isArray(val) ? val : []);
-      let projects = projectsRes?.status === 'fulfilled' ? toArray(projectsRes.value.data?.projects || projectsRes.value.data) : [];
+      let projects = (projectsRes?.status === 'fulfilled' && toArray(projectsRes.value.data?.projects || projectsRes.value.data).length > 0)
+        ? toArray(projectsRes.value.data?.projects || projectsRes.value.data)
+        : toArray(clientRes?.value?.data?.projects);
       let invoices = invoicesRes?.status === 'fulfilled' ? toArray(invoicesRes.value.data?.invoices || invoicesRes.value.data) : [];
       let financeRecords = financeRes?.status === 'fulfilled' ? toArray(financeRes.value.data?.records || financeRes.value.data) : [];
       let callHistory = callRes?.status === 'fulfilled' ? toArray(callRes.value.data?.calls || callRes.value.data?.callHistory || callRes.value.data) : [];
       let referrals = referralRes?.status === 'fulfilled' ? toArray(referralRes.value.data?.referrals || referralRes.value.data) : [];
       let receipts = receiptsRes?.status === 'fulfilled' ? toArray(receiptsRes.value.data?.receipts || receiptsRes.value.data?.data || receiptsRes.value.data) : [];
+      let tasks = toArray(clientRes?.value?.data?.tasks);
+      let recentActivity = toArray(clientRes?.value?.data?.recentActivity);
 
       if (client?._id && String(client._id) !== String(id) && projects.length === 0) {
         try {
@@ -285,6 +289,8 @@ const ClientDetails = () => {
       return {
         client,
         projects,
+        tasks,
+        recentActivity,
         invoices,
         financeRecords,
         callHistory,

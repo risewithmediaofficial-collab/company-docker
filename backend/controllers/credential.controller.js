@@ -2,8 +2,10 @@
 // CLIENT CREDENTIAL CONTROLLER
 // =============================================
 
+import mongoose from 'mongoose';
 import ClientCredential from '../models/clientCredential.model.js';
 import Client from '../models/client.model.js';
+import SmmClient from '../models/smm/smmClient.model.js';
 import { encryptData, decryptData } from '../utils/encryption.js';
 import { createActivityLog } from '../utils/activity.js';
 
@@ -96,14 +98,33 @@ export const getClientCredentials = async (req, res) => {
     const { search, credentialType, page = 1, limit = 20 } = req.query;
 
     // Verify client exists and user has access
-    const client = await Client.findById(clientId);
+    let client = null;
+    if (mongoose.Types.ObjectId.isValid(clientId)) {
+      client = await Client.findById(clientId) || await SmmClient.findById(clientId);
+    }
+    if (!client) {
+      client = await Client.findOne({
+        $or: [
+          { clientId },
+          { company: clientId },
+          { name: clientId },
+        ],
+      }) || await SmmClient.findOne({
+        $or: [
+          { clientId },
+          { companyName: clientId },
+        ],
+      });
+    }
     if (!client) {
       return res.status(404).json({ success: false, message: 'Client not found' });
     }
 
+    const resolvedClientId = client._id;
+
     if (req.user.role === 'client') {
       const userClient = await getClientForUser(req.user);
-      if (!userClient || String(userClient._id) !== String(clientId)) {
+      if (!userClient || (String(userClient._id) !== String(clientId) && String(userClient._id) !== String(resolvedClientId))) {
         return res.status(403).json({ success: false, message: 'Access denied: You can only view your own credentials' });
       }
     } else {
@@ -113,7 +134,10 @@ export const getClientCredentials = async (req, res) => {
       }
     }
 
-    const filter = { clientId, isActive: true };
+    const filter = {
+      clientId: { $in: [clientId, resolvedClientId] },
+      isActive: true,
+    };
 
     if (req.user.role === 'client') {
       filter.visibleToClient = true;

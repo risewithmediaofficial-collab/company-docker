@@ -102,33 +102,38 @@ export const backfillClientIds = async () => {
     }
 
     // 4. Two-way sync: Ensure every SmmClient also exists in CRM Client
-    const defaultOrg = await Organization.findOne().sort({ createdAt: 1 }).select('_id').lean();
+    const allOrgs = await Organization.find({}).sort({ createdAt: 1 }).select('_id').lean();
+    const defaultOrg = allOrgs[0] || null;
+    const allOrgIds = allOrgs.map((o) => o._id);
+
     const allSmmClients = await SmmClient.find({}).lean();
     for (const smm of allSmmClients) {
+      const cName = (smm.companyName || smm.clientName || '').trim();
       const crmExists = await Client.findOne({
         $or: [
           { _id: smm._id },
           ...(smm.clientId ? [{ clientId: smm.clientId }] : []),
           ...(smm.email ? [{ email: smm.email.toLowerCase().trim() }] : []),
-          ...(smm.companyName ? [{ company: smm.companyName.trim() }] : []),
+          ...(cName ? [{ company: new RegExp(`^${cName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }] : []),
         ],
       });
 
-      if (!crmExists && smm.companyName) {
+      if (!crmExists && cName) {
         try {
           await Client.create({
             _id: smm._id,
             clientId: smm.clientId || undefined,
-            name: smm.companyName,
-            company: smm.companyName,
+            name: smm.primaryContact || smm.contactPerson || cName,
+            company: cName,
             email: smm.email || '',
             phone: smm.phone || '',
             website: smm.website || '',
             logo: smm.brandLogo || '',
             status: smm.status?.toLowerCase() === 'active' ? 'active' : 'inactive',
             organizationId: smm.organizationId || defaultOrg?._id || undefined,
+            services: ['Social Media Marketing'],
           });
-          console.log(`[ClientMigration] Synced SMM client '${smm.companyName}' into CRM Client collection.`);
+          console.log(`[ClientMigration] Synced SMM client '${cName}' into CRM Client collection.`);
         } catch (syncErr) {
           // Ignore duplicate key errors if already created concurrently
         }
@@ -140,16 +145,41 @@ export const backfillClientIds = async () => {
       }
     }
 
-    // 5. Backfill missing organizationId on any remaining CRM clients
+    // 5. Backfill missing or foreign migrated organizationId on CRM and SMM clients
     if (defaultOrg?._id) {
-      await Client.updateMany(
-        { $or: [{ organizationId: { $exists: false } }, { organizationId: null }] },
-        { $set: { organizationId: defaultOrg._id } }
-      );
-      await SmmClient.updateMany(
-        { $or: [{ organizationId: { $exists: false } }, { organizationId: null }] },
-        { $set: { organizationId: defaultOrg._id } }
-      );
+      if (allOrgIds.length <= 1) {
+        // Single-tenant system: All clients belong to the primary default organization
+        await Client.updateMany(
+          { organizationId: { $ne: defaultOrg._id } },
+          { $set: { organizationId: defaultOrg._id } }
+        );
+        await SmmClient.updateMany(
+          { organizationId: { $ne: defaultOrg._id } },
+          { $set: { organizationId: defaultOrg._id } }
+        );
+      } else {
+        // Multi-tenant system: Adopt any clients whose organizationId doesn't belong to any valid known organization
+        await Client.updateMany(
+          {
+            $or: [
+              { organizationId: { $exists: false } },
+              { organizationId: null },
+              { organizationId: { $nin: allOrgIds } },
+            ],
+          },
+          { $set: { organizationId: defaultOrg._id } }
+        );
+        await SmmClient.updateMany(
+          {
+            $or: [
+              { organizationId: { $exists: false } },
+              { organizationId: null },
+              { organizationId: { $nin: allOrgIds } },
+            ],
+          },
+          { $set: { organizationId: defaultOrg._id } }
+        );
+      }
     }
   } catch (err) {
     console.error('[ClientMigration] Error during clientId backfill:', err.message);

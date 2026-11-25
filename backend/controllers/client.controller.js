@@ -9,6 +9,7 @@ import Project from '../models/project.model.js';
 import Task from '../models/task.model.js';
 import ActivityLog from '../models/activityLog.model.js';
 import SmmClient from '../models/smm/smmClient.model.js';
+import Organization from '../models/organization.model.js';
 import { sendEmail } from '../utils/email.js';
 import { createActivityLog } from '../utils/activity.js';
 import { moveToRecycleBin } from '../utils/recycleBin.js';
@@ -21,6 +22,14 @@ const statusMap = {
   Prospect: 'onboarding',
   Churned: 'churned',
   Renew: 'renew',
+};
+
+const statusQueryMap = {
+  Active: ['active', 'Active'],
+  Inactive: ['inactive', 'Inactive', 'paused', 'Paused'],
+  Prospect: ['onboarding', 'Onboarding', 'prospect', 'Prospect', 'lead', 'Lead'],
+  Churned: ['churned', 'Churned', 'cancelled', 'Cancelled', 'lost', 'Lost'],
+  Renew: ['renew', 'Renew', 'renewal', 'Renewal'],
 };
 
 const serializeClient = (client) => {
@@ -98,8 +107,7 @@ export const getClients = async (req, res) => {
     const filter = {};
 
     if (status) {
-      const mapped = statusMap[status] || status;
-      filter.status = { $in: [status, mapped, status.toLowerCase()] };
+      filter.status = { $in: statusQueryMap[status] || [status, statusMap[status] || status, status.toLowerCase()] };
     }
     if (service) {
       filter.services = { $elemMatch: { $regex: service, $options: 'i' } };
@@ -159,11 +167,35 @@ export const getClients = async (req, res) => {
       }
     }
 
-    // ── STRICT TENANT ISOLATION (with legacy null-org fallback) ──
+    // ── STRICT TENANT ISOLATION (with legacy null-org fallback & migration support) ──
     const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
     const targetOrgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
     if (targetOrgId) {
-      const orgFilter = { $in: [targetOrgId, null] };
+      // Find all OTHER known active organizations in this database
+      const otherOrgs = await Organization.find({ _id: { $ne: targetOrgId } }).select('_id').lean();
+      const otherOrgIds = otherOrgs.map((o) => o._id);
+
+      // Backfill any orphan or migrated clients that don't belong to another valid organization
+      if (otherOrgIds.length === 0) {
+        // Single-organization environment: adopt all clients with missing, null, or foreign migrated orgId
+        Client.updateMany({ organizationId: { $ne: targetOrgId } }, { $set: { organizationId: targetOrgId } }).exec().catch(() => {});
+        SmmClient.updateMany({ organizationId: { $ne: targetOrgId } }, { $set: { organizationId: targetOrgId } }).exec().catch(() => {});
+      } else {
+        // Multi-tenant: adopt clients whose organizationId does not belong to any valid existing organization
+        const allOrgs = await Organization.find({}).select('_id').lean();
+        const allOrgIds = allOrgs.map((o) => o._id);
+        Client.updateMany(
+          { $or: [{ organizationId: { $nin: allOrgIds } }, { organizationId: null }, { organizationId: { $exists: false } }] },
+          { $set: { organizationId: targetOrgId } }
+        ).exec().catch(() => {});
+        SmmClient.updateMany(
+          { $or: [{ organizationId: { $nin: allOrgIds } }, { organizationId: null }, { organizationId: { $exists: false } }] },
+          { $set: { organizationId: targetOrgId } }
+        ).exec().catch(() => {});
+      }
+
+      // Filter: Allow user's organization PLUS any legacy/null/migrated clients not owned by another org
+      const orgFilter = otherOrgIds.length > 0 ? { $nin: otherOrgIds } : { $exists: true };
       if (filter.$or) {
         filter.$and = [{ $or: filter.$or }, { organizationId: orgFilter }];
         delete filter.$or;
@@ -173,6 +205,39 @@ export const getClients = async (req, res) => {
         filter.organizationId = orgFilter;
       }
     }
+
+    // Auto-sync any standalone SMM clients into CRM Client collection so all clients are visible in Clients 360
+    try {
+      const allSmm = await SmmClient.find({}).lean();
+      for (const smm of allSmm) {
+        const cName = (smm.companyName || smm.clientName || '').trim();
+        if (!cName) continue;
+        const crmExists = await Client.findOne({
+          $or: [
+            { _id: smm._id },
+            ...(smm.clientId ? [{ clientId: smm.clientId }] : []),
+            ...(smm.email ? [{ email: smm.email.toLowerCase().trim() }] : []),
+            { company: new RegExp(`^${cName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+          ],
+        }).select('_id').lean();
+
+        if (!crmExists) {
+          await Client.create({
+            _id: smm._id,
+            clientId: smm.clientId || undefined,
+            name: smm.primaryContact || smm.contactPerson || cName,
+            company: cName,
+            email: smm.email || '',
+            phone: smm.phone || '',
+            website: smm.website || '',
+            logo: smm.brandLogo || '',
+            status: smm.status?.toLowerCase() === 'active' ? 'active' : 'inactive',
+            organizationId: targetOrgId || smm.organizationId || undefined,
+            services: ['Social Media Marketing'],
+          }).catch(() => {});
+        }
+      }
+    } catch (_) {}
 
     const [total, clients] = await Promise.all([
       Client.countDocuments(filter),
@@ -189,7 +254,32 @@ export const getClients = async (req, res) => {
     const taskSummaryMap = {};
 
     if (clientIds.length > 0) {
-      const clientProjects = await Project.find({ client: { $in: clientIds } })
+      // Collect alternate SMM client IDs so projects and tasks attributed to SMM IDs are fully grouped
+      const smmAlternateMap = {};
+      const allLookupIds = [...clientIds];
+      const smmMatches = await SmmClient.find({
+        $or: [
+          { _id: { $in: clientIds } },
+          { clientId: { $in: clients.map((c) => c.clientId).filter(Boolean) } },
+          { email: { $in: clients.map((c) => c.email?.toLowerCase()?.trim()).filter(Boolean) } },
+        ],
+      }).select('_id clientId email companyName').lean();
+
+      smmMatches.forEach((s) => {
+        allLookupIds.push(s._id);
+        const parentCrm = clients.find(
+          (c) =>
+            String(c._id) === String(s._id) ||
+            (c.clientId && c.clientId === s.clientId) ||
+            (c.email && s.email && c.email.toLowerCase().trim() === s.email.toLowerCase().trim()) ||
+            (c.company && s.companyName && c.company.toLowerCase().trim() === s.companyName.toLowerCase().trim())
+        );
+        if (parentCrm) {
+          smmAlternateMap[String(s._id)] = String(parentCrm._id);
+        }
+      });
+
+      const clientProjects = await Project.find({ client: { $in: allLookupIds } })
         .select('client name category startDate dueDate status createdAt')
         .lean();
 
@@ -197,7 +287,8 @@ export const getClients = async (req, res) => {
       const projectIds = [];
 
       clientProjects.forEach((proj) => {
-        const cid = String(proj.client);
+        const rawCid = String(proj.client);
+        const cid = smmAlternateMap[rawCid] || rawCid;
         projectToClientMap[String(proj._id)] = cid;
         projectIds.push(proj._id);
 
@@ -232,7 +323,7 @@ export const getClients = async (req, res) => {
         }
       });
 
-      const taskQueryOr = [{ client: { $in: clientIds } }];
+      const taskQueryOr = [{ client: { $in: allLookupIds } }];
       if (projectIds.length > 0) {
         taskQueryOr.push({ project: { $in: projectIds } });
       }
@@ -263,7 +354,8 @@ export const getClients = async (req, res) => {
       ]);
 
       clientTasks.forEach((t) => {
-        const cid = String(t.client || (t.project ? projectToClientMap[String(t.project)] : '') || '');
+        const rawCid = String(t.client || (t.project ? projectToClientMap[String(t.project)] : '') || '');
+        const cid = smmAlternateMap[rawCid] || rawCid;
         if (!cid) return;
         if (!taskSummaryMap[cid]) {
           taskSummaryMap[cid] = { totalTasks: 0, ongoingTasks: 0, pendingTasks: 0, completedTasks: 0 };
@@ -405,7 +497,22 @@ export const getClient = async (req, res) => {
       return res.status(access.status).json({ success: false, message: access.message });
     }
 
-    const projects = await Project.find({ client: client._id })
+    const relatedClientIds = [client._id];
+    try {
+      const smmClientMatch = await SmmClient.findOne({
+        $or: [
+          { _id: client._id },
+          ...(client.clientId ? [{ clientId: client.clientId }] : []),
+          ...(client.email ? [{ email: client.email.toLowerCase().trim() }] : []),
+          ...(client.company ? [{ companyName: client.company.trim() }] : []),
+        ],
+      }).select('_id').lean();
+      if (smmClientMatch && String(smmClientMatch._id) !== String(client._id)) {
+        relatedClientIds.push(smmClientMatch._id);
+      }
+    } catch (_) {}
+
+    const projects = await Project.find({ client: { $in: relatedClientIds } })
       .select('name status progress startDate dueDate category priority budget team manager')
       .populate('manager', 'name avatar')
       .sort({ createdAt: -1 })
@@ -416,7 +523,7 @@ export const getClient = async (req, res) => {
     const [tasks, recentActivity] = await Promise.all([
       Task.find({
         $or: [
-          { client: client._id },
+          { client: { $in: relatedClientIds } },
           ...(projectIds.length > 0 ? [{ project: { $in: projectIds } }] : []),
         ],
       })
@@ -426,7 +533,7 @@ export const getClient = async (req, res) => {
         .sort({ dueDate: 1, createdAt: -1 })
         .limit(200)
         .lean(),
-      ActivityLog.find({ relatedClient: client._id })
+      ActivityLog.find({ relatedClient: { $in: relatedClientIds } })
         .populate('actor', 'name avatar role')
         .sort({ createdAt: -1 })
         .limit(15)
