@@ -980,7 +980,7 @@ export const KanbanCreateTaskModal = ({
       className="fixed inset-0 z-[999] flex justify-end bg-black/60 animate-in fade-in duration-200"
     >
       <div
-        className="relative flex h-full w-full max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col bg-background text-foreground shadow-[-24px_0_48px_-12px_rgb(0,0,0,0.12)] dark:shadow-[-24px_0_48px_-12px_rgb(0,0,0,0.5)] animate-in slide-in-from-right duration-300 overflow-hidden"
+        className="relative flex h-full w-full max-w-full sm:max-w-xl flex-col bg-background text-foreground shadow-[-24px_0_48px_-12px_rgb(0,0,0,0.12)] dark:shadow-[-24px_0_48px_-12px_rgb(0,0,0,0.5)] animate-in slide-in-from-right duration-300 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

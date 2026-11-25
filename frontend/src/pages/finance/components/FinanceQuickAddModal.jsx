@@ -548,7 +548,7 @@ export default function FinanceQuickAddModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         variant="side"
-        size="xl"
+        size="default"
         noPadding={true}
         className="bg-card overflow-hidden flex flex-col font-sans"
       >

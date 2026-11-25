@@ -418,7 +418,7 @@ export const TaskWorkflowDrawer = ({ task, isOpen, onClose, onOpenTaskDetail }) 
   return createPortal(
     <div className="fixed inset-0 z-[999] flex justify-end bg-black/60 animate-in fade-in duration-200">
       <div
-        className="relative flex h-full w-full max-w-full sm:max-w-2xl flex-col bg-card text-foreground animate-in slide-in-from-right duration-300"
+        className="relative flex h-full w-full max-w-full sm:max-w-xl flex-col bg-card text-foreground animate-in slide-in-from-right duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drawer Header */}

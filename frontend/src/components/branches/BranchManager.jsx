@@ -630,7 +630,7 @@ export const BranchManager = ({ companyId, companyName, isSuperAdmin = false, au
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
                 transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-                className="w-screen max-w-2xl bg-white border-l border-slate-200 shadow-2xl flex flex-col h-full pointer-events-auto overflow-hidden"
+                className="w-screen max-w-xl bg-white border-l border-slate-200 shadow-2xl flex flex-col h-full pointer-events-auto overflow-hidden"
               >
                 {/* Drawer Sticky Header */}
                 <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">

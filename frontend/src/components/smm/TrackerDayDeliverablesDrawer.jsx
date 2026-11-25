@@ -389,7 +389,7 @@ export const TrackerDayDeliverablesDrawer = ({
       onClick={onClose}
     >
       <div
-        className="relative flex h-full w-full max-w-full sm:max-w-xl md:max-w-2xl flex-col bg-card animate-in slide-in-from-right duration-300"
+        className="relative flex h-full w-full max-w-full sm:max-w-xl flex-col bg-card animate-in slide-in-from-right duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── 1. Drawer Header ── */}

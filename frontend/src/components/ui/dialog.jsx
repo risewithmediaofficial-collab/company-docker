@@ -22,21 +22,35 @@ export const DialogContent = React.forwardRef(
   ) => {
     const isSide = variant === 'side';
 
-    const sizeClasses = {
+    // Standardize all side drawer forms to one consistent width (sm:max-w-xl / 576px)
+    const sideSizeClasses = {
+      sm: 'sm:max-w-md',
+      default: 'sm:max-w-xl',
+      md: 'sm:max-w-xl',
+      lg: 'sm:max-w-xl',
+      xl: 'sm:max-w-xl',
+      full: 'sm:max-w-[88vw]',
+    };
+
+    const centerSizeClasses = {
       sm: 'sm:max-w-md',
       default: 'sm:max-w-xl md:max-w-2xl',
+      md: 'sm:max-w-xl md:max-w-2xl',
       lg: 'sm:max-w-2xl md:max-w-3xl',
       xl: 'sm:max-w-3xl md:max-w-4xl xl:max-w-5xl',
       full: 'sm:max-w-[88vw]',
     };
 
-    // For side drawers: strip any legacy max-h, width calc, or rounding constraints so it spans 100% full screen height cleanly
+    const sizeClasses = isSide ? sideSizeClasses : centerSizeClasses;
+
+    // For side drawers: strip legacy max-h, width calc, rounding, and oversized max-w-* overrides so all side forms stay consistent
     const sanitizedClassName = isSide && typeof className === 'string'
       ? className
           .replace(/max-h-\[[^\]]+\]/g, '')
           .replace(/w-\[calc\([^\]]+\)\]/g, '')
           .replace(/my-auto/g, '')
           .replace(/rounded-\S+/g, '')
+          .replace(size !== 'full' ? /(?:sm:|md:|lg:|xl:)?max-w-(?:xl|2xl|3xl|4xl|5xl|6xl|7xl|full)\b/g : /^$/, '')
       : className;
 
 
