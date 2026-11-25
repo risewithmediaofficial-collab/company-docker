@@ -20,6 +20,15 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            set -eu
             cd /docker/company
-            git pull origin main
-            docker compose up -d --build
+            echo "Before deploy: $(git rev-parse --short HEAD)"
+            if ! git diff --quiet || ! git diff --cached --quiet; then
+              echo "Stashing local tracked modifications before deploy..."
+              git stash push -m "auto-backup-before-deploy-$(date +%s)" || true
+            fi
+            git fetch origin main
+            git reset --hard origin/main
+            echo "Deploying commit: $(git rev-parse --short HEAD)"
+            docker compose up -d --build --remove-orphans
+            docker compose ps
