@@ -1,13 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { Phone, PhoneCall, Plus, Search, Calendar, User, Edit2, Trash2, CheckCircle2, AlertCircle } from '@/components/ui/muiIcons';
+import { Phone, PhoneCall, Calendar, User, Edit2, Trash2, CheckCircle2, AlertCircle } from '@/components/ui/muiIcons';
 import { useClients } from '../../hooks/useClients';
 import { useProjects } from '../../hooks/useProjects';
 import { useLeads, useUpdateLead } from '../../hooks/useLeads';
 import { useCallHistory, useCreateCallHistory, useUpdateCallHistory, useDeleteCallHistory } from '../../hooks/useFinance';
 import { SelectDropdown } from '../../components/ui/SelectDropdown';
 import { Button } from '../../components/ui/button';
-import { PageHeader, PageToolbar, SectionCard, StatusBadge } from '../../components/ui/page';
+import { PageHeader, PageToolbar, MetricGrid, MetricCard, EmptyState, SearchField, SectionCard } from '../../components/ui/page';
 import { useDateFilter } from '../../context/DateFilterContext';
 
 const CALL_TYPES = ['Incoming', 'Outgoing', 'Missed', 'WhatsApp Call', 'Google Meet', 'Zoom', 'Direct Meeting'];
@@ -162,7 +162,7 @@ export default function CallHistoryDashboard() {
       leadId: isLead ? form.leadId || undefined : undefined,
       projectId: isLead || isUnregistered ? undefined : form.projectId || undefined,
       callType: form.callType,
-      callPurpose: form.callPurpose,
+      callPurpose: form.callPurpose === 'Other' && form.customCallPurpose?.trim() ? form.customCallPurpose.trim() : form.callPurpose,
       callDate: form.callDate,
       callTime: form.callTime,
       spokenWith: form.spokenWith,
@@ -214,12 +214,37 @@ export default function CallHistoryDashboard() {
 
   const { isDateInRange } = useDateFilter();
 
+  const dateFilteredCalls = useMemo(() => {
+    const calls = callHistoryQuery.data || [];
+    return calls.filter((call) => isDateInRange(call.calledAt || call.callDate || call.createdAt));
+  }, [callHistoryQuery.data, isDateInRange]);
+
+  const stats = useMemo(() => {
+    let clientCount = 0;
+    let leadCount = 0;
+    let unregisteredCount = 0;
+    let followUpsCount = 0;
+
+    dateFilteredCalls.forEach((call) => {
+      if (call.clientId) clientCount += 1;
+      else if (call.leadId) leadCount += 1;
+      else if (call.unregisteredClientName) unregisteredCount += 1;
+      if (call.nextFollowUpDate) followUpsCount += 1;
+    });
+
+    return {
+      total: dateFilteredCalls.length,
+      client: clientCount,
+      lead: leadCount,
+      unregistered: unregisteredCount,
+      followUps: followUpsCount,
+    };
+  }, [dateFilteredCalls]);
+
   // Filter Call Logs
   const filteredCalls = useMemo(() => {
-    const calls = callHistoryQuery.data || [];
-    return calls
+    return dateFilteredCalls
       .filter((call) => {
-        if (!isDateInRange(call.calledAt || call.callDate || call.createdAt)) return false;
         // Type filter
         if (filterType === 'client' && !call.clientId) return false;
         if (filterType === 'lead' && !call.leadId) return false;
@@ -248,78 +273,78 @@ export default function CallHistoryDashboard() {
         return true;
       })
       .sort((a, b) => new Date(b.calledAt || b.callDate || b.createdAt || 0) - new Date(a.calledAt || a.callDate || a.createdAt || 0));
-  }, [callHistoryQuery.data, filterType, searchQuery, isDateInRange]);
+  }, [dateFilteredCalls, filterType, searchQuery]);
+
+  const fieldClass =
+    'w-full h-10 rounded-xl bg-background border border-border/70 px-3.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-colors';
+  const textareaClass =
+    'w-full rounded-xl bg-background border border-border/70 px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-colors resize-none';
+  const selectButtonClass = 'h-10 rounded-xl bg-background border border-border/70 px-3.5 text-sm';
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Call History & Client Touchpoints"
-      />
+      <PageHeader title="Call History & Client Touchpoints" />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+      <MetricGrid>
+        <MetricCard label="Total Calls" value={stats.total} icon={PhoneCall} />
+        <MetricCard label="Client Calls" value={stats.client} icon={User} />
+        <MetricCard label="Lead Calls" value={stats.lead} icon={CheckCircle2} />
+        <MetricCard label="Follow-ups Set" value={stats.followUps} icon={Calendar} />
+      </MetricGrid>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12 items-start">
         {/* Call History Timeline List */}
-        <div className="space-y-4">
-          <PageToolbar className="flex-wrap gap-3">
-            <div className="flex gap-1.5 rounded-2xl bg-secondary/40 p-1 overflow-x-auto custom-scrollbar max-w-full">
-              <button
-                type="button"
-                onClick={() => setFilterType('all')}
-                className={`rounded-xl px-4 py-2 text-xs font-semibold transition-all shrink-0 min-h-[36px] ${
-                  filterType === 'all' ? 'bg-primary text-primary-foreground ' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                All Calls
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterType('client')}
-                className={`rounded-xl px-4 py-2 text-xs font-semibold transition-all shrink-0 min-h-[36px] ${
-                  filterType === 'client' ? 'bg-primary text-primary-foreground ' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Client Calls
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterType('lead')}
-                className={`rounded-xl px-4 py-2 text-xs font-semibold transition-all shrink-0 min-h-[36px] ${
-                  filterType === 'lead' ? 'bg-primary text-primary-foreground ' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Lead Calls
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterType('unregistered')}
-                className={`rounded-xl px-4 py-2 text-xs font-semibold transition-all shrink-0 min-h-[36px] ${
-                  filterType === 'unregistered' ? 'bg-primary text-primary-foreground ' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Unregistered Calls
-              </button>
+        <div className="xl:col-span-7 space-y-4 min-w-0">
+          <PageToolbar className="border border-border/60 shadow-xs">
+            <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-secondary/50 p-1">
+              {[
+                { key: 'all', label: 'All Calls', count: stats.total },
+                { key: 'client', label: 'Client Calls', count: stats.client },
+                { key: 'lead', label: 'Lead Calls', count: stats.lead },
+                { key: 'unregistered', label: 'New / Unregistered', count: stats.unregistered },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setFilterType(tab.key)}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                    filterType === tab.key
+                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
+                      filterType === tab.key ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-background text-muted-foreground'
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
             </div>
 
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search call logs..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-2xl bg-card pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
+            <SearchField
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search client, lead, summary, or purpose..."
+              className="min-w-[220px]"
+              inputClassName="h-10 py-2 border border-border/60 bg-background/80"
+            />
           </PageToolbar>
 
-          <div className="overflow-y-auto max-h-[calc(100vh-270px)] pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
+          <div className="space-y-4">
             {callHistoryQuery.isLoading ? (
-              <div className="flex h-40 items-center justify-center rounded-3xl bg-card">
+              <div className="flex h-56 items-center justify-center rounded-2xl border border-border/60 bg-card">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
               </div>
             ) : filteredCalls.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-3xl bg-card p-10 text-center">
-                <Phone className="h-10 w-10 text-muted-foreground/50" />
-                <h3 className="mt-4 font-bold text-foreground">No call logs found</h3>
+              <div className="rounded-2xl border border-border/60 bg-card py-10">
+                <EmptyState
+                  icon={Phone}
+                  title={searchQuery.trim() || filterType !== 'all' ? 'No matching call logs found' : 'No call logs recorded yet'}
+                />
               </div>
             ) : (
               <div className="space-y-4">
@@ -330,21 +355,21 @@ export default function CallHistoryDashboard() {
                     ? call.unregisteredClientName
                     : (isLead ? call.leadId?.name : (call.clientId?.company || call.clientId?.name));
                   return (
-                    <div key={call._id} className="group relative rounded-3xl bg-card p-6 transition-all ">
+                    <div key={call._id} className="group relative rounded-2xl border border-border/60 bg-card p-5 shadow-xs transition-all hover:border-border">
                       <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div className="flex items-start gap-4">
-                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
-                            isUnregistered ? 'bg-primary text-primary-foreground' : (isLead ? 'bg-secondary text-foreground' : 'bg-muted text-muted-foreground')
+                        <div className="flex items-start gap-3.5 min-w-0">
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                            isUnregistered ? 'bg-primary text-primary-foreground' : (isLead ? 'bg-secondary text-foreground' : 'bg-primary/10 text-primary')
                           }`}>
-                            <Phone size={18} className="shrink-0" />
+                            <Phone size={17} className="shrink-0" />
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="font-bold text-foreground text-base">{contactName}</h3>
+                              <h3 className="font-bold text-foreground text-base truncate">{contactName}</h3>
                               <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase ${
-                                isUnregistered ? 'bg-primary text-primary-foreground' : (isLead ? 'bg-secondary text-foreground ' : 'bg-muted text-muted-foreground ')
+                                isUnregistered ? 'bg-primary/15 text-primary' : (isLead ? 'bg-secondary text-foreground' : 'bg-muted text-muted-foreground')
                               }`}>
-                                {isUnregistered ? 'New/Unregistered' : (isLead ? 'Lead' : 'Client')}
+                                {isUnregistered ? 'New / Unregistered' : (isLead ? 'Lead' : 'Client')}
                               </span>
                               {call.projectId?.name && (
                                 <span className="text-xs text-muted-foreground">
@@ -352,13 +377,21 @@ export default function CallHistoryDashboard() {
                                 </span>
                               )}
                             </div>
-                            <p className="mt-1.5 text-xs text-muted-foreground flex flex-wrap items-center gap-2 tabular-nums">
-                              <Calendar size={12} className="shrink-0" />
-                              <span>{new Date(call.callDate).toLocaleDateString()} {call.callTime ? `at ${call.callTime}` : ''}</span>
+                            <p className="mt-1 text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 tabular-nums">
+                              <span className="inline-flex items-center gap-1">
+                                <Calendar size={12} className="shrink-0" />
+                                {new Date(call.callDate).toLocaleDateString()} {call.callTime ? `at ${call.callTime}` : ''}
+                              </span>
                               <span>• Type: <span className="font-semibold text-foreground">{call.callType}</span></span>
+                              {call.spokenWith && (
+                                <span>• Spoken with: <span className="font-semibold text-foreground">{call.spokenWith}</span></span>
+                              )}
+                              {call.contactNumber && (
+                                <span>• <span className="font-semibold text-foreground">{call.contactNumber}</span></span>
+                              )}
                             </p>
                             {isUnregistered && (
-                              <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                              <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
                                 {call.unregisteredClientPhone && (
                                   <p>Phone: <span className="font-semibold text-foreground tabular-nums">{call.unregisteredClientPhone}</span></p>
                                 )}
@@ -371,17 +404,19 @@ export default function CallHistoryDashboard() {
                         </div>
 
                         {canManage && (
-                          <div className="flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-1.5">
                             <button
+                              type="button"
                               onClick={() => startEdit(call)}
-                              className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                              className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
                               title="Edit Call Note"
                             >
                               <Edit2 size={14} />
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleDelete(call._id)}
-                              className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                              className="rounded-lg p-1.5 text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600 transition-colors cursor-pointer"
                               title="Delete Call Note"
                             >
                               <Trash2 size={14} />
@@ -390,24 +425,24 @@ export default function CallHistoryDashboard() {
                         )}
                       </div>
 
-                      <div className="mt-4 grid gap-4 md:grid-cols-2">
-                        <div className="rounded-2xl bg-secondary/40 p-4 ">
-                          <h4 className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground">Discussion Summary</h4>
-                          <p className="mt-2 text-sm text-foreground leading-relaxed whitespace-pre-wrap">{call.callSummary || 'No details provided.'}</p>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl border border-border/40 bg-secondary/30 p-3.5">
+                          <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Discussion Summary</h4>
+                          <p className="mt-1.5 text-sm text-foreground leading-relaxed whitespace-pre-wrap">{call.callSummary || 'No details provided.'}</p>
                         </div>
-                        <div className="rounded-2xl bg-secondary/40 p-4 ">
-                          <h4 className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground">Response & Next Steps</h4>
-                          <p className="mt-2 text-sm text-foreground leading-relaxed whitespace-pre-wrap">{call.clientResponse || 'No responses provided.'}</p>
+                        <div className="rounded-xl border border-border/40 bg-secondary/30 p-3.5">
+                          <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Response & Next Steps</h4>
+                          <p className="mt-1.5 text-sm text-foreground leading-relaxed whitespace-pre-wrap">{call.clientResponse || 'No responses provided.'}</p>
                           {call.nextFollowUpDate && (
-                            <div className="mt-3 flex items-center gap-1.5 text-xs text-foreground bg-secondary px-2.5 py-1.5 rounded-xl w-fit font-medium tabular-nums">
-                              <AlertCircle size={12} className="shrink-0 text-muted-foreground" />
-                              Next Follow-up: {new Date(call.nextFollowUpDate).toLocaleDateString()}
+                            <div className="mt-2.5 inline-flex items-center gap-1.5 text-xs text-foreground bg-background border border-border/60 px-2.5 py-1 rounded-lg font-medium tabular-nums">
+                              <AlertCircle size={12} className="shrink-0 text-primary" />
+                              Follow-up: {new Date(call.nextFollowUpDate).toLocaleDateString()}
                             </div>
                           )}
                         </div>
                       </div>
 
-                      <div className="mt-4 pt-3 flex flex-wrap items-center justify-between text-xs text-muted-foreground">
+                      <div className="mt-3.5 pt-3 border-t border-border/40 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                         <span>Purpose: <span className="font-semibold text-foreground">{call.callPurpose}</span></span>
                         <span>Logged by: <span className="font-semibold text-foreground">{call.addedBy?.name || 'Unknown'}</span></span>
                       </div>
@@ -420,21 +455,32 @@ export default function CallHistoryDashboard() {
         </div>
 
         {/* Add/Edit Call Log Form Card */}
-        <div>
+        <div className="xl:col-span-5 min-w-0">
           {canManage ? (
             <SectionCard
               title={isEditing ? 'Edit Call Note' : 'Log Call Note'}
-              className="sticky top-6 shadow-lg max-h-[calc(100vh-120px)] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent"
+              action={
+                isEditing ? (
+                  <button
+                    type="button"
+                    onClick={cancelEdit}
+                    className="text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    Cancel Edit
+                  </button>
+                ) : null
+              }
+              className="border border-border/60 shadow-sm xl:sticky xl:top-6"
             >
               <form onSubmit={handleSubmit} className="space-y-4">
-                                {/* Form Type Selector */}
+                {/* Form Type Selector */}
                 {!isEditing && (
-                  <div className="grid grid-cols-3 gap-2 rounded-2xl bg-secondary/30 p-1">
+                  <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-secondary/50 p-1">
                     <button
                       type="button"
                       onClick={() => { setFormType('client'); resetForm(); }}
-                      className={`rounded-xl py-2 text-[10px] font-semibold transition-all ${
-                        formType === 'client' ? 'bg-background text-foreground ' : 'text-muted-foreground hover:text-foreground'
+                      className={`rounded-lg py-2 px-2 text-xs font-semibold transition-all cursor-pointer ${
+                        formType === 'client' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       Client Call
@@ -442,8 +488,8 @@ export default function CallHistoryDashboard() {
                     <button
                       type="button"
                       onClick={() => { setFormType('lead'); resetForm(); }}
-                      className={`rounded-xl py-2 text-[10px] font-semibold transition-all ${
-                        formType === 'lead' ? 'bg-background text-foreground ' : 'text-muted-foreground hover:text-foreground'
+                      className={`rounded-lg py-2 px-2 text-xs font-semibold transition-all cursor-pointer ${
+                        formType === 'lead' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       Lead Call
@@ -451,8 +497,8 @@ export default function CallHistoryDashboard() {
                     <button
                       type="button"
                       onClick={() => { setFormType('unregistered'); resetForm(); }}
-                      className={`rounded-xl py-2 text-[10px] font-semibold transition-all ${
-                        formType === 'unregistered' ? 'bg-background text-foreground ' : 'text-muted-foreground hover:text-foreground'
+                      className={`rounded-lg py-2 px-2 text-xs font-semibold transition-all cursor-pointer ${
+                        formType === 'unregistered' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       New Client
@@ -463,58 +509,62 @@ export default function CallHistoryDashboard() {
                 {/* Contact Selection */}
                 {formType === 'client' && (
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-foreground">Select Client *</label>
+                    <label className="block text-xs font-semibold text-foreground">Select Client *</label>
                     <SelectDropdown
                       value={form.clientId}
                       onChange={(val) => setForm((prev) => ({ ...prev, clientId: val, projectId: '' }))}
                       options={clients.map((c) => ({ value: c._id, label: c.company || c.name }))}
                       placeholder="Choose client"
+                      buttonClassName={selectButtonClass}
                     />
                   </div>
                 )}
                 {formType === 'lead' && (
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-foreground">Select Lead *</label>
+                    <label className="block text-xs font-semibold text-foreground">Select Lead *</label>
                     <SelectDropdown
                       value={form.leadId}
                       onChange={(val) => setForm((prev) => ({ ...prev, leadId: val }))}
                       options={leads.map((l) => ({ value: l._id, label: `${l.name} (${l.company || 'Independent'})` }))}
                       placeholder="Choose lead"
+                      buttonClassName={selectButtonClass}
                     />
                   </div>
                 )}
                 {formType === 'unregistered' && (
-                  <div className="space-y-4 pt-3 animate-fadeIn">
-                    <p className="text-xs font-bold text-foreground bg-secondary px-2.5 py-1 rounded-lg w-fit">New Client Details</p>
-                    <div className="space-y-1.5">
-                      <label className="block text-sm font-semibold text-foreground">Client Name *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. John Doe / ABC Inc."
-                        value={form.unregisteredClientName}
-                        onChange={(e) => setForm((prev) => ({ ...prev, unregisteredClientName: e.target.value }))}
-                        className="w-full h-11 rounded-xl bg-card px-4 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      />
+                  <div className="space-y-3 rounded-xl border border-border/50 bg-secondary/20 p-3.5 animate-fadeIn">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">New Client Details</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-semibold text-foreground">Client Name *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. John Doe / ABC Inc."
+                          value={form.unregisteredClientName}
+                          onChange={(e) => setForm((prev) => ({ ...prev, unregisteredClientName: e.target.value }))}
+                          className={fieldClass}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-semibold text-foreground">Phone Number</label>
+                        <input
+                          type="text"
+                          placeholder="Phone number"
+                          value={form.unregisteredClientPhone}
+                          onChange={(e) => setForm((prev) => ({ ...prev, unregisteredClientPhone: e.target.value }))}
+                          className={fieldClass}
+                        />
+                      </div>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-semibold text-foreground">Phone Number</label>
-                      <input
-                        type="text"
-                        placeholder="Phone number"
-                        value={form.unregisteredClientPhone}
-                        onChange={(e) => setForm((prev) => ({ ...prev, unregisteredClientPhone: e.target.value }))}
-                        className="w-full h-11 rounded-xl bg-card px-4 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="block text-sm font-semibold text-foreground">Business Address</label>
+                      <label className="block text-xs font-semibold text-foreground">Business Address</label>
                       <textarea
                         placeholder="Enter business address..."
                         rows={2}
                         value={form.unregisteredClientAddress}
                         onChange={(e) => setForm((prev) => ({ ...prev, unregisteredClientAddress: e.target.value }))}
-                        className="w-full min-h-[84px] rounded-xl bg-card px-4 py-3 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                        className={`${textareaClass} min-h-[72px]`}
                       />
                     </div>
                   </div>
@@ -523,52 +573,56 @@ export default function CallHistoryDashboard() {
                 {/* Project Selection (Client only) */}
                 {formType === 'client' && form.clientId && (
                   <div className="space-y-1.5 animate-fadeIn">
-                    <label className="block text-sm font-semibold text-foreground">Select Project (Optional)</label>
+                    <label className="block text-xs font-semibold text-foreground">Select Project (Optional)</label>
                     <SelectDropdown
                       value={form.projectId}
                       onChange={(val) => setForm((prev) => ({ ...prev, projectId: val }))}
                       options={filteredProjects.map((p) => ({ value: p._id, label: p.name }))}
                       placeholder="General / Select project"
+                      buttonClassName={selectButtonClass}
                     />
                   </div>
                 )}
 
                 {/* Lead CRM Fields (Lead only) */}
                 {formType === 'lead' && form.leadId && (
-                  <div className="pt-3 mt-2 space-y-3 animate-fadeIn">
-                    <p className="text-xs font-bold text-foreground bg-secondary px-2.5 py-1 rounded-lg w-fit">Update Lead Details</p>
+                  <div className="space-y-3 rounded-xl border border-border/50 bg-secondary/20 p-3.5 animate-fadeIn">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Update Lead Details</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <label className="block text-sm font-semibold text-foreground">Lead Stage</label>
+                        <label className="block text-xs font-semibold text-foreground">Lead Stage</label>
                         <SelectDropdown
                           value={form.leadStage}
                           onChange={(val) => setForm((prev) => ({ ...prev, leadStage: val }))}
                           options={LEAD_STAGES.map((s) => ({ value: s, label: s.replace('_', ' ').toUpperCase() }))}
+                          buttonClassName={selectButtonClass}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="block text-sm font-semibold text-foreground">Lead Value (INR)</label>
+                        <label className="block text-xs font-semibold text-foreground">Lead Value (INR)</label>
                         <input
                           type="number"
                           value={form.leadValue}
                           onChange={(e) => setForm((prev) => ({ ...prev, leadValue: e.target.value }))}
-                          className="w-full h-11 rounded-xl bg-card px-4 text-sm font-normal tabular-nums focus:outline-none focus:ring-2 focus:ring-ring/20"
+                          className={`${fieldClass} tabular-nums`}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="block text-sm font-semibold text-foreground">Priority</label>
+                        <label className="block text-xs font-semibold text-foreground">Priority</label>
                         <SelectDropdown
                           value={form.leadPriority}
                           onChange={(val) => setForm((prev) => ({ ...prev, leadPriority: val }))}
                           options={LEAD_PRIORITIES.map((p) => ({ value: p, label: p.toUpperCase() }))}
+                          buttonClassName={selectButtonClass}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="block text-sm font-semibold text-foreground">Source</label>
+                        <label className="block text-xs font-semibold text-foreground">Source</label>
                         <SelectDropdown
                           value={form.leadSource}
                           onChange={(val) => setForm((prev) => ({ ...prev, leadSource: val }))}
                           options={LEAD_SOURCES.map((s) => ({ value: s, label: s.replace('_', ' ').toUpperCase() }))}
+                          buttonClassName={selectButtonClass}
                         />
                       </div>
                     </div>
@@ -576,21 +630,23 @@ export default function CallHistoryDashboard() {
                 )}
 
                 {/* Call Properties */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-foreground">Call Type</label>
+                    <label className="block text-xs font-semibold text-foreground">Call Type</label>
                     <SelectDropdown
                       value={form.callType}
                       onChange={(val) => setForm((prev) => ({ ...prev, callType: val }))}
                       options={CALL_TYPES}
+                      buttonClassName={selectButtonClass}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-foreground">Purpose</label>
+                    <label className="block text-xs font-semibold text-foreground">Purpose</label>
                     <SelectDropdown
                       value={form.callPurpose}
                       onChange={(val) => setForm((prev) => ({ ...prev, callPurpose: val }))}
                       options={CALL_PURPOSES}
+                      buttonClassName={selectButtonClass}
                     />
                     {form.callPurpose === 'Other' && (
                       <input
@@ -598,7 +654,7 @@ export default function CallHistoryDashboard() {
                         placeholder="Specify call purpose..."
                         value={form.customCallPurpose || ''}
                         onChange={(e) => setForm((prev) => ({ ...prev, customCallPurpose: e.target.value }))}
-                        className="w-full h-11 rounded-xl bg-card px-4 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-primary/20 mt-1"
+                        className={`${fieldClass} mt-1.5`}
                       />
                     )}
                   </div>
@@ -606,88 +662,88 @@ export default function CallHistoryDashboard() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-foreground">Call Date</label>
+                    <label className="block text-xs font-semibold text-foreground">Call Date</label>
                     <input
                       type="date"
                       value={form.callDate}
                       onChange={(e) => setForm((prev) => ({ ...prev, callDate: e.target.value }))}
                       onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
-                      className="w-full h-11 rounded-xl bg-card px-4 text-sm font-normal tabular-nums focus:outline-none focus:ring-2 focus:ring-ring/20 cursor-pointer"
+                      className={`${fieldClass} tabular-nums cursor-pointer`}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-foreground">Call Time</label>
+                    <label className="block text-xs font-semibold text-foreground">Call Time</label>
                     <input
                       type="time"
                       value={form.callTime}
                       onChange={(e) => setForm((prev) => ({ ...prev, callTime: e.target.value }))}
                       onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
-                      className="w-full h-11 rounded-xl bg-card px-4 text-sm font-normal tabular-nums focus:outline-none focus:ring-2 focus:ring-ring/20 cursor-pointer"
+                      className={`${fieldClass} tabular-nums cursor-pointer`}
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-foreground">Spoken With</label>
+                    <label className="block text-xs font-semibold text-foreground">Spoken With</label>
                     <input
                       type="text"
                       placeholder="e.g. CEO, Manager"
                       value={form.spokenWith}
                       onChange={(e) => setForm((prev) => ({ ...prev, spokenWith: e.target.value }))}
-                      className="w-full h-11 rounded-xl bg-card px-4 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className={fieldClass}
                     />
                   </div>
                   {formType !== 'unregistered' && (
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-semibold text-foreground">Contact Number</label>
+                      <label className="block text-xs font-semibold text-foreground">Contact Number</label>
                       <input
                         type="text"
                         placeholder="Phone number"
                         value={form.contactNumber}
                         onChange={(e) => setForm((prev) => ({ ...prev, contactNumber: e.target.value }))}
-                        className="w-full h-11 rounded-xl bg-card px-4 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        className={fieldClass}
                       />
                     </div>
                   )}
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-semibold text-foreground">Call Summary</label>
+                  <label className="block text-xs font-semibold text-foreground">Call Summary</label>
                   <textarea
                     placeholder="Key points of discussion..."
                     rows={3}
                     value={form.callSummary}
                     onChange={(e) => setForm((prev) => ({ ...prev, callSummary: e.target.value }))}
-                    className="w-full min-h-[96px] rounded-xl bg-card px-4 py-3 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                    className={`${textareaClass} min-h-[84px]`}
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-semibold text-foreground">Client Response / Outcome</label>
+                  <label className="block text-xs font-semibold text-foreground">Client Response / Outcome</label>
                   <textarea
                     placeholder="Promises, objections, outcomes..."
                     rows={2}
                     value={form.clientResponse}
                     onChange={(e) => setForm((prev) => ({ ...prev, clientResponse: e.target.value }))}
-                    className="w-full min-h-[84px] rounded-xl bg-card px-4 py-3 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                    className={`${textareaClass} min-h-[72px]`}
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-foreground">Next Follow-up Date</label>
+                    <label className="block text-xs font-semibold text-foreground">Next Follow-up Date</label>
                     <input
                       type="date"
                       value={form.nextFollowUpDate}
                       onChange={(e) => setForm((prev) => ({ ...prev, nextFollowUpDate: e.target.value }))}
                       onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
-                      className="w-full h-11 rounded-xl bg-card px-4 text-sm font-normal tabular-nums focus:outline-none focus:ring-2 focus:ring-ring/20 cursor-pointer"
+                      className={`${fieldClass} tabular-nums cursor-pointer`}
                     />
                   </div>
                   {formType === 'client' && (
                     <div className="flex items-end">
-                      <label className="flex h-11 w-full cursor-pointer items-center gap-3 rounded-xl bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/20">
+                      <label className="flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-xl bg-background border border-border/70 px-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/30">
                         <input
                           type="checkbox"
                           checked={form.visibleToClient}
@@ -705,7 +761,7 @@ export default function CallHistoryDashboard() {
                     <>
                       <Button
                         type="submit"
-                        className="flex-1 h-11 rounded-xl text-sm font-bold"
+                        className="flex-1 h-10 rounded-xl text-sm font-bold"
                         disabled={updateCallHistory.isPending}
                       >
                         {updateCallHistory.isPending ? 'Updating...' : 'Update Note'}
@@ -713,7 +769,7 @@ export default function CallHistoryDashboard() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="h-11 px-5 rounded-xl text-sm font-semibold"
+                        className="h-10 px-5 rounded-xl text-sm font-semibold"
                         onClick={cancelEdit}
                       >
                         Cancel
@@ -722,7 +778,7 @@ export default function CallHistoryDashboard() {
                   ) : (
                     <Button
                       type="submit"
-                      className="w-full h-11 rounded-xl text-sm font-bold"
+                      className="w-full h-10 rounded-xl text-sm font-bold"
                       disabled={createCallHistory.isPending}
                     >
                       {createCallHistory.isPending ? 'Saving...' : 'Add Call Note'}
@@ -732,7 +788,7 @@ export default function CallHistoryDashboard() {
               </form>
             </SectionCard>
           ) : (
-            <div className="rounded-3xl bg-card p-6 text-center text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-border/60 bg-card p-6 text-center text-sm text-muted-foreground">
               You do not have permissions to log new calls.
             </div>
           )}

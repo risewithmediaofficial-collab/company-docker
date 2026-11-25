@@ -859,6 +859,9 @@ const SMMOnePageTracker = () => {
     socket.on('clientCreated', handleClientChanged);
     socket.on('clientUpdated', handleClientChanged);
     socket.on('clientDeleted', handleClientChanged);
+    socket.on('projectCreated', handleClientChanged);
+    socket.on('projectUpdated', handleClientChanged);
+    socket.on('projectDeleted', handleClientChanged);
 
     return () => {
       socket.off('smmTrackerCellUpdated', handleCellUpdated);
@@ -868,6 +871,9 @@ const SMMOnePageTracker = () => {
       socket.off('clientCreated', handleClientChanged);
       socket.off('clientUpdated', handleClientChanged);
       socket.off('clientDeleted', handleClientChanged);
+      socket.off('projectCreated', handleClientChanged);
+      socket.off('projectUpdated', handleClientChanged);
+      socket.off('projectDeleted', handleClientChanged);
     };
   }, [socket, month, year, fetchData]);
 

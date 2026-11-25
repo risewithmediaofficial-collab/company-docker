@@ -7,6 +7,8 @@ import Project from '../models/project.model.js';
 import Task from '../models/task.model.js';
 import Client from '../models/client.model.js';
 import SmmClient from '../models/smm/smmClient.model.js';
+import SmmMonthlyTracker from '../models/smm/smmMonthlyTracker.model.js';
+import ProjectMonthlyDeliverable from '../models/projectMonthlyDeliverable.model.js';
 import ActivityLog from '../models/activityLog.model.js';
 import Proposal from '../models/proposal.model.js';
 import { createNotification } from '../utils/notification.js';
@@ -783,6 +785,16 @@ export const deleteProject = async (req, res) => {
     });
 
     await Task.deleteMany({ project: project._id });
+    await ProjectMonthlyDeliverable.deleteMany({ projectId: project._id });
+    const trackerDeleteOr = [{ project: project._id }];
+    if (project.client && project.name) {
+      trackerDeleteOr.push({
+        client: project.client,
+        $or: [{ project: null }, { project: { $exists: false } }],
+        projectName: project.name,
+      });
+    }
+    await SmmMonthlyTracker.deleteMany({ $or: trackerDeleteOr });
     await project.deleteOne();
 
     await createActivityLog({
@@ -797,6 +809,8 @@ export const deleteProject = async (req, res) => {
     });
 
     emitLiveEvent('projectDeleted', req.params.id);
+    emitLiveEvent('smmTrackerDeleted', { projectId: project._id });
+    emitLiveEvent('smmTrackerUpdated', {});
     res.json({ success: true, message: 'Project and associated tasks deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
