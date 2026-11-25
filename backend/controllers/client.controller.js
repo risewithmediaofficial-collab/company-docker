@@ -25,27 +25,41 @@ const statusMap = {
 };
 
 const statusQueryMap = {
-  Active: ['active', 'Active'],
-  Inactive: ['inactive', 'Inactive', 'paused', 'Paused'],
+  Active: ['active', 'Active', 'ACTIVE', 'ongoing', 'Ongoing', 'live', 'Live', 'running', 'Running', 'enabled', 'Enabled'],
+  Inactive: ['inactive', 'Inactive', 'INACTIVE', 'paused', 'Paused', 'PAUSED'],
   Prospect: ['onboarding', 'Onboarding', 'prospect', 'Prospect', 'lead', 'Lead'],
   Churned: ['churned', 'Churned', 'cancelled', 'Cancelled', 'lost', 'Lost'],
   Renew: ['renew', 'Renew', 'renewal', 'Renewal'],
 };
 
+const ACTIVE_STATUS_TOKENS = new Set(['active', 'ongoing', 'live', 'running', 'enabled', 'approved']);
+
+const mapSmmStatusToClient = (raw) => {
+  const s = (raw || 'Active').toString().trim().toLowerCase();
+  if (s === 'inactive' || s === 'paused') return 'inactive';
+  if (s === 'churned' || s === 'cancelled' || s === 'lost') return 'churned';
+  if (s === 'prospect' || s === 'onboarding' || s === 'lead') return 'onboarding';
+  if (s === 'renew' || s === 'renewal') return 'renew';
+  return 'active';
+};
+
 const serializeClient = (client) => {
   const item = client.toObject ? client.toObject() : client;
   const rawStatus = (item.status || 'active').toString().toLowerCase().trim();
-  const label = {
-    active: 'Active',
-    inactive: 'Inactive',
-    onboarding: 'Prospect',
-    prospect: 'Prospect',
-    lead: 'Prospect',
-    churned: 'Churned',
-    renew: 'Renew',
-    renewal: 'Renew',
-    paused: 'Inactive',
-  }[rawStatus] || (item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Active');
+  const label = ACTIVE_STATUS_TOKENS.has(rawStatus)
+    ? 'Active'
+    : {
+        inactive: 'Inactive',
+        onboarding: 'Prospect',
+        prospect: 'Prospect',
+        lead: 'Prospect',
+        churned: 'Churned',
+        cancelled: 'Churned',
+        lost: 'Churned',
+        renew: 'Renew',
+        renewal: 'Renew',
+        paused: 'Inactive',
+      }[rawStatus] || (item.status ? item.status.toString().trim().charAt(0).toUpperCase() + item.status.toString().trim().slice(1) : 'Active');
 
   return { ...item, status: label };
 };
@@ -107,7 +121,14 @@ export const getClients = async (req, res) => {
     const filter = {};
 
     if (status) {
-      filter.status = { $in: statusQueryMap[status] || [status, statusMap[status] || status, status.toLowerCase()] };
+      const mappedQueries = statusQueryMap[status];
+      if (mappedQueries) {
+        filter.status = {
+          $regex: new RegExp(`^\\s*(${mappedQueries.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\s*$`, 'i'),
+        };
+      } else {
+        filter.status = { $in: [status, statusMap[status] || status, status.toLowerCase()] };
+      }
     }
     if (service) {
       filter.services = { $elemMatch: { $regex: service, $options: 'i' } };
@@ -153,6 +174,7 @@ export const getClients = async (req, res) => {
         { _id: { $in: relevantClientIds } },
         { assignedTeam: { $size: 0 } },
         { assignedTeam: { $exists: false } },
+        { assignedTeam: null },
       ];
       // Team member with organization assigned sees all clients within their organization
       if (req.user.organizationId) {
@@ -170,76 +192,101 @@ export const getClients = async (req, res) => {
     // ── STRICT TENANT ISOLATION (with legacy null-org fallback & migration support) ──
     const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
     const targetOrgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
+    let otherOrgIds = [];
     if (targetOrgId) {
       // Find all OTHER known active organizations in this database
       const otherOrgs = await Organization.find({ _id: { $ne: targetOrgId } }).select('_id').lean();
-      const otherOrgIds = otherOrgs.map((o) => o._id);
+      otherOrgIds = otherOrgs.map((o) => o._id);
 
-      // Backfill any orphan or migrated clients that don't belong to another valid organization
-      if (otherOrgIds.length === 0) {
-        // Single-organization environment: adopt all clients with missing, null, or foreign migrated orgId
-        Client.updateMany({ organizationId: { $ne: targetOrgId } }, { $set: { organizationId: targetOrgId } }).exec().catch(() => {});
-        SmmClient.updateMany({ organizationId: { $ne: targetOrgId } }, { $set: { organizationId: targetOrgId } }).exec().catch(() => {});
-      } else {
-        // Multi-tenant: adopt clients whose organizationId does not belong to any valid existing organization
-        const allOrgs = await Organization.find({}).select('_id').lean();
-        const allOrgIds = allOrgs.map((o) => o._id);
-        Client.updateMany(
-          { $or: [{ organizationId: { $nin: allOrgIds } }, { organizationId: null }, { organizationId: { $exists: false } }] },
-          { $set: { organizationId: targetOrgId } }
-        ).exec().catch(() => {});
-        SmmClient.updateMany(
-          { $or: [{ organizationId: { $nin: allOrgIds } }, { organizationId: null }, { organizationId: { $exists: false } }] },
-          { $set: { organizationId: targetOrgId } }
-        ).exec().catch(() => {});
-      }
+      // Backfill any orphan or migrated clients before querying so migrated rows are immediately visible
+      try {
+        if (otherOrgIds.length === 0) {
+          // Single-organization environment: adopt all clients with missing, null, or foreign migrated orgId
+          await Promise.all([
+            Client.updateMany({ organizationId: { $ne: targetOrgId } }, { $set: { organizationId: targetOrgId } }),
+            SmmClient.updateMany({ organizationId: { $ne: targetOrgId } }, { $set: { organizationId: targetOrgId } }),
+          ]);
+        } else {
+          // Multi-tenant: adopt clients whose organizationId does not belong to any valid existing organization
+          const allOrgs = await Organization.find({}).select('_id').lean();
+          const allOrgIds = allOrgs.map((o) => o._id);
+          const orphanFilter = {
+            $or: [{ organizationId: { $nin: allOrgIds } }, { organizationId: null }, { organizationId: { $exists: false } }],
+          };
+          await Promise.all([
+            Client.updateMany(orphanFilter, { $set: { organizationId: targetOrgId } }),
+            SmmClient.updateMany(orphanFilter, { $set: { organizationId: targetOrgId } }),
+          ]);
+        }
+      } catch (_) {}
 
-      // Filter: Allow user's organization PLUS any legacy/null/migrated clients not owned by another org
-      const orgFilter = otherOrgIds.length > 0 ? { $nin: otherOrgIds } : { $exists: true };
-      if (filter.$or) {
-        filter.$and = [{ $or: filter.$or }, { organizationId: orgFilter }];
-        delete filter.$or;
-      } else if (filter.$and) {
-        filter.$and.push({ organizationId: orgFilter });
-      } else {
-        filter.organizationId = orgFilter;
+      // Multi-tenant isolation: only exclude documents explicitly owned by another valid organization
+      if (otherOrgIds.length > 0) {
+        const orgFilter = { $nin: otherOrgIds };
+        if (filter.$or) {
+          filter.$and = [{ $or: filter.$or }, { organizationId: orgFilter }];
+          delete filter.$or;
+        } else if (filter.$and) {
+          filter.$and.push({ organizationId: orgFilter });
+        } else {
+          filter.organizationId = orgFilter;
+        }
       }
     }
 
     // Auto-sync any standalone SMM clients into CRM Client collection so all clients are visible in Clients 360
-    try {
-      const allSmm = await SmmClient.find({}).lean();
-      for (const smm of allSmm) {
-        const cName = (smm.companyName || smm.clientName || '').trim();
-        if (!cName) continue;
-        const crmExists = await Client.findOne({
-          $or: [
-            { _id: smm._id },
-            ...(smm.clientId ? [{ clientId: smm.clientId }] : []),
-            ...(smm.email ? [{ email: smm.email.toLowerCase().trim() }] : []),
-            { company: new RegExp(`^${cName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-          ],
-        }).select('_id').lean();
+    const uncreatedSmmClients = [];
+    const isPortalClientUser = ['client', 'clientAdmin', 'clientMember'].includes(req.user.role);
+    if (!isPortalClientUser) {
+      try {
+        const smmScope = targetOrgId && otherOrgIds.length > 0 ? { organizationId: { $nin: otherOrgIds } } : {};
+        const allSmm = await SmmClient.find(smmScope).lean();
+        for (const smm of allSmm) {
+          const cName = (smm.companyName || smm.clientName || smm.primaryContact || smm.contactPerson || '').trim();
+          if (!cName) continue;
+          const crmExists = await Client.findOne({
+            $or: [
+              { _id: smm._id },
+              ...(smm.clientId ? [{ clientId: smm.clientId }] : []),
+              ...(smm.email ? [{ email: smm.email.toLowerCase().trim() }] : []),
+              { company: new RegExp(`^${cName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+            ],
+          }).select('_id').lean();
 
-        if (!crmExists) {
-          await Client.create({
-            _id: smm._id,
-            clientId: smm.clientId || undefined,
-            name: smm.primaryContact || smm.contactPerson || cName,
-            company: cName,
-            email: smm.email || '',
-            phone: smm.phone || '',
-            website: smm.website || '',
-            logo: smm.brandLogo || '',
-            status: smm.status?.toLowerCase() === 'active' ? 'active' : 'inactive',
-            organizationId: targetOrgId || smm.organizationId || undefined,
-            services: ['Social Media Marketing'],
-          }).catch(() => {});
+          if (!crmExists) {
+            const payload = {
+              _id: smm._id,
+              clientId: smm.clientId || undefined,
+              name: smm.primaryContact || smm.contactPerson || cName,
+              company: cName,
+              email: smm.email || '',
+              phone: smm.phone || '',
+              website: smm.website || '',
+              logo: smm.brandLogo || '',
+              status: mapSmmStatusToClient(smm.status),
+              organizationId: targetOrgId || smm.organizationId || undefined,
+              services: ['Social Media Marketing'],
+            };
+            try {
+              await Client.create(payload);
+            } catch (syncErr) {
+              if (syncErr?.code === 11000) {
+                try {
+                  const { clientId: _dropId, ...retryPayload } = payload;
+                  await Client.create(retryPayload);
+                } catch (_) {
+                  uncreatedSmmClients.push(payload);
+                }
+              } else {
+                uncreatedSmmClients.push(payload);
+              }
+            }
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
-    const [total, clients] = await Promise.all([
+    let [total, clients] = await Promise.all([
       Client.countDocuments(filter),
       Client.find(filter)
         .populate(clientPopulate)
@@ -248,6 +295,29 @@ export const getClients = async (req, res) => {
         .limit(limit)
         .lean(),
     ]);
+
+    if (page === 1 && uncreatedSmmClients.length > 0) {
+      const searchLower = search ? String(search).toLowerCase().trim() : '';
+      const serviceLower = service ? String(service).toLowerCase().trim() : '';
+      const targetStatusSet = status
+        ? new Set((statusQueryMap[status] || [status]).map((s) => s.toLowerCase().trim()))
+        : null;
+
+      for (const fallback of uncreatedSmmClients) {
+        if (targetStatusSet && !targetStatusSet.has((fallback.status || 'active').toLowerCase())) continue;
+        if (serviceLower && !fallback.services.some((sv) => sv.toLowerCase().includes(serviceLower))) continue;
+        if (
+          searchLower &&
+          ![fallback.clientId, fallback.name, fallback.company, fallback.email, fallback.phone]
+            .filter(Boolean)
+            .some((v) => String(v).toLowerCase().includes(searchLower))
+        ) {
+          continue;
+        }
+        clients.push(fallback);
+        total += 1;
+      }
+    }
 
     const clientIds = clients.map((c) => c._id);
     const projectSummaryMap = {};
@@ -436,7 +506,7 @@ export const getClient = async (req, res) => {
               company: smmClient.companyName,
               email: smmClient.email || `${smmClient._id}@client.internal`,
               phone: smmClient.phone || '',
-              status: smmClient.status === 'active' ? 'Active' : 'Inactive',
+              status: mapSmmStatusToClient(smmClient.status),
               services: ['Social Media Marketing'],
               website: smmClient.website || '',
             });
@@ -480,7 +550,7 @@ export const getClient = async (req, res) => {
               company: smmClient.companyName,
               email: smmClient.email || `${smmClient._id}@client.internal`,
               phone: smmClient.phone || '',
-              status: smmClient.status === 'active' ? 'Active' : 'Inactive',
+              status: mapSmmStatusToClient(smmClient.status),
               services: ['Social Media Marketing'],
               website: smmClient.website || '',
             });

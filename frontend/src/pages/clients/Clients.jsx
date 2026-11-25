@@ -130,14 +130,14 @@ export const CLIENT_SORT_OPTIONS = [
 ];
 
 export const normalizeClientStatus = (status) => {
-  if (!status) return 'Prospect';
+  if (!status) return 'Active';
   const s = String(status).trim().toLowerCase();
-  if (s === 'active') return 'Active';
+  if (!s || s === 'active' || s === 'ongoing' || s === 'live' || s === 'running' || s === 'enabled' || s === 'approved') return 'Active';
   if (s === 'prospect' || s === 'onboarding' || s === 'lead') return 'Prospect';
   if (s === 'renew' || s === 'renewal') return 'Renew';
   if (s === 'inactive' || s === 'paused') return 'Inactive';
   if (s === 'churned' || s === 'cancelled' || s === 'lost') return 'Churned';
-  return status.charAt(0).toUpperCase() + status.slice(1);
+  return String(status).trim().charAt(0).toUpperCase() + String(status).trim().slice(1);
 };
 
 const AVATAR_PALETTES = [

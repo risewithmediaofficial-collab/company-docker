@@ -21,6 +21,7 @@ const smmClientSchema = new mongoose.Schema(
       enum: ['Active', 'Inactive', 'Prospect', 'Paused'],
       default: 'Active',
     },
+    organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization' },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }

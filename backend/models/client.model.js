@@ -141,12 +141,24 @@ clientSchema.pre('save', async function (next) {
       const rawName = (this.company || this.name || 'CLIENT').trim();
       const lettersOnly = rawName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
       const prefix = (lettersOnly.slice(0, 3) || 'CLI').padEnd(3, 'X');
-      
-      const count = await mongoose.model('Client').countDocuments({
+
+      const ClientModel = mongoose.model('Client');
+      let seqNum = (await ClientModel.countDocuments({
         clientId: new RegExp(`^CLI-${prefix}`, 'i'),
-      });
-      const seq = String(count + 1).padStart(3, '0');
-      this.clientId = `CLI-${prefix}${seq}`;
+      })) + 1;
+
+      let candidate = `CLI-${prefix}${String(seqNum).padStart(3, '0')}`;
+      let attempts = 0;
+      while (attempts < 50 && (await ClientModel.exists({ clientId: candidate }))) {
+        seqNum += 1;
+        candidate = `CLI-${prefix}${String(seqNum).padStart(3, '0')}`;
+        attempts += 1;
+      }
+
+      if (attempts >= 50) {
+        candidate = `CLI-${prefix}${Date.now().toString().slice(-5)}`;
+      }
+      this.clientId = candidate;
     } catch (err) {
       console.error('Failed to generate clientId sequence:', err);
     }

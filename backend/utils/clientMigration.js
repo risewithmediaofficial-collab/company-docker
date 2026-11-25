@@ -106,6 +106,15 @@ export const backfillClientIds = async () => {
     const defaultOrg = allOrgs[0] || null;
     const allOrgIds = allOrgs.map((o) => o._id);
 
+    const mapSmmStatus = (raw) => {
+      const s = (raw || 'Active').toString().trim().toLowerCase();
+      if (s === 'inactive' || s === 'paused') return 'inactive';
+      if (s === 'churned' || s === 'cancelled' || s === 'lost') return 'churned';
+      if (s === 'prospect' || s === 'onboarding' || s === 'lead') return 'onboarding';
+      if (s === 'renew' || s === 'renewal') return 'renew';
+      return 'active';
+    };
+
     const allSmmClients = await SmmClient.find({}).lean();
     for (const smm of allSmmClients) {
       const cName = (smm.companyName || smm.clientName || '').trim();
@@ -119,23 +128,30 @@ export const backfillClientIds = async () => {
       });
 
       if (!crmExists && cName) {
+        const payload = {
+          _id: smm._id,
+          clientId: smm.clientId || undefined,
+          name: smm.primaryContact || smm.contactPerson || cName,
+          company: cName,
+          email: smm.email || '',
+          phone: smm.phone || '',
+          website: smm.website || '',
+          logo: smm.brandLogo || '',
+          status: mapSmmStatus(smm.status),
+          organizationId: smm.organizationId || defaultOrg?._id || undefined,
+          services: ['Social Media Marketing'],
+        };
         try {
-          await Client.create({
-            _id: smm._id,
-            clientId: smm.clientId || undefined,
-            name: smm.primaryContact || smm.contactPerson || cName,
-            company: cName,
-            email: smm.email || '',
-            phone: smm.phone || '',
-            website: smm.website || '',
-            logo: smm.brandLogo || '',
-            status: smm.status?.toLowerCase() === 'active' ? 'active' : 'inactive',
-            organizationId: smm.organizationId || defaultOrg?._id || undefined,
-            services: ['Social Media Marketing'],
-          });
+          await Client.create(payload);
           console.log(`[ClientMigration] Synced SMM client '${cName}' into CRM Client collection.`);
         } catch (syncErr) {
-          // Ignore duplicate key errors if already created concurrently
+          if (syncErr?.code === 11000) {
+            try {
+              const { clientId: _dropId, ...retryPayload } = payload;
+              await Client.create(retryPayload);
+              console.log(`[ClientMigration] Synced SMM client '${cName}' with fresh clientId.`);
+            } catch (_) {}
+          }
         }
       } else if (crmExists && !crmExists.organizationId && (smm.organizationId || defaultOrg?._id)) {
         await Client.updateOne(
