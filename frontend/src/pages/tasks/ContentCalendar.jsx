@@ -1,6 +1,5 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
 import {
   addDays,
   addMonths,
@@ -21,269 +20,137 @@ import {
   subWeeks,
 } from 'date-fns';
 import {
-  AlertTriangle,
+  Briefcase,
+  Building2,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  CheckCircle2,
-  Clock3,
+  Clock,
   Download,
-  Filter,
+  ExternalLink,
+  FileText,
+  FolderOpen,
   LayoutGrid,
   List,
+  Menu,
   PanelTop,
   Plus,
   Rows3,
   TimerReset,
+  Users,
+  Video,
   X,
-  FileText,
 } from '@/components/ui/muiIcons';
 import { ClientTaskResponsePanel } from '../../components/tasks/ClientTaskResponsePanel';
 import { DailyCalendarTaskDialog } from '../../components/tasks/DailyCalendarTaskDialog';
 import { DailyTaskUpdateDialog } from '../../components/tasks/DailyTaskUpdateDialog';
-import { CollapsibleFilterBar } from '../../components/ui/CollapsibleFilterBar';
+import { KanbanCreateTaskModal } from '../../components/tasks/KanbanCreateTaskModal';
+import { ProjectCalendarDrawer } from '../../components/tasks/ProjectCalendarDrawer';
+import { ScheduleMeetingModal } from '../../components/tasks/ScheduleMeetingModal';
+import { SelectDropdown } from '../../components/ui/SelectDropdown';
 import { TaskDetailModal } from '../../components/ui/TaskDetailModal';
 import { Button } from '../../components/ui/button';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
-  DialogClose,
 } from '../../components/ui/dialog';
-import {
-  EmptyState,
-  MetricCard,
-  MetricGrid,
-  PageHeader,
-  PageToolbar,
-  SearchField,
-  SectionCard,
-  StatusBadge,
-} from '../../components/ui/page';
+import { EmptyState, SearchField, StatusBadge } from '../../components/ui/page';
 import { useClients } from '../../hooks/useClients';
+import { useMeetings } from '../../hooks/useMeetings';
 import { useProjects } from '../../hooks/useProjects';
 import { useTaskCalendar, useTasks, useWeeklyTaskReport } from '../../hooks/useTasks';
 import { useUsers } from '../../hooks/useUsers';
+import { getAssetUrl } from '../../utils/assetUrl';
+import { cn } from '../../utils/cn';
 import {
-  CONTENT_TASK_TYPE_OPTIONS,
-  NON_CONTENT_TASK_TYPE_OPTIONS,
-  PRIORITY_OPTIONS,
-  TASK_CATEGORY_OPTIONS,
-  TASK_STATUS_OPTIONS,
   formatTaskTypeLabel,
   getClientTaskStatusMeta,
   normalizeTaskStatusLabel,
 } from '../../utils/taskFields';
-import { cn } from '../../utils/cn';
-import { getAssetUrl } from '../../utils/assetUrl';
 
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+const MINI_DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const HOURS = Array.from({ length: 13 }, (_, idx) => idx + 8); // 08:00 -> 20:00
+
 const VIEW_OPTIONS = [
-  { value: 'month', label: 'Monthly', icon: LayoutGrid },
-  { value: 'week', label: 'Weekly', icon: Rows3 },
-  { value: 'day', label: 'Daily', icon: PanelTop },
-  { value: 'list', label: 'Cards', icon: List },
-  { value: 'agenda', label: 'List', icon: CalendarDays },
+  { value: 'month', label: 'Month', icon: LayoutGrid },
+  { value: 'week', label: 'Week', icon: Rows3 },
+  { value: 'day', label: 'Day', icon: PanelTop },
+  { value: 'agenda', label: 'Projects & List', icon: List },
 ];
 
 export const TASK_STATUS_COLORS = {
   'To Do': {
-    label: 'To Do / Scheduled',
+    label: 'To Do',
     dot: 'bg-amber-500',
-    border: 'border border-amber-500/30',
-    bg: 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-900 dark:text-amber-200',
-    badge: 'bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold',
-    sign: 'To Do',
+    pill: 'bg-amber-500/12 hover:bg-amber-500/20 text-amber-900 dark:text-amber-200 border border-amber-500/25',
+    badge: 'bg-amber-500/18 text-amber-800 dark:text-amber-300',
   },
   'On Process': {
-    label: 'In Process / Active',
+    label: 'In Process',
     dot: 'bg-sky-500',
-    border: 'border border-sky-500/30',
-    bg: 'bg-sky-500/15 hover:bg-sky-500/25 text-sky-900 dark:text-sky-200',
-    badge: 'bg-sky-500/20 text-sky-800 dark:text-sky-300 font-bold',
-    sign: 'In Process',
+    pill: 'bg-sky-500/12 hover:bg-sky-500/20 text-sky-900 dark:text-sky-200 border border-sky-500/25',
+    badge: 'bg-sky-500/18 text-sky-800 dark:text-sky-300',
   },
   'Waiting for Client': {
-    label: 'Waiting for Client (Pending)',
+    label: 'Pending',
     dot: 'bg-orange-500',
-    border: 'border border-orange-500/30',
-    bg: 'bg-orange-500/15 hover:bg-orange-500/25 text-orange-900 dark:text-orange-200',
-    badge: 'bg-orange-500/20 text-orange-800 dark:text-orange-300 font-bold',
-    sign: 'Pending',
+    pill: 'bg-orange-500/12 hover:bg-orange-500/20 text-orange-900 dark:text-orange-200 border border-orange-500/25',
+    badge: 'bg-orange-500/18 text-orange-800 dark:text-orange-300',
   },
   'Review Required': {
-    label: 'Review Required',
+    label: 'Review',
     dot: 'bg-indigo-500',
-    border: 'border border-indigo-500/30',
-    bg: 'bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-900 dark:text-indigo-200',
-    badge: 'bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 font-bold',
-    sign: 'Review Needed',
+    pill: 'bg-indigo-500/12 hover:bg-indigo-500/20 text-indigo-900 dark:text-indigo-200 border border-indigo-500/25',
+    badge: 'bg-indigo-500/18 text-indigo-800 dark:text-indigo-300',
   },
-  'Rework': {
-    label: 'Rework Required',
-    dot: 'bg-rose-500',
-    border: 'border border-rose-500/30',
-    bg: 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-900 dark:text-rose-200',
-    badge: 'bg-rose-500/20 text-rose-800 dark:text-rose-300 font-bold',
-    sign: 'Rework',
-  },
-  'Completed': {
-    label: 'Completed / Approved',
+  Completed: {
+    label: 'Done',
     dot: 'bg-emerald-500',
-    border: 'border border-emerald-500/30',
-    bg: 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-900 dark:text-emerald-200',
-    badge: 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold',
-    sign: 'Completed',
+    pill: 'bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-900 dark:text-emerald-200 border border-emerald-500/25',
+    badge: 'bg-emerald-500/18 text-emerald-800 dark:text-emerald-300',
   },
-  'Approved': {
+  Rework: {
+    label: 'Rework',
+    dot: 'bg-rose-500',
+    pill: 'bg-rose-500/12 hover:bg-rose-500/20 text-rose-900 dark:text-rose-200 border border-rose-500/25',
+    badge: 'bg-rose-500/18 text-rose-800 dark:text-rose-300',
+  },
+  Approved: {
     label: 'Approved',
     dot: 'bg-emerald-500',
-    border: 'border border-emerald-500/30',
-    bg: 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-900 dark:text-emerald-200',
-    badge: 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold',
-    sign: 'Approved',
+    pill: 'bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-900 dark:text-emerald-200 border border-emerald-500/25',
+    badge: 'bg-emerald-500/18 text-emerald-800 dark:text-emerald-300',
   },
 };
 
 export const TASK_PRIORITY_COLORS = {
   Urgent: {
     label: 'Urgent',
-    dot: 'bg-primary',
-    badge: 'bg-primary text-primary-foreground font-black ',
-    pill: 'bg-primary text-primary-foreground ',
-    sign: 'Urgent',
-    borderLeft: ' ',
+    dot: 'bg-rose-500',
+    badge: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 font-bold',
   },
   High: {
     label: 'High',
-    dot: 'bg-foreground',
-    badge: 'bg-secondary text-foreground font-bold',
-    pill: 'bg-secondary text-foreground ',
-    sign: 'High',
-    borderLeft: ' ',
+    dot: 'bg-orange-500',
+    badge: 'bg-orange-500/15 text-orange-700 dark:text-orange-300 font-semibold',
   },
   Medium: {
     label: 'Medium',
-    dot: 'bg-muted-foreground',
-    badge: 'bg-secondary/70 text-foreground font-semibold',
-    pill: 'bg-secondary/70 text-foreground ',
-    sign: 'Medium',
-    borderLeft: '',
+    dot: 'bg-sky-500',
+    badge: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 font-semibold',
   },
   Low: {
     label: 'Low',
-    dot: 'bg-muted-foreground/60',
-    badge: 'bg-secondary/40 text-muted-foreground font-medium',
-    pill: 'bg-secondary/40 text-muted-foreground ',
-    sign: 'Low',
-    borderLeft: '',
+    dot: 'bg-slate-400',
+    badge: 'bg-secondary text-muted-foreground font-medium',
   },
 };
 
-const statusTone = {
-  'To Do': 'warning',
-  Pending: 'warning',
-  'On Process': 'info',
-  'Waiting for Client': 'warning',
-  Completed: 'success',
-  Rework: 'danger',
-  Approved: 'success',
-  'Rework Completed': 'info',
-  'Review Required': 'warning',
-};
-
-const priorityTone = {
-  Low: 'neutral',
-  Medium: 'info',
-  High: 'warning',
-  Urgent: 'danger',
-};
-
-const categoryTone = {
-  content: 'info',
-  non_content: 'warning',
-};
-
-const ALL_TASK_TYPES = [...CONTENT_TASK_TYPE_OPTIONS, ...NON_CONTENT_TASK_TYPE_OPTIONS];
 const EMPLOYEE_ROLES = ['employee', 'intern', 'editor', 'designer', 'adsManager'];
-
-const DEFAULT_DOS = [
-  'Confirm the brief, due time, and assignee before starting work.',
-  'Check attachments, reference links, and client-visible notes first.',
-  'Update status as work moves from received to in progress to review.',
-];
-
-const DEFAULT_DONTS = [
-  'Do not start production without reviewing the latest requirement.',
-  'Do not deliver files without checking quality and required formats.',
-  'Do not close the task without updating notes or response status.',
-];
-
-const DEFAULT_PROCESS = [
-  'Review task scope and required files.',
-  'Start execution with status update.',
-  'Upload work progress or completed files.',
-  'Move task to review, waiting for client, or approved state.',
-];
-
-const CONTENT_DOS = [
-  'Follow brand tone, caption style, and editing guide exactly.',
-  'Validate script, CTA, duration, and format before editing.',
-  'Keep export names and platform dimensions organized.',
-];
-
-const CONTENT_DONTS = [
-  'Do not ignore editor guide, music direction, or logo placement notes.',
-  'Do not publish or mark complete before caption and creative review.',
-  'Do not use unapproved inspiration assets in final delivery.',
-];
-
-const CONTENT_PROCESS = [
-  'Review script, caption, reference, and attachments.',
-  'Draft content and prepare edit flow.',
-  'Upload preview or final files for review.',
-  'Collect client response and close or rework the task.',
-];
-
-const WEBSITE_DOS = [
-  'Validate page scope, features, and credentials before development.',
-  'Check hosting, domain, branding, and content availability early.',
-  'Keep login, dashboard, and integration requirements documented.',
-];
-
-const WEBSITE_DONTS = [
-  'Do not change approved page scope without confirmation.',
-  'Do not deploy without checking forms, buttons, and responsive layout.',
-  'Do not share admin credentials in client-visible notes.',
-];
-
-const WEBSITE_PROCESS = [
-  'Review website requirements, pages, and credentials.',
-  'Build or update the required pages and features.',
-  'Run QA for forms, responsiveness, and integrations.',
-  'Send for review and collect approval or rework.',
-];
-
-const OPERATIONS_DOS = [
-  'Confirm the exact operational outcome expected from the task.',
-  'Keep communication and status updates clear for the client.',
-  'Attach proof of work, reports, or final documents when done.',
-];
-
-const OPERATIONS_DONTS = [
-  'Do not leave the task without notes when external follow-up is needed.',
-  'Do not mark completed if client action is still pending.',
-  'Do not skip evidence files for reports, setup, or support work.',
-];
-
-const OPERATIONS_PROCESS = [
-  'Review task description and external dependencies.',
-  'Complete the setup, support, or follow-up action.',
-  'Attach supporting files or notes.',
-  'Move the task to completed, waiting for client, or approved.',
-];
 
 const getRangeForView = (date, view) => {
   if (view === 'week') {
@@ -292,17 +159,17 @@ const getRangeForView = (date, view) => {
       end: endOfWeek(date, { weekStartsOn: 0 }),
     };
   }
-
   if (view === 'day') {
     return {
       start: startOfDay(date),
       end: endOfDay(date),
     };
   }
-
+  const monthStart = startOfMonth(date);
+  const monthEnd = endOfMonth(date);
   return {
-    start: startOfMonth(date),
-    end: endOfMonth(date),
+    start: startOfWeek(monthStart, { weekStartsOn: 0 }),
+    end: endOfWeek(monthEnd, { weekStartsOn: 0 }),
   };
 };
 
@@ -312,39 +179,57 @@ const shiftDateByView = (date, view, direction) => {
   return direction > 0 ? addMonths(date, 1) : subMonths(date, 1);
 };
 
-const buildGuidanceForDate = (tasksForDate = []) => {
-  if (!tasksForDate.length) {
-    return {
-      dos: DEFAULT_DOS,
-      donts: DEFAULT_DONTS,
-      process: DEFAULT_PROCESS,
-    };
+const parseHourFromTime = (timeStr) => {
+  if (!timeStr) return null;
+  const match = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  let hour = Number(match[1]);
+  const lower = String(timeStr).toLowerCase();
+  if (lower.includes('pm') && hour < 12) hour += 12;
+  if (lower.includes('am') && hour === 12) hour = 0;
+  return Number.isNaN(hour) ? null : hour;
+};
+
+const formatHourLabel = (hour) => {
+  if (hour === 0) return '12 AM';
+  if (hour === 12) return '12 PM';
+  return hour > 12 ? `${hour - 12} PM` : `${hour} AM`;
+};
+
+const extractTaskAssigneeNames = (task) => {
+  const names = [];
+  if (Array.isArray(task.assignedTo)) {
+    task.assignedTo.forEach((u) => u?.name && names.push(u.name));
   }
+  if (task.editorAssigned?.name) names.push(task.editorAssigned.name);
+  if (task.videographerAssigned?.name) names.push(task.videographerAssigned.name);
+  if (task.designerAssigned?.name) names.push(task.designerAssigned.name);
+  if (task.publisherAssigned?.name) names.push(task.publisherAssigned.name);
+  if (task.scriptWriterAssigned?.name) names.push(task.scriptWriterAssigned.name);
+  if (names.length === 0 && task.assignedPersonName) names.push(task.assignedPersonName);
+  return [...new Set(names)];
+};
 
-  const hasContent = tasksForDate.some((task) => task.taskCategory !== 'non_content');
-  const hasWebsite = tasksForDate.some((task) => ['website_development', 'website_update', 'landing_page'].includes(task.taskType));
-
-  if (hasWebsite) {
-    return {
-      dos: WEBSITE_DOS,
-      donts: WEBSITE_DONTS,
-      process: WEBSITE_PROCESS,
-    };
+const doesTaskMatchUser = (task, userId) => {
+  if (!userId) return true;
+  const target = String(userId);
+  const direct = (Array.isArray(task.assignedTo) ? task.assignedTo : []).some(
+    (u) => String(u?._id || u) === target
+  );
+  if (direct) return true;
+  const stageFields = [
+    task.editorAssigned,
+    task.videographerAssigned,
+    task.designerAssigned,
+    task.publisherAssigned,
+    task.scriptWriterAssigned,
+    task.voiceArtistAssigned,
+  ];
+  if (stageFields.some((f) => String(f?._id || f || '') === target)) return true;
+  if (Array.isArray(task.extraShootPersons)) {
+    return task.extraShootPersons.some((p) => String(p?._id || p) === target);
   }
-
-  if (hasContent) {
-    return {
-      dos: CONTENT_DOS,
-      donts: CONTENT_DONTS,
-      process: CONTENT_PROCESS,
-    };
-  }
-
-  return {
-    dos: OPERATIONS_DOS,
-    donts: OPERATIONS_DONTS,
-    process: OPERATIONS_PROCESS,
-  };
+  return false;
 };
 
 const downloadWeeklyReportPdf = async ({ report, range, employeeName }) => {
@@ -378,7 +263,11 @@ const downloadWeeklyReportPdf = async ({ report, range, employeeName }) => {
 
   doc.setFontSize(10);
   doc.setTextColor(100, 116, 139);
-  doc.text(`${employeeName} • ${format(range.start, 'MMM d, yyyy')} to ${format(range.end, 'MMM d, yyyy')}`, margin, y);
+  doc.text(
+    `${employeeName} • ${format(range.start, 'MMM d, yyyy')} to ${format(range.end, 'MMM d, yyyy')}`,
+    margin,
+    y
+  );
   y += 10;
 
   doc.setFillColor(248, 250, 252);
@@ -400,7 +289,11 @@ const downloadWeeklyReportPdf = async ({ report, range, employeeName }) => {
     doc.text(`${index + 1}. ${row.taskTitle}`, margin + 4, y + 7);
     doc.setFontSize(9);
     doc.setTextColor(71, 85, 105);
-    doc.text(`${format(new Date(row.workDate), 'EEE, MMM d')} • ${row.employeeName} • ${Number(row.hours || 0).toFixed(2)}h`, margin + 4, y + 13);
+    doc.text(
+      `${format(new Date(row.workDate), 'EEE, MMM d')} • ${row.employeeName} • ${Number(row.hours || 0).toFixed(2)}h`,
+      margin + 4,
+      y + 13
+    );
     doc.text(`${row.clientName || 'No client'} • ${row.projectName || 'No project'}`, margin + 4, y + 18);
     y += 24;
     doc.setFontSize(10);
@@ -426,30 +319,32 @@ const FileLinks = ({ files = [], emptyMessage = 'No files available.' }) => {
     <div className="space-y-2">
       {files.map((file, index) => {
         const fileUrl = getAssetUrl(file.url);
-        const isImage = file.type?.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(file.url || file.name || '');
+        const isImage =
+          file.type?.startsWith('image/') ||
+          /\.(png|jpe?g|gif|webp|svg)$/i.test(file.url || file.name || '');
 
         return (
-        <a
-          key={`${file.url || file.name}-${index}`}
-          href={fileUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center justify-between gap-3 rounded-2xl bg-background px-3 py-2 text-sm transition-colors hover:bg-secondary/40"
-        >
-          <span className="flex min-w-0 items-center gap-3">
-            {isImage ? (
-              <img
-                src={fileUrl}
-                alt={file.name || 'Attachment preview'}
-                className="h-12 w-12 shrink-0 rounded-xl object-cover"
-                loading="lazy"
-              />
-            ) : null}
-            <span className="truncate">{file.name || 'File'}</span>
-          </span>
-          <span className="shrink-0 text-xs text-muted-foreground">{file.type || 'Attachment'}</span>
-        </a>
-      );
+          <a
+            key={`${file.url || file.name}-${index}`}
+            href={fileUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-between gap-3 rounded-xl bg-background border border-border/60 px-3 py-2 text-sm transition-colors hover:bg-secondary/40"
+          >
+            <span className="flex min-w-0 items-center gap-3">
+              {isImage ? (
+                <img
+                  src={fileUrl}
+                  alt={file.name || 'Attachment preview'}
+                  className="h-10 w-10 shrink-0 rounded-lg object-cover"
+                  loading="lazy"
+                />
+              ) : null}
+              <span className="truncate">{file.name || 'File'}</span>
+            </span>
+            <span className="shrink-0 text-xs text-muted-foreground">{file.type || 'Attachment'}</span>
+          </a>
+        );
       })}
     </div>
   );
@@ -460,107 +355,90 @@ const ClientTaskDialog = ({ task, open, onOpenChange, onSubmitted }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg" noPadding hideCloseButton className="flex flex-col min-h-0 p-0 overflow-hidden bg-card w-[calc(100vw-24px)] max-w-3xl max-h-[90dvh]">
+      <DialogContent
+        variant="side"
+        noPadding
+        hideCloseButton
+        className="flex flex-col min-h-0 p-0 overflow-hidden bg-background"
+      >
         <div className="flex flex-col min-h-0 h-full">
-          {/* Pinned Header */}
-          <div className="shrink-0 bg-card px-6 py-5 flex items-center justify-between gap-4 z-10">
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 text-primary">
+          <div className="shrink-0 bg-background border-b border-border px-6 py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 text-primary">
                 <FileText className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <DialogTitle className="text-lg sm:text-xl font-bold tracking-tight text-foreground truncate">
+                <DialogTitle className="text-base sm:text-lg font-bold text-foreground truncate">
                   {task?.taskTitle || task?.title || 'Task Details'}
                 </DialogTitle>
                 <DialogDescription className="sr-only">
-                  Review task details, delivery files, and confirm your response
+                  Review task details and confirm your response
                 </DialogDescription>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="hidden sm:inline-flex items-center text-[11px] font-medium text-muted-foreground/70 bg-muted/50 px-2 py-0.5 rounded-md">
-                ESC
-              </span>
-              <DialogClose asChild>
-                <button
-                  type="button"
-                  className="h-9 w-9 rounded-xl bg-muted/30 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </DialogClose>
-            </div>
+            <DialogClose className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer">
+              <X className="h-4 w-4" />
+            </DialogClose>
           </div>
 
-          {/* Scrollable Linear Body */}
-          <div className="space-y-6 p-6 sm:p-7 overflow-y-auto flex-1 min-h-0 custom-scrollbar overscroll-contain">
+          <div className="space-y-5 p-6 overflow-y-auto flex-1 min-h-0 custom-scrollbar">
             {task ? (
-              <div className="space-y-6">
+              <div className="space-y-5">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl bg-background p-4 ">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Task Category</p>
+                  <div className="rounded-xl border border-border bg-card p-3.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Category
+                    </p>
                     <p className="mt-1 text-sm font-semibold text-foreground">
                       {task.taskCategory === 'non_content' ? 'Non-Content Task' : 'Content Task'}
                     </p>
                   </div>
-                  <div className="rounded-xl bg-background p-4 ">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Task Type</p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">{formatTaskTypeLabel(task.taskType)}</p>
-                  </div>
-                  <div className="rounded-xl bg-background p-4 ">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Assigned Person</p>
+                  <div className="rounded-xl border border-border bg-card p-3.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Task Type
+                    </p>
                     <p className="mt-1 text-sm font-semibold text-foreground">
-                      {task.assignedPersonName || task.assignedTo?.map((item) => item.name).join(', ') || 'Unassigned'}
+                      {formatTaskTypeLabel(task.taskType)}
                     </p>
                   </div>
-                  <div className="rounded-xl bg-background p-4 ">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Current Status</p>
+                  <div className="rounded-xl border border-border bg-card p-3.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Assigned To
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">
+                      {extractTaskAssigneeNames(task).join(', ') || 'Unassigned'}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-card p-3.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Status
+                    </p>
                     <p className="mt-1 text-sm font-semibold text-foreground">{statusMeta.label}</p>
                   </div>
                 </div>
 
-                <div className="rounded-xl bg-background p-4 text-sm text-foreground ">
-                  <p className="font-semibold text-sm">Progress Alert</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{statusMeta.alert}</p>
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="text-xs font-semibold text-foreground mb-1">Requirements</p>
+                  <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                    {task.description || task.websiteRequirements || 'No requirements shared yet.'}
+                  </p>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="rounded-xl bg-background p-4 ">
-                    <p className="text-xs font-semibold text-foreground mb-1">Requirements</p>
+                {task.clientVisibleNotes && (
+                  <div className="rounded-xl border border-border bg-card p-4">
+                    <p className="text-xs font-semibold text-foreground mb-1">Notes</p>
                     <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                      {task.description || task.websiteRequirements || 'No requirements shared yet.'}
+                      {task.clientVisibleNotes}
                     </p>
                   </div>
-                  <div className="rounded-xl bg-background p-4 ">
-                    <p className="text-xs font-semibold text-foreground mb-1">Notes Visible To You</p>
-                    <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                      {task.clientVisibleNotes || 'No client-visible notes available.'}
-                    </p>
-                  </div>
-                </div>
+                )}
 
-                {task.taskCategory !== 'non_content' ? (
-                  <div className="space-y-4">
-                    <div className="rounded-xl bg-background p-4 ">
-                      <p className="text-xs font-semibold text-foreground mb-1">Script / Script Link</p>
-                      <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                        {task.scriptText || task.scriptLink || 'No script shared.'}
-                      </p>
-                    </div>
-                    <div className="rounded-xl bg-background p-4 ">
-                      <p className="text-xs font-semibold text-foreground mb-1">Caption / Editor Guide</p>
-                      <p className="whitespace-pre-wrap text-sm text-muted-foreground">{task.caption || 'No caption shared.'}</p>
-                      {task.editorGuide ? <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{task.editorGuide}</p> : null}
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className="space-y-4">
-                  <div className="rounded-xl bg-background p-4 ">
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-border bg-card p-4">
                     <p className="mb-2 text-xs font-semibold text-foreground">Attachments</p>
                     <FileLinks files={task.attachments || []} />
                   </div>
-                  <div className="rounded-xl bg-background p-4 ">
+                  <div className="rounded-xl border border-border bg-card p-4">
                     <p className="mb-2 text-xs font-semibold text-foreground">Completed Files</p>
                     <FileLinks files={task.completedFiles || []} />
                   </div>
@@ -571,15 +449,8 @@ const ClientTaskDialog = ({ task, open, onOpenChange, onSubmitted }) => {
             ) : null}
           </div>
 
-          {/* Pinned Sticky Footer */}
-          <div className="shrink-0 bg-card px-6 py-4 flex items-center justify-between gap-3 z-10 select-none">
-            <span className="text-xs text-muted-foreground hidden sm:inline">Press Esc to exit</span>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="h-11 px-5 rounded-xl hover:bg-muted text-sm font-medium w-full sm:w-auto"
-            >
+          <div className="shrink-0 bg-card border-t border-border px-6 py-3.5 flex justify-end">
+            <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               Close
             </Button>
           </div>
@@ -589,895 +460,2293 @@ const ClientTaskDialog = ({ task, open, onOpenChange, onSubmitted }) => {
   );
 };
 
-const TaskSummaryCard = ({ task, onOpen }) => {
-  const normalizedStatus = normalizeTaskStatusLabel(task.status);
-  const statusTheme = TASK_STATUS_COLORS[normalizedStatus] || TASK_STATUS_COLORS['To Do'];
-  const priorityTheme = TASK_PRIORITY_COLORS[task.priority] || TASK_PRIORITY_COLORS['Medium'];
-  const isUrgent = task.priority === 'Urgent';
-  const isHigh = task.priority === 'High';
-
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(task)}
-      className={cn(
-        'w-full rounded-2xl p-4 text-left transition-colors relative overflow-hidden cursor-pointer',
-        statusTheme.border,
-        statusTheme.bg,
-        isUrgent && ' ring-1 ring-primary/30 bg-primary/[0.06]',
-        isHigh && !isUrgent && ' ',
-        task.isOverdue && ' bg-primary/[0.08]',
-      )}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className={cn('px-2.5 py-0.5 rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5', statusTheme.badge)}>
-              <span className={cn('h-2 w-2 rounded-full shrink-0', statusTheme.dot)} />
-              <span>{normalizedStatus}</span>
-            </span>
-
-            {isUrgent ? (
-              <span className="px-2.5 py-0.5 rounded-lg text-[11px] font-black bg-primary text-primary-foreground inline-flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3 shrink-0" />
-                <span>URGENT</span>
-              </span>
-            ) : isHigh ? (
-              <span className="px-2 py-0.5 rounded-lg text-[11px] font-bold bg-secondary text-foreground ">
-                High Priority
-              </span>
-            ) : task.priority ? (
-              <span className="px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-secondary text-muted-foreground ">
-                {priorityTheme.sign || task.priority}
-              </span>
-            ) : null}
-
-            <StatusBadge tone={categoryTone[task.taskCategory] || 'neutral'}>
-              {task.taskCategory === 'non_content' ? 'Non-Content' : 'Content'}
-            </StatusBadge>
-
-            {task.isOverdue ? <StatusBadge tone="danger">Overdue</StatusBadge> : null}
-          </div>
-
-          <h3 className="mt-3 text-base font-bold text-foreground transition-colors">
-            {task.taskTitle || task.title}
-          </h3>
-          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-            {task.description || task.websiteRequirements || task.scriptText || 'No requirements added yet.'}
-          </p>
-        </div>
-
-        <div className="rounded-xl bg-card px-3 py-2 text-right shrink-0">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Due Date</p>
-          <p className="mt-0.5 text-xs font-black text-foreground tabular-nums">
-            {task.dueDate ? format(new Date(task.dueDate), 'MMM d, yyyy') : 'No date'}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-3.5 grid gap-2.5 md:grid-cols-3">
-        <div className="rounded-xl bg-background/80 px-3 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Client</p>
-          <p className="mt-0.5 text-xs font-semibold text-foreground truncate">{task.client?.name || task.client?.company || task.clientName || 'No client linked'}</p>
-        </div>
-        <div className="rounded-xl bg-background/80 px-3 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Assigned To</p>
-          <p className="mt-0.5 text-xs font-semibold text-foreground truncate">
-            {task.assignedPersonName || task.assignedTo?.map((item) => item.name).join(', ') || 'Unassigned'}
-          </p>
-        </div>
-        <div className="rounded-xl bg-background/80 px-3 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Project</p>
-          <p className="mt-0.5 text-xs font-semibold text-foreground truncate">{task.project?.name || task.projectName || 'No project linked'}</p>
-        </div>
-      </div>
-    </button>
-  );
-};
-
 const ContentCalendar = ({ embedded = false, defaultView = 'month' }) => {
-  const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
+  const normalizedInitialView = defaultView === 'list' ? 'agenda' : defaultView || 'month';
+
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState(defaultView);
+  const [miniMonthDate, setMiniMonthDate] = useState(new Date());
+  const [view, setView] = useState(normalizedInitialView);
+  const [agendaMode, setAgendaMode] = useState('projects'); // 'projects' | 'timeline'
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [search, setSearch] = useState('');
+
   const [filters, setFilters] = useState({
     client: '',
     assignedTo: '',
-    taskCategory: '',
-    taskType: '',
-    status: '',
-    priority: '',
     project: '',
-    startDate: '',
-    endDate: '',
+    status: '',
   });
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [draftDueDate, setDraftDueDate] = useState('');
-  const [selectedTask, setSelectedTask] = useState(null);
+
+  // Google-Calendar layers
+  const [layers, setLayers] = useState({
+    projects: true,
+    tasks: true,
+    meetings: true,
+  });
+
+  // Modals / Drawers
   const [selectedTaskId, setSelectedTaskId] = useState(null);
-  const [showTaskDetail, setShowTaskDetail] = useState(false);
-  const [showClientDetail, setShowClientDetail] = useState(false);
-  const [activeTask, setActiveTask] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [showDayDialog, setShowDayDialog] = useState(false);
-  const [showDailyUpdateDialog, setShowDailyUpdateDialog] = useState(false);
-  const [showDailyTaskDialog, setShowDailyTaskDialog] = useState(false);
+  const [selectedClientTask, setSelectedClientTask] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [selectedProjectDrawer, setSelectedProjectDrawer] = useState(null);
+
+  const [taskModalState, setTaskModalState] = useState({
+    open: false,
+    initialValues: null,
+  });
+  const [meetingModalState, setMeetingModalState] = useState({
+    open: false,
+    meeting: null,
+    initialDate: '',
+    initialTime: '',
+    initialClientId: '',
+    initialProjectId: '',
+  });
+
+  const [dailyUpdateOpen, setDailyUpdateOpen] = useState(false);
+  const [dailyCalendarTaskOpen, setDailyCalendarTaskOpen] = useState(false);
 
   const isClient = user?.role === 'client';
-  const canManageCalendar = ['superAdmin', 'admin', 'manager'].includes(user?.role);
-  const canFilterAssignee = ['superAdmin', 'admin', 'manager'].includes(user?.role);
-  const canFilterClientProject = ['superAdmin', 'admin', 'manager', 'employee'].includes(user?.role);
+  const canManageCalendar = ['superAdmin', 'admin', 'organizationOwner', 'manager'].includes(
+    user?.role
+  );
+  const canScheduleMeeting = !isClient;
+  const canFilterAssignee = ['superAdmin', 'admin', 'organizationOwner', 'manager'].includes(
+    user?.role
+  );
   const canLogDailyUpdates = EMPLOYEE_ROLES.includes(user?.role);
   const canDownloadWeeklyReport = canLogDailyUpdates || canManageCalendar;
 
+  useEffect(() => {
+    setMiniMonthDate(currentDate);
+  }, [currentDate]);
+
   const visibleRange = useMemo(() => getRangeForView(currentDate, view), [currentDate, view]);
+  const weeklyReportRange = useMemo(() => getRangeForView(currentDate, 'week'), [currentDate]);
 
-  const queryFilters = useMemo(() => ({
-    ...filters,
-    search,
-    parent: 'all',
-    startDate: filters.startDate || format(visibleRange.start, 'yyyy-MM-dd'),
-    endDate: filters.endDate || format(visibleRange.end, 'yyyy-MM-dd'),
-  }), [filters, search, visibleRange]);
+  const taskQueryFilters = useMemo(
+    () => ({
+      client: filters.client || undefined,
+      assignedTo: filters.assignedTo || undefined,
+      project: filters.project || undefined,
+      status: filters.status || undefined,
+      search: search || undefined,
+      parent: 'all',
+      startDate: format(visibleRange.start, 'yyyy-MM-dd'),
+      endDate: format(visibleRange.end, 'yyyy-MM-dd'),
+    }),
+    [filters, search, visibleRange]
+  );
 
-  const { data: calendarData, isLoading, refetch } = useTaskCalendar(queryFilters);
+  const meetingQueryFilters = useMemo(
+    () => ({
+      client: filters.client || undefined,
+      assignedTo: filters.assignedTo || undefined,
+      project: filters.project || undefined,
+      search: search || undefined,
+      startDate: format(visibleRange.start, 'yyyy-MM-dd'),
+      endDate: format(visibleRange.end, 'yyyy-MM-dd'),
+    }),
+    [filters, search, visibleRange]
+  );
+
+  const { data: calendarData, isLoading: tasksLoading, refetch: refetchTasks } =
+    useTaskCalendar(taskQueryFilters);
+  const { data: meetingsRaw = [], isLoading: meetingsLoading, refetch: refetchMeetings } =
+    useMeetings(meetingQueryFilters);
+  const { data: clients = [] } = useClients({}, { enabled: !isClient });
+  const { data: projectsRaw = [] } = useProjects({});
+  const { data: usersRaw = [] } = useUsers({ enabled: canFilterAssignee || canScheduleMeeting });
+
   const { data: employeeTasks = [] } = useTasks(
     { assignedTo: user?._id, parent: 'all', limit: 300 },
-    { enabled: canLogDailyUpdates && !!user?._id },
-  );
-  const { data: clients = [] } = useClients({}, { enabled: canFilterClientProject });
-  const { data: projects = [] } = useProjects({}, { enabled: canFilterClientProject });
-  const { data: users = [] } = useUsers({ enabled: canFilterAssignee });
-
-  const tasks = useMemo(
-    () => (calendarData?.tasks || [])
-      .map((task) => ({ ...task, status: normalizeTaskStatusLabel(task.status) })),
-    [calendarData],
+    { enabled: canLogDailyUpdates && !!user?._id }
   );
 
-  const summary = calendarData?.summary || {
-    total: tasks.length,
-    overdue: tasks.filter((task) => task.isOverdue).length,
-    waitingForClient: tasks.filter((task) => task.status === 'Waiting for Client').length,
-    completed: tasks.filter((task) => ['Completed', 'Approved'].includes(task.status)).length,
-  };
-
-  const weeklyRange = useMemo(() => ({
-    start: startOfWeek(currentDate, { weekStartsOn: 1 }),
-    end: endOfWeek(currentDate, { weekStartsOn: 1 }),
-  }), [currentDate]);
-
-  const weeklyReportFilters = useMemo(() => ({
-    startDate: format(weeklyRange.start, 'yyyy-MM-dd'),
-    endDate: format(weeklyRange.end, 'yyyy-MM-dd'),
-    assignedTo: canManageCalendar ? filters.assignedTo || undefined : user?._id,
-  }), [weeklyRange, canManageCalendar, filters.assignedTo, user?._id]);
-
-  const { data: weeklyReport, isFetching: isWeeklyReportLoading } = useWeeklyTaskReport(
-    weeklyReportFilters,
-    { enabled: canDownloadWeeklyReport && (!!user?._id || !!filters.assignedTo) },
+  const weeklyReportQuery = useWeeklyTaskReport(
+    {
+      startDate: format(weeklyReportRange.start, 'yyyy-MM-dd'),
+      endDate: format(weeklyReportRange.end, 'yyyy-MM-dd'),
+      employeeId: canManageCalendar ? filters.assignedTo || undefined : undefined,
+    },
+    { enabled: canDownloadWeeklyReport }
   );
 
-  const daysInView = useMemo(() => {
-    if (view === 'week') {
-      return eachDayOfInterval({ start: visibleRange.start, end: visibleRange.end });
-    }
+  const teamMembers = useMemo(
+    () => (usersRaw || []).filter((u) => u.role !== 'client' && u.isActive !== false),
+    [usersRaw]
+  );
 
-    if (view === 'day') {
-      return [visibleRange.start];
-    }
+  const rawTasks = calendarData?.tasks || [];
 
-    const calendarStart = startOfWeek(visibleRange.start, { weekStartsOn: 0 });
-    const calendarEnd = endOfWeek(visibleRange.end, { weekStartsOn: 0 });
-    return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-  }, [view, visibleRange]);
+  // Scope Tasks accurately on client too (e.g. if assignee/client filters active)
+  const visibleTasks = useMemo(() => {
+    return rawTasks.filter((task) => {
+      if (filters.client) {
+        const cid = task.client?._id || task.client || '';
+        if (String(cid) !== String(filters.client)) return false;
+      }
+      if (filters.project) {
+        const pid = task.project?._id || task.project || '';
+        if (String(pid) !== String(filters.project)) return false;
+      }
+      if (filters.assignedTo && !doesTaskMatchUser(task, filters.assignedTo)) {
+        return false;
+      }
+      if (filters.status) {
+        if (normalizeTaskStatusLabel(task.status) !== filters.status) return false;
+      }
+      if (search.trim()) {
+        const q = search.trim().toLowerCase();
+        const hay = [
+          task.taskTitle,
+          task.title,
+          task.project?.name,
+          task.client?.name,
+          task.client?.company,
+          ...extractTaskAssigneeNames(task),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [rawTasks, filters, search]);
+
+  // Visible Meetings (CalendarMeetings)
+  const visibleMeetings = useMemo(() => {
+    return (meetingsRaw || []).filter((mtg) => {
+      if (filters.client) {
+        const cid = mtg.client?._id || mtg.client || '';
+        if (String(cid) !== String(filters.client)) return false;
+      }
+      if (filters.project) {
+        const pid = mtg.project?._id || mtg.project || '';
+        if (String(pid) !== String(filters.project)) return false;
+      }
+      if (filters.assignedTo) {
+        const target = String(filters.assignedTo);
+        const orgId = String(mtg.organizer?._id || mtg.organizer || '');
+        const inAttendees = (mtg.attendees || []).some((a) => String(a?._id || a) === target);
+        if (orgId !== target && !inAttendees) return false;
+      }
+      if (search.trim()) {
+        const q = search.trim().toLowerCase();
+        const hay = [
+          mtg.title,
+          mtg.platform,
+          mtg.project?.name,
+          mtg.client?.name,
+          mtg.notes,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [meetingsRaw, filters, search]);
+
+  // Projects filtered by selected client, project, employee, search, and visible dates
+  const dropdownProjects = useMemo(() => {
+    if (!filters.client) return projectsRaw;
+    return projectsRaw.filter((p) => {
+      const cid = p.client?._id || p.client || '';
+      return String(cid) === String(filters.client);
+    });
+  }, [projectsRaw, filters.client]);
+
+  const visibleProjects = useMemo(() => {
+    const taskProjectIds = new Set(
+      visibleTasks.map((t) => String(t.project?._id || t.project || '')).filter(Boolean)
+    );
+    const meetingProjectIds = new Set(
+      visibleMeetings.map((m) => String(m.project?._id || m.project || '')).filter(Boolean)
+    );
+
+    return (projectsRaw || []).filter((proj) => {
+      const pid = String(proj._id);
+      if (filters.project && pid !== String(filters.project)) return false;
+      if (filters.client) {
+        const cid = String(proj.client?._id || proj.client || '');
+        if (cid !== String(filters.client)) return false;
+      }
+      if (filters.assignedTo) {
+        const target = String(filters.assignedTo);
+        const isMgr = String(proj.manager?._id || proj.manager || '') === target;
+        const inTeam = (proj.team || []).some((m) => String(m?._id || m) === target);
+        if (!isMgr && !inTeam && !taskProjectIds.has(pid) && !meetingProjectIds.has(pid)) {
+          return false;
+        }
+      }
+      if (search.trim()) {
+        const q = search.trim().toLowerCase();
+        const hay = [proj.name, proj.client?.name, proj.client?.company, proj.category]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!hay.includes(q) && !taskProjectIds.has(pid) && !meetingProjectIds.has(pid)) {
+          return false;
+        }
+      }
+
+      // Include project if it overlaps the visible range OR has visible tasks/meetings in range
+      if (taskProjectIds.has(pid) || meetingProjectIds.has(pid)) return true;
+
+      const start = proj.startDate ? new Date(proj.startDate) : null;
+      const due = proj.dueDate ? new Date(proj.dueDate) : null;
+      const meetup = proj.nextMeetupDate ? new Date(proj.nextMeetupDate) : null;
+
+      const overlapsRange =
+        (start && start <= visibleRange.end && (!due || due >= visibleRange.start)) ||
+        (due && due >= visibleRange.start && due <= visibleRange.end) ||
+        (meetup && meetup >= visibleRange.start && meetup <= visibleRange.end);
+
+      return Boolean(overlapsRange) || proj.status === 'In Progress' || proj.status === 'active';
+    });
+  }, [projectsRaw, visibleTasks, visibleMeetings, filters, search, visibleRange]);
 
   const tasksByDate = useMemo(() => {
-    const map = new Map();
-    tasks.forEach((task) => {
-      if (!task.dueDate) return;
-      const key = format(new Date(task.dueDate), 'yyyy-MM-dd');
-      const current = map.get(key) || [];
-      current.push(task);
-      map.set(key, current);
+    const grouped = new Map();
+    if (!layers.tasks) return grouped;
+    visibleTasks.forEach((task) => {
+      const dateValue = task.dueDate || task.createdAt;
+      if (!dateValue) return;
+      const d = new Date(dateValue);
+      if (Number.isNaN(d.getTime())) return;
+      const key = format(d, 'yyyy-MM-dd');
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(task);
     });
-    return map;
-  }, [tasks]);
+    return grouped;
+  }, [visibleTasks, layers.tasks]);
 
-  const selectedDateTasks = useMemo(() => {
-    if (!selectedDate) return [];
-    return tasksByDate.get(format(selectedDate, 'yyyy-MM-dd')) || [];
-  }, [selectedDate, tasksByDate]);
-
-  const selectedDateGuidance = useMemo(
-    () => buildGuidanceForDate(selectedDateTasks),
-    [selectedDateTasks],
-  );
-
-  const assignableUsers = useMemo(
-    () => users.filter((person) => ['superAdmin', 'admin', 'manager', 'employee'].includes(person.role)),
-    [users],
-  );
-
-  const listTasks = useMemo(
-    () => [...tasks].sort((a, b) => new Date(a.dueDate || 0) - new Date(b.dueDate || 0)),
-    [tasks],
-  );
-
-  const dailyUpdateTasks = useMemo(
-    () => (canLogDailyUpdates ? employeeTasks : []),
-    [canLogDailyUpdates, employeeTasks],
-  );
-
-  const weeklyReportOwnerLabel = canManageCalendar
-    ? (assignableUsers.find((person) => person._id === filters.assignedTo)?.name || 'All visible team members')
-    : (user?.name || 'Employee');
-
-  const toolbarTitle = useMemo(() => {
-    if (view === 'week') {
-      return `${format(visibleRange.start, 'MMM d')} - ${format(visibleRange.end, 'MMM d, yyyy')}`;
-    }
-    if (view === 'day') {
-      return format(visibleRange.start, 'EEEE, MMM d, yyyy');
-    }
-    return format(currentDate, 'MMMM yyyy');
-  }, [currentDate, view, visibleRange]);
-
-  const handleDownloadWeeklyReport = () => {
-    if (!weeklyReport?.rows?.length) return;
-    downloadWeeklyReportPdf({
-      report: weeklyReport,
-      range: weeklyRange,
-      employeeName: weeklyReportOwnerLabel,
+  const meetingsByDate = useMemo(() => {
+    const grouped = new Map();
+    if (!layers.meetings) return grouped;
+    visibleMeetings.forEach((mtg) => {
+      if (!mtg.meetingDate) return;
+      const d = new Date(mtg.meetingDate);
+      if (Number.isNaN(d.getTime())) return;
+      const key = format(d, 'yyyy-MM-dd');
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(mtg);
     });
+    return grouped;
+  }, [visibleMeetings, layers.meetings]);
+
+  // Project milestones per date: startDate, dueDate, nextMeetupDate
+  const projectEventsByDate = useMemo(() => {
+    const grouped = new Map();
+    if (!layers.projects) return grouped;
+    visibleProjects.forEach((proj) => {
+      const pushEvent = (dateVal, kind, label) => {
+        if (!dateVal) return;
+        const d = new Date(dateVal);
+        if (Number.isNaN(d.getTime())) return;
+        const key = format(d, 'yyyy-MM-dd');
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push({ project: proj, kind, label });
+      };
+      pushEvent(proj.dueDate, 'due', 'Due');
+      pushEvent(proj.startDate, 'start', 'Kickoff');
+      pushEvent(proj.nextMeetupDate, 'meetup', 'Sync');
+    });
+    return grouped;
+  }, [visibleProjects, layers.projects]);
+
+  const monthDays = useMemo(() => {
+    const start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 });
+    const end = endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 });
+    return eachDayOfInterval({ start, end });
+  }, [currentDate]);
+
+  const miniMonthDays = useMemo(() => {
+    const start = startOfWeek(startOfMonth(miniMonthDate), { weekStartsOn: 0 });
+    const end = endOfWeek(endOfMonth(miniMonthDate), { weekStartsOn: 0 });
+    return eachDayOfInterval({ start, end });
+  }, [miniMonthDate]);
+
+  const weekDays = useMemo(
+    () =>
+      eachDayOfInterval({
+        start: startOfWeek(currentDate, { weekStartsOn: 0 }),
+        end: endOfWeek(currentDate, { weekStartsOn: 0 }),
+      }),
+    [currentDate]
+  );
+
+  // Project -> Visible Tasks & Meetings grouping (used in Projects & List view + Day split view)
+  const groupedByProject = useMemo(() => {
+    const tasksByProj = new Map();
+    const meetingsByProj = new Map();
+
+    if (layers.tasks) {
+      visibleTasks.forEach((t) => {
+        const pid = String(t.project?._id || t.project || 'unassigned');
+        if (!tasksByProj.has(pid)) tasksByProj.set(pid, []);
+        tasksByProj.get(pid).push(t);
+      });
+    }
+    if (layers.meetings) {
+      visibleMeetings.forEach((m) => {
+        const pid = String(m.project?._id || m.project || 'unassigned');
+        if (!meetingsByProj.has(pid)) meetingsByProj.set(pid, []);
+        meetingsByProj.get(pid).push(m);
+      });
+    }
+
+    const groups = visibleProjects.map((proj) => {
+      const pid = String(proj._id);
+      return {
+        project: proj,
+        tasks: tasksByProj.get(pid) || [],
+        meetings: meetingsByProj.get(pid) || [],
+      };
+    });
+
+    const knownIds = new Set(visibleProjects.map((p) => String(p._id)));
+    const otherTasks = [];
+    const otherMeetings = [];
+
+    tasksByProj.forEach((list, pid) => {
+      if (!knownIds.has(pid)) otherTasks.push(...list);
+    });
+    meetingsByProj.forEach((list, pid) => {
+      if (!knownIds.has(pid)) otherMeetings.push(...list);
+    });
+
+    return { groups, otherTasks, otherMeetings };
+  }, [visibleProjects, visibleTasks, visibleMeetings, layers]);
+
+  const selectedEmployeeObj = teamMembers.find((u) => String(u._id) === String(filters.assignedTo));
+  const selectedClientObj = clients.find((c) => String(c._id) === String(filters.client));
+  const selectedProjectObj = projectsRaw.find((p) => String(p._id) === String(filters.project));
+
+  const hasActiveFilters =
+    Boolean(filters.client || filters.assignedTo || filters.project || filters.status || search);
+
+  const clearAllFilters = () => {
+    setFilters({ client: '', assignedTo: '', project: '', status: '' });
+    setSearch('');
   };
 
   const handleOpenTask = (task) => {
     if (isClient) {
-      setActiveTask(task);
-      setShowClientDetail(true);
-      return;
+      setSelectedClientTask(task);
+    } else {
+      setSelectedTaskId(task._id);
     }
-
-    setSelectedTaskId(task._id);
-    setShowTaskDetail(true);
   };
 
-  const openDateDetails = (date) => {
-    const key = format(date, 'yyyy-MM-dd');
-    const dayTasks = tasksByDate.get(key) || [];
-
-    if (!dayTasks.length && canLogDailyUpdates && !canManageCalendar) {
-      setSelectedDate(date);
-      setShowDailyTaskDialog(true);
-      return;
-    }
-
-    setSelectedDate(date);
-    setShowDayDialog(true);
+  const openCreateTask = (opts = {}) => {
+    setTaskModalState({
+      open: true,
+      initialValues: {
+        dueDate: opts.date || format(currentDate, 'yyyy-MM-dd'),
+        dueTime: opts.time || '',
+        client: opts.clientId || filters.client || '',
+        project: opts.projectId || filters.project || '',
+        assignedTo: opts.assignedTo || filters.assignedTo || '',
+      },
+    });
   };
 
+  const openScheduleMeeting = (opts = {}) => {
+    setMeetingModalState({
+      open: true,
+      meeting: opts.meeting || null,
+      initialDate: opts.date || format(currentDate, 'yyyy-MM-dd'),
+      initialTime: opts.time || '10:00',
+      initialClientId: opts.clientId || filters.client || '',
+      initialProjectId: opts.projectId || filters.project || '',
+      initialAssigneeId: opts.assignedTo || filters.assignedTo || '',
+    });
+  };
+
+  const handleRefreshAll = () => {
+    refetchTasks();
+    refetchMeetings();
+  };
+
+  const handleDownloadWeeklyReport = async () => {
+    const result = await weeklyReportQuery.refetch();
+    const report = result.data || weeklyReportQuery.data;
+    if (!report) return;
+    await downloadWeeklyReportPdf({
+      report,
+      range: weeklyReportRange,
+      employeeName: selectedEmployeeObj?.name || user?.name || 'Team Schedule',
+    });
+  };
+
+  const rangeHeading = useMemo(() => {
+    if (view === 'day') return format(currentDate, 'EEEE, MMM d, yyyy');
+    if (view === 'week') {
+      const s = startOfWeek(currentDate, { weekStartsOn: 0 });
+      const e = endOfWeek(currentDate, { weekStartsOn: 0 });
+      return s.getMonth() === e.getMonth()
+        ? `${format(s, 'MMM d')} – ${format(e, 'd, yyyy')}`
+        : `${format(s, 'MMM d')} – ${format(e, 'MMM d, yyyy')}`;
+    }
+    return format(currentDate, 'MMMM yyyy');
+  }, [currentDate, view]);
+
+  const isLoading = tasksLoading || meetingsLoading;
+
+  // Render Month Grid (Google Calendar Style)
   const renderMonthView = () => (
-    <div className="responsive-table-container rounded-2xl bg-card ">
-      <div className="min-w-[680px]">
-        <div className="grid grid-cols-7 bg-secondary/40">
-          {DAY_NAMES.map((day) => (
-            <div key={day} className="py-1.5 px-1 text-center text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-              {day}
-            </div>
-          ))}
-        </div>
+    <div className="bg-card rounded-2xl border border-border overflow-hidden">
+      {/* Weekday Header */}
+      <div className="grid grid-cols-7 border-b border-border bg-secondary/30">
+        {DAY_NAMES.map((dayName) => (
+          <div
+            key={dayName}
+            className="py-2 text-center text-[11px] font-semibold tracking-wider text-muted-foreground border-r last:border-r-0 border-border/60"
+          >
+            {dayName}
+          </div>
+        ))}
+      </div>
 
-        <div className="grid grid-cols-7">
-          {daysInView.map((day) => {
-            const key = format(day, 'yyyy-MM-dd');
-            const dayTasks = tasksByDate.get(key) || [];
-            const inCurrentMonth = isSameMonth(day, currentDate);
-            const isDayToday = isToday(day);
+      {/* Calendar Cells */}
+      <div className="grid grid-cols-7">
+        {monthDays.map((day, idx) => {
+          const key = format(day, 'yyyy-MM-dd');
+          const dayTasks = tasksByDate.get(key) || [];
+          const dayMeetings = meetingsByDate.get(key) || [];
+          const dayProjectEvents = projectEventsByDate.get(key) || [];
+          const inCurrentMonth = isSameMonth(day, currentDate);
+          const today = isToday(day);
+          const selected = selectedDay && isSameDay(day, selectedDay);
 
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => openDateDetails(day)}
-                className={cn(
-                  'min-h-[72px] sm:min-h-[80px] max-h-[105px] overflow-hidden p-1 sm:p-1.5 text-left align-top transition-colors focus:outline-none focus:ring-1 focus:ring-primary/30',
-                  !inCurrentMonth && 'bg-secondary/15 opacity-55',
-                  isDayToday && 'bg-primary/5 ring-1 ring-inset ring-primary/25',
-                  dayTasks.length ? 'hover:bg-secondary/35' : 'hover:bg-secondary/15',
+          const totalItems =
+            dayProjectEvents.length + dayMeetings.length + dayTasks.length;
+          const MAX_CELL_ITEMS = 4;
+
+          // Combine in priority order: Meetings -> Project milestones -> Tasks
+          const combined = [
+            ...dayMeetings.map((m) => ({ kind: 'meeting', id: m._id, data: m })),
+            ...dayProjectEvents.map((p, i) => ({
+              kind: 'project',
+              id: `${p.project._id}-${p.kind}-${i}`,
+              data: p,
+            })),
+            ...dayTasks.map((t) => ({ kind: 'task', id: t._id, data: t })),
+          ];
+          const shown = combined.slice(0, MAX_CELL_ITEMS);
+          const hiddenCount = Math.max(0, combined.length - shown.length);
+
+          return (
+            <div
+              key={key}
+              onClick={() => setSelectedDay(day)}
+              className={cn(
+                'group relative min-h-[122px] sm:min-h-[136px] p-1.5 sm:p-2 border-r border-b border-border/70 transition-colors cursor-pointer flex flex-col',
+                idx % 7 === 6 && 'border-r-0',
+                !inCurrentMonth ? 'bg-secondary/20 text-muted-foreground/60' : 'bg-card hover:bg-secondary/15',
+                selected && 'ring-1 ring-inset ring-primary bg-primary/[0.03]'
+              )}
+            >
+              {/* Day Header */}
+              <div className="flex items-center justify-between gap-1 mb-1.5">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentDate(day);
+                    setView('day');
+                  }}
+                  title="Open Day View"
+                  className={cn(
+                    'h-7 min-w-7 px-1.5 rounded-full inline-flex items-center justify-center text-xs font-semibold transition-colors',
+                    today
+                      ? 'bg-primary text-primary-foreground font-bold shadow-xs'
+                      : inCurrentMonth
+                      ? 'text-foreground hover:bg-secondary'
+                      : 'text-muted-foreground/60 hover:bg-secondary/60'
+                  )}
+                >
+                  {day.getDate() === 1 ? format(day, 'MMM d') : format(day, 'd')}
+                </button>
+
+                {/* Hover Quick-Add Actions */}
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {canManageCalendar && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openCreateTask({ date: key });
+                      }}
+                      title="Add Task"
+                      className="h-6 px-1.5 rounded-md text-[10px] font-semibold bg-secondary hover:bg-primary hover:text-primary-foreground text-muted-foreground transition-colors"
+                    >
+                      +Task
+                    </button>
+                  )}
+                  {canScheduleMeeting && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openScheduleMeeting({ date: key });
+                      }}
+                      title="Schedule Meeting"
+                      className="h-6 px-1.5 rounded-md text-[10px] font-semibold bg-violet-500/12 hover:bg-violet-600 hover:text-white text-violet-700 dark:text-violet-300 transition-colors"
+                    >
+                      +Meet
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Event Pills */}
+              <div className="space-y-1 flex-1 min-w-0">
+                {shown.map((entry) => {
+                  if (entry.kind === 'meeting') {
+                    const mtg = entry.data;
+                    return (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openScheduleMeeting({ meeting: mtg });
+                        }}
+                        className="w-full text-left rounded-md px-1.5 py-0.5 text-[11px] font-medium bg-violet-500/15 hover:bg-violet-500/25 text-violet-900 dark:text-violet-200 border border-violet-500/25 flex items-center gap-1 truncate transition-colors"
+                      >
+                        <Video size={11} className="text-violet-600 dark:text-violet-400 shrink-0" />
+                        {mtg.startTime && (
+                          <span className="text-[10px] font-semibold opacity-80 shrink-0">
+                            {mtg.startTime}
+                          </span>
+                        )}
+                        <span className="truncate">{mtg.title}</span>
+                      </button>
+                    );
+                  }
+
+                  if (entry.kind === 'project') {
+                    const { project, label } = entry.data;
+                    return (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedProjectDrawer(project);
+                        }}
+                        className="w-full text-left rounded-md px-1.5 py-0.5 text-[11px] font-semibold bg-emerald-500/14 hover:bg-emerald-500/22 text-emerald-900 dark:text-emerald-200 border border-emerald-500/25 flex items-center gap-1 truncate transition-colors"
+                      >
+                        <FolderOpen size={11} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <span className="truncate">{project.name}</span>
+                        <span className="ml-auto text-[9px] uppercase opacity-75 shrink-0">{label}</span>
+                      </button>
+                    );
+                  }
+
+                  const task = entry.data;
+                  const statusLabel = normalizeTaskStatusLabel(task.status);
+                  const theme = TASK_STATUS_COLORS[statusLabel] || TASK_STATUS_COLORS['To Do'];
+                  return (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenTask(task);
+                      }}
+                      title={`${task.taskTitle || task.title}${task.project?.name ? ` • ${task.project.name}` : ''}`}
+                      className={cn(
+                        'w-full text-left rounded-md px-1.5 py-0.5 text-[11px] font-medium flex items-center gap-1.5 truncate transition-colors',
+                        theme.pill
+                      )}
+                    >
+                      <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', theme.dot)} />
+                      {task.dueTime && (
+                        <span className="text-[10px] opacity-75 shrink-0">{task.dueTime}</span>
+                      )}
+                      <span className="truncate flex-1">{task.taskTitle || task.title}</span>
+                    </button>
+                  );
+                })}
+
+                {hiddenCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedDay(day);
+                    }}
+                    className="w-full text-left px-1.5 py-0.5 text-[11px] font-semibold text-primary hover:underline"
+                  >
+                    +{hiddenCount} more ({totalItems} total)
+                  </button>
                 )}
-              >
-                <div className="flex items-center justify-between gap-1 leading-none">
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  // Render Google Calendar Time-Grid Week View
+  const renderWeekView = () => (
+    <div className="bg-card rounded-2xl border border-border overflow-hidden flex flex-col">
+      <div className="overflow-x-auto">
+        <div className="min-w-[820px]">
+          {/* Column Headers */}
+          <div className="grid grid-cols-[68px_repeat(7,minmax(0,1fr))] border-b border-border bg-secondary/30">
+            <div className="p-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-end justify-center border-r border-border/60">
+              Time
+            </div>
+            {weekDays.map((day) => {
+              const today = isToday(day);
+              return (
+                <button
+                  key={format(day, 'yyyy-MM-dd')}
+                  type="button"
+                  onClick={() => {
+                    setCurrentDate(day);
+                    setView('day');
+                  }}
+                  className={cn(
+                    'py-2.5 px-2 text-center border-r last:border-r-0 border-border/60 hover:bg-secondary/40 transition-colors',
+                    today && 'bg-primary/[0.04]'
+                  )}
+                >
+                  <div className="text-[10px] font-semibold text-muted-foreground uppercase">
+                    {format(day, 'EEE')}
+                  </div>
                   <div
                     className={cn(
-                      'flex h-6 w-6 items-center justify-center rounded-full text-xs sm:text-sm font-black tracking-tight tabular-nums',
-                      isDayToday
-                        ? 'bg-primary text-primary-foreground font-black ring-1 ring-primary/40'
-                        : inCurrentMonth
-                        ? 'text-foreground font-black'
-                        : 'text-muted-foreground font-bold',
+                      'mt-0.5 mx-auto h-7 w-7 rounded-full flex items-center justify-center text-sm font-bold',
+                      today ? 'bg-primary text-primary-foreground' : 'text-foreground'
                     )}
                   >
                     {format(day, 'd')}
                   </div>
-                  {dayTasks.length ? (
-                    <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[10px] font-black text-foreground leading-none tabular-nums">
-                      {dayTasks.length}
-                    </span>
-                  ) : null}
-                </div>
+                </button>
+              );
+            })}
+          </div>
 
-                <div className="mt-1 space-y-1">
-                  {dayTasks.slice(0, 2).map((task) => {
-                    const normalizedStatus = normalizeTaskStatusLabel(task.status);
-                    const statusTheme = TASK_STATUS_COLORS[normalizedStatus] || TASK_STATUS_COLORS['To Do'];
-                    const isUrgent = task.priority === 'Urgent';
-                    const isHigh = task.priority === 'High';
+          {/* All-Day Projects & Due Tasks Row */}
+          <div className="grid grid-cols-[68px_repeat(7,minmax(0,1fr))] border-b border-border bg-secondary/10">
+            <div className="p-2 text-[10px] font-semibold text-muted-foreground flex items-center justify-center border-r border-border/60">
+              All-day
+            </div>
+            {weekDays.map((day) => {
+              const key = format(day, 'yyyy-MM-dd');
+              const allDayTasks = (tasksByDate.get(key) || []).filter(
+                (t) => parseHourFromTime(t.dueTime) === null
+              );
+              const dayProjEvents = projectEventsByDate.get(key) || [];
+              const combined = [
+                ...dayProjEvents.map((p, idx) => ({ kind: 'project', id: `${p.project._id}-${idx}`, data: p })),
+                ...allDayTasks.map((t) => ({ kind: 'task', id: t._id, data: t })),
+              ];
+              return (
+                <div
+                  key={key}
+                  className="p-1.5 border-r last:border-r-0 border-border/60 min-h-[58px] space-y-1"
+                >
+                  {combined.slice(0, 3).map((item) =>
+                    item.kind === 'project' ? (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setSelectedProjectDrawer(item.data.project)}
+                        className="w-full text-left rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-500/14 text-emerald-800 dark:text-emerald-200 truncate flex items-center gap-1"
+                      >
+                        <FolderOpen size={10} className="shrink-0" />
+                        <span className="truncate">{item.data.project.name}</span>
+                      </button>
+                    ) : (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleOpenTask(item.data)}
+                        className={cn(
+                          'w-full text-left rounded px-1.5 py-0.5 text-[10px] font-medium truncate flex items-center gap-1',
+                          (TASK_STATUS_COLORS[normalizeTaskStatusLabel(item.data.status)] ||
+                            TASK_STATUS_COLORS['To Do']).pill
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'h-1.5 w-1.5 rounded-full shrink-0',
+                            (TASK_STATUS_COLORS[normalizeTaskStatusLabel(item.data.status)] ||
+                              TASK_STATUS_COLORS['To Do']).dot
+                          )}
+                        />
+                        <span className="truncate">{item.data.taskTitle || item.data.title}</span>
+                      </button>
+                    )
+                  )}
+                  {combined.length > 3 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDay(day)}
+                      className="text-[10px] font-semibold text-primary hover:underline px-1"
+                    >
+                      +{combined.length - 3} more
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Hourly Grid */}
+          <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
+            {HOURS.map((hour) => {
+              const timeStr = `${String(hour).padStart(2, '0')}:00`;
+              return (
+                <div
+                  key={hour}
+                  className="grid grid-cols-[68px_repeat(7,minmax(0,1fr))] border-b last:border-b-0 border-border/50"
+                >
+                  <div className="px-2 py-2 text-[10px] font-medium text-muted-foreground text-right border-r border-border/60">
+                    {formatHourLabel(hour)}
+                  </div>
+                  {weekDays.map((day) => {
+                    const key = format(day, 'yyyy-MM-dd');
+                    const slotMeetings = (meetingsByDate.get(key) || []).filter(
+                      (m) => (parseHourFromTime(m.startTime) ?? 10) === hour
+                    );
+                    const slotTasks = (tasksByDate.get(key) || []).filter(
+                      (t) => parseHourFromTime(t.dueTime) === hour
+                    );
 
                     return (
                       <div
-                        key={task._id}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleOpenTask(task);
-                        }}
-                        className={cn(
-                          'group/task relative rounded-md px-1.5 py-0.5 text-left transition-colors cursor-pointer',
-                          statusTheme.border,
-                          statusTheme.bg,
-                          isUrgent && ' ring-1 ring-primary/35 bg-primary/[0.07]',
-                          isHigh && !isUrgent && ' ',
-                          task.isOverdue && ' bg-primary/10',
-                        )}
+                        key={`${key}-${hour}`}
+                        onClick={() =>
+                          canScheduleMeeting &&
+                          openScheduleMeeting({ date: key, time: timeStr })
+                        }
+                        className="min-h-[50px] p-1 border-r last:border-r-0 border-border/50 hover:bg-primary/[0.03] cursor-pointer space-y-1 transition-colors"
                       >
-                        <div className="flex items-center justify-between gap-1">
-                          <div className="flex items-center gap-1 min-w-0">
-                            <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', statusTheme.dot)} />
-                            <p className="truncate text-[10px] font-bold text-foreground transition-colors leading-tight">
+                        {slotMeetings.map((mtg) => (
+                          <button
+                            key={mtg._id}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openScheduleMeeting({ meeting: mtg });
+                            }}
+                            className="w-full text-left rounded-md px-1.5 py-1 text-[11px] font-semibold bg-violet-500/18 hover:bg-violet-500/28 text-violet-900 dark:text-violet-100 border-l-2 border-violet-600 truncate"
+                          >
+                            <div className="flex items-center gap-1 truncate">
+                              <Video size={10} className="shrink-0" />
+                              <span className="truncate">{mtg.title}</span>
+                            </div>
+                            <div className="text-[9px] opacity-80">
+                              {mtg.startTime}
+                              {mtg.endTime ? ` – ${mtg.endTime}` : ''}
+                            </div>
+                          </button>
+                        ))}
+                        {slotTasks.map((task) => {
+                          const label = normalizeTaskStatusLabel(task.status);
+                          const theme = TASK_STATUS_COLORS[label] || TASK_STATUS_COLORS['To Do'];
+                          return (
+                            <button
+                              key={task._id}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenTask(task);
+                              }}
+                              className={cn(
+                                'w-full text-left rounded-md px-1.5 py-1 text-[11px] font-medium truncate',
+                                theme.pill
+                              )}
+                            >
                               {task.taskTitle || task.title}
-                            </p>
-                          </div>
-                          {isUrgent ? (
-                            <span className="shrink-0 px-1 py-0.5 rounded text-[8px] font-black bg-primary text-primary-foreground leading-none">
-                              !
-                            </span>
-                          ) : null}
-                        </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     );
                   })}
-
-                  {dayTasks.length > 2 ? (
-                    <div className="text-[9px] font-black text-foreground px-0.5 leading-none tabular-nums">
-                      +{dayTasks.length - 2} more
-                    </div>
-                  ) : null}
                 </div>
-              </button>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
   );
 
-  const renderAgendaView = () => {
-    // Group tasks by due date
-    const grouped = new Map();
-    listTasks.forEach((task) => {
-      const key = task.dueDate ? format(new Date(task.dueDate), 'yyyy-MM-dd') : 'no-date';
-      const label = task.dueDate ? format(new Date(task.dueDate), 'EEEE, MMMM d, yyyy') : 'No Due Date';
-      if (!grouped.has(key)) grouped.set(key, { label, tasks: [] });
-      grouped.get(key).tasks.push(task);
-    });
-
-    const groups = Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b));
-
-    if (!groups.length) {
-      return (
-        <EmptyState
-          title="No tasks found"
-          action={canManageCalendar ? (
-            <Button onClick={() => navigate('/tasks/new')}>
-              <Plus size={16} className="mr-2" />
-              Create Task
-            </Button>
-          ) : null}
-        />
-      );
-    }
+  // Render Day View (Hourly Timeline + Active Projects Breakdown)
+  const renderDayView = () => {
+    const key = format(currentDate, 'yyyy-MM-dd');
+    const dayTasks = tasksByDate.get(key) || [];
+    const dayMeetings = meetingsByDate.get(key) || [];
+    const dayProjectEvents = projectEventsByDate.get(key) || [];
+    const allDayTasks = dayTasks.filter((t) => parseHourFromTime(t.dueTime) === null);
 
     return (
-      <div className="responsive-table-container rounded-[20px] ">
-        <div className="min-w-[720px] space-y-1">
-          {/* Header Row */}
-          <div className="grid items-center gap-2 bg-secondary/60 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground"
-            style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 100px' }}>
-            <span>Task</span>
-            <span>Client</span>
-            <span>Assigned To</span>
-            <span>Status</span>
-            <span>Priority</span>
-            <span className="text-right">Due Date</span>
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+        {/* Left: Google Calendar Day Time Grid */}
+        <div className="xl:col-span-8 bg-card rounded-2xl border border-border overflow-hidden">
+          <div className="px-4 py-3 border-b border-border flex flex-wrap items-center justify-between gap-2 bg-secondary/20">
+            <div>
+              <h3 className="text-sm font-bold text-foreground">
+                {format(currentDate, 'EEEE, MMMM d, yyyy')}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {dayMeetings.length} meetings • {dayTasks.length} tasks scheduled
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {canManageCalendar && (
+                <Button size="sm" variant="outline" onClick={() => openCreateTask({ date: key })}>
+                  <Plus size={14} className="mr-1" /> Add Task
+                </Button>
+              )}
+              {canScheduleMeeting && (
+                <Button size="sm" onClick={() => openScheduleMeeting({ date: key })}>
+                  <Video size={14} className="mr-1" /> Schedule Meeting
+                </Button>
+              )}
+            </div>
           </div>
 
-          {groups.map(([dateKey, { label, tasks: dateTasks }]) => (
-            <div key={dateKey}>
-              {/* Date Group Header */}
-              <div className={cn(
-                'sticky top-0 z-10 flex items-center gap-3 bg-card px-4 py-2',
-                dateKey !== 'no-date' && isToday(new Date(dateKey)) && 'bg-secondary ',
-              )}>
-                <div className={cn(
-                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black tabular-nums',
-                  dateKey !== 'no-date' && isToday(new Date(dateKey))
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-foreground',
-                )}>
-                  {dateKey !== 'no-date' ? format(new Date(dateKey), 'd') : '—'}
-                </div>
-                <p className="text-xs font-bold text-foreground">{label}</p>
-                <span className="ml-auto rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground tabular-nums">
-                  {dateTasks.length} {dateTasks.length === 1 ? 'task' : 'tasks'}
-                </span>
+          {/* All-day Row */}
+          {(dayProjectEvents.length > 0 || allDayTasks.length > 0) && (
+            <div className="p-3 border-b border-border bg-secondary/10 space-y-2">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                All-Day Tasks & Project Milestones
               </div>
-
-              {/* Task Rows */}
-              {dateTasks.map((task, idx) => {
-                const normalizedStatus = normalizeTaskStatusLabel(task.status);
-                const assignees = task.assignedTo?.map((a) => a.name).join(', ') || task.assignedPersonName || 'Unassigned';
-                return (
+              <div className="flex flex-wrap gap-1.5">
+                {dayProjectEvents.map((ev, idx) => (
                   <button
-                    key={task._id}
+                    key={`${ev.project._id}-${idx}`}
                     type="button"
-                    onClick={() => handleOpenTask(task)}
-                    className={cn(
-                      'w-full grid items-center gap-2 px-4 py-3 text-left transition-all hover:bg-secondary/30',
-                      idx % 2 === 0 ? 'bg-background' : 'bg-secondary/10',
-                      task.isOverdue && ' ',
-                    )}
-                    style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 100px' }}
+                    onClick={() => setSelectedProjectDrawer(ev.project)}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold bg-emerald-500/14 text-emerald-800 dark:text-emerald-200 border border-emerald-500/25 hover:bg-emerald-500/22"
                   >
-                    {/* Title + Category */}
-                    <div className="min-w-0 flex items-center gap-2">
-                      <span className={cn(
-                        'h-2 w-2 shrink-0 rounded-full',
-                        task.taskCategory === 'content' ? 'bg-foreground' : 'bg-muted-foreground',
-                      )} />
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-foreground">{task.taskTitle || task.title}</p>
-                        <p className="truncate text-[11px] text-muted-foreground">{formatTaskTypeLabel(task.taskType)}</p>
-                      </div>
-                      {task.isOverdue && (
-                        <span className="ml-1 shrink-0 rounded-full bg-primary text-primary-foreground px-2 py-0.5 text-[9px] font-bold uppercase">Overdue</span>
+                    <FolderOpen size={12} /> {ev.project.name} ({ev.label})
+                  </button>
+                ))}
+                {allDayTasks.map((task) => {
+                  const statusLabel = normalizeTaskStatusLabel(task.status);
+                  const theme = TASK_STATUS_COLORS[statusLabel] || TASK_STATUS_COLORS['To Do'];
+                  return (
+                    <button
+                      key={task._id}
+                      type="button"
+                      onClick={() => handleOpenTask(task)}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium',
+                        theme.pill
+                      )}
+                    >
+                      <span className={cn('h-1.5 w-1.5 rounded-full', theme.dot)} />
+                      <span>{task.taskTitle || task.title}</span>
+                      {task.project?.name && (
+                        <span className="text-[10px] opacity-75">• {task.project.name}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Hourly Schedule */}
+          <div className="max-h-[580px] overflow-y-auto custom-scrollbar divide-y divide-border/50">
+            {HOURS.map((hour) => {
+              const timeStr = `${String(hour).padStart(2, '0')}:00`;
+              const slotMeetings = dayMeetings.filter(
+                (m) => (parseHourFromTime(m.startTime) ?? 10) === hour
+              );
+              const slotTasks = dayTasks.filter(
+                (t) => parseHourFromTime(t.dueTime) === hour
+              );
+              return (
+                <div
+                  key={hour}
+                  onClick={() =>
+                    canScheduleMeeting && openScheduleMeeting({ date: key, time: timeStr })
+                  }
+                  className="grid grid-cols-[72px_1fr] min-h-[56px] hover:bg-primary/[0.02] cursor-pointer"
+                >
+                  <div className="px-3 py-2 text-xs font-medium text-muted-foreground text-right border-r border-border/60">
+                    {formatHourLabel(hour)}
+                  </div>
+                  <div className="p-2 space-y-1.5">
+                    {slotMeetings.map((mtg) => (
+                      <button
+                        key={mtg._id}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openScheduleMeeting({ meeting: mtg });
+                        }}
+                        className="w-full text-left rounded-xl px-3 py-2 bg-violet-500/14 hover:bg-violet-500/22 border border-violet-500/25 flex items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground truncate">
+                            <Video size={14} className="text-violet-600 shrink-0" />
+                            <span className="truncate">{mtg.title}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {mtg.startTime} – {mtg.endTime || ''} • {mtg.platform}
+                            {mtg.project?.name ? ` • ${mtg.project.name}` : ''}
+                            {mtg.client?.name ? ` • ${mtg.client.name}` : ''}
+                          </div>
+                        </div>
+                        <StatusBadge value={mtg.status || 'scheduled'} />
+                      </button>
+                    ))}
+                    {slotTasks.map((task) => {
+                      const label = normalizeTaskStatusLabel(task.status);
+                      const theme = TASK_STATUS_COLORS[label] || TASK_STATUS_COLORS['To Do'];
+                      return (
+                        <button
+                          key={task._id}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenTask(task);
+                          }}
+                          className={cn(
+                            'w-full text-left rounded-xl px-3 py-2 text-xs font-medium flex items-center justify-between gap-2',
+                            theme.pill
+                          )}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={cn('h-2 w-2 rounded-full shrink-0', theme.dot)} />
+                            <span className="font-semibold truncate">
+                              {task.taskTitle || task.title}
+                            </span>
+                            {task.project?.name && (
+                              <span className="opacity-75 truncate">• {task.project.name}</span>
+                            )}
+                          </div>
+                          <span className="shrink-0">{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right: Active Projects & Visible Tasks Inside */}
+        <div className="xl:col-span-4 bg-card rounded-2xl border border-border p-4 space-y-3 self-start">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <FolderOpen size={15} className="text-emerald-600" />
+              Projects & Inside Tasks
+            </h4>
+            <span className="text-xs font-semibold text-muted-foreground">
+              {groupedByProject.groups.length} projects
+            </span>
+          </div>
+
+          <div className="space-y-2.5 max-h-[600px] overflow-y-auto custom-scrollbar pr-1">
+            {groupedByProject.groups.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-6 text-center">
+                No projects match the current filters.
+              </p>
+            ) : (
+              groupedByProject.groups.map(({ project, tasks, meetings }) => (
+                <div
+                  key={project._id}
+                  className="rounded-xl border border-border bg-background/70 p-3 space-y-2"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProjectDrawer(project)}
+                      className="text-left min-w-0 flex-1 group"
+                    >
+                      <p className="text-xs font-bold text-foreground group-hover:text-primary truncate">
+                        {project.name}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {project.client?.name || project.client?.company || 'Internal'} •{' '}
+                        {tasks.length} tasks • {meetings.length} meets
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProjectDrawer(project)}
+                      className="text-[10px] font-semibold text-primary hover:underline shrink-0"
+                    >
+                      Open
+                    </button>
+                  </div>
+
+                  {(tasks.length > 0 || meetings.length > 0) && (
+                    <div className="space-y-1 pt-1 border-t border-border/50">
+                      {meetings.slice(0, 2).map((m) => (
+                        <button
+                          key={m._id}
+                          type="button"
+                          onClick={() => openScheduleMeeting({ meeting: m })}
+                          className="w-full text-left text-[11px] px-2 py-1 rounded bg-violet-500/10 text-violet-800 dark:text-violet-200 flex items-center gap-1.5 truncate"
+                        >
+                          <Video size={10} className="shrink-0" />
+                          <span className="truncate">{m.title}</span>
+                        </button>
+                      ))}
+                      {tasks.slice(0, 4).map((t) => {
+                        const label = normalizeTaskStatusLabel(t.status);
+                        const theme = TASK_STATUS_COLORS[label] || TASK_STATUS_COLORS['To Do'];
+                        return (
+                          <button
+                            key={t._id}
+                            type="button"
+                            onClick={() => handleOpenTask(t)}
+                            className="w-full text-left text-[11px] px-2 py-1 rounded hover:bg-secondary/60 flex items-center gap-1.5 truncate"
+                          >
+                            <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', theme.dot)} />
+                            <span className="truncate flex-1">{t.taskTitle || t.title}</span>
+                            <span className="text-[10px] text-muted-foreground shrink-0">
+                              {extractTaskAssigneeNames(t)[0] || ''}
+                            </span>
+                          </button>
+                        );
+                      })}
+                      {tasks.length > 4 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProjectDrawer(project)}
+                          className="text-[10px] font-semibold text-primary px-2 hover:underline"
+                        >
+                          View all {tasks.length} tasks →
+                        </button>
                       )}
                     </div>
-
-                    {/* Client */}
-                    <p className="truncate text-xs text-muted-foreground">
-                      {task.client?.name || task.client?.company || task.clientName || '—'}
-                    </p>
-
-                    {/* Assignees */}
-                    <p className="truncate text-xs text-muted-foreground">{assignees}</p>
-
-                    {/* Status */}
-                    <div>
-                      <StatusBadge tone={statusTone[normalizedStatus] || 'neutral'}>
-                        {normalizedStatus}
-                      </StatusBadge>
-                    </div>
-
-                    {/* Priority */}
-                    <div>
-                      <StatusBadge tone={priorityTone[task.priority] || 'neutral'}>
-                        {task.priority || '—'}
-                      </StatusBadge>
-                    </div>
-
-                    {/* Due Date */}
-                    <p className="text-right text-xs font-semibold text-foreground tabular-nums">
-                      {task.dueDate ? format(new Date(task.dueDate), 'MMM d') : '—'}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+                  )}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     );
   };
 
-  const renderWeekOrDayView = () => (
-    <div className="grid gap-4 lg:grid-cols-7">
-      {daysInView.map((day) => {
-        const key = format(day, 'yyyy-MM-dd');
-        const dayTasks = tasksByDate.get(key) || [];
+  // Render Projects & List (Agenda) View — Clearly shows Projects -> Visible Tasks & Meetings Inside
+  const renderAgendaView = () => {
+    const timelineDays = Array.from(
+      new Set([
+        ...Array.from(tasksByDate.keys()),
+        ...Array.from(meetingsByDate.keys()),
+        ...Array.from(projectEventsByDate.keys()),
+      ])
+    ).sort();
 
-        return (
-          <div key={key} className={cn('rounded-[24px] bg-card p-4 ', view === 'day' && 'lg:col-span-7')}>
-            <button type="button" onClick={() => openDateDetails(day)} className="w-full text-left">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    {format(day, 'EEEE')}
-                  </p>
-                  <h3 className="mt-1 text-lg font-bold text-foreground">{format(day, 'MMM d')}</h3>
-                </div>
-                {isToday(day) ? <StatusBadge tone="info">Today</StatusBadge> : null}
-              </div>
-            </button>
-
-            <div className="mt-4 space-y-3">
-              {dayTasks.length ? (
-                dayTasks.map((task) => (
-                  <TaskSummaryCard key={task._id} task={task} onOpen={handleOpenTask} />
-                ))
-              ) : (
-                <div className="rounded-2xl bg-background px-4 py-10 text-center text-sm text-muted-foreground">
-                  {canManageCalendar
-                    ? 'No tasks here yet. Click the date above to add one.'
-                    : canLogDailyUpdates
-                      ? 'No tasks scheduled. Add your daily task to keep your weekly report complete.'
-                      : 'No tasks scheduled.'}
-                </div>
-              )}
-            </div>
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-card rounded-xl border border-border px-4 py-2.5">
+          <div className="text-xs font-semibold text-muted-foreground">
+            {agendaMode === 'projects'
+              ? `Showing ${groupedByProject.groups.length} projects with their visible tasks & meetings`
+              : `Chronological schedule across ${timelineDays.length} active days`}
           </div>
-        );
-      })}
-    </div>
-  );
+          <div className="inline-flex rounded-lg bg-secondary p-0.5 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setAgendaMode('projects')}
+              className={cn(
+                'px-3 py-1 rounded-md transition-colors',
+                agendaMode === 'projects'
+                  ? 'bg-background text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              By Project (Tasks Inside)
+            </button>
+            <button
+              type="button"
+              onClick={() => setAgendaMode('timeline')}
+              className={cn(
+                'px-3 py-1 rounded-md transition-colors',
+                agendaMode === 'timeline'
+                  ? 'bg-background text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              By Date
+            </button>
+          </div>
+        </div>
+
+        {agendaMode === 'projects' ? (
+          <div className="space-y-3">
+            {groupedByProject.groups.length === 0 &&
+            groupedByProject.otherTasks.length === 0 &&
+            groupedByProject.otherMeetings.length === 0 ? (
+              <EmptyState
+                icon={FolderOpen}
+                title="No matching projects, tasks, or meetings"
+                description="Adjust your employee, client, or month filters, or create a new task or meeting."
+              />
+            ) : (
+              <>
+                {groupedByProject.groups.map(({ project, tasks, meetings }) => (
+                  <div
+                    key={project._id}
+                    className="rounded-2xl border border-border bg-card overflow-hidden"
+                  >
+                    {/* Project Header */}
+                    <div className="px-5 py-3.5 bg-secondary/20 border-b border-border flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0 flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-xl bg-emerald-500/12 text-emerald-600 flex items-center justify-center shrink-0">
+                          <FolderOpen size={18} />
+                        </div>
+                        <div className="min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedProjectDrawer(project)}
+                            className="text-sm font-bold text-foreground hover:text-primary text-left truncate block"
+                          >
+                            {project.name}
+                          </button>
+                          <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center gap-1">
+                              <Building2 size={11} />
+                              {project.client?.name || project.client?.company || 'Internal Project'}
+                            </span>
+                            <span>•</span>
+                            <span>{tasks.length} tasks</span>
+                            <span>•</span>
+                            <span>{meetings.length} meetings</span>
+                            {project.dueDate && (
+                              <>
+                                <span>•</span>
+                                <span>Due {format(new Date(project.dueDate), 'MMM d, yyyy')}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {canManageCalendar && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              openCreateTask({
+                                projectId: project._id,
+                                clientId: project.client?._id || project.client || '',
+                              })
+                            }
+                          >
+                            <Plus size={13} className="mr-1" /> Task
+                          </Button>
+                        )}
+                        {canScheduleMeeting && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              openScheduleMeeting({
+                                projectId: project._id,
+                                clientId: project.client?._id || project.client || '',
+                              })
+                            }
+                          >
+                            <Video size={13} className="mr-1 text-violet-600" /> Meeting
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSelectedProjectDrawer(project)}
+                        >
+                          Details
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Inside Project Content: Meetings + Tasks */}
+                    <div className="p-4 space-y-3">
+                      {meetings.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+                            Scheduled Meetings ({meetings.length})
+                          </p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {meetings.map((mtg) => (
+                              <button
+                                key={mtg._id}
+                                type="button"
+                                onClick={() => openScheduleMeeting({ meeting: mtg })}
+                                className="text-left rounded-xl border border-violet-500/25 bg-violet-500/5 hover:bg-violet-500/10 p-3 flex items-center justify-between gap-2 transition-colors"
+                              >
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-foreground truncate flex items-center gap-1.5">
+                                    <Video size={13} className="text-violet-600 shrink-0" />
+                                    {mtg.title}
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                                    {format(new Date(mtg.meetingDate), 'MMM d, yyyy')}
+                                    {mtg.startTime ? ` • ${mtg.startTime}` : ''} • {mtg.platform}
+                                  </p>
+                                </div>
+                                <StatusBadge value={mtg.status || 'scheduled'} />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {tasks.length > 0 ? (
+                        <div className="space-y-1.5">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Visible Tasks ({tasks.length})
+                          </p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {tasks.map((task) => {
+                              const statusLabel = normalizeTaskStatusLabel(task.status);
+                              const theme =
+                                TASK_STATUS_COLORS[statusLabel] || TASK_STATUS_COLORS['To Do'];
+                              const assignees = extractTaskAssigneeNames(task);
+                              return (
+                                <button
+                                  key={task._id}
+                                  type="button"
+                                  onClick={() => handleOpenTask(task)}
+                                  className="text-left rounded-xl border border-border bg-background hover:border-primary/40 hover:bg-secondary/20 p-3 flex items-start justify-between gap-2 transition-colors"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-semibold text-foreground truncate">
+                                      {task.taskTitle || task.title}
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                                      {formatTaskTypeLabel(task.taskType)} •{' '}
+                                      {assignees.join(', ') || 'Unassigned'}
+                                      {task.dueDate
+                                        ? ` • Due ${format(new Date(task.dueDate), 'MMM d')}`
+                                        : ''}
+                                    </p>
+                                  </div>
+                                  <span
+                                    className={cn(
+                                      'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0',
+                                      theme.badge
+                                    )}
+                                  >
+                                    <span className={cn('h-1.5 w-1.5 rounded-full', theme.dot)} />
+                                    {statusLabel}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        meetings.length === 0 && (
+                          <p className="text-xs text-muted-foreground py-2">
+                            No visible tasks or meetings match the active filters in this project.
+                          </p>
+                        )
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {(groupedByProject.otherTasks.length > 0 ||
+                  groupedByProject.otherMeetings.length > 0) && (
+                  <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Standalone Meetings & Tasks (No Linked Project)
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {groupedByProject.otherMeetings.map((mtg) => (
+                        <button
+                          key={mtg._id}
+                          type="button"
+                          onClick={() => openScheduleMeeting({ meeting: mtg })}
+                          className="text-left rounded-xl border border-violet-500/25 bg-violet-500/5 hover:bg-violet-500/10 p-3 flex items-center justify-between gap-2"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-foreground truncate flex items-center gap-1.5">
+                              <Video size={13} className="text-violet-600 shrink-0" />
+                              {mtg.title}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              {format(new Date(mtg.meetingDate), 'MMM d, yyyy')} • {mtg.startTime}
+                            </p>
+                          </div>
+                          <StatusBadge value={mtg.status || 'scheduled'} />
+                        </button>
+                      ))}
+                      {groupedByProject.otherTasks.map((task) => {
+                        const statusLabel = normalizeTaskStatusLabel(task.status);
+                        const theme =
+                          TASK_STATUS_COLORS[statusLabel] || TASK_STATUS_COLORS['To Do'];
+                        return (
+                          <button
+                            key={task._id}
+                            type="button"
+                            onClick={() => handleOpenTask(task)}
+                            className="text-left rounded-xl border border-border bg-background hover:border-primary/40 p-3 flex items-start justify-between gap-2"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-foreground truncate">
+                                {task.taskTitle || task.title}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                                {extractTaskAssigneeNames(task).join(', ') || 'Unassigned'}
+                              </p>
+                            </div>
+                            <span
+                              className={cn(
+                                'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0',
+                                theme.badge
+                              )}
+                            >
+                              {statusLabel}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {timelineDays.length === 0 ? (
+              <EmptyState
+                icon={CalendarDays}
+                title="No scheduled items in this range"
+                description="Schedule a meeting or add a task on any date."
+              />
+            ) : (
+              timelineDays.map((dateKey) => {
+                const day = new Date(`${dateKey}T12:00:00`);
+                const mtgs = meetingsByDate.get(dateKey) || [];
+                const tks = tasksByDate.get(dateKey) || [];
+                const projs = projectEventsByDate.get(dateKey) || [];
+
+                return (
+                  <div
+                    key={dateKey}
+                    className="rounded-2xl border border-border bg-card p-4 flex flex-col sm:flex-row gap-4"
+                  >
+                    <div className="sm:w-36 shrink-0">
+                      <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        {format(day, 'EEE, MMM')}
+                      </div>
+                      <div className="text-2xl font-bold text-foreground">{format(day, 'd')}</div>
+                    </div>
+
+                    <div className="flex-1 space-y-2">
+                      {mtgs.map((m) => (
+                        <button
+                          key={m._id}
+                          type="button"
+                          onClick={() => openScheduleMeeting({ meeting: m })}
+                          className="w-full text-left rounded-xl border border-violet-500/25 bg-violet-500/8 px-3 py-2 flex items-center justify-between gap-2"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Video size={14} className="text-violet-600 shrink-0" />
+                            <span className="text-xs font-semibold text-foreground truncate">
+                              {m.title}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {m.startTime} • {m.platform}
+                            </span>
+                          </div>
+                          <StatusBadge value={m.status || 'scheduled'} />
+                        </button>
+                      ))}
+                      {projs.map((p, idx) => (
+                        <button
+                          key={`${p.project._id}-${idx}`}
+                          type="button"
+                          onClick={() => setSelectedProjectDrawer(p.project)}
+                          className="w-full text-left rounded-xl border border-emerald-500/25 bg-emerald-500/8 px-3 py-2 flex items-center gap-2"
+                        >
+                          <FolderOpen size={14} className="text-emerald-600 shrink-0" />
+                          <span className="text-xs font-semibold text-foreground">
+                            {p.project.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">({p.label})</span>
+                        </button>
+                      ))}
+                      {tks.map((t) => {
+                        const label = normalizeTaskStatusLabel(t.status);
+                        const theme = TASK_STATUS_COLORS[label] || TASK_STATUS_COLORS['To Do'];
+                        return (
+                          <button
+                            key={t._id}
+                            type="button"
+                            onClick={() => handleOpenTask(t)}
+                            className="w-full text-left rounded-xl border border-border bg-background hover:bg-secondary/30 px-3 py-2 flex items-center justify-between gap-2"
+                          >
+                            <div className="min-w-0 flex items-center gap-2">
+                              <span className={cn('h-2 w-2 rounded-full shrink-0', theme.dot)} />
+                              <span className="text-xs font-semibold text-foreground truncate">
+                                {t.taskTitle || t.title}
+                              </span>
+                              {t.project?.name && (
+                                <span className="text-[11px] text-muted-foreground truncate">
+                                  • {t.project.name}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[11px] font-medium text-muted-foreground shrink-0">
+                              {extractTaskAssigneeNames(t)[0] || label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Selected day agenda modal details
+  const selectedDayKey = selectedDay ? format(selectedDay, 'yyyy-MM-dd') : '';
+  const selectedDayTasks = selectedDayKey ? tasksByDate.get(selectedDayKey) || [] : [];
+  const selectedDayMeetings = selectedDayKey ? meetingsByDate.get(selectedDayKey) || [] : [];
+  const selectedDayProjects = selectedDayKey ? projectEventsByDate.get(selectedDayKey) || [] : [];
 
   return (
-    <div className={cn('space-y-2.5', embedded && 'p-3 sm:p-4')}>
-      {/* ── Compact Header & View Toolbar ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 bg-card rounded-2xl p-3 ">
-        {/* Left: Title + Date Range Period + Nav Arrows */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="h-5 w-5 text-primary" />
-            <h1 className="text-base sm:text-lg font-black tracking-tight text-foreground">
-              {isClient ? 'Client Calendar' : user?.role === 'employee' ? 'My Task Calendar' : 'Task Calendar'}
-            </h1>
-          </div>
-
-          {/* Date Navigation & Period Label */}
-          <div className="flex items-center gap-1.5 bg-secondary/50 rounded-xl p-0.5 ">
-            <button
+    <div className={cn('space-y-3', embedded && 'p-3 sm:p-4')}>
+      {/* ── Google Calendar Top Header Bar ── */}
+      <div className="bg-card rounded-2xl border border-border px-3 sm:px-4 py-2.5 flex flex-col gap-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
+          {/* Left Navigation Cluster */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
               type="button"
-              onClick={() => setCurrentDate((current) => shiftDateByView(current, view, -1))}
-              className="p-1 rounded-lg hover:bg-background text-muted-foreground hover:text-foreground transition-all cursor-pointer"
-              title="Previous"
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen((v) => !v)}
+              title="Toggle calendar sidebar"
+              className="h-9 w-9 rounded-xl"
             >
-              <ChevronLeft size={15} />
-            </button>
-            <button
+              <Menu size={18} />
+            </Button>
+
+            <div className="flex items-center gap-2 pr-1">
+              <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <CalendarDays size={17} />
+              </div>
+              <span className="text-base font-bold text-foreground hidden sm:inline">
+                Calendar
+              </span>
+            </div>
+
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setCurrentDate(new Date())}
-              className="px-2 py-0.5 text-xs font-bold rounded-md hover:bg-background text-foreground transition-all cursor-pointer"
+              className="h-8 px-3 rounded-lg text-xs font-semibold"
             >
               Today
-            </button>
+            </Button>
+
+            <div className="flex items-center">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setCurrentDate((d) => shiftDateByView(d, view, -1))}
+                className="h-8 w-8 rounded-lg"
+                title="Previous"
+              >
+                <ChevronLeft size={17} />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setCurrentDate((d) => shiftDateByView(d, view, 1))}
+                className="h-8 w-8 rounded-lg"
+                title="Next"
+              >
+                <ChevronRight size={17} />
+              </Button>
+            </div>
+
+            <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
+              {rangeHeading}
+            </h2>
+          </div>
+
+          {/* Right Actions Cluster */}
+          <div className="flex flex-wrap items-center gap-2">
+            <SearchField
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search tasks, projects, meetings..."
+              className="w-48 sm:w-56"
+            />
+
+            {/* View Switcher */}
+            <div className="inline-flex items-center rounded-xl bg-secondary p-1">
+              {VIEW_OPTIONS.map((option) => {
+                const Icon = option.icon;
+                const active = view === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setView(option.value)}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer',
+                      active
+                        ? 'bg-background text-foreground shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    <Icon size={13} />
+                    <span className="hidden md:inline">{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {canScheduleMeeting && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => openScheduleMeeting({ date: format(currentDate, 'yyyy-MM-dd') })}
+                className="h-8 rounded-xl border-violet-500/35 text-violet-700 dark:text-violet-300 hover:bg-violet-500/10"
+              >
+                <Video size={14} className="mr-1.5" />
+                Meeting
+              </Button>
+            )}
+
+            {canManageCalendar && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => openCreateTask({ date: format(currentDate, 'yyyy-MM-dd') })}
+                className="h-8 rounded-xl"
+              >
+                <Plus size={14} className="mr-1" />
+                Task
+              </Button>
+            )}
+
+            {canLogDailyUpdates && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setDailyUpdateOpen(true)}
+                className="h-8 rounded-xl"
+              >
+                <TimerReset size={14} className="mr-1" />
+                Log Work
+              </Button>
+            )}
+
+            {canDownloadWeeklyReport && (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={handleDownloadWeeklyReport}
+                disabled={weeklyReportQuery.isFetching}
+                title="Download Weekly PDF Report"
+                className="h-8 w-8 rounded-xl"
+              >
+                <Download size={15} />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Active Scope Chips (only when filtered by Employee / Client / Project / Status) */}
+        {hasActiveFilters && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-border/60 text-xs">
+            <span className="text-[11px] font-semibold text-muted-foreground mr-1">
+              Viewing:
+            </span>
+            {selectedEmployeeObj && (
+              <button
+                type="button"
+                onClick={() => setFilters((p) => ({ ...p, assignedTo: '' }))}
+                className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-0.5 font-semibold"
+              >
+                Employee: {selectedEmployeeObj.name} <X size={12} />
+              </button>
+            )}
+            {selectedClientObj && (
+              <button
+                type="button"
+                onClick={() => setFilters((p) => ({ ...p, client: '' }))}
+                className="inline-flex items-center gap-1 rounded-full bg-sky-500/12 text-sky-700 dark:text-sky-300 px-2.5 py-0.5 font-semibold"
+              >
+                Client: {selectedClientObj.name || selectedClientObj.company} <X size={12} />
+              </button>
+            )}
+            {selectedProjectObj && (
+              <button
+                type="button"
+                onClick={() => setFilters((p) => ({ ...p, project: '' }))}
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 px-2.5 py-0.5 font-semibold"
+              >
+                Project: {selectedProjectObj.name} <X size={12} />
+              </button>
+            )}
+            {filters.status && (
+              <button
+                type="button"
+                onClick={() => setFilters((p) => ({ ...p, status: '' }))}
+                className="inline-flex items-center gap-1 rounded-full bg-secondary text-foreground px-2.5 py-0.5 font-semibold"
+              >
+                Status: {filters.status} <X size={12} />
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setCurrentDate((current) => shiftDateByView(current, view, 1))}
-              className="p-1 rounded-lg hover:bg-background text-muted-foreground hover:text-foreground transition-all cursor-pointer"
-              title="Next"
+              onClick={clearAllFilters}
+              className="text-[11px] font-semibold text-muted-foreground hover:text-foreground underline ml-1"
             >
-              <ChevronRight size={15} />
+              Reset all
             </button>
-            <span className="text-xs font-black text-primary px-2 ">
-              {toolbarTitle}
-            </span>
           </div>
-        </div>
-
-        {/* Right: View Options + Action Button */}
-        <div className="flex items-center gap-2 self-start md:self-auto flex-wrap w-full md:w-auto justify-between md:justify-end">
-          <div className="inline-flex rounded-xl bg-secondary/40 p-0.5 overflow-x-auto max-w-full">
-            {VIEW_OPTIONS.map(({ value, label, icon: Icon }) => (
-              <button
-                key={value}
-                onClick={() => setView(value)}
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition-all cursor-pointer shrink-0 min-h-[32px] sm:min-h-[36px]',
-                  view === value
-                    ? 'bg-primary text-primary-foreground font-black'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-background/60',
-                )}
-              >
-                <Icon size={13} />
-                <span>{label}</span>
-              </button>
-            ))}
-          </div>
-
-          {canManageCalendar ? (
-            <Button
-              size="sm"
-              onClick={() => navigate('/tasks/new')}
-              className="h-8 rounded-xl text-xs font-bold gap-1 px-3 shrink-0"
-            >
-              <Plus size={14} className="stroke-[2.5]" />
-              <span>Create Task</span>
-            </Button>
-          ) : null}
-        </div>
+        )}
       </div>
 
-      {/* ── Compact Metric Badges & Search Ribbon ── */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 bg-card rounded-xl px-3 py-1.5 ">
-        {/* Metric Badges */}
-        <div className="flex items-center gap-2 flex-wrap text-xs">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-secondary text-foreground font-semibold">
-            <CalendarDays size={12} className="text-muted-foreground shrink-0" />
-            <span>Visible Tasks: <strong className="font-black text-sm tabular-nums">{summary.total}</strong></span>
-          </div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-secondary text-foreground font-semibold">
-            <Clock3 size={12} className="text-muted-foreground shrink-0" />
-            <span>Waiting for Client: <strong className="font-black text-sm tabular-nums">{summary.waitingForClient}</strong></span>
-          </div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-secondary text-foreground font-semibold">
-            <CheckCircle2 size={12} className="text-muted-foreground shrink-0" />
-            <span>Completed / Approved: <strong className="font-black text-sm tabular-nums">{summary.completed}</strong></span>
-          </div>
-          <div className={cn(
-            'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg font-semibold',
-            summary.overdue > 0
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-secondary text-muted-foreground'
-          )}>
-            <TimerReset size={12} className="shrink-0" />
-            <span>Overdue: <strong className="font-black text-sm tabular-nums">{summary.overdue}</strong></span>
-          </div>
-        </div>
+      {/* ── Main Google Calendar Workspace: Collapsible Left Rail + Calendar Grid ── */}
+      <div className="flex flex-col lg:flex-row gap-3 items-start">
+        {sidebarOpen && (
+          <aside className="w-full lg:w-[268px] shrink-0 space-y-3">
+            {/* Mini Month Calendar */}
+            <div className="bg-card rounded-2xl border border-border p-3.5">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-foreground">
+                  {format(miniMonthDate, 'MMMM yyyy')}
+                </span>
+                <div className="flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setMiniMonthDate((d) => subMonths(d, 1))}
+                    className="h-6 w-6 rounded-md hover:bg-secondary flex items-center justify-center text-muted-foreground"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMiniMonthDate((d) => addMonths(d, 1))}
+                    className="h-6 w-6 rounded-md hover:bg-secondary flex items-center justify-center text-muted-foreground"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
 
-        {/* Quick Search */}
-        <div className="relative w-full lg:w-72">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search task titles, clients, scripts..."
-            className="w-full h-7 rounded-lg bg-background px-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/40"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-            >
-              <X size={12} />
-            </button>
+              <div className="grid grid-cols-7 gap-0.5 text-center mb-1">
+                {MINI_DAY_NAMES.map((d, i) => (
+                  <span key={`${d}-${i}`} className="text-[10px] font-semibold text-muted-foreground">
+                    {d}
+                  </span>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-0.5">
+                {miniMonthDays.map((day) => {
+                  const key = format(day, 'yyyy-MM-dd');
+                  const inMonth = isSameMonth(day, miniMonthDate);
+                  const today = isToday(day);
+                  const active = isSameDay(day, currentDate);
+                  const hasItems =
+                    (tasksByDate.get(key)?.length || 0) + (meetingsByDate.get(key)?.length || 0) >
+                    0;
+
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setCurrentDate(day)}
+                      className={cn(
+                        'relative h-7 w-7 mx-auto rounded-full text-[11px] font-medium flex items-center justify-center transition-colors',
+                        today
+                          ? 'bg-primary text-primary-foreground font-bold'
+                          : active
+                          ? 'bg-primary/15 text-primary font-bold'
+                          : inMonth
+                          ? 'text-foreground hover:bg-secondary'
+                          : 'text-muted-foreground/40 hover:bg-secondary/40'
+                      )}
+                    >
+                      {format(day, 'd')}
+                      {hasItems && !today && (
+                        <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Filter By Employee / Client / Project */}
+            <div className="bg-card rounded-2xl border border-border p-3.5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Users size={13} className="text-primary" /> People & Clients
+                </span>
+                {user?._id && !isClient && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        assignedTo:
+                          String(prev.assignedTo) === String(user._id) ? '' : user._id,
+                      }))
+                    }
+                    className={cn(
+                      'text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors',
+                      String(filters.assignedTo) === String(user._id)
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    My Schedule
+                  </button>
+                )}
+              </div>
+
+              {canFilterAssignee && (
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    Employee
+                  </label>
+                  <SelectDropdown
+                    value={filters.assignedTo}
+                    onChange={(val) => setFilters((p) => ({ ...p, assignedTo: val || '' }))}
+                    allOptionLabel="All Employees"
+                    options={teamMembers.map((u) => ({
+                      value: u._id,
+                      label: u.name,
+                      subLabel: u.role,
+                    }))}
+                    allowCustom={false}
+                    placeholder="Select employee..."
+                  />
+                </div>
+              )}
+
+              {!isClient && (
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    Client
+                  </label>
+                  <SelectDropdown
+                    value={filters.client}
+                    onChange={(val) =>
+                      setFilters((p) => ({
+                        ...p,
+                        client: val || '',
+                        project: '',
+                      }))
+                    }
+                    allOptionLabel="All Clients"
+                    options={clients.map((c) => ({
+                      value: c._id,
+                      label: c.name || c.company || 'Unnamed',
+                      subLabel: c.company && c.company !== c.name ? c.company : undefined,
+                    }))}
+                    allowCustom={false}
+                    placeholder="Select client..."
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                  Project
+                </label>
+                <SelectDropdown
+                  value={filters.project}
+                  onChange={(val) => setFilters((p) => ({ ...p, project: val || '' }))}
+                  allOptionLabel="All Projects"
+                  options={dropdownProjects.map((proj) => ({
+                    value: proj._id,
+                    label: proj.name,
+                    subLabel: proj.client?.name || proj.status,
+                  }))}
+                  allowCustom={false}
+                  placeholder="Select project..."
+                />
+              </div>
+            </div>
+
+            {/* Google Calendar Layers + Status Filters */}
+            <div className="bg-card rounded-2xl border border-border p-3.5 space-y-3">
+              <div>
+                <span className="block text-xs font-bold text-foreground mb-2">
+                  Show on Calendar
+                </span>
+                <div className="space-y-1.5">
+                  {[
+                    {
+                      key: 'projects',
+                      label: 'Projects',
+                      count: visibleProjects.length,
+                      color: 'accent-emerald-600',
+                      dot: 'bg-emerald-500',
+                    },
+                    {
+                      key: 'tasks',
+                      label: 'Tasks',
+                      count: visibleTasks.length,
+                      color: 'accent-sky-600',
+                      dot: 'bg-sky-500',
+                    },
+                    {
+                      key: 'meetings',
+                      label: 'Meetings',
+                      count: visibleMeetings.length,
+                      color: 'accent-violet-600',
+                      dot: 'bg-violet-500',
+                    },
+                  ].map((layer) => (
+                    <label
+                      key={layer.key}
+                      className="flex items-center justify-between gap-2 px-2 py-1 rounded-lg hover:bg-secondary/50 cursor-pointer text-xs"
+                    >
+                      <span className="flex items-center gap-2 font-medium text-foreground">
+                        <input
+                          type="checkbox"
+                          checked={layers[layer.key]}
+                          onChange={() =>
+                            setLayers((prev) => ({ ...prev, [layer.key]: !prev[layer.key] }))
+                          }
+                          className={cn('h-3.5 w-3.5 rounded', layer.color)}
+                        />
+                        <span className={cn('h-2 w-2 rounded-full', layer.dot)} />
+                        {layer.label}
+                      </span>
+                      <span className="text-[11px] font-semibold text-muted-foreground">
+                        {layer.count}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-border/60">
+                <span className="block text-xs font-bold text-foreground mb-2">Task Status</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {['To Do', 'On Process', 'Waiting for Client', 'Review Required', 'Completed', 'Rework'].map(
+                    (statusKey) => {
+                      const meta = TASK_STATUS_COLORS[statusKey];
+                      const active = filters.status === statusKey;
+                      return (
+                        <button
+                          key={statusKey}
+                          type="button"
+                          onClick={() =>
+                            setFilters((p) => ({
+                              ...p,
+                              status: p.status === statusKey ? '' : statusKey,
+                            }))
+                          }
+                          className={cn(
+                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium border transition-colors cursor-pointer',
+                            active
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-background border-border text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          <span className={cn('h-1.5 w-1.5 rounded-full', meta.dot)} />
+                          {meta.label}
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+              </div>
+            </div>
+          </aside>
+        )}
+
+        {/* ── Right Calendar Stage ── */}
+        <div className="flex-1 min-w-0 w-full space-y-3">
+          {/* Active Projects Quick Strip (Click any project to inspect its Tasks & Meetings) */}
+          {layers.projects && visibleProjects.length > 0 && view !== 'agenda' && (
+            <div className="bg-card rounded-2xl border border-border px-3.5 py-2.5">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <FolderOpen size={12} className="text-emerald-600" />
+                  Projects ({visibleProjects.length}) — click a project to view inside tasks & meetings
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView('agenda');
+                    setAgendaMode('projects');
+                  }}
+                  className="text-[11px] font-semibold text-primary hover:underline shrink-0"
+                >
+                  Expand All Projects →
+                </button>
+              </div>
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                {visibleProjects.map((proj) => {
+                  const taskCount = visibleTasks.filter(
+                    (t) => String(t.project?._id || t.project || '') === String(proj._id)
+                  ).length;
+                  const mtgCount = visibleMeetings.filter(
+                    (m) => String(m.project?._id || m.project || '') === String(proj._id)
+                  ).length;
+                  return (
+                    <button
+                      key={proj._id}
+                      type="button"
+                      onClick={() => setSelectedProjectDrawer(proj)}
+                      className="shrink-0 inline-flex items-center gap-2 rounded-xl border border-border bg-background hover:border-emerald-500/40 hover:bg-emerald-500/[0.04] px-3 py-1.5 text-left transition-colors"
+                    >
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                      <span className="text-xs font-semibold text-foreground max-w-[160px] truncate">
+                        {proj.name}
+                      </span>
+                      <span className="text-[10px] font-medium text-muted-foreground">
+                        {taskCount}t{mtgCount > 0 ? ` · ${mtgCount}m` : ''}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="h-[460px] rounded-2xl border border-border bg-card flex items-center justify-center text-sm text-muted-foreground">
+              Loading calendar schedule...
+            </div>
+          ) : view === 'month' ? (
+            renderMonthView()
+          ) : view === 'week' ? (
+            renderWeekView()
+          ) : view === 'day' ? (
+            renderDayView()
+          ) : (
+            renderAgendaView()
           )}
         </div>
       </div>
 
-      {/* ── Filter Chips & Legend Bar ── */}
-      <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 custom-scrollbar">
-        <span className="text-[11px] font-bold text-muted-foreground shrink-0 inline-flex items-center gap-1 mr-1">
-          <Filter size={12} className="text-foreground" /> Filter:
-        </span>
-        {Object.entries(TASK_STATUS_COLORS).filter(([key]) => key !== 'Approved').map(([statusKey, meta]) => {
-          const isSelected = filters.status === statusKey;
-          const count = tasks.filter((t) => t.status === statusKey || (statusKey === 'Completed' && ['Completed', 'Approved'].includes(t.status))).length;
-
-          return (
-            <button
-              key={statusKey}
-              type="button"
-              onClick={() => setFilters((current) => ({ ...current, status: isSelected ? '' : statusKey }))}
-              className={cn(
-                'inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold transition-colors cursor-pointer shrink-0 select-none',
-                meta.badge,
-                isSelected
-                  ? 'ring-2 ring-primary ring-offset-1 font-black'
-                  : 'hover:opacity-90'
-              )}
-            >
-              <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', meta.dot)} />
-              <span>{meta.label}</span>
-              <span className="ml-0.5 px-1 py-0.5 rounded-full text-[9px] font-black bg-foreground/10 tabular-nums">
-                {count}
-              </span>
-            </button>
-          );
-        })}
-
-        <div className="h-3 w-px bg-border mx-1 shrink-0" />
-
-        {Object.entries(TASK_PRIORITY_COLORS).map(([prioKey, meta]) => {
-          const isSelected = filters.priority === prioKey;
-          const count = tasks.filter((t) => t.priority === prioKey).length;
-
-          return (
-            <button
-              key={prioKey}
-              type="button"
-              onClick={() => setFilters((current) => ({ ...current, priority: isSelected ? '' : prioKey }))}
-              className={cn(
-                'inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold transition-colors cursor-pointer shrink-0 select-none',
-                meta.pill,
-                isSelected
-                  ? 'ring-2 ring-primary ring-offset-1 font-black'
-                  : 'hover:opacity-90'
-              )}
-            >
-              <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', meta.dot)} />
-              <span>{meta.sign}</span>
-              <span className="ml-0.5 px-1 py-0.5 rounded-full text-[9px] font-black bg-foreground/10 tabular-nums">
-                {count}
-              </span>
-            </button>
-          );
-        })}
-
-        {(filters.status || filters.priority) && (
-          <button
-            type="button"
-            onClick={() => setFilters((current) => ({ ...current, status: '', priority: '' }))}
-            className="text-[10px] font-bold text-primary hover:underline flex items-center gap-0.5 shrink-0 ml-1 cursor-pointer"
-          >
-            <span>Reset</span>
-            <X size={10} />
-          </button>
-        )}
-      </div>
-
-      {/* ── Main Calendar Container ── */}
-      <div>
-        {isLoading ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {[1, 2, 3, 4, 5, 6].map((item) => (
-              <div key={item} className="h-32 animate-pulse rounded-2xl bg-secondary/50" />
-            ))}
-          </div>
-        ) : view === 'agenda' ? (
-          renderAgendaView()
-        ) : view === 'list' ? (
-          listTasks.length ? (
-            <div className="grid gap-3 xl:grid-cols-2">
-              {listTasks.map((task) => (
-                <TaskSummaryCard key={task._id} task={task} onOpen={handleOpenTask} />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              title="No tasks found for this view"
-              action={canManageCalendar ? (
-                <Button onClick={() => navigate('/tasks/new')}>
-                  <Plus size={16} className="mr-2" />
-                  Create Task
-                </Button>
-              ) : null}
-            />
-          )
-        ) : view === 'month' ? (
-          renderMonthView()
-        ) : (
-          renderWeekOrDayView()
-        )}
-      </div>
-
-      <DailyTaskUpdateDialog
-        open={showDailyUpdateDialog}
-        onOpenChange={setShowDailyUpdateDialog}
-        tasks={dailyUpdateTasks}
-        defaultDate={format(new Date(), 'yyyy-MM-dd')}
-        onSubmitted={refetch}
-      />
-
-      <DailyCalendarTaskDialog
-        open={showDailyTaskDialog}
-        onOpenChange={setShowDailyTaskDialog}
-        defaultDate={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')}
-        onSubmitted={refetch}
-      />
-
-      <Dialog open={showDayDialog} onOpenChange={setShowDayDialog}>
-        <DialogContent noPadding className="w-[calc(100vw-24px)] max-h-[90dvh] overflow-hidden p-0 sm:max-w-4xl">
-          <div className="bg-card px-4 sm:px-6 py-4 sm:py-5">
-            <DialogHeader className="mb-0 pb-0">
-              <DialogTitle className="text-xl sm:text-2xl tracking-tight">
-                {selectedDate ? format(selectedDate, 'EEEE, MMMM d, yyyy') : 'Tasks'}
+      {/* ── Day Agenda Drawer (Clean Google-Calendar Day Breakdown) ── */}
+      <Dialog open={Boolean(selectedDay)} onOpenChange={(open) => !open && setSelectedDay(null)}>
+        <DialogContent
+          variant="side"
+          noPadding
+          hideCloseButton
+          className="flex flex-col min-h-0 p-0 overflow-hidden bg-background"
+        >
+          <div className="shrink-0 px-6 py-4 border-b border-border flex items-center justify-between gap-3">
+            <div>
+              <DialogTitle className="text-base sm:text-lg font-bold text-foreground">
+                {selectedDay ? format(selectedDay, 'EEEE, MMMM d, yyyy') : ''}
               </DialogTitle>
-              <DialogDescription className="sr-only">
-                {selectedDateTasks.length} scheduled {selectedDateTasks.length === 1 ? 'task' : 'tasks'} for this date.
+              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                {selectedDayMeetings.length} meetings • {selectedDayTasks.length} tasks •{' '}
+                {selectedDayProjects.length} project milestones
               </DialogDescription>
-            </DialogHeader>
+            </div>
+            <DialogClose className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/70 text-muted-foreground hover:text-foreground cursor-pointer">
+              <X size={17} />
+            </DialogClose>
           </div>
 
-          <div className="max-h-[calc(88vh-112px)] overflow-y-auto px-6 py-5">
-            <div className="grid gap-5 xl:grid-cols-[1.35fr_0.95fr]">
-              <div>
-                {selectedDateTasks.length ? (
-                  <div className="space-y-4">
-                    {selectedDateTasks.map((task) => (
-                      <TaskSummaryCard key={task._id} task={task} onOpen={handleOpenTask} />
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState
-                    title="No tasks due on this date"
-                    action={canManageCalendar ? (
-                      <Button
-                        onClick={() => {
-                          setShowDayDialog(false);
-                          navigate('/tasks/new');
-                        }}
-                      >
-                        <Plus size={16} className="mr-2" />
-                        Create Task
-                      </Button>
-                    ) : canLogDailyUpdates ? (
-                      <Button
-                        onClick={() => {
-                          setShowDayDialog(false);
-                          setShowDailyTaskDialog(true);
-                        }}
-                      >
-                        <Plus size={16} className="mr-2" />
-                        Add Daily Task
-                      </Button>
-                    ) : null}
-                  />
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5 custom-scrollbar">
+            {(canManageCalendar || canScheduleMeeting) && selectedDay && (
+              <div className="flex flex-wrap gap-2">
+                {canManageCalendar && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const key = format(selectedDay, 'yyyy-MM-dd');
+                      setSelectedDay(null);
+                      openCreateTask({ date: key });
+                    }}
+                  >
+                    <Plus size={14} className="mr-1.5" /> Add Task
+                  </Button>
+                )}
+                {canScheduleMeeting && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const key = format(selectedDay, 'yyyy-MM-dd');
+                      setSelectedDay(null);
+                      openScheduleMeeting({ date: key });
+                    }}
+                  >
+                    <Video size={14} className="mr-1.5 text-violet-600" /> Schedule Meeting
+                  </Button>
+                )}
+                {canLogDailyUpdates && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedDay(null);
+                      setDailyCalendarTaskOpen(true);
+                    }}
+                  >
+                    <Briefcase size={14} className="mr-1.5" /> Personal Task
+                  </Button>
                 )}
               </div>
+            )}
 
-              <div className="space-y-4">
-                <div className="rounded-2xl bg-card p-5 ">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Do</p>
-                  <ul className="mt-3 space-y-2.5 text-sm text-foreground">
-                    {selectedDateGuidance.dos.map((item) => (
-                      <li key={item} className="rounded-xl bg-secondary/50 px-3 py-2.5 flex items-start gap-2.5">
-                        <CheckCircle2 className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="rounded-2xl bg-card p-5 ">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Don&apos;t</p>
-                  <ul className="mt-3 space-y-2.5 text-sm text-foreground">
-                    {selectedDateGuidance.donts.map((item) => (
-                      <li key={item} className="rounded-xl bg-secondary/35 px-3 py-2.5 flex items-start gap-2.5">
-                        <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="rounded-2xl bg-card p-5 ">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Work Process</p>
-                  <ol className="mt-3 space-y-2.5 text-sm text-foreground">
-                    {selectedDateGuidance.process.map((item, index) => (
-                      <li key={item} className="flex items-start gap-3 rounded-xl bg-secondary/50 px-3 py-2.5">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground tabular-nums">
-                          {index + 1}
-                        </span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
+            {/* Meetings */}
+            {selectedDayMeetings.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+                  Meetings ({selectedDayMeetings.length})
+                </h4>
+                {selectedDayMeetings.map((mtg) => (
+                  <button
+                    key={mtg._id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDay(null);
+                      openScheduleMeeting({ meeting: mtg });
+                    }}
+                    className="w-full text-left rounded-xl border border-violet-500/25 bg-violet-500/5 hover:bg-violet-500/10 p-3 space-y-1 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-foreground truncate flex items-center gap-1.5">
+                        <Video size={14} className="text-violet-600 shrink-0" />
+                        {mtg.title}
+                      </span>
+                      <StatusBadge value={mtg.status || 'scheduled'} />
+                    </div>
+                    <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock size={12} /> {mtg.startTime}
+                        {mtg.endTime ? ` – ${mtg.endTime}` : ''}
+                      </span>
+                      <span>• {mtg.platform}</span>
+                      {mtg.project?.name && <span>• {mtg.project.name}</span>}
+                      {mtg.client?.name && <span>• {mtg.client.name}</span>}
+                    </div>
+                    {mtg.meetingLink && (
+                      <div className="pt-1">
+                        <a
+                          href={
+                            mtg.meetingLink.startsWith('http')
+                              ? mtg.meetingLink
+                              : `https://${mtg.meetingLink}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                        >
+                          Open Meeting Link <ExternalLink size={11} />
+                        </a>
+                      </div>
+                    )}
+                  </button>
+                ))}
               </div>
+            )}
+
+            {/* Project Milestones */}
+            {selectedDayProjects.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                  Project Milestones ({selectedDayProjects.length})
+                </h4>
+                {selectedDayProjects.map(({ project, label }, idx) => (
+                  <button
+                    key={`${project._id}-${idx}`}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDay(null);
+                      setSelectedProjectDrawer(project);
+                    }}
+                    className="w-full text-left rounded-xl border border-emerald-500/25 bg-emerald-500/5 hover:bg-emerald-500/10 p-3 flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate flex items-center gap-1.5">
+                        <FolderOpen size={14} className="text-emerald-600 shrink-0" />
+                        {project.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {project.client?.name || project.client?.company || 'Internal'} • Milestone:{' '}
+                        {label}
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 shrink-0">
+                      View Tasks →
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Tasks */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Tasks ({selectedDayTasks.length})
+              </h4>
+              {selectedDayTasks.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                  No tasks due on this date.
+                </div>
+              ) : (
+                selectedDayTasks.map((task) => {
+                  const statusLabel = normalizeTaskStatusLabel(task.status);
+                  const theme = TASK_STATUS_COLORS[statusLabel] || TASK_STATUS_COLORS['To Do'];
+                  const assignees = extractTaskAssigneeNames(task);
+                  return (
+                    <button
+                      key={task._id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDay(null);
+                        handleOpenTask(task);
+                      }}
+                      className="w-full text-left rounded-xl border border-border bg-card hover:border-primary/40 p-3 flex items-start justify-between gap-2 transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">
+                          {task.taskTitle || task.title}
+                        </p>
+                        <div className="text-xs text-muted-foreground mt-1 flex flex-wrap items-center gap-2">
+                          <span>{formatTaskTypeLabel(task.taskType)}</span>
+                          {task.project?.name && <span>• {task.project.name}</span>}
+                          <span>• {assignees.join(', ') || 'Unassigned'}</span>
+                        </div>
+                      </div>
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0',
+                          theme.badge
+                        )}
+                      >
+                        <span className={cn('h-1.5 w-1.5 rounded-full', theme.dot)} />
+                        {statusLabel}
+                      </span>
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      <TaskDetailModal taskId={selectedTaskId} open={showTaskDetail} onOpenChange={setShowTaskDetail} />
+      {/* ── Project Breakdown Drawer (Tasks Inside Project + Meetings) ── */}
+      <ProjectCalendarDrawer
+        open={Boolean(selectedProjectDrawer)}
+        onOpenChange={(open) => !open && setSelectedProjectDrawer(null)}
+        project={selectedProjectDrawer}
+        tasks={visibleTasks}
+        meetings={visibleMeetings}
+        canManage={canManageCalendar}
+        canScheduleMeeting={canScheduleMeeting}
+        onSelectTask={(task) => handleOpenTask(task)}
+        onSelectMeeting={(mtg) => openScheduleMeeting({ meeting: mtg })}
+        onAddTaskForProject={(proj) =>
+          openCreateTask({
+            projectId: proj._id,
+            clientId: proj.client?._id || proj.client || '',
+            date: format(currentDate, 'yyyy-MM-dd'),
+          })
+        }
+        onScheduleMeetingForProject={(proj) =>
+          openScheduleMeeting({
+            projectId: proj._id,
+            clientId: proj.client?._id || proj.client || '',
+            date: format(currentDate, 'yyyy-MM-dd'),
+          })
+        }
+      />
+
+      {/* ── Schedule / Edit Meeting Modal ── */}
+      <ScheduleMeetingModal
+        open={meetingModalState.open}
+        onOpenChange={(open) => setMeetingModalState((prev) => ({ ...prev, open }))}
+        meeting={meetingModalState.meeting}
+        initialDate={meetingModalState.initialDate}
+        initialTime={meetingModalState.initialTime}
+        initialClientId={meetingModalState.initialClientId}
+        initialProjectId={meetingModalState.initialProjectId}
+        initialAssigneeId={meetingModalState.initialAssigneeId}
+        clients={clients}
+        projects={projectsRaw}
+        users={teamMembers}
+        readOnly={isClient}
+        canDelete={canManageCalendar || String(meetingModalState.meeting?.organizer?._id || meetingModalState.meeting?.organizer || '') === String(user?._id || '')}
+      />
+
+      {/* ── Inline Create Task Modal ── */}
+      <KanbanCreateTaskModal
+        open={taskModalState.open}
+        onOpenChange={(open) => setTaskModalState((prev) => ({ ...prev, open }))}
+        initialValues={taskModalState.initialValues}
+        onTaskCreated={handleRefreshAll}
+      />
+
+      {/* ── Employee Progress & Daily Task Dialogs ── */}
+      {canLogDailyUpdates && (
+        <DailyTaskUpdateDialog
+          open={dailyUpdateOpen}
+          onOpenChange={setDailyUpdateOpen}
+          tasks={employeeTasks}
+          defaultDate={format(currentDate, 'yyyy-MM-dd')}
+          onSubmitted={handleRefreshAll}
+        />
+      )}
+
+      {canLogDailyUpdates && (
+        <DailyCalendarTaskDialog
+          open={dailyCalendarTaskOpen}
+          onOpenChange={setDailyCalendarTaskOpen}
+          defaultDate={format(currentDate, 'yyyy-MM-dd')}
+          onSubmitted={handleRefreshAll}
+        />
+      )}
+
+      {/* ── Task Detail / Client Task Dialogs ── */}
+      <TaskDetailModal
+        taskId={selectedTaskId}
+        open={Boolean(selectedTaskId)}
+        onOpenChange={(open) => !open && setSelectedTaskId(null)}
+      />
 
       <ClientTaskDialog
-        task={activeTask}
-        open={showClientDetail}
-        onOpenChange={setShowClientDetail}
-        onSubmitted={refetch}
+        task={selectedClientTask}
+        open={Boolean(selectedClientTask)}
+        onOpenChange={(open) => !open && setSelectedClientTask(null)}
+        onSubmitted={handleRefreshAll}
       />
     </div>
   );

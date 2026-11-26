@@ -1856,9 +1856,13 @@ export const getCalendarTasks = async (req, res) => {
     if (taskType) filter.taskType = taskType;
     if (status) filter.status = taskStatusMap[status] || status;
     if (priority) filter.priority = priorityMap[priority] || priority;
-    if (assignedTo) filter.assignedTo = assignedTo;
     if (approvalStatus) filter.approvalStatus = approvalStatus.toString().toLowerCase();
     if (clientResponse) filter.clientResponse = clientResponse.toString().toLowerCase();
+
+    const andClauses = [];
+    if (assignedTo) {
+      andClauses.push({ $or: buildUserTaskAssignmentOr(assignedTo) });
+    }
 
     if (parent === 'all') {
       // leave unfiltered
@@ -1879,29 +1883,36 @@ export const getCalendarTasks = async (req, res) => {
       if (end) dateRange.$lte = end;
 
       if (Object.keys(dateRange).length) {
-        filter.$or = [
-          ...(filter.$or || []),
-          { dueDate: dateRange },
-          { createdAt: dateRange },
-          { dueDate: null },
-          { dueDate: { $exists: false } },
-        ];
+        andClauses.push({
+          $or: [
+            { dueDate: dateRange },
+            { createdAt: dateRange },
+            { dueDate: null },
+            { dueDate: { $exists: false } },
+          ],
+        });
       }
     }
 
     if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { taskType: { $regex: search, $options: 'i' } },
-        { clientName: { $regex: search, $options: 'i' } },
-        { assignedPersonName: { $regex: search, $options: 'i' } },
-        { scriptText: { $regex: search, $options: 'i' } },
-        { caption: { $regex: search, $options: 'i' } },
-        { websiteRequirements: { $regex: search, $options: 'i' } },
-        { requiredFeatures: { $regex: search, $options: 'i' } },
-        { clientVisibleNotes: { $regex: search, $options: 'i' } },
-      ];
+      andClauses.push({
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+          { taskType: { $regex: search, $options: 'i' } },
+          { clientName: { $regex: search, $options: 'i' } },
+          { assignedPersonName: { $regex: search, $options: 'i' } },
+          { scriptText: { $regex: search, $options: 'i' } },
+          { caption: { $regex: search, $options: 'i' } },
+          { websiteRequirements: { $regex: search, $options: 'i' } },
+          { requiredFeatures: { $regex: search, $options: 'i' } },
+          { clientVisibleNotes: { $regex: search, $options: 'i' } },
+        ],
+      });
+    }
+
+    if (andClauses.length) {
+      filter.$and = andClauses;
     }
 
     if (overdue === 'true') {
@@ -1917,8 +1928,13 @@ export const getCalendarTasks = async (req, res) => {
 
     const tasks = await Task.find(scopedFilter)
       .populate('assignedTo', 'name avatar role')
+      .populate('editorAssigned', 'name avatar role')
+      .populate('videographerAssigned', 'name avatar role')
+      .populate('designerAssigned', 'name avatar role')
+      .populate('publisherAssigned', 'name avatar role')
+      .populate('scriptWriterAssigned', 'name avatar role')
       .populate('createdBy', 'name avatar role')
-      .populate('project', 'name')
+      .populate('project', 'name color status startDate dueDate')
       .populate('client', 'name company')
       .sort({ dueDate: 1, priority: -1, createdAt: -1 })
       .limit(Math.min(Number(limit) || 500, 1000));

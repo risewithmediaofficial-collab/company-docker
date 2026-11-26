@@ -138,3 +138,25 @@ test('Tasks: Submission categorizes on_time, completed_with_delay, and incomplet
   assert.equal(getSubmissionCategory(deadline, '2026-10-24T12:15:00.000Z', true), 'completed_with_delay');
   assert.equal(getSubmissionCategory(deadline, '2026-10-24T11:30:00.000Z', false), 'incomplete_with_reason');
 });
+
+test('Calendar: CalendarMeeting model validates required title/date/organizer and defaults cleanly', async () => {
+  const { default: CalendarMeeting } = await import('../models/calendarMeeting.model.js');
+  const mongoose = (await import('mongoose')).default;
+
+  const valid = new CalendarMeeting({
+    title: 'Client Monthly Sync',
+    meetingDate: new Date('2026-09-15T10:00:00.000Z'),
+    organizer: new mongoose.Types.ObjectId(),
+  });
+  await valid.validate();
+  assert.equal(valid.platform, 'Google Meet');
+  assert.equal(valid.status, 'scheduled');
+  assert.equal(valid.startTime, '10:00');
+  assert.equal(valid.visibleToClient, true);
+
+  const missingTitle = new CalendarMeeting({
+    meetingDate: new Date('2026-09-15T10:00:00.000Z'),
+    organizer: new mongoose.Types.ObjectId(),
+  });
+  await assert.rejects(() => missingTitle.validate());
+});
