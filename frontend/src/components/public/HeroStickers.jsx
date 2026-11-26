@@ -54,7 +54,7 @@ export const HeroStickers = () => {
               ₹75,000
               <span className="text-[10px] text-slate-400 font-bold">/mo</span>
             </span>
-            <span className="text-[9px] font-extrabold text-[#12B7D4] bg-[#12B7D4]/10 px-1.5 py-0.2 rounded">
+            <span className="text-[9px] font-extrabold text-[#07c8f9] bg-[#07c8f9]/10 px-1.5 py-0.2 rounded">
               Retainer
             </span>
           </div>
@@ -83,7 +83,7 @@ export const HeroStickers = () => {
           </div>
 
           {/* Client Approval Pill Button */}
-          <div className="py-1 px-2.5 rounded-xl bg-gradient-to-r from-[#12B7D4] to-teal-500 text-white text-[10px] font-extrabold flex items-center justify-between shadow-xs">
+          <div className="py-1 px-2.5 rounded-xl bg-gradient-to-r from-[#07c8f9] to-teal-500 text-white text-[10px] font-extrabold flex items-center justify-between shadow-xs">
             <span className="flex items-center gap-1">
               <Check size={11} className="stroke-[3]" />
               <span>Approved by Client</span>
@@ -103,7 +103,7 @@ export const HeroStickers = () => {
         >
           <div className="flex items-center justify-between gap-1.5">
             <div className="flex items-center gap-1.5 min-w-0">
-              <div className="w-5 h-5 rounded-full bg-cyan-100 text-[#12B7D4] flex items-center justify-center shrink-0">
+              <div className="w-5 h-5 rounded-full bg-cyan-100 text-[#07c8f9] flex items-center justify-center shrink-0">
                 <Receipt size={12} className="stroke-[2.5]" />
               </div>
               <span className="text-[11px] font-extrabold text-slate-800 truncate">
@@ -139,7 +139,7 @@ export const HeroStickers = () => {
             <span className="text-[11px] font-extrabold text-slate-800">
               Monthly SMM Target
             </span>
-            <span className="text-[9px] font-black text-[#12B7D4] bg-[#12B7D4]/10 px-1.5 py-0.2 rounded-full">
+            <span className="text-[9px] font-black text-[#07c8f9] bg-[#07c8f9]/10 px-1.5 py-0.2 rounded-full">
               12 / 12 Reels
             </span>
           </div>
@@ -147,7 +147,7 @@ export const HeroStickers = () => {
           {/* Progress Bar */}
           <div className="space-y-1">
             <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden p-0.5 border border-slate-200/60">
-              <div className="bg-gradient-to-r from-[#12B7D4] to-emerald-500 h-full w-full rounded-full" />
+              <div className="bg-gradient-to-r from-[#07c8f9] to-emerald-500 h-full w-full rounded-full" />
             </div>
           </div>
 
@@ -167,7 +167,7 @@ export const HeroStickers = () => {
 
         {/* ── STICKER F: 100% PRIVATE STAMP (TOP-CENTER-RIGHT) ── */}
         <div className="hidden 2xl:flex absolute top-6 right-1/4 translate-x-12 z-10 items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-50 border border-cyan-200/90 text-[10px] font-black text-cyan-900 shadow-sm -rotate-6 select-none">
-          <ShieldCheck size={11} className="text-[#12B7D4]" />
+          <ShieldCheck size={11} className="text-[#07c8f9]" />
           <span>100% Private Workspace</span>
         </div>
 
@@ -196,10 +196,10 @@ export const HeroStickers = () => {
 
         {/* ── STICKER I: PLAYFUL HAND-DRAWN DOODLE ARROW (NEAR CTA) ── */}
         <div className="hidden xl:flex absolute bottom-4 left-1/4 translate-x-10 z-10 items-center gap-1 pointer-events-none select-none">
-          <span className="text-[11px] font-extrabold text-[#12B7D4] -rotate-6 tracking-wide">
+          <span className="text-[11px] font-extrabold text-[#07c8f9] -rotate-6 tracking-wide">
             Takes 2 mins ⚡
           </span>
-          <svg width="28" height="22" viewBox="0 0 34 26" fill="none" className="text-[#12B7D4] stroke-current transform rotate-12 -mt-1">
+          <svg width="28" height="22" viewBox="0 0 34 26" fill="none" className="text-[#07c8f9] stroke-current transform rotate-12 -mt-1">
             <path d="M2 18 C10 8, 22 6, 30 18 M22 14 L30 18 L26 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>

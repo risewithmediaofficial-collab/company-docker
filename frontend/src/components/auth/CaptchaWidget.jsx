@@ -161,12 +161,12 @@ export const CaptchaWidget = ({
             status === 'verified'
               ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs'
               : status === 'verifying'
-              ? 'border-[#12B7D4] bg-white dark:bg-slate-900'
-              : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 hover:border-[#12B7D4]'
+              ? 'border-[#07c8f9] bg-white dark:bg-slate-900'
+              : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 hover:border-[#07c8f9]'
           }`}
         >
           {status === 'verifying' ? (
-            <Loader2 size={13} className="animate-spin text-[#12B7D4]" />
+            <Loader2 size={13} className="animate-spin text-[#07c8f9]" />
           ) : status === 'verified' ? (
             <Check size={13} strokeWidth={3} />
           ) : null}
@@ -184,7 +184,7 @@ export const CaptchaWidget = ({
         <div className="flex items-center gap-1 text-[10px] font-extrabold text-slate-500 dark:text-slate-400">
           <ShieldCheck
             size={14}
-            className={status === 'verified' ? 'text-emerald-500' : 'text-[#12B7D4]'}
+            className={status === 'verified' ? 'text-emerald-500' : 'text-[#07c8f9]'}
           />
           <span>{status === 'verified' ? 'Verified' : 'Security'}</span>
         </div>

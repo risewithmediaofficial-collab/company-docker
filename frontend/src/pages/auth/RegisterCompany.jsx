@@ -221,18 +221,18 @@ const RegisterCompany = () => {
           </div>
 
           {/* Dedicated Company Login Portal Card */}
-          <div className="bg-cyan-50/80 border border-[#12B7D4]/30 rounded-2xl p-4 mb-6 text-left space-y-2.5">
+          <div className="bg-cyan-50/80 border border-[#07c8f9]/30 rounded-2xl p-4 mb-6 text-left space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                <Globe size={14} className="text-[#12B7D4]" />
+                <Globe size={14} className="text-[#07c8f9]" />
                 Your Dedicated Login Portal
               </span>
-              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#12B7D4] text-white shadow-xs">
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#07c8f9] text-white shadow-xs">
                 Custom URL
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-slate-900 font-semibold bg-white px-3 py-2 rounded-xl border border-[#12B7D4]/30 flex-1 truncate select-all">
+              <span className="font-mono text-xs text-slate-900 font-semibold bg-white px-3 py-2 rounded-xl border border-[#07c8f9]/30 flex-1 truncate select-all">
                 {`${window.location.origin}/login/${createdSlug || form.slug}`}
               </span>
               <button
@@ -242,7 +242,7 @@ const RegisterCompany = () => {
                   navigator.clipboard.writeText(url);
                   toast.success('Copied your custom login portal URL!');
                 }}
-                className="px-3 py-2 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-xs transition-all shadow-xs flex items-center gap-1.5 shrink-0"
+                className="px-3 py-2 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white font-bold text-xs transition-all shadow-xs flex items-center gap-1.5 shrink-0"
               >
                 <Copy size={13} />
                 <span>Copy</span>
@@ -256,7 +256,7 @@ const RegisterCompany = () => {
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <button
               onClick={() => navigate(`/login/${createdSlug || form.slug}`)}
-              className="w-full py-3.5 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm transition-all shadow-lg shadow-[#12B7D4]/25 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white font-bold text-sm transition-all shadow-lg shadow-[#07c8f9]/25 flex items-center justify-center gap-2 cursor-pointer"
             >
               Open Company Portal <ChevronRight size={16} />
             </button>
@@ -275,8 +275,8 @@ const RegisterCompany = () => {
   return (
     <div className="min-h-screen bg-slate-50/60 text-slate-900 flex flex-col justify-center items-center p-3.5 sm:p-6 md:p-8 relative overflow-hidden font-sans">
       {/* Ambient Brand Logo Blue Glows (matching Login and CRM) */}
-      <div className="fixed top-1/4 -left-36 w-80 sm:w-96 h-[500px] bg-gradient-to-r from-[#12B7D4]/12 via-[#12B7D4]/6 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
-      <div className="fixed top-1/3 -right-36 w-80 sm:w-96 h-[500px] bg-gradient-to-l from-[#12B7D4]/10 via-[#12B7D4]/5 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
+      <div className="fixed top-1/4 -left-36 w-80 sm:w-96 h-[500px] bg-gradient-to-r from-[#07c8f9]/12 via-[#07c8f9]/6 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
+      <div className="fixed top-1/3 -right-36 w-80 sm:w-96 h-[500px] bg-gradient-to-l from-[#07c8f9]/10 via-[#07c8f9]/5 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
 
       {/* Main Container */}
       <div className="w-full max-w-2xl relative z-10 py-6 sm:py-8">
@@ -295,7 +295,7 @@ const RegisterCompany = () => {
               <span className="text-slate-950 font-extrabold text-lg sm:text-xl tracking-wider block leading-none">
                 RISE WITH MEDIA
               </span>
-              <span className="text-[#12B7D4] text-[10px] sm:text-[11px] font-bold uppercase tracking-widest mt-1 block">
+              <span className="text-[#07c8f9] text-[10px] sm:text-[11px] font-bold uppercase tracking-widest mt-1 block">
                 Agency SaaS Operating System
               </span>
             </div>
@@ -322,7 +322,7 @@ const RegisterCompany = () => {
                   isDone ? 'cursor-pointer' : ''
                 } ${
                   isActive
-                    ? 'bg-[#12B7D4]/10 border-[#12B7D4]/40 shadow-xs'
+                    ? 'bg-[#07c8f9]/10 border-[#07c8f9]/40 shadow-xs'
                     : isDone
                     ? 'bg-emerald-50 border-emerald-200'
                     : 'bg-white border-slate-200/80'
@@ -332,7 +332,7 @@ const RegisterCompany = () => {
                   <div
                     className={`w-6 h-6 sm:w-7 sm:h-7 rounded-xl flex items-center justify-center text-xs font-black shrink-0 transition-colors ${
                       isActive
-                        ? 'bg-[#12B7D4] text-white shadow-2xs'
+                        ? 'bg-[#07c8f9] text-white shadow-2xs'
                         : isDone
                         ? 'bg-emerald-600 text-white'
                         : 'bg-slate-100 text-slate-500'
@@ -378,7 +378,7 @@ const RegisterCompany = () => {
               >
                 <div>
                   <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <Building2 size={20} className="text-[#12B7D4]" />
+                    <Building2 size={20} className="text-[#07c8f9]" />
                     Company & Agency Details
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
@@ -399,7 +399,7 @@ const RegisterCompany = () => {
                       placeholder="e.g. Apex Digital Marketing"
                       className={`w-full bg-slate-50/80 border ${
                         errors.companyName ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'
-                      } rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all`}
+                      } rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all`}
                     />
                   </div>
                   {errors.companyName && <p className="text-red-500 text-xs mt-1">{errors.companyName}</p>}
@@ -424,12 +424,12 @@ const RegisterCompany = () => {
                       placeholder="apex-digital"
                       className={`w-full bg-slate-50/80 border ${
                         errors.slug ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'
-                      } rounded-xl py-3 pl-16 pr-4 text-slate-900 font-mono text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all`}
+                      } rounded-xl py-3 pl-16 pr-4 text-slate-900 font-mono text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all`}
                     />
                   </div>
                   {errors.slug && <p className="text-red-500 text-xs mt-1">{errors.slug}</p>}
                   <p className="text-[11px] text-slate-500 mt-1 flex flex-wrap items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#12B7D4] shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#07c8f9] shrink-0" />
                     <span>Branded Login Portal:</span>
                     <code className="font-mono text-[#0e7490] font-semibold break-all">
                       {window.location.origin}/login/{form.slug || 'company-slug'}
@@ -448,15 +448,15 @@ const RegisterCompany = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
                     {/* File upload option */}
-                    <div className="relative border-2 border-dashed border-slate-200 hover:border-[#12B7D4] rounded-xl p-3 text-center bg-slate-50/50 hover:bg-[#12B7D4]/5 transition-all flex flex-col items-center justify-center cursor-pointer group min-h-[96px]">
+                    <div className="relative border-2 border-dashed border-slate-200 hover:border-[#07c8f9] rounded-xl p-3 text-center bg-slate-50/50 hover:bg-[#07c8f9]/5 transition-all flex flex-col items-center justify-center cursor-pointer group min-h-[96px]">
                       <input
                         type="file"
                         accept="image/*"
                         onChange={handleLogoUpload}
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
                       />
-                      <Upload size={20} className="text-slate-400 group-hover:text-[#12B7D4] transition-colors mb-1" />
-                      <p className="text-xs font-semibold text-slate-700 group-hover:text-[#12B7D4] transition-colors">
+                      <Upload size={20} className="text-slate-400 group-hover:text-[#07c8f9] transition-colors mb-1" />
+                      <p className="text-xs font-semibold text-slate-700 group-hover:text-[#07c8f9] transition-colors">
                         Click to upload logo image
                       </p>
                       <p className="text-[10px] text-slate-400">or drag and drop file here</p>
@@ -471,16 +471,16 @@ const RegisterCompany = () => {
                           value={form.logo}
                           onChange={(e) => update('logo', e.target.value)}
                           placeholder="Or paste direct logo URL (https://...)"
-                          className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-slate-900 text-xs placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all"
+                          className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-slate-900 text-xs placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all"
                         />
                       </div>
                       {form.logo ? (
-                        <div className="flex items-center justify-between p-2 rounded-xl bg-cyan-50/80 border border-[#12B7D4]/25 text-xs">
+                        <div className="flex items-center justify-between p-2 rounded-xl bg-cyan-50/80 border border-[#07c8f9]/25 text-xs">
                           <div className="flex items-center gap-2 min-w-0">
                             <img
                               src={form.logo}
                               alt="Logo preview"
-                              className="w-7 h-7 rounded-lg object-contain bg-white border border-[#12B7D4]/30 shrink-0"
+                              className="w-7 h-7 rounded-lg object-contain bg-white border border-[#07c8f9]/30 shrink-0"
                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
                             <span className="text-[11px] font-semibold text-[#0e7490] truncate">Logo attached</span>
@@ -504,9 +504,9 @@ const RegisterCompany = () => {
                 </div>
 
                 {/* Live Brand Preview Showing Company Name + RWM */}
-                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-50/80 via-teal-50/40 to-slate-50 border border-[#12B7D4]/25 shadow-xs flex items-center justify-between gap-3">
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-50/80 via-teal-50/40 to-slate-50 border border-[#07c8f9]/25 shadow-xs flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-[#12B7D4]/30 p-1 flex items-center justify-center shrink-0 shadow-xs">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-[#07c8f9]/30 p-1 flex items-center justify-center shrink-0 shadow-xs">
                       {form.logo ? (
                         <img
                           src={form.logo}
@@ -515,7 +515,7 @@ const RegisterCompany = () => {
                           onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
                       ) : (
-                        <Building2 size={20} className="text-[#12B7D4]" />
+                        <Building2 size={20} className="text-[#07c8f9]" />
                       )}
                     </div>
                     <div className="min-w-0">
@@ -527,7 +527,7 @@ const RegisterCompany = () => {
                       </h4>
                     </div>
                   </div>
-                  <span className="shrink-0 text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-[#12B7D4] text-white shadow-xs">
+                  <span className="shrink-0 text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-[#07c8f9] text-white shadow-xs">
                     Live Preview
                   </span>
                 </div>
@@ -542,7 +542,7 @@ const RegisterCompany = () => {
                       <select
                         value={form.industry}
                         onChange={(e) => update('industry', e.target.value)}
-                        className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all appearance-none cursor-pointer"
+                        className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all appearance-none cursor-pointer"
                       >
                         <option value="">Select industry</option>
                         {industries.map((ind) => (
@@ -563,7 +563,7 @@ const RegisterCompany = () => {
                         value={form.website}
                         onChange={(e) => update('website', e.target.value)}
                         placeholder="https://youragency.com"
-                        className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all"
+                        className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all"
                       />
                     </div>
                   </div>
@@ -583,7 +583,7 @@ const RegisterCompany = () => {
               >
                 <div>
                   <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <User size={20} className="text-[#12B7D4]" />
+                    <User size={20} className="text-[#07c8f9]" />
                     Account Administrator Profile
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
@@ -604,7 +604,7 @@ const RegisterCompany = () => {
                       placeholder="e.g. Vikramaditya Roy"
                       className={`w-full bg-slate-50/80 border ${
                         errors.ownerName ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'
-                      } rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all`}
+                      } rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all`}
                     />
                   </div>
                   {errors.ownerName && <p className="text-red-500 text-xs mt-1">{errors.ownerName}</p>}
@@ -624,7 +624,7 @@ const RegisterCompany = () => {
                         placeholder="owner@youragency.com"
                         className={`w-full bg-slate-50/80 border ${
                           errors.email ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'
-                        } rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all`}
+                        } rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all`}
                       />
                     </div>
                     {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
@@ -641,7 +641,7 @@ const RegisterCompany = () => {
                         value={form.phone}
                         onChange={(e) => update('phone', e.target.value)}
                         placeholder="+91 98765 43210"
-                        className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all"
+                        className="w-full bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10 pr-4 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all"
                       />
                     </div>
                   </div>
@@ -661,7 +661,7 @@ const RegisterCompany = () => {
               >
                 <div>
                   <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <Lock size={20} className="text-[#12B7D4]" />
+                    <Lock size={20} className="text-[#07c8f9]" />
                     Security & Plan Activation
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
@@ -686,7 +686,7 @@ const RegisterCompany = () => {
                         placeholder="At least 6 characters"
                         className={`w-full bg-slate-50/80 border ${
                           errors.password ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'
-                        } rounded-xl py-3 pl-10 pr-10 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all`}
+                        } rounded-xl py-3 pl-10 pr-10 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all`}
                       />
                       <button
                         type="button"
@@ -715,7 +715,7 @@ const RegisterCompany = () => {
                         placeholder="Repeat your password"
                         className={`w-full bg-slate-50/80 border ${
                           errors.confirmPassword ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'
-                        } rounded-xl py-3 pl-10 pr-10 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all`}
+                        } rounded-xl py-3 pl-10 pr-10 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all`}
                       />
                       <button
                         type="button"
@@ -754,14 +754,14 @@ const RegisterCompany = () => {
                         setTermsAccepted(e.target.checked);
                         setErrors((prev) => ({ ...prev, terms: '' }));
                       }}
-                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#12B7D4] focus:ring-[#12B7D4] cursor-pointer"
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#07c8f9] focus:ring-[#07c8f9] cursor-pointer"
                     />
                     <span>
                       I accept the{' '}
                       <button
                         type="button"
                         onClick={() => setTermsModalOpen(true)}
-                        className="text-[#12B7D4] hover:underline font-bold cursor-pointer"
+                        className="text-[#07c8f9] hover:underline font-bold cursor-pointer"
                       >
                         Terms &amp; Conditions
                       </button>{' '}
@@ -772,9 +772,9 @@ const RegisterCompany = () => {
                 </div>
 
                 {/* Plan Highlights Box */}
-                <div className="bg-gradient-to-br from-cyan-50/70 via-teal-50/40 to-slate-50 border border-[#12B7D4]/25 rounded-2xl p-4">
+                <div className="bg-gradient-to-br from-cyan-50/70 via-teal-50/40 to-slate-50 border border-[#07c8f9]/25 rounded-2xl p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <Sparkles size={16} className="text-[#12B7D4]" />
+                    <Sparkles size={16} className="text-[#07c8f9]" />
                     <span className="text-slate-900 text-xs font-extrabold uppercase tracking-wider">
                       Included in Your 14-Day Free Trial
                     </span>
@@ -811,7 +811,7 @@ const RegisterCompany = () => {
               <button
                 type="button"
                 onClick={nextStep}
-                className="flex-1 py-3.5 px-6 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-extrabold text-sm transition-all shadow-lg shadow-[#12B7D4]/25 flex items-center justify-center gap-2 cursor-pointer"
+                className="flex-1 py-3.5 px-6 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white font-extrabold text-sm transition-all shadow-lg shadow-[#07c8f9]/25 flex items-center justify-center gap-2 cursor-pointer"
               >
                 Continue to Next Step <ChevronRight size={16} />
               </button>
@@ -820,7 +820,7 @@ const RegisterCompany = () => {
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading}
-                className="flex-1 py-3.5 px-6 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-extrabold text-sm transition-all shadow-lg shadow-[#12B7D4]/25 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                className="flex-1 py-3.5 px-6 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white font-extrabold text-sm transition-all shadow-lg shadow-[#07c8f9]/25 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
@@ -842,7 +842,7 @@ const RegisterCompany = () => {
         <div className="text-center mt-6">
           <p className="text-slate-600 text-xs sm:text-sm font-medium">
             Already have an account?{' '}
-            <Link to="/login" className="text-[#12B7D4] hover:text-[#0ea5c6] font-bold underline underline-offset-4 transition-colors">
+            <Link to="/login" className="text-[#07c8f9] hover:text-[#06b4e0] font-bold underline underline-offset-4 transition-colors">
               Sign into existing workspace
             </Link>
           </p>

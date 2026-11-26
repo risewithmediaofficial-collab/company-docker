@@ -28,14 +28,14 @@ export const Landing = () => {
 
         <div className="relative z-10 max-w-4xl mx-auto">
           {/* Plain Text Section Title (No Rounded Pill Effect) */}
-          <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#12B7D4] uppercase mb-3 sm:mb-4">
+          <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#07c8f9] uppercase mb-3 sm:mb-4">
             All-in-One Workspace for Digital Agencies
           </p>
 
           {/* Main Headline */}
           <h1 className="font-extrabold text-3xl sm:text-5xl lg:text-[62px] text-slate-950 tracking-tight leading-[1.15]">
             Manage Your Entire Agency.
-            <span className="text-[#12B7D4] block mt-1 sm:mt-2 pb-1">
+            <span className="text-[#07c8f9] block mt-1 sm:mt-2 pb-1">
               All in One Easy Place.
             </span>
           </h1>
@@ -50,7 +50,7 @@ export const Landing = () => {
           <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
             <Link
               to="/register"
-              className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#12B7D4]/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#07c8f9] hover:bg-[#06b4e0] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#07c8f9]/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Register</span>
               <ArrowRight size={16} />
@@ -96,13 +96,13 @@ export const Landing = () => {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
                 {/* Left: Text & Features (Neatly Constrained with Card Bullets) */}
                 <div className="lg:col-span-7 space-y-4 text-left">
-                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
+                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9]">
                     Getting & Managing Clients
                   </p>
 
                   <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                     Never Miss a Lead.
-                    <span className="text-[#12B7D4] block mt-1">
+                    <span className="text-[#07c8f9] block mt-1">
                       Win Clients Faster.
                     </span>
                   </h2>
@@ -113,7 +113,7 @@ export const Landing = () => {
 
                   {/* Clean Feature Mini-Cards (Perfect Text Alignment) */}
                   <div className="space-y-3 pt-2 max-w-xl">
-                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#07c8f9]/40 hover:shadow-xs transition-all">
                       <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={14} className="stroke-[3]" />
                       </div>
@@ -123,7 +123,7 @@ export const Landing = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#07c8f9]/40 hover:shadow-xs transition-all">
                       <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={14} className="stroke-[3]" />
                       </div>
@@ -133,7 +133,7 @@ export const Landing = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#07c8f9]/40 hover:shadow-xs transition-all">
                       <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={14} className="stroke-[3]" />
                       </div>
@@ -166,13 +166,13 @@ export const Landing = () => {
 
                 {/* Right: Text & Features */}
                 <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
-                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
+                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9]">
                     Content & Social Media
                   </p>
 
                   <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                     Simple Content Calendar.
-                    <span className="text-[#12B7D4] block mt-1">
+                    <span className="text-[#07c8f9] block mt-1">
                       1-Tap Approvals on Mobile.
                     </span>
                   </h2>
@@ -183,7 +183,7 @@ export const Landing = () => {
 
                   {/* Clean Feature Mini-Cards */}
                   <div className="space-y-3 pt-2 max-w-xl">
-                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 hover:border-[#07c8f9]/40 hover:shadow-xs transition-all">
                       <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={14} className="stroke-[3]" />
                       </div>
@@ -215,7 +215,7 @@ export const Landing = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 hover:border-[#07c8f9]/40 hover:shadow-xs transition-all">
                       <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={14} className="stroke-[3]" />
                       </div>
@@ -225,7 +225,7 @@ export const Landing = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 hover:border-[#07c8f9]/40 hover:shadow-xs transition-all">
                       <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={14} className="stroke-[3]" />
                       </div>
@@ -248,13 +248,13 @@ export const Landing = () => {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
                 {/* Left: Text & Features */}
                 <div className="lg:col-span-7 space-y-4 text-left">
-                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
+                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9]">
                     Money, Billing & Team
                   </p>
 
                   <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                     Send Invoices in 30 Seconds.
-                    <span className="text-[#12B7D4] block mt-1">
+                    <span className="text-[#07c8f9] block mt-1">
                       See Your Real Profit & Loss.
                     </span>
                   </h2>
@@ -265,7 +265,7 @@ export const Landing = () => {
 
                   {/* Clean Feature Mini-Cards */}
                   <div className="space-y-3 pt-2 max-w-xl">
-                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#07c8f9]/40 hover:shadow-xs transition-all">
                       <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={14} className="stroke-[3]" />
                       </div>
@@ -275,7 +275,7 @@ export const Landing = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#07c8f9]/40 hover:shadow-xs transition-all">
                       <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={14} className="stroke-[3]" />
                       </div>
@@ -285,7 +285,7 @@ export const Landing = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#07c8f9]/40 hover:shadow-xs transition-all">
                       <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={14} className="stroke-[3]" />
                       </div>
@@ -313,7 +313,7 @@ export const Landing = () => {
         <div className="max-w-7xl mx-auto">
           <ScrollReveal>
             <div className="text-center max-w-2xl mx-auto mb-10">
-              <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] mb-2">
+              <p className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9] mb-2">
                 Transparent Storage Pricing
               </p>
               <h2 className="font-extrabold text-2xl sm:text-4xl text-slate-950 tracking-tight">
@@ -349,12 +349,12 @@ export const Landing = () => {
           <ScrollReveal>
             <div className="text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8">
               <div className="space-y-2 max-w-2xl">
-                <span className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] block">
+                <span className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9] block">
                   Ready to Upgrade Your Agency?
                 </span>
                 <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
                   Stop juggling 6 different tools.
-                  <span className="text-[#12B7D4] block mt-1">Run your agency smoothly and without stress.</span>
+                  <span className="text-[#07c8f9] block mt-1">Run your agency smoothly and without stress.</span>
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed pt-1">
                   Create your account in seconds, choose your plan inside, and configure your agency details cleanly in Settings.
@@ -362,7 +362,7 @@ export const Landing = () => {
               </div>
               <Link
                 to="/register"
-                className="px-8 py-4 bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base border border-[#12B7D4] transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
+                className="px-8 py-4 bg-[#07c8f9] hover:bg-[#06b4e0] text-white font-bold text-sm sm:text-base border border-[#07c8f9] transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
               >
                 <span>Register Now</span>
                 <ArrowRight size={16} />

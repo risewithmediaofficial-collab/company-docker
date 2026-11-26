@@ -16,7 +16,7 @@ import { generateCaptchaChallenge, verifyCaptchaChallenge, isTermsAccepted } fro
 const ORG_AUTH_PROJECTION =
   'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients storageLimitMb storageUsedBytes trialEndsAt settings paidAt';
 
-const createSelfServeWorkspace = async ({ name, email, ownerId }) => {
+const createSelfServeWorkspace = async ({ name, email, phone, ownerId }) => {
   const baseName = String(name || email?.split('@')[0] || 'My Agency').trim();
   let cleanSlug = baseName
     .toLowerCase()
@@ -34,6 +34,7 @@ const createSelfServeWorkspace = async ({ name, email, ownerId }) => {
     slug: cleanSlug,
     ownerId,
     email: email || '',
+    phone: phone || '',
     plan: 'free',
     billingCycle: 'monthly',
     planStatus: 'pending',
@@ -70,10 +71,16 @@ const generateRefreshToken = (id) => {
 // @access  Public
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role, companySlug, captchaToken, captchaAnswer, acceptTerms } = req.body;
+    const { name, email, phone, password, role, companySlug, captchaToken, captchaAnswer, acceptTerms } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ success: false, message: 'Please provide name, email and password' });
+    if (!name || !email || !phone || !password) {
+      return res.status(400).json({ success: false, message: 'Please provide name, email, mobile number and password' });
+    }
+
+    const cleanPhone = String(phone).trim();
+    const phoneDigits = cleanPhone.replace(/\D/g, '');
+    if (phoneDigits.length < 10 || phoneDigits.length > 15) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid mobile number (at least 10 digits)' });
     }
 
     if (!isTermsAccepted(acceptTerms)) {
@@ -111,6 +118,7 @@ export const register = async (req, res) => {
       const tenantUser = await User.create({
         name: String(name).trim(),
         email: cleanEmail,
+        phone: cleanPhone,
         password,
         role: safeRole,
         organizationId: orgDoc._id,
@@ -122,6 +130,7 @@ export const register = async (req, res) => {
         const client = await Client.create({
           name: tenantUser.name,
           email: cleanEmail,
+          phone: cleanPhone,
           company: tenantUser.name,
           status: 'onboarding',
           userId: tenantUser._id,
@@ -145,6 +154,7 @@ export const register = async (req, res) => {
     const newUser = await User.create({
       name: String(name).trim(),
       email: cleanEmail,
+      phone: cleanPhone,
       password,
       role: 'organizationOwner',
       isActive: true,
@@ -154,6 +164,7 @@ export const register = async (req, res) => {
     const org = await createSelfServeWorkspace({
       name: newUser.name,
       email: cleanEmail,
+      phone: cleanPhone,
       ownerId: newUser._id,
     });
     newUser.organizationId = org._id;

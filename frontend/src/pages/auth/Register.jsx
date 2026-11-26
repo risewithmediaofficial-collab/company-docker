@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Loader2, AlertCircle, Eye, EyeOff } from '@/components/ui/muiIcons';
+import { Mail, Phone, Lock, User, Loader2, AlertCircle, Eye, EyeOff } from '@/components/ui/muiIcons';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { GoogleAuthButton } from '../../components/auth/GoogleAuthButton';
@@ -20,6 +20,7 @@ const Register = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     password: '',
   });
 
@@ -112,6 +113,27 @@ const Register = () => {
               onChange={handleChange}
               className="block w-full pl-10 pr-3 py-2.5 rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-brand/40 transition-colors text-sm"
               placeholder="name@gmail.com"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground ml-1" htmlFor="phone">
+            Mobile Number
+          </label>
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground group-focus-within:text-primary transition-colors">
+              <Phone size={18} />
+            </div>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              required
+              value={formData.phone}
+              onChange={handleChange}
+              className="block w-full pl-10 pr-3 py-2.5 rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-brand/40 transition-colors text-sm"
+              placeholder="+91 98765 43210"
             />
           </div>
         </div>

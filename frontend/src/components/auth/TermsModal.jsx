@@ -13,7 +13,7 @@ export const TermsModal = ({ open, onClose, onAccept }) => {
       <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-[#12B7D4]/10 text-[#12B7D4] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-[#07c8f9]/10 text-[#07c8f9] flex items-center justify-center">
               <ShieldCheck size={17} />
             </div>
             <div>
@@ -77,7 +77,7 @@ export const TermsModal = ({ open, onClose, onAccept }) => {
                 onAccept();
                 onClose();
               }}
-              className="px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-[#12B7D4] hover:bg-[#0ea5c6] shadow-xs flex items-center gap-1.5 cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-[#07c8f9] hover:bg-[#06b4e0] shadow-xs flex items-center gap-1.5 cursor-pointer"
             >
               <Check size={14} />
               <span>I Accept Terms</span>

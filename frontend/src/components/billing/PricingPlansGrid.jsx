@@ -171,7 +171,7 @@ const PricingPlansGrid = ({
               data-testid={`pricing-card-${plan.id}`}
               className={`relative rounded-3xl p-6 sm:p-7 border transition-all flex flex-col justify-between bg-white ${
                 isPopular
-                  ? 'border-[#1EC6D7] ring-2 ring-[#1EC6D7]/25 shadow-xl shadow-cyan-500/10'
+                  ? 'border-[#07c8f9] ring-2 ring-[#07c8f9]/25 shadow-xl shadow-cyan-500/10'
                   : isCurrent
                   ? 'border-emerald-400 ring-2 ring-emerald-500/20 shadow-lg'
                   : 'border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300'
@@ -182,7 +182,7 @@ const PricingPlansGrid = ({
                   <span
                     className={`inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full ${
                       isPopular
-                        ? 'bg-[#1EC6D7]/15 text-[#0B8694]'
+                        ? 'bg-[#07c8f9]/15 text-[#0586a8]'
                         : isFree
                         ? 'bg-emerald-50 text-emerald-700'
                         : 'bg-slate-100 text-slate-600'
@@ -223,7 +223,7 @@ const PricingPlansGrid = ({
                 {/* Storage & Client Quota Pills */}
                 <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
                   <div className="rounded-xl bg-cyan-50/80 border border-cyan-100 px-3 py-2 flex items-center gap-2">
-                    <HardDrive className="w-4 h-4 text-[#0B8694] shrink-0" />
+                    <HardDrive className="w-4 h-4 text-[#0586a8] shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-700">Storage</p>
                       <p className="font-extrabold text-slate-900 truncate">
@@ -251,7 +251,7 @@ const PricingPlansGrid = ({
                     </li>
                   ))}
                   <li className="flex items-start gap-2 text-slate-500">
-                    <Layers className="w-4 h-4 text-[#1EC6D7] shrink-0 mt-0.5" />
+                    <Layers className="w-4 h-4 text-[#07c8f9] shrink-0 mt-0.5" />
                     <span>Up to {plan.maxUsers} team seats included</span>
                   </li>
                 </ul>
@@ -265,7 +265,7 @@ const PricingPlansGrid = ({
                   isCurrent
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
                     : isPopular
-                    ? 'bg-gradient-to-r from-[#1EC6D7] to-[#0B8694] text-white shadow-lg shadow-cyan-500/20 hover:opacity-95 disabled:opacity-60'
+                    ? 'bg-gradient-to-r from-[#07c8f9] to-[#0586a8] text-white shadow-lg shadow-cyan-500/20 hover:opacity-95 disabled:opacity-60'
                     : isFree
                     ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm disabled:opacity-60'
                     : 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60'

@@ -152,7 +152,7 @@ const SelectPlan = () => {
           order_id: order.orderId,
           prefill,
           theme: {
-            color: '#12B7D4',
+            color: '#07c8f9',
           },
           handler: async (response) => {
             try {
@@ -241,7 +241,7 @@ const SelectPlan = () => {
             </div>
             <div>
               <p className="text-sm font-black tracking-tight text-slate-900">RiseWithMedia Agency OS</p>
-              <p className="text-[11px] font-semibold text-[#0B8694]">
+              <p className="text-[11px] font-semibold text-[#0586a8]">
                 Signed in as {user?.name || user?.email}
               </p>
             </div>
@@ -262,7 +262,7 @@ const SelectPlan = () => {
 
         {/* Heading */}
         <div className="text-center space-y-3">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#12B7D4]/12 text-[#0e7490] text-xs font-extrabold uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#07c8f9]/12 text-[#0e7490] text-xs font-extrabold uppercase tracking-wider">
             <Sparkles size={13} />
             <span>
               {isUpgradeMode
@@ -298,7 +298,7 @@ const SelectPlan = () => {
             </div>
             <div className="flex flex-wrap items-center gap-4 text-xs">
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-cyan-50 border border-cyan-100">
-                <HardDrive size={15} className="text-[#0B8694]" />
+                <HardDrive size={15} className="text-[#0586a8]" />
                 <span className="font-bold text-slate-800">
                   Storage: {usage?.storageUsedMb ?? 0} MB /{' '}
                   {formatStorageQuota(usage?.storageLimitMb ?? organization.storageLimitMb ?? 100)}
@@ -396,7 +396,7 @@ const SelectPlan = () => {
                   type="button"
                   disabled={verifyingSandbox}
                   onClick={handleConfirmSandboxPayment}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-extrabold flex items-center justify-center gap-2 cursor-pointer"
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white font-extrabold flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {verifyingSandbox ? (
                     <>

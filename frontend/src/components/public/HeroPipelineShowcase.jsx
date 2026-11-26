@@ -18,7 +18,7 @@ export const HeroPipelineShowcase = () => {
   return (
     <div className="relative mt-10 sm:mt-14 max-w-5xl mx-auto px-2 sm:px-4">
       {/* ── AMBIENT GLOW BACKDROP ── */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-[#12B7D4]/15 via-emerald-500/10 to-[#12B7D4]/10 rounded-3xl blur-2xl -z-10 pointer-events-none transform -translate-y-2" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-[#07c8f9]/15 via-emerald-500/10 to-[#07c8f9]/10 rounded-3xl blur-2xl -z-10 pointer-events-none transform -translate-y-2" />
 
       {/* ── FLOATING BADGE 1: Won Deal Pulse (Top-Left) ── */}
       <div className="hidden md:flex absolute -top-5 -left-4 z-20 items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-emerald-200 shadow-lg shadow-emerald-500/10 text-xs font-bold text-slate-800 animate-bounce duration-1000">
@@ -28,9 +28,9 @@ export const HeroPipelineShowcase = () => {
       </div>
 
       {/* ── FLOATING BADGE 2: 1-Click Action (Top-Right) ── */}
-      <div className="hidden md:flex absolute -top-5 -right-4 z-20 items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#12B7D4]/30 shadow-lg shadow-[#12B7D4]/15 text-xs font-bold text-slate-800">
-        <Sparkles size={14} className="text-[#12B7D4]" />
-        <span className="text-[#12B7D4] font-extrabold">Instant:</span>
+      <div className="hidden md:flex absolute -top-5 -right-4 z-20 items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#07c8f9]/30 shadow-lg shadow-[#07c8f9]/15 text-xs font-bold text-slate-800">
+        <Sparkles size={14} className="text-[#07c8f9]" />
+        <span className="text-[#07c8f9] font-extrabold">Instant:</span>
         <span>Client & Project Created in 1-Click</span>
       </div>
 
@@ -55,7 +55,7 @@ export const HeroPipelineShowcase = () => {
           {/* Quick Metrics Bar */}
           <div className="flex items-center gap-2 sm:gap-3 text-xs font-bold">
             <span className="hidden sm:inline-block text-slate-400 text-[11px]">Pipeline:</span>
-            <span className="px-2 py-0.5 rounded-md bg-[#12B7D4]/10 text-[#0d99b2] text-[11px] font-black">
+            <span className="px-2 py-0.5 rounded-md bg-[#07c8f9]/10 text-[#0d99b2] text-[11px] font-black">
               ₹3,85,000
             </span>
           </div>
@@ -98,10 +98,10 @@ export const HeroPipelineShowcase = () => {
               </div>
 
               {/* Deal Card 1 */}
-              <div className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1.5 hover:border-[#12B7D4]/40 transition-colors">
+              <div className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1.5 hover:border-[#07c8f9]/40 transition-colors">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-900 truncate">Nexa Retail</span>
-                  <span className="text-[10px] font-black text-[#12B7D4]">₹75,000</span>
+                  <span className="text-[10px] font-black text-[#07c8f9]">₹75,000</span>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] text-slate-500">
                   <span className="px-1.5 py-0.2 rounded bg-cyan-50 text-cyan-700 font-semibold">Meta Ads</span>
@@ -120,7 +120,7 @@ export const HeroPipelineShowcase = () => {
               <div className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-900 truncate">Zenith Fashion</span>
-                  <span className="text-[10px] font-black text-[#12B7D4]">₹45,000</span>
+                  <span className="text-[10px] font-black text-[#07c8f9]">₹45,000</span>
                 </div>
                 <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 font-semibold inline-block">
                   Brand Identity
@@ -145,7 +145,7 @@ export const HeroPipelineShowcase = () => {
               <div className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-900 truncate">FreshBites Cafe</span>
-                  <span className="text-[10px] font-black text-[#12B7D4]">₹50,000</span>
+                  <span className="text-[10px] font-black text-[#07c8f9]">₹50,000</span>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] text-slate-500">
                   <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 font-semibold">SMM Quota</span>
@@ -162,7 +162,7 @@ export const HeroPipelineShowcase = () => {
 
             {/* ── COLUMN 3: PROPOSAL SENT ── */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between pb-1.5 border-b-2 border-[#12B7D4]">
+              <div className="flex items-center justify-between pb-1.5 border-b-2 border-[#07c8f9]">
                 <span className="text-xs font-black text-slate-700 uppercase tracking-wider">
                   Proposal <span className="text-slate-400 font-medium">(1)</span>
                 </span>
@@ -170,16 +170,16 @@ export const HeroPipelineShowcase = () => {
               </div>
 
               {/* Deal Card 4 */}
-              <div className="p-2.5 rounded-xl bg-white border-2 border-[#12B7D4]/40 shadow-sm space-y-1.5">
+              <div className="p-2.5 rounded-xl bg-white border-2 border-[#07c8f9]/40 shadow-sm space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-900 truncate">Horizon Tech</span>
-                  <span className="text-[10px] font-black text-[#12B7D4]">₹1,20,000</span>
+                  <span className="text-[10px] font-black text-[#07c8f9]">₹1,20,000</span>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] text-slate-500">
                   <span className="px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 font-semibold">Custom Web</span>
                   <span className="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 font-semibold">SEO</span>
                 </div>
-                <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[9px] text-[#12B7D4] font-bold">
+                <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[9px] text-[#07c8f9] font-bold">
                   <span className="flex items-center gap-1">
                     <Zap size={10} />
                     <span>1-Tap Link Viewed</span>

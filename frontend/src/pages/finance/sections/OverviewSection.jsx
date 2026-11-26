@@ -30,7 +30,7 @@ import {
 } from 'recharts';
 import { formatINR, formatDateIST } from '../../../utils/financeFormatters';
 
-const PIE_COLORS = ['#12B7D4', '#0891b2', '#38bdf8', '#0284c7', '#0e7490', '#64748b', '#94a3b8', '#cbd5e1'];
+const PIE_COLORS = ['#07c8f9', '#0891b2', '#38bdf8', '#0284c7', '#0e7490', '#64748b', '#94a3b8', '#cbd5e1'];
 
 const formatCategory = (cat) => {
   if (!cat) return '';
@@ -244,7 +244,7 @@ export default function OverviewSection({ overviewData, onQuickAdd, onNavigateSe
                       fontWeight: '600',
                     }}
                   />
-                  <Bar dataKey="revenue" fill="#12B7D4" radius={[4, 4, 0, 0]} name="Service Revenue" />
+                  <Bar dataKey="revenue" fill="#07c8f9" radius={[4, 4, 0, 0]} name="Service Revenue" />
                   <Bar dataKey="expenses" fill="#64748b" radius={[4, 4, 0, 0]} name="Operating Costs" />
                 </BarChart>
               </ResponsiveContainer>

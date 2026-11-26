@@ -85,7 +85,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
               <span className="text-slate-900">₹75,000/mo</span>
             </div>
             <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-              <div className="bg-[#12B7D4] h-full w-4/5" />
+              <div className="bg-[#07c8f9] h-full w-4/5" />
             </div>
             <p className="text-[9px] text-slate-500 font-medium">Stage: Proposal Sent • Follow-up Today</p>
           </div>
@@ -99,7 +99,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
       topBadgeBg: 'bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600',
       topBadgeBorder: 'border-pink-300',
       chatBadgeIcon: Calendar,
-      chatBadgeBg: 'bg-[#12B7D4]',
+      chatBadgeBg: 'bg-[#07c8f9]',
       chatBadgeBorder: 'border-cyan-300',
       notificationTag: 'Creative Staged',
       notificationTitle: 'Diwali Festive Launch',
@@ -152,7 +152,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
     approvals: {
       personType: 'sitting',
       topBadgeIcon: CheckCircle2,
-      topBadgeBg: 'bg-[#12B7D4]',
+      topBadgeBg: 'bg-[#07c8f9]',
       topBadgeBorder: 'border-cyan-300',
       chatBadgeIcon: CheckCheck,
       chatBadgeBg: 'bg-emerald-500',
@@ -166,7 +166,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-1.5 pb-1.5 border-b border-slate-200">
             <div className="text-left min-w-0">
-              <p className="text-[9px] sm:text-[10px] font-bold text-[#12B7D4] uppercase tracking-wider">Client Review</p>
+              <p className="text-[9px] sm:text-[10px] font-bold text-[#07c8f9] uppercase tracking-wider">Client Review</p>
               <p className="text-xs font-bold text-slate-900 truncate">Diwali Post #04</p>
             </div>
             <span className="text-[9px] sm:text-[10px] bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded-full border border-amber-200 whitespace-nowrap shrink-0">
@@ -174,7 +174,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
             </span>
           </div>
 
-          <div className="rounded-2xl border-2 border-dashed border-[#12B7D4]/40 bg-[#12B7D4]/5 p-2.5 sm:p-3 text-center space-y-1 sm:space-y-1.5">
+          <div className="rounded-2xl border-2 border-dashed border-[#07c8f9]/40 bg-[#07c8f9]/5 p-2.5 sm:p-3 text-center space-y-1 sm:space-y-1.5">
             <div className="flex items-center justify-center gap-1.5">
               <InstagramIcon size={16} />
               <p className="text-xs font-bold text-slate-900 leading-snug">Instagram Ad Carousel Preview</p>
@@ -184,7 +184,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
 
           {/* Realistic 1-Tap Client Review Buttons */}
           <div className="space-y-1.5 pt-0.5 sm:pt-1">
-            <div className="w-full py-2 sm:py-2.5 rounded-xl bg-[#12B7D4] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-[#12B7D4]/25">
+            <div className="w-full py-2 sm:py-2.5 rounded-xl bg-[#07c8f9] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-[#07c8f9]/25">
               <Check size={14} className="stroke-[3]" />
               <span>Approve Post</span>
             </div>
@@ -202,7 +202,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
       topBadgeBg: 'bg-emerald-600',
       topBadgeBorder: 'border-emerald-300',
       chatBadgeIcon: Zap,
-      chatBadgeBg: 'bg-[#12B7D4]',
+      chatBadgeBg: 'bg-[#07c8f9]',
       chatBadgeBorder: 'border-cyan-300',
       notificationTag: 'Tax Invoice',
       notificationTitle: 'Invoice #RWM-2026-089',
@@ -236,7 +236,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
             </div>
             <div className="border-t border-slate-300/80 pt-1 flex justify-between font-extrabold text-xs text-slate-950">
               <span>Total Amount</span>
-              <span className="text-[#12B7D4]">₹59,000.00</span>
+              <span className="text-[#07c8f9]">₹59,000.00</span>
             </div>
           </div>
 
@@ -254,7 +254,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
     attendance: {
       personType: 'sitting',
       topBadgeIcon: ShieldCheck,
-      topBadgeBg: 'bg-[#12B7D4]',
+      topBadgeBg: 'bg-[#07c8f9]',
       topBadgeBorder: 'border-cyan-300',
       chatBadgeIcon: Clock,
       chatBadgeBg: 'bg-emerald-500',
@@ -279,7 +279,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
           <div className="p-2.5 rounded-2xl bg-white border border-slate-200 text-left space-y-1.5 shadow-2xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-[#12B7D4]/15 text-[#12B7D4] flex items-center justify-center font-bold text-xs">
+                <div className="w-8 h-8 rounded-full bg-[#07c8f9]/15 text-[#07c8f9] flex items-center justify-center font-bold text-xs">
                   PN
                 </div>
                 <div>
@@ -353,7 +353,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
       topBadgeBg: 'bg-amber-500',
       topBadgeBorder: 'border-amber-300',
       chatBadgeIcon: Smartphone,
-      chatBadgeBg: 'bg-[#12B7D4]',
+      chatBadgeBg: 'bg-[#07c8f9]',
       chatBadgeBorder: 'border-cyan-300',
       notificationTag: 'Fast & Lightweight',
       notificationTitle: 'Opens Instantly on Phone',
@@ -372,9 +372,9 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
             </span>
           </div>
 
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-[#12B7D4]/10 via-cyan-50 to-white border border-[#12B7D4]/30 text-center space-y-1">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-[#07c8f9]/10 via-cyan-50 to-white border border-[#07c8f9]/30 text-center space-y-1">
             <p className="text-2xl font-black text-slate-950 tracking-tight">0.38s</p>
-            <p className="text-[10px] font-bold text-[#12B7D4] uppercase tracking-wider">Opens in a Blink</p>
+            <p className="text-[10px] font-bold text-[#07c8f9] uppercase tracking-wider">Opens in a Blink</p>
           </div>
 
           <div className="space-y-1 text-[10px] font-medium text-slate-600">
@@ -394,7 +394,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
     rhythm: {
       personType: 'standing',
       topBadgeIcon: Sparkles,
-      topBadgeBg: 'bg-[#12B7D4]',
+      topBadgeBg: 'bg-[#07c8f9]',
       topBadgeBorder: 'border-cyan-300',
       chatBadgeIcon: CheckCheck,
       chatBadgeBg: 'bg-emerald-500',
@@ -411,7 +411,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">DAILY WORKFLOW</p>
               <p className="text-xs font-bold text-slate-900 truncate">4 Simple Steps</p>
             </div>
-            <span className="text-[10px] bg-[#12B7D4]/15 text-[#0e7490] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
+            <span className="text-[10px] bg-[#07c8f9]/15 text-[#0e7490] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
               Seamless
             </span>
           </div>

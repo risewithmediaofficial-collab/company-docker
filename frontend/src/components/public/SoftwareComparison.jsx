@@ -24,7 +24,7 @@ const FragmentedStackIllustration = () => (
           <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.06" floodColor="#0f172a" />
         </filter>
         <filter id="cyan-accent-shadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="3" dy="3" stdDeviation="0" floodColor="#12B7D4" floodOpacity="0.3" />
+          <feDropShadow dx="3" dy="3" stdDeviation="0" floodColor="#07c8f9" floodOpacity="0.3" />
         </filter>
       </defs>
 
@@ -232,7 +232,7 @@ const FragmentedStackIllustration = () => (
  * - Tier 1 (Acquisition & Onboarding: Left -> Right): Proposals -> Contracts -> Client Vault
  * - Tier 2 (Fulfillment & Execution: Right -> Left): Projects -> Tasks -> Content & SMM
  * - Tier 3 (Billing & Financial Health: Left -> Right): Invoices -> Expenses -> Accounting / P&L
- * - Connected via continuous #12B7D4 line with directional flow arrows and Apple-minimalist styling
+ * - Connected via continuous #07c8f9 line with directional flow arrows and Apple-minimalist styling
  */
 const UnifiedFlowIllustration = () => (
   <div className="w-full py-2 flex items-center justify-center select-none">
@@ -247,54 +247,54 @@ const UnifiedFlowIllustration = () => (
           <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.07" floodColor="#0f172a" />
         </filter>
         <filter id="cyan-block-shadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="3" dy="3" stdDeviation="0" floodColor="#12B7D4" floodOpacity="0.35" />
+          <feDropShadow dx="3" dy="3" stdDeviation="0" floodColor="#07c8f9" floodOpacity="0.35" />
         </filter>
       </defs>
 
-      {/* ── 1. THE CONTINUOUS SERPENTINE CONNECTING PIPELINE (LOGO CYAN #12B7D4) ── */}
+      {/* ── 1. THE CONTINUOUS SERPENTINE CONNECTING PIPELINE (LOGO CYAN #07c8f9) ── */}
       {/* Tier 1: Proposals -> Contracts -> Client Vault */}
-      <line x1="104" y1="45" x2="246" y2="45" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
-      <line x1="294" y1="45" x2="436" y2="45" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
+      <line x1="104" y1="45" x2="246" y2="45" stroke="#07c8f9" strokeWidth="2.4" strokeLinecap="round" />
+      <line x1="294" y1="45" x2="436" y2="45" stroke="#07c8f9" strokeWidth="2.4" strokeLinecap="round" />
 
       {/* Directional Flow Arrows: Tier 1 (Left -> Right) */}
-      <polygon points="172,41 179,45 172,49" fill="#12B7D4" />
-      <polygon points="362,41 369,45 362,49" fill="#12B7D4" />
+      <polygon points="172,41 179,45 172,49" fill="#07c8f9" />
+      <polygon points="362,41 369,45 362,49" fill="#07c8f9" />
 
       {/* Right Curve Downward: Tier 1 to Tier 2 (Client Vault -> Projects) */}
       <path
         d="M 484 45 C 528 45 528 155 484 155"
-        stroke="#12B7D4"
+        stroke="#07c8f9"
         strokeWidth="2.4"
         strokeLinecap="round"
       />
       {/* Directional Arrow on Right Curve */}
-      <polygon points="518,96 523,103 527,96" fill="#12B7D4" />
+      <polygon points="518,96 523,103 527,96" fill="#07c8f9" />
 
       {/* Tier 2: Projects -> Tasks -> Content & SMM (Right -> Left) */}
-      <line x1="436" y1="155" x2="294" y2="155" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
-      <line x1="246" y1="155" x2="104" y2="155" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
+      <line x1="436" y1="155" x2="294" y2="155" stroke="#07c8f9" strokeWidth="2.4" strokeLinecap="round" />
+      <line x1="246" y1="155" x2="104" y2="155" stroke="#07c8f9" strokeWidth="2.4" strokeLinecap="round" />
 
       {/* Directional Flow Arrows: Tier 2 (Right -> Left) */}
-      <polygon points="369,151 362,155 369,159" fill="#12B7D4" />
-      <polygon points="179,151 172,155 179,159" fill="#12B7D4" />
+      <polygon points="369,151 362,155 369,159" fill="#07c8f9" />
+      <polygon points="179,151 172,155 179,159" fill="#07c8f9" />
 
       {/* Left Curve Downward: Tier 2 to Tier 3 (Content & SMM -> Invoices) */}
       <path
         d="M 56 155 C 12 155 12 265 56 265"
-        stroke="#12B7D4"
+        stroke="#07c8f9"
         strokeWidth="2.4"
         strokeLinecap="round"
       />
       {/* Directional Arrow on Left Curve */}
-      <polygon points="13,206 17,213 22,206" fill="#12B7D4" />
+      <polygon points="13,206 17,213 22,206" fill="#07c8f9" />
 
       {/* Tier 3: Invoices -> Expenses -> Accounting / P&L (Left -> Right) */}
-      <line x1="104" y1="265" x2="246" y2="265" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
-      <line x1="294" y1="265" x2="436" y2="265" stroke="#12B7D4" strokeWidth="2.4" strokeLinecap="round" />
+      <line x1="104" y1="265" x2="246" y2="265" stroke="#07c8f9" strokeWidth="2.4" strokeLinecap="round" />
+      <line x1="294" y1="265" x2="436" y2="265" stroke="#07c8f9" strokeWidth="2.4" strokeLinecap="round" />
 
       {/* Directional Flow Arrows: Tier 3 (Left -> Right) */}
-      <polygon points="172,261 179,265 172,269" fill="#12B7D4" />
-      <polygon points="362,261 369,265 362,269" fill="#12B7D4" />
+      <polygon points="172,261 179,265 172,269" fill="#07c8f9" />
+      <polygon points="362,261 369,265 362,269" fill="#07c8f9" />
 
       {/* ── 2. THE 9 ORGANIZED FLOW MILESTONE NODES ── */}
 
@@ -316,7 +316,7 @@ const UnifiedFlowIllustration = () => (
         />
         <path
           d="M 11 23 L 37 12 L 26 34 L 22 24 Z"
-          fill="#12B7D4"
+          fill="#07c8f9"
           stroke="#0F172A"
           strokeWidth="1.8"
           strokeLinejoin="round"
@@ -412,7 +412,7 @@ const UnifiedFlowIllustration = () => (
           filter="url(#uni-shadow)"
         />
         <rect x="7" y="9" width="9" height="28" rx="2" fill="#F1F5F9" />
-        <rect x="7" y="11" width="9" height="11" rx="1.5" fill="#12B7D4" />
+        <rect x="7" y="11" width="9" height="11" rx="1.5" fill="#07c8f9" />
         <rect x="19.5" y="9" width="9" height="28" rx="2" fill="#F1F5F9" />
         <rect x="19.5" y="16" width="9" height="9" rx="1.5" fill="#F59E0B" />
         <rect x="32" y="9" width="9" height="28" rx="2" fill="#F1F5F9" />
@@ -532,7 +532,7 @@ export const SoftwareComparison = () => {
       <ScrollReveal delay={0}>
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-10">
-          <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#12B7D4] uppercase mb-2">
+          <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#07c8f9] uppercase mb-2">
             The Agency Difference
           </p>
           <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
@@ -595,10 +595,10 @@ export const SoftwareComparison = () => {
           <div className="relative z-10">
             {/* Header Topline */}
             <div className="flex items-center justify-between gap-2 h-5 mb-3">
-              <span className="text-[11px] font-black uppercase tracking-wider text-[#12B7D4]">
+              <span className="text-[11px] font-black uppercase tracking-wider text-[#07c8f9]">
                 The Simple All-in-One Way
               </span>
-              <span className="text-[11px] font-bold text-[#12B7D4] uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-[#07c8f9] uppercase tracking-wider">
                 With RiseWithMedia
               </span>
             </div>
@@ -614,9 +614,9 @@ export const SoftwareComparison = () => {
             </div>
 
             {/* Value Pill */}
-            <div className="mt-3.5 px-4 py-2.5 min-h-[42px] rounded-xl bg-[#12B7D4]/10 flex items-center justify-between text-xs font-bold text-slate-900">
+            <div className="mt-3.5 px-4 py-2.5 min-h-[42px] rounded-xl bg-[#07c8f9]/10 flex items-center justify-between text-xs font-bold text-slate-900">
               <span className="flex items-center gap-1.5 text-[#0d99b2]">
-                <Zap size={13} className="fill-[#12B7D4] shrink-0" />
+                <Zap size={13} className="fill-[#07c8f9] shrink-0" />
                 <span>Flexible Agency Plans:</span>
               </span>
               <span className="font-extrabold text-slate-950">Isolated Workspaces • Full Access</span>
@@ -635,7 +635,7 @@ export const SoftwareComparison = () => {
             </span>
             <Link
               to="/register"
-              className="px-5 py-2.5 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-none shrink-0"
+              className="px-5 py-2.5 rounded-full bg-[#07c8f9] hover:bg-[#06b4e0] text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-none shrink-0"
             >
               <span>Register Now</span>
               <ArrowRight size={13} />

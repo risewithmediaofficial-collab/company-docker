@@ -40,7 +40,7 @@ const ModuleUpgradeGate = ({ moduleInfo, organization }) => {
             <span>Instant unlock right after Razorpay checkout</span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
-            <Layers size={14} className="shrink-0 text-[#12B7D4]" />
+            <Layers size={14} className="shrink-0 text-[#07c8f9]" />
             <span>Expands cloud storage quota, active client limits &amp; team seats automatically</span>
           </div>
         </div>
@@ -48,7 +48,7 @@ const ModuleUpgradeGate = ({ moduleInfo, organization }) => {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
           <Link
             to="/select-plan"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-sm font-extrabold shadow-md shadow-[#12B7D4]/20 transition-all"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white text-sm font-extrabold shadow-md shadow-[#07c8f9]/20 transition-all"
           >
             <span>Upgrade Plan</span>
             <ArrowRight size={16} />

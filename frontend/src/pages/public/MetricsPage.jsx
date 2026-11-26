@@ -33,13 +33,13 @@ export const MetricsPage = () => {
 
         <div className="relative z-10 max-w-3xl mx-auto">
           {/* Plain Text Section Title */}
-          <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#12B7D4] uppercase mb-3 sm:mb-4">
+          <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#07c8f9] uppercase mb-3 sm:mb-4">
             Real Agency Results
           </p>
 
           <h1 className="font-extrabold text-3xl sm:text-5xl lg:text-[58px] text-slate-950 tracking-tight leading-[1.16]">
             Real Time Saved.
-            <span className="text-[#12B7D4] block mt-1 sm:mt-2 pb-1">
+            <span className="text-[#07c8f9] block mt-1 sm:mt-2 pb-1">
               Dependable Everyday System.
             </span>
           </h1>
@@ -51,7 +51,7 @@ export const MetricsPage = () => {
           <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
             <Link
               to="/register"
-              className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#12B7D4]/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#07c8f9] hover:bg-[#06b4e0] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#07c8f9]/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Register</span>
               <ArrowRight size={16} />
@@ -75,7 +75,7 @@ export const MetricsPage = () => {
       {/* 3. FOUR MEASURABLE OUTCOMES */}
       <section className="py-14 sm:py-20 px-4 sm:px-8 max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
-          <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] mb-2">
+          <p className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9] mb-2">
             Real Impact
           </p>
           <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
@@ -87,8 +87,8 @@ export const MetricsPage = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-2 hover:border-[#12B7D4]/40 transition-all">
-            <span className="text-3xl sm:text-4xl font-black text-[#12B7D4] block">12+ Hrs</span>
+          <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-2 hover:border-[#07c8f9]/40 transition-all">
+            <span className="text-3xl sm:text-4xl font-black text-[#07c8f9] block">12+ Hrs</span>
             <h3 className="font-bold text-slate-900 text-sm">Saved Every Week</h3>
             <p className="text-xs text-slate-500 font-medium leading-relaxed">
               Automatic client reminders, instant bills, and 1-minute daily updates replace hours of calling and checking.
@@ -130,13 +130,13 @@ export const MetricsPage = () => {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
                 {/* Left: Text & Features */}
                 <div className="lg:col-span-7 space-y-4 text-left">
-                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
+                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9]">
                     Data Privacy
                   </p>
 
                   <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                     Your Agency Data
-                    <span className="text-[#12B7D4] block mt-1">
+                    <span className="text-[#07c8f9] block mt-1">
                       Stays 100% Private.
                     </span>
                   </h2>
@@ -146,7 +146,7 @@ export const MetricsPage = () => {
                   </p>
 
                   <div className="space-y-3 pt-2 max-w-xl">
-                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 hover:border-[#07c8f9]/40 hover:shadow-xs transition-all">
                       <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={14} className="stroke-[3]" />
                       </div>
@@ -156,7 +156,7 @@ export const MetricsPage = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 hover:border-[#07c8f9]/40 hover:shadow-xs transition-all">
                       <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={14} className="stroke-[3]" />
                       </div>
@@ -166,7 +166,7 @@ export const MetricsPage = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 hover:border-[#07c8f9]/40 hover:shadow-xs transition-all">
                       <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={14} className="stroke-[3]" />
                       </div>
@@ -195,7 +195,7 @@ export const MetricsPage = () => {
                     <div className="space-y-2.5">
                       <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <Database size={15} className="text-[#12B7D4]" />
+                          <Database size={15} className="text-[#07c8f9]" />
                           <div>
                             <p className="text-xs font-bold text-slate-900">Agency A (Private Space)</p>
                             <p className="text-[10px] text-slate-500 font-mono">Locked to Agency Owner</p>
@@ -206,7 +206,7 @@ export const MetricsPage = () => {
 
                       <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <Database size={15} className="text-[#12B7D4]" />
+                          <Database size={15} className="text-[#07c8f9]" />
                           <div>
                             <p className="text-xs font-bold text-slate-900">Agency B (Private Space)</p>
                             <p className="text-[10px] text-slate-500 font-mono">Locked to Agency Owner</p>
@@ -217,7 +217,7 @@ export const MetricsPage = () => {
 
                       <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <Database size={15} className="text-[#12B7D4]" />
+                          <Database size={15} className="text-[#07c8f9]" />
                           <div>
                             <p className="text-xs font-bold text-slate-900">Agency C (Private Space)</p>
                             <p className="text-[10px] text-slate-500 font-mono">Locked to Agency Owner</p>
@@ -251,7 +251,7 @@ export const MetricsPage = () => {
                   <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
                     <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                       <div className="flex items-center gap-2">
-                        <Activity size={16} className="text-[#12B7D4]" />
+                        <Activity size={16} className="text-[#07c8f9]" />
                         <span className="text-xs font-black text-slate-900">System Speed & Health</span>
                       </div>
                       <span className="text-[10px] font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded-full border border-cyan-200">
@@ -279,7 +279,7 @@ export const MetricsPage = () => {
                         <span className="text-emerald-600">Active</span>
                       </div>
                       <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-[#12B7D4] h-full w-full" />
+                        <div className="bg-[#07c8f9] h-full w-full" />
                       </div>
                       <p className="text-[10px] text-slate-500 font-medium">Add to your iPhone or Android home screen with 1 tap</p>
                     </div>
@@ -296,13 +296,13 @@ export const MetricsPage = () => {
 
                 {/* Right: Text & Features */}
                 <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
-                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
+                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9]">
                     Speed & Reliability
                   </p>
 
                   <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
                     Opens in Less Than a Second.
-                    <span className="text-[#12B7D4] block mt-1">
+                    <span className="text-[#07c8f9] block mt-1">
                       Smooth on Any Smartphone.
                     </span>
                   </h2>
@@ -312,7 +312,7 @@ export const MetricsPage = () => {
                   </p>
 
                   <div className="space-y-3 pt-2 max-w-xl">
-                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#07c8f9]/40 hover:shadow-xs transition-all">
                       <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={14} className="stroke-[3]" />
                       </div>
@@ -322,7 +322,7 @@ export const MetricsPage = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#07c8f9]/40 hover:shadow-xs transition-all">
                       <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={14} className="stroke-[3]" />
                       </div>
@@ -332,7 +332,7 @@ export const MetricsPage = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#12B7D4]/40 hover:shadow-xs transition-all">
+                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-[#07c8f9]/40 hover:shadow-xs transition-all">
                       <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={14} className="stroke-[3]" />
                       </div>
@@ -355,7 +355,7 @@ export const MetricsPage = () => {
           <ScrollReveal>
             <div className="text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8">
               <div className="space-y-2 max-w-2xl">
-                <span className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] block">
+                <span className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9] block">
                   Simple Agency Platform
                 </span>
                 <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
@@ -367,7 +367,7 @@ export const MetricsPage = () => {
               </div>
               <Link
                 to="/register"
-                className="px-8 py-4 bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base border border-[#12B7D4] transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
+                className="px-8 py-4 bg-[#07c8f9] hover:bg-[#06b4e0] text-white font-bold text-sm sm:text-base border border-[#07c8f9] transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
               >
                 <span>Register Now</span>
                 <ArrowRight size={16} />

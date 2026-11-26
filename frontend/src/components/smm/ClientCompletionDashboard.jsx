@@ -379,7 +379,7 @@ export const ClientCompletionDashboard = ({
                         y={barY}
                         width={barWidth}
                         height={barHeight}
-                        fill={isHovered ? '#12B7D4' : '#0EA5C6'}
+                        fill={isHovered ? '#07c8f9' : '#06b4e0'}
                         rx="2"
                         style={{
                           transition: 'height 0.4s ease-out, y 0.4s ease-out, fill 0.2s',

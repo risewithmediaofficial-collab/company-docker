@@ -26,11 +26,11 @@ const ClientProjectsPanel = ({ clientId, clientName, onAddProject }) => {
     Planning: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold',
 
     // In Progress / Active -> Cyan / Teal
-    active: 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#12B7D4] border border-cyan-500/30 font-bold',
-    Active: 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#12B7D4] border border-cyan-500/30 font-bold',
-    'In Progress': 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#12B7D4] border border-cyan-500/30 font-bold',
-    'in progress': 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#12B7D4] border border-cyan-500/30 font-bold',
-    in_progress: 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#12B7D4] border border-cyan-500/30 font-bold',
+    active: 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#07c8f9] border border-cyan-500/30 font-bold',
+    Active: 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#07c8f9] border border-cyan-500/30 font-bold',
+    'In Progress': 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#07c8f9] border border-cyan-500/30 font-bold',
+    'in progress': 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#07c8f9] border border-cyan-500/30 font-bold',
+    in_progress: 'bg-cyan-500/15 text-[#0d99b2] dark:text-[#07c8f9] border border-cyan-500/30 font-bold',
 
     // On Hold -> Orange
     on_hold: 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30 font-bold',
@@ -87,8 +87,8 @@ const ClientProjectsPanel = ({ clientId, clientName, onAddProject }) => {
           <div className="text-2xl font-bold text-foreground">{totalTasks}</div>
         </div>
         <div className="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/20">
-          <div className="text-xs font-bold text-[#0d99b2] dark:text-[#12B7D4] mb-1">Ongoing</div>
-          <div className="text-2xl font-black text-[#0d99b2] dark:text-[#12B7D4]">{ongoingTasks}</div>
+          <div className="text-xs font-bold text-[#0d99b2] dark:text-[#07c8f9] mb-1">Ongoing</div>
+          <div className="text-2xl font-black text-[#0d99b2] dark:text-[#07c8f9]">{ongoingTasks}</div>
         </div>
         <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25">
           <div className="text-xs font-bold text-amber-700 dark:text-amber-400 mb-1">Pending</div>
@@ -166,7 +166,7 @@ const ClientProjectsPanel = ({ clientId, clientName, onAddProject }) => {
                         <span>{pTotal} {pTotal === 1 ? 'task' : 'tasks'}</span>
                       </span>
                       <span className="text-[11px] font-medium flex items-center gap-1.5">
-                        <span className="text-[#0d99b2] dark:text-[#12B7D4] font-bold">{pOngoing} ongoing</span>
+                        <span className="text-[#0d99b2] dark:text-[#07c8f9] font-bold">{pOngoing} ongoing</span>
                         <span className="text-muted-foreground/40">·</span>
                         <span className="text-amber-600 dark:text-amber-400 font-bold">{pPending} pending</span>
                         <span className="text-muted-foreground/40">·</span>
@@ -180,7 +180,7 @@ const ClientProjectsPanel = ({ clientId, clientName, onAddProject }) => {
                           pProgress === 100
                             ? 'bg-emerald-500'
                             : pProgress > 0
-                            ? 'bg-[#12B7D4]'
+                            ? 'bg-[#07c8f9]'
                             : 'bg-muted-foreground/20'
                         }`}
                         style={{ width: `${Math.min(pProgress, 100)}%` }}

@@ -13,12 +13,12 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* RiseWithMedia Brand Blue (#12B7D4) */
-    --brand: 189 84% 45%;
+    /* RiseWithMedia Brand Blue (#07c8f9) */
+    --brand: 192 95% 50%;
     --brand-foreground: 194 78% 7%;
 
-    /* Light Mode Primary calibrated on brand hue (189°) for crisp white text contrast */
-    --primary: 189 89% 37%;
+    /* Light Mode Primary calibrated on brand hue (192°) for crisp white text contrast */
+    --primary: 192 92% 40%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 214 32% 94.5%;
@@ -27,15 +27,15 @@
     --muted: 214 25% 95%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 189 60% 93%;
-    --accent-foreground: 191 78% 18%;
+    --accent: 192 75% 93%;
+    --accent-foreground: 192 85% 20%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 214 28% 89%;
     --input: 214 28% 89%;
-    --ring: 189 84% 45%;
+    --ring: 192 95% 50%;
 
     --radius: 0.75rem;
     --tracker-status-sticky: #f8fafc;
@@ -61,11 +61,11 @@
     --popover: 222 40% 12%;
     --popover-foreground: 210 40% 98%;
 
-    /* Exact RiseWithMedia Logo Blue (#12B7D4) pops cleanly on dark surfaces */
-    --brand: 189 84% 45%;
+    /* Exact RiseWithMedia Logo Blue (#07c8f9) pops cleanly on dark surfaces */
+    --brand: 192 95% 50%;
     --brand-foreground: 194 78% 7%;
 
-    --primary: 189 84% 45%;
+    --primary: 192 95% 50%;
     --primary-foreground: 194 78% 7%;
 
     --secondary: 217 33% 16%;
@@ -74,15 +74,15 @@
     --muted: 217 33% 14%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 189 45% 18%;
-    --accent-foreground: 189 85% 78%;
+    --accent: 192 50% 18%;
+    --accent-foreground: 192 90% 78%;
 
     --destructive: 0 78% 54%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 217 33% 20%;
     --input: 217 33% 22%;
-    --ring: 189 84% 45%;
+    --ring: 192 95% 50%;
   }
 }
 

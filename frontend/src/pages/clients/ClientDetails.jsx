@@ -683,7 +683,7 @@ const ClientDetails = () => {
                   : isPendingStatus
                   ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40 font-extrabold shadow-xs'
                   : isActiveStatus
-                  ? 'bg-cyan-500/20 text-[#0d99b2] dark:text-[#12B7D4] border border-cyan-500/40 font-extrabold shadow-xs'
+                  ? 'bg-cyan-500/20 text-[#0d99b2] dark:text-[#07c8f9] border border-cyan-500/40 font-extrabold shadow-xs'
                   : isOnHold
                   ? 'bg-orange-500/20 text-orange-800 dark:text-orange-300 border border-orange-500/40 font-extrabold shadow-xs'
                   : isCancelled
@@ -778,7 +778,7 @@ const ClientDetails = () => {
                             pProgress === 100
                               ? 'bg-emerald-500'
                               : pProgress > 0
-                              ? 'bg-[#12B7D4]'
+                              ? 'bg-[#07c8f9]'
                               : 'bg-muted-foreground/30'
                           }`}
                           style={{ width: `${Math.min(pProgress, 100)}%` }}
@@ -791,8 +791,8 @@ const ClientDetails = () => {
                           <div className="text-sm font-bold text-foreground mt-0.5">{pTotal}</div>
                         </div>
                         <div className="rounded-xl bg-cyan-500/10 p-2 border border-cyan-500/20">
-                          <div className="text-[10px] font-bold text-[#0d99b2] dark:text-[#12B7D4]">Ongoing</div>
-                          <div className="text-sm font-black text-[#0d99b2] dark:text-[#12B7D4] mt-0.5">{pOngoing}</div>
+                          <div className="text-[10px] font-bold text-[#0d99b2] dark:text-[#07c8f9]">Ongoing</div>
+                          <div className="text-sm font-black text-[#0d99b2] dark:text-[#07c8f9] mt-0.5">{pOngoing}</div>
                         </div>
                         <div className="rounded-xl bg-amber-500/10 p-2 border border-amber-500/20">
                           <div className="text-[10px] font-bold text-amber-700 dark:text-amber-400">Pending</div>

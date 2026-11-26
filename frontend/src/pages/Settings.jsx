@@ -821,9 +821,9 @@ const Settings = () => {
               return (
                 <div className="space-y-6">
                   {organization?.companySetupRequired && (
-                    <div className="p-4 rounded-2xl bg-[#12B7D4]/10 border border-[#12B7D4]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="p-4 rounded-2xl bg-[#07c8f9]/10 border border-[#07c8f9]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <p className="text-xs font-extrabold uppercase tracking-wider text-[#0e7490] dark:text-[#12B7D4]">
+                        <p className="text-xs font-extrabold uppercase tracking-wider text-[#0e7490] dark:text-[#07c8f9]">
                           Step 2 of 2 • Complete Workspace Registration
                         </p>
                         <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
@@ -855,7 +855,7 @@ const Settings = () => {
                       </button>
                       <Link
                         to="/select-plan"
-                        className="px-3.5 py-2 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs font-extrabold transition-colors"
+                        className="px-3.5 py-2 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white text-xs font-extrabold transition-colors"
                       >
                         Upgrade Plan
                       </Link>
@@ -873,7 +873,7 @@ const Settings = () => {
                             className="h-full w-full object-contain p-1.5"
                           />
                         ) : (
-                          <span className="text-lg font-black text-[#0B8694]">
+                          <span className="text-lg font-black text-[#0586a8]">
                             {(companyProfile.name || 'RW').slice(0, 2).toUpperCase()}
                           </span>
                         )}
@@ -883,7 +883,7 @@ const Settings = () => {
                           <span className="font-black text-sm text-foreground truncate">
                             {companyProfile.name || 'Your Agency Name'}
                           </span>
-                          <span className="px-2 py-0.5 rounded-full bg-cyan-500/15 text-[#0B8694] dark:text-[#12B7D4] text-[10px] font-extrabold">
+                          <span className="px-2 py-0.5 rounded-full bg-cyan-500/15 text-[#0586a8] dark:text-[#07c8f9] text-[10px] font-extrabold">
                             + RWM
                           </span>
                         </div>
@@ -895,7 +895,7 @@ const Settings = () => {
 
                     <div className="p-4 rounded-2xl border border-cyan-200 dark:border-cyan-900/50 bg-cyan-50/60 dark:bg-cyan-950/20 flex flex-col justify-between gap-2">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0B8694] dark:text-[#12B7D4] flex items-center gap-1.5">
+                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0586a8] dark:text-[#07c8f9] flex items-center gap-1.5">
                           <Globe size={13} />
                           Live Workspace Login URL
                         </span>
@@ -915,7 +915,7 @@ const Settings = () => {
                             href={liveWorkspaceUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#12B7D4] text-white text-[11px] font-bold hover:opacity-90"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#07c8f9] text-white text-[11px] font-bold hover:opacity-90"
                           >
                             <ExternalLink size={11} />
                             Open
@@ -1279,7 +1279,7 @@ const Settings = () => {
                     </div>
                     <Link
                       to="/select-plan"
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs font-extrabold shadow-xs transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white text-xs font-extrabold shadow-xs transition-colors"
                     >
                       <Sparkles size={14} />
                       <span>Upgrade Plan</span>
@@ -1326,7 +1326,7 @@ const Settings = () => {
                     <div className="p-4 rounded-2xl border border-border bg-background space-y-2.5">
                       <div className="flex items-center justify-between text-xs font-bold">
                         <span className="flex items-center gap-1.5 text-muted-foreground uppercase tracking-wider text-[11px]">
-                          <HardDrive size={14} className="text-[#12B7D4]" />
+                          <HardDrive size={14} className="text-[#07c8f9]" />
                           Cloud Storage
                         </span>
                         <span>{storagePercent}%</span>
@@ -1335,7 +1335,7 @@ const Settings = () => {
                         {storageUsedMb} MB <span className="text-xs font-semibold text-muted-foreground">/ {formatStorageQuota(storageLimitMb)}</span>
                       </p>
                       <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                        <div className="h-full rounded-full bg-[#12B7D4]" style={{ width: `${Math.max(4, storagePercent)}%` }} />
+                        <div className="h-full rounded-full bg-[#07c8f9]" style={{ width: `${Math.max(4, storagePercent)}%` }} />
                       </div>
                     </div>
 

@@ -796,11 +796,13 @@ test.describe('All Role Logins & Workspace Isolation Verification', () => {
     await expect(page.locator('select[name="role"]')).toHaveCount(0);
     await expect(page.locator('#signup-name')).toBeVisible();
     await expect(page.locator('#signup-email')).toBeVisible();
+    await expect(page.locator('#signup-phone')).toBeVisible();
     await expect(page.locator('#signup-password')).toBeVisible();
 
-    // 2. Self-register using only Full Name, Gmail, Password (+ robot check & terms)
+    // 2. Self-register using Full Name, Gmail, Mobile Number, Password (+ robot check & terms)
     await page.fill('#signup-name', 'Nikhil NewOwner');
     await page.fill('#signup-email', 'newowner@test.com');
+    await page.fill('#signup-phone', '+91 98765 43210');
     await page.fill('#signup-password', 'password123');
     await completeRobotCheck(page, 'signup-captcha');
     await page.check('#signup-terms');

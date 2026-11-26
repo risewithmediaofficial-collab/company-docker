@@ -8,12 +8,12 @@ const FeatureCard = ({
   icon: Icon,
   badge,
   linkTo = "/login",
-  waveFill = "#12B7D425"
+  waveFill = "#07c8f925"
 }) => {
   return (
     <Link
       to={linkTo}
-      className="group relative overflow-hidden bg-white border border-slate-200/90 rounded-xl p-4 sm:p-5 flex items-center justify-between gap-3.5 transition-all duration-200 hover:border-[#12B7D4] hover:shadow-sm cursor-pointer w-full"
+      className="group relative overflow-hidden bg-white border border-slate-200/90 rounded-xl p-4 sm:p-5 flex items-center justify-between gap-3.5 transition-all duration-200 hover:border-[#07c8f9] hover:shadow-sm cursor-pointer w-full"
       style={{
         boxShadow: 'rgba(149, 157, 165, 0.06) 0px 4px 14px',
       }}
@@ -38,13 +38,13 @@ const FeatureCard = ({
       </svg>
 
       {/* Circular Icon Container */}
-      <div className="relative z-10 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#12B7D4]/10 flex items-center justify-center text-[#12B7D4] shrink-0 group-hover:scale-105 transition-transform">
+      <div className="relative z-10 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#07c8f9]/10 flex items-center justify-center text-[#07c8f9] shrink-0 group-hover:scale-105 transition-transform">
         {Icon && <Icon size={20} />}
       </div>
 
       {/* Message Text Container */}
       <div className="relative z-10 flex flex-col justify-center items-start flex-grow min-w-0 text-left">
-        <p className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-[#12B7D4] transition-colors truncate w-full">
+        <p className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-[#07c8f9] transition-colors truncate w-full">
           {title}
         </p>
         <p className="text-xs sm:text-sm text-slate-600 font-medium truncate w-full mt-0.5">
@@ -55,11 +55,11 @@ const FeatureCard = ({
       {/* Right Badge / Arrow */}
       <div className="relative z-10 flex items-center gap-1.5 shrink-0">
         {badge && (
-          <span className="text-xs font-bold text-[#12B7D4] bg-[#12B7D4]/10 border border-[#12B7D4]/20 px-2.5 py-1 rounded-md hidden sm:inline-block">
+          <span className="text-xs font-bold text-[#07c8f9] bg-[#07c8f9]/10 border border-[#07c8f9]/20 px-2.5 py-1 rounded-md hidden sm:inline-block">
             {badge}
           </span>
         )}
-        <ChevronRight size={18} className="text-slate-400 group-hover:text-[#12B7D4] group-hover:translate-x-0.5 transition-all" />
+        <ChevronRight size={18} className="text-slate-400 group-hover:text-[#07c8f9] group-hover:translate-x-0.5 transition-all" />
       </div>
     </Link>
   );

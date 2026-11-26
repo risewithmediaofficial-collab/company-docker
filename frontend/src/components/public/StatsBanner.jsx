@@ -68,7 +68,7 @@ const StatsBanner = ({
               <span className="font-extrabold text-lg sm:text-xl lg:text-2xl text-slate-950 block tracking-tight leading-tight">
                 {stats[0].value}
               </span>
-              <span className="text-[11px] sm:text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1.5 block">
+              <span className="text-[11px] sm:text-xs font-bold text-[#07c8f9] uppercase tracking-wider mt-1.5 block">
                 {stats[0].label}
               </span>
             </div>
@@ -81,7 +81,7 @@ const StatsBanner = ({
               <span className="font-extrabold text-lg sm:text-xl lg:text-2xl text-slate-950 block tracking-tight leading-tight">
                 {stats[1].value}
               </span>
-              <span className="text-[11px] sm:text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1.5 block">
+              <span className="text-[11px] sm:text-xs font-bold text-[#07c8f9] uppercase tracking-wider mt-1.5 block">
                 {stats[1].label}
               </span>
             </div>
@@ -94,7 +94,7 @@ const StatsBanner = ({
               <span className="font-extrabold text-lg sm:text-xl lg:text-2xl text-slate-950 block tracking-tight leading-tight">
                 {stats[2].value}
               </span>
-              <span className="text-[11px] sm:text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1.5 block">
+              <span className="text-[11px] sm:text-xs font-bold text-[#07c8f9] uppercase tracking-wider mt-1.5 block">
                 {stats[2].label}
               </span>
             </div>
@@ -108,7 +108,7 @@ const StatsBanner = ({
               <span className="font-extrabold text-lg sm:text-xl lg:text-2xl text-slate-950 block tracking-tight leading-tight">
                 {stats[3].value}
               </span>
-              <span className="text-[11px] sm:text-xs font-bold text-[#12B7D4] uppercase tracking-wider mt-1.5 block">
+              <span className="text-[11px] sm:text-xs font-bold text-[#07c8f9] uppercase tracking-wider mt-1.5 block">
                 {stats[3].label}
               </span>
             </div>

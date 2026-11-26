@@ -98,7 +98,7 @@ const HDR_TODAY = {
   background: '#083344',
   backgroundColor: '#083344',
   color: '#ffffff',
-  boxShadow: 'inset 0 0 0 2px #12B7D4',
+  boxShadow: 'inset 0 0 0 2px #07c8f9',
 };
 
 const CELL_BASE = {

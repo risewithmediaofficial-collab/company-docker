@@ -626,7 +626,7 @@ const Dashboard = () => {
             <div className="rounded-2xl border border-cyan-200/80 dark:border-cyan-900/50 bg-gradient-to-r from-cyan-50/80 via-white to-slate-50 dark:from-cyan-950/20 dark:via-card dark:to-card p-4 sm:p-5 shadow-xs">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="flex flex-wrap items-center gap-4">
-                  <div className="w-11 h-11 rounded-2xl bg-[#12B7D4] text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <div className="w-11 h-11 rounded-2xl bg-[#07c8f9] text-white flex items-center justify-center shrink-0 shadow-sm">
                     <HardDrive size={20} />
                   </div>
                   <div className="space-y-1">
@@ -634,7 +634,7 @@ const Dashboard = () => {
                       <span className="text-[11px] font-extrabold uppercase tracking-wider text-cyan-700 dark:text-cyan-400">
                         Active Workspace Plan
                       </span>
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#12B7D4]/15 text-[#0B8694] dark:text-[#12B7D4] text-xs font-extrabold capitalize">
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#07c8f9]/15 text-[#0586a8] dark:text-[#07c8f9] text-xs font-extrabold capitalize">
                         {planLabel} ({activeOrg.billingCycle || 'monthly'})
                       </span>
                       {activeOrg.companySetupRequired && (
@@ -667,7 +667,7 @@ const Dashboard = () => {
                     </div>
                     <div className="w-full max-w-xs h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-[#12B7D4] transition-all"
+                        className="h-full rounded-full bg-[#07c8f9] transition-all"
                         style={{ width: `${Math.max(4, storagePct)}%` }}
                       />
                     </div>
@@ -684,7 +684,7 @@ const Dashboard = () => {
                   </Link>
                   <Link
                     to="/select-plan"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs font-extrabold shadow-xs transition-colors"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white text-xs font-extrabold shadow-xs transition-colors"
                   >
                     <CreditCard size={13} />
                     <span>Upgrade Plan</span>
@@ -905,8 +905,8 @@ const Dashboard = () => {
                       <AreaChart data={revenueTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                         <defs>
                           <linearGradient id="rwmRevenueFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#12B7D4" stopOpacity={0.28} />
-                            <stop offset="95%" stopColor="#12B7D4" stopOpacity={0.0} />
+                            <stop offset="5%" stopColor="#07c8f9" stopOpacity={0.28} />
+                            <stop offset="95%" stopColor="#07c8f9" stopOpacity={0.0} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--foreground) / 0.06)" vertical={false} />
@@ -934,7 +934,7 @@ const Dashboard = () => {
                             fontWeight: '600',
                           }}
                         />
-                        <Area type="monotone" dataKey="revenue" stroke="#12B7D4" strokeWidth={2.5} fill="url(#rwmRevenueFill)" dot={{ fill: '#12B7D4', strokeWidth: 0, r: 3 }} activeDot={{ r: 5, fill: '#12B7D4' }} />
+                        <Area type="monotone" dataKey="revenue" stroke="#07c8f9" strokeWidth={2.5} fill="url(#rwmRevenueFill)" dot={{ fill: '#07c8f9', strokeWidth: 0, r: 3 }} activeDot={{ r: 5, fill: '#07c8f9' }} />
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : (

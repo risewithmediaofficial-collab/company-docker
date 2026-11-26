@@ -7,6 +7,7 @@ import {
   UserPlus,
   Download,
   Mail,
+  Phone,
   Lock,
   User,
   Building2,
@@ -68,14 +69,14 @@ const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
         onClick={() => onSelect('signin')}
         className={`signin group relative flex items-center md:flex-col justify-center gap-1.5 md:gap-1 py-1.5 px-3 md:py-3 md:px-2.5 md:w-full rounded-xl md:rounded-2xl border transition-all duration-200 text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 ${
           view === 'signin'
-            ? 'text-[#12B7D4] bg-white dark:bg-slate-900 border-[#12B7D4]/25 shadow-2xs md:shadow-sm md:shadow-[#12B7D4]/15'
+            ? 'text-[#07c8f9] bg-white dark:bg-slate-900 border-[#07c8f9]/25 shadow-2xs md:shadow-sm md:shadow-[#07c8f9]/15'
             : 'text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-700 dark:hover:text-slate-200'
         }`}
       >
         {view === 'signin' && (
-          <span className="hidden md:block active-bar absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-7 bg-[#12B7D4] rounded-r-full shadow-xs" />
+          <span className="hidden md:block active-bar absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-7 bg-[#07c8f9] rounded-r-full shadow-xs" />
         )}
-        <UserCheck size={15} className={`transition-transform duration-200 shrink-0 ${view === 'signin' ? 'scale-105 text-[#12B7D4]' : ''}`} />
+        <UserCheck size={15} className={`transition-transform duration-200 shrink-0 ${view === 'signin' ? 'scale-105 text-[#07c8f9]' : ''}`} />
         <span className="leading-none text-[11px] md:text-xs whitespace-nowrap">Sign In</span>
       </button>
 
@@ -85,14 +86,14 @@ const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
         onClick={() => onSelect('signup')}
         className={`signup group relative flex items-center md:flex-col justify-center gap-1.5 md:gap-1 py-1.5 px-3 md:py-3 md:px-2.5 md:w-full rounded-xl md:rounded-2xl border transition-all duration-200 text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 ${
           view === 'signup'
-            ? 'text-[#12B7D4] bg-white dark:bg-slate-900 border-[#12B7D4]/25 shadow-2xs md:shadow-sm md:shadow-[#12B7D4]/15'
+            ? 'text-[#07c8f9] bg-white dark:bg-slate-900 border-[#07c8f9]/25 shadow-2xs md:shadow-sm md:shadow-[#07c8f9]/15'
             : 'text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-700 dark:hover:text-slate-200'
         }`}
       >
         {view === 'signup' && (
-          <span className="hidden md:block active-bar absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-7 bg-[#12B7D4] rounded-r-full shadow-xs" />
+          <span className="hidden md:block active-bar absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-7 bg-[#07c8f9] rounded-r-full shadow-xs" />
         )}
-        <UserPlus size={15} className={`transition-transform duration-200 shrink-0 ${view === 'signup' ? 'scale-105 text-[#12B7D4]' : ''}`} />
+        <UserPlus size={15} className={`transition-transform duration-200 shrink-0 ${view === 'signup' ? 'scale-105 text-[#07c8f9]' : ''}`} />
         <span className="leading-none text-[11px] md:text-xs whitespace-nowrap">Sign Up</span>
       </button>
     </div>
@@ -102,7 +103,7 @@ const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
       <button
         type="button"
         onClick={onToggleTheme}
-        className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-[#12B7D4] dark:hover:text-[#12B7D4] hover:border-[#12B7D4]/40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-2xs cursor-pointer shrink-0"
+        className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-[#07c8f9] dark:hover:text-[#07c8f9] hover:border-[#07c8f9]/40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-2xs cursor-pointer shrink-0"
         title={darkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
         aria-label="Toggle theme"
       >
@@ -121,7 +122,7 @@ const Hero = ({ variant, view, title, subtitle, portalOrg, onOpenTerms }) => {
   const isActive = view === variant;
   return (
     <div
-      className={`card-hero-content ${variant} h-[480px] md:h-[630px] flex flex-col justify-center items-center text-center px-6 transition-opacity duration-500 ease-in-out ${
+      className={`card-hero-content ${variant} h-[480px] md:h-[660px] flex flex-col justify-center items-center text-center px-6 transition-opacity duration-500 ease-in-out ${
         isActive ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
     >
@@ -207,8 +208,8 @@ const SignInForm = ({
     if (isSuperAdmin) {
       return (
         <div className="space-y-3.5 text-left w-full max-w-sm mx-auto">
-          <div className="p-3 rounded-2xl bg-cyan-50 dark:bg-cyan-950/40 border border-[#12B7D4]/30 space-y-1">
-            <div className="flex items-center gap-1.5 font-bold text-xs text-[#0e7490] dark:text-[#12B7D4]">
+          <div className="p-3 rounded-2xl bg-cyan-50 dark:bg-cyan-950/40 border border-[#07c8f9]/30 space-y-1">
+            <div className="flex items-center gap-1.5 font-bold text-xs text-[#0e7490] dark:text-[#07c8f9]">
               <Shield size={15} />
               <span>Platform Super Admin Active</span>
             </div>
@@ -226,7 +227,7 @@ const SignInForm = ({
                 toast.success(`Stealth Live View Activated for "${target.name}"`);
                 navigate('/');
               }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#12B7D4] hover:bg-[#0ea5c6] shadow-sm shadow-[#12B7D4]/20 transition-all cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#07c8f9] hover:bg-[#06b4e0] shadow-sm shadow-[#07c8f9]/20 transition-all cursor-pointer"
             >
               <Radio size={14} className="animate-pulse" />
               <span>Live View {portalOrg?.name || companySlug} CRM</span>
@@ -264,7 +265,7 @@ const SignInForm = ({
           <button
             type="button"
             onClick={() => navigate('/')}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#12B7D4] hover:bg-[#0ea5c6] transition-all cursor-pointer shadow-sm shadow-[#12B7D4]/20"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#07c8f9] hover:bg-[#06b4e0] transition-all cursor-pointer shadow-sm shadow-[#07c8f9]/20"
           >
             <span>Go to CRM Dashboard</span>
             <ArrowRight size={14} />
@@ -314,7 +315,7 @@ const SignInForm = ({
           Email address or Phone
         </label>
         <div className="relative group">
-          <Mail size={15} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none group-focus-within:text-[#12B7D4] transition-colors" />
+          <Mail size={15} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none group-focus-within:text-[#07c8f9] transition-colors" />
           <input
             id="signin-email"
             name="email"
@@ -324,7 +325,7 @@ const SignInForm = ({
             value={formData.email}
             onChange={handleChange}
             placeholder="name@company.com or phone"
-            className="w-full bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 rounded-xl py-2 pl-9 pr-3 text-slate-900 dark:text-white text-xs placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all"
+            className="w-full bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 rounded-xl py-2 pl-9 pr-3 text-slate-900 dark:text-white text-xs placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all"
           />
         </div>
       </div>
@@ -340,7 +341,7 @@ const SignInForm = ({
           </Link>
         </div>
         <div className="relative group">
-          <Lock size={15} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none group-focus-within:text-[#12B7D4] transition-colors" />
+          <Lock size={15} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none group-focus-within:text-[#07c8f9] transition-colors" />
           <input
             id="signin-password"
             name="password"
@@ -350,7 +351,7 @@ const SignInForm = ({
             value={formData.password}
             onChange={handleChange}
             placeholder="••••••••"
-            className="w-full bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 rounded-xl py-2 pl-9 pr-9 text-slate-900 dark:text-white text-xs placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all"
+            className="w-full bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 rounded-xl py-2 pl-9 pr-9 text-slate-900 dark:text-white text-xs placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all"
           />
           <button
             type="button"
@@ -392,7 +393,7 @@ const SignInForm = ({
               setTermsAccepted(e.target.checked);
               if (e.target.checked) setLocalError('');
             }}
-            className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-[#12B7D4] focus:ring-[#12B7D4] cursor-pointer shrink-0"
+            className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-[#07c8f9] focus:ring-[#07c8f9] cursor-pointer shrink-0"
           />
           <span className="leading-snug">
             I accept the{' '}
@@ -412,7 +413,7 @@ const SignInForm = ({
       <button
         type="submit"
         disabled={loading}
-        className={`w-full py-2.5 px-4 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-extrabold text-xs transition-all shadow-sm shadow-[#12B7D4]/25 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer ${
+        className={`w-full py-2.5 px-4 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white font-extrabold text-xs transition-all shadow-sm shadow-[#07c8f9]/25 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer ${
           !termsAccepted ? 'opacity-80' : ''
         }`}
       >
@@ -470,6 +471,7 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms })
   const [signupData, setSignupData] = useState({
     name: '',
     email: '',
+    phone: '',
     password: '',
   });
   const [loading, setLoading] = useState(false);
@@ -487,6 +489,13 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms })
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    const phoneDigits = String(signupData.phone || '').replace(/\D/g, '');
+    if (phoneDigits.length < 10 || phoneDigits.length > 15) {
+      const msg = 'Please enter a valid 10-digit mobile number.';
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
     if (!termsAccepted) {
       const msg = 'You must accept the Terms & Conditions to create an account.';
       setError(msg);
@@ -503,6 +512,7 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms })
     try {
       const res = await axios.post('/api/auth/register', {
         ...signupData,
+        phone: signupData.phone.trim(),
         companySlug: companySlug || undefined,
         captchaToken: captcha.captchaToken,
         captchaAnswer: captcha.captchaAnswer.trim(),
@@ -543,7 +553,7 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms })
           Your Full Name
         </label>
         <div className="relative group">
-          <User size={15} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none group-focus-within:text-[#12B7D4] transition-colors" />
+          <User size={15} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none group-focus-within:text-[#07c8f9] transition-colors" />
           <input
             id="signup-name"
             name="name"
@@ -552,7 +562,7 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms })
             value={signupData.name}
             onChange={handleSignupChange}
             placeholder="e.g. Alex Morgan"
-            className="w-full bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 rounded-xl py-2 pl-9 pr-3 text-slate-900 dark:text-white text-xs placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all"
+            className="w-full bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 rounded-xl py-2 pl-9 pr-3 text-slate-900 dark:text-white text-xs placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all"
           />
         </div>
       </div>
@@ -563,7 +573,7 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms })
           Gmail / Email Address
         </label>
         <div className="relative group">
-          <Mail size={15} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none group-focus-within:text-[#12B7D4] transition-colors" />
+          <Mail size={15} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none group-focus-within:text-[#07c8f9] transition-colors" />
           <input
             id="signup-email"
             name="email"
@@ -572,7 +582,27 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms })
             value={signupData.email}
             onChange={handleSignupChange}
             placeholder="name@gmail.com"
-            className="w-full bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 rounded-xl py-2 pl-9 pr-3 text-slate-900 dark:text-white text-xs placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all"
+            className="w-full bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 rounded-xl py-2 pl-9 pr-3 text-slate-900 dark:text-white text-xs placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all"
+          />
+        </div>
+      </div>
+
+      {/* Mobile Number Field */}
+      <div>
+        <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-0.5 block" htmlFor="signup-phone">
+          Mobile Number
+        </label>
+        <div className="relative group">
+          <Phone size={15} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none group-focus-within:text-[#07c8f9] transition-colors" />
+          <input
+            id="signup-phone"
+            name="phone"
+            type="tel"
+            required
+            value={signupData.phone}
+            onChange={handleSignupChange}
+            placeholder="e.g. +91 98765 43210"
+            className="w-full bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 rounded-xl py-2 pl-9 pr-3 text-slate-900 dark:text-white text-xs placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all"
           />
         </div>
       </div>
@@ -583,7 +613,7 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms })
           Password
         </label>
         <div className="relative group">
-          <Lock size={15} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none group-focus-within:text-[#12B7D4] transition-colors" />
+          <Lock size={15} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none group-focus-within:text-[#07c8f9] transition-colors" />
           <input
             id="signup-password"
             name="password"
@@ -593,7 +623,7 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms })
             value={signupData.password}
             onChange={handleSignupChange}
             placeholder="At least 6 characters"
-            className="w-full bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 rounded-xl py-2 pl-9 pr-9 text-slate-900 dark:text-white text-xs placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all"
+            className="w-full bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 rounded-xl py-2 pl-9 pr-9 text-slate-900 dark:text-white text-xs placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-[#07c8f9] focus:ring-2 focus:ring-[#07c8f9]/20 transition-all"
           />
           <button
             type="button"
@@ -628,7 +658,7 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms })
             setTermsAccepted(e.target.checked);
             if (e.target.checked) setError('');
           }}
-          className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-[#12B7D4] focus:ring-[#12B7D4] cursor-pointer shrink-0"
+          className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-[#07c8f9] focus:ring-[#07c8f9] cursor-pointer shrink-0"
         />
         <span className="leading-snug">
           I agree to the{' '}
@@ -647,7 +677,7 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms })
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-2.5 px-4 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-extrabold text-xs transition-all shadow-sm shadow-[#12B7D4]/25 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+        className="w-full py-2.5 px-4 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white font-extrabold text-xs transition-all shadow-sm shadow-[#07c8f9]/25 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
       >
         {loading ? (
           <span className="flex items-center gap-2">
@@ -797,11 +827,11 @@ export const Login = ({ initialView }) => {
           <div
             className={`card-hero-bg absolute -inset-y-6 inset-x-0 transition-transform duration-500 ease-in-out ${
               view === 'signup' ? '-translate-y-6' : 'translate-y-0'
-            } bg-gradient-to-br from-[#06242c] via-[#0b5161] to-[#12B7D4]`}
+            } bg-gradient-to-br from-[#06242c] via-[#0b5161] to-[#07c8f9]`}
           >
             {/* Tech Mesh Overlay */}
             <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#fff_1.2px,transparent_1.2px)] [background-size:18px_18px]" />
-            <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#12B7D4]/30 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#07c8f9]/30 rounded-full blur-2xl pointer-events-none" />
             <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-emerald-400/25 rounded-full blur-2xl pointer-events-none" />
           </div>
 
@@ -831,7 +861,7 @@ export const Login = ({ initialView }) => {
         </div>
 
         {/* 3. Form Container Sliding Area */}
-        <div className="card-form w-full flex-auto min-w-0 relative overflow-hidden h-[610px] sm:h-[620px] md:h-[630px]">
+        <div className="card-form w-full flex-auto min-w-0 relative overflow-hidden h-[650px] sm:h-[655px] md:h-[660px]">
           <div
             className={`forms absolute inset-x-0 top-0 h-[200%] transition-transform duration-500 ease-in-out ${
               view === 'signup' ? '-translate-y-1/2' : 'translate-y-0'

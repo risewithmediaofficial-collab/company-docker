@@ -114,7 +114,7 @@ export const CookieConsentBanner = () => {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#12B7D4]/12 text-[#12B7D4] flex items-center justify-center shrink-0 mt-0.5">
+          <div className="w-8 h-8 rounded-xl bg-[#07c8f9]/12 text-[#07c8f9] flex items-center justify-center shrink-0 mt-0.5">
             <Cookie size={16} />
           </div>
           <div>
@@ -158,7 +158,7 @@ export const CookieConsentBanner = () => {
               type="checkbox"
               checked={preferencesCache}
               onChange={(e) => setPreferencesCache(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-[#12B7D4] focus:ring-[#12B7D4] cursor-pointer"
+              className="h-4 w-4 rounded border-slate-300 text-[#07c8f9] focus:ring-[#07c8f9] cursor-pointer"
             />
           </label>
 
@@ -171,7 +171,7 @@ export const CookieConsentBanner = () => {
               type="checkbox"
               checked={analytics}
               onChange={(e) => setAnalytics(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-[#12B7D4] focus:ring-[#12B7D4] cursor-pointer"
+              className="h-4 w-4 rounded border-slate-300 text-[#07c8f9] focus:ring-[#07c8f9] cursor-pointer"
             />
           </label>
         </div>
@@ -181,7 +181,7 @@ export const CookieConsentBanner = () => {
         <button
           type="button"
           onClick={handleAcceptAll}
-          className="flex-1 min-w-[110px] py-2 px-3 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-[11px] font-extrabold shadow-2xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
+          className="flex-1 min-w-[110px] py-2 px-3 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white text-[11px] font-extrabold shadow-2xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
         >
           <Check size={13} />
           <span>Accept All</span>

@@ -26,14 +26,14 @@ export const AboutPage = () => {
         
         <div className="relative z-10 max-w-3xl mx-auto">
           <ScrollReveal delay={0}>
-            <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#12B7D4] uppercase mb-3 sm:mb-4 animate-fade-up">
+            <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#07c8f9] uppercase mb-3 sm:mb-4 animate-fade-up">
               Our Story
             </p>
 
             <h1 className="font-extrabold text-3xl sm:text-5xl lg:text-[58px] text-slate-950 tracking-tight leading-[1.15] animate-fade-up">
               Built by Agency Owners,
               <span className="block mt-1 sm:mt-2 pb-1">
-                For <span className="marker-highlight text-[#12B7D4]">Agency Owners</span>.
+                For <span className="marker-highlight text-[#07c8f9]">Agency Owners</span>.
               </span>
             </h1>
 
@@ -47,7 +47,7 @@ export const AboutPage = () => {
             <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5 animate-fade-up">
               <Link
                 to="/register"
-                className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#12B7D4]/25 hover:shadow-[#12B7D4]/40 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#07c8f9] hover:bg-[#06b4e0] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#07c8f9]/25 hover:shadow-[#07c8f9]/40 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Register</span>
                 <ArrowRight size={16} />
@@ -67,7 +67,7 @@ export const AboutPage = () => {
       <section className="py-14 sm:py-20 px-4 sm:px-8 max-w-6xl mx-auto">
         <ScrollReveal delay={0}>
           <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
-            <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] mb-2">
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9] mb-2">
               Why We Built This
             </p>
             <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
@@ -123,7 +123,7 @@ export const AboutPage = () => {
           <ScrollReveal delay={240} className="h-full">
             <div className="h-full bg-white rounded-3xl border border-slate-200 p-8 sm:p-9 space-y-4 relative overflow-hidden flex flex-col justify-between">
               <div className="space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-[#12B7D4] flex items-center justify-center">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-[#07c8f9] flex items-center justify-center">
                   <Receipt size={24} />
                 </div>
                 <h3 className="font-bold text-xl text-slate-950 tracking-tight">The Weekend Invoicing Stress</h3>
@@ -132,7 +132,7 @@ export const AboutPage = () => {
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center gap-1.5 text-xs font-bold text-[#0ea5c6]">
+              <div className="pt-3 border-t border-slate-100 flex items-center gap-1.5 text-xs font-bold text-[#06b4e0]">
                 <span>✓ Solved with Instant Invoices & Receipts in 30 Seconds</span>
               </div>
             </div>
@@ -179,7 +179,7 @@ export const AboutPage = () => {
 
                     <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-cyan-100 text-[#12B7D4] flex items-center justify-center font-black text-xs">
+                        <div className="w-8 h-8 rounded-xl bg-cyan-100 text-[#07c8f9] flex items-center justify-center font-black text-xs">
                           02
                         </div>
                         <div>
@@ -236,7 +236,7 @@ export const AboutPage = () => {
 
               {/* Right Column: Clean Minimalist Steps */}
               <div className="lg:col-span-7 order-1 lg:order-2 space-y-4 text-left">
-                <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">
+                <p className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9]">
                   The Daily Agency Flow
                 </p>
 
@@ -253,25 +253,25 @@ export const AboutPage = () => {
 
                 <div className="space-y-2.5 pt-2 max-w-xl">
                   <div className="p-3 rounded-2xl bg-white border border-slate-200/80 space-y-0.5 hover:border-slate-300 transition-all">
-                    <span className="text-[10px] font-black uppercase text-[#12B7D4] tracking-wider">Step 1 — New Leads</span>
+                    <span className="text-[10px] font-black uppercase text-[#07c8f9] tracking-wider">Step 1 — New Leads</span>
                     <h4 className="font-bold text-slate-900 text-sm">WhatsApp & Website Leads Saved</h4>
                     <p className="text-xs text-slate-500 font-medium">Record budget, phone numbers, and client goals in 1 tap.</p>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-white border border-slate-200/80 space-y-0.5 hover:border-slate-300 transition-all">
-                    <span className="text-[10px] font-black uppercase text-[#12B7D4] tracking-wider">Step 2 — Monthly Planning</span>
+                    <span className="text-[10px] font-black uppercase text-[#07c8f9] tracking-wider">Step 2 — Monthly Planning</span>
                     <h4 className="font-bold text-slate-900 text-sm">Easy Calendar & Monthly Targets</h4>
                     <p className="text-xs text-slate-500 font-medium">Assign video editors, copywriters, and designers in seconds.</p>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-white border border-slate-200/80 space-y-0.5 hover:border-slate-300 transition-all">
-                    <span className="text-[10px] font-black uppercase text-[#12B7D4] tracking-wider">Step 3 — Client Approvals</span>
+                    <span className="text-[10px] font-black uppercase text-[#07c8f9] tracking-wider">Step 3 — Client Approvals</span>
                     <h4 className="font-bold text-slate-900 text-sm">Quick Phone Previews</h4>
                     <p className="text-xs text-slate-500 font-medium">Clients review graphics and videos on their phone and approve without logging in.</p>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-white border border-slate-200/80 space-y-0.5 hover:border-slate-300 transition-all">
-                    <span className="text-[10px] font-black uppercase text-[#12B7D4] tracking-wider">Step 4 — Getting Paid</span>
+                    <span className="text-[10px] font-black uppercase text-[#07c8f9] tracking-wider">Step 4 — Getting Paid</span>
                     <h4 className="font-bold text-slate-900 text-sm">Instant PDF Invoices</h4>
                     <p className="text-xs text-slate-500 font-medium">Create clean PDF invoices with UPI payment QR codes in 30 seconds.</p>
                   </div>
@@ -286,7 +286,7 @@ export const AboutPage = () => {
       <section className="py-14 sm:py-20 px-4 sm:px-8 max-w-6xl mx-auto">
         <ScrollReveal delay={0}>
           <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
-            <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] mb-2">
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9] mb-2">
               Our Guiding Principles
             </p>
             <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
@@ -304,7 +304,7 @@ export const AboutPage = () => {
           <ScrollReveal delay={0} className="h-full">
             <div className="h-full bg-white rounded-3xl border border-slate-200 p-8 sm:p-9 space-y-4 relative overflow-hidden flex flex-col justify-between">
               <div className="space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-[#12B7D4] flex items-center justify-center">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-[#07c8f9] flex items-center justify-center">
                   <Zap size={24} />
                 </div>
                 <h3 className="font-bold text-xl text-slate-950 tracking-tight">Made for Monthly Clients</h3>
@@ -313,7 +313,7 @@ export const AboutPage = () => {
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center gap-1.5 text-xs font-bold text-[#0ea5c6]">
+              <div className="pt-3 border-t border-slate-100 flex items-center gap-1.5 text-xs font-bold text-[#06b4e0]">
                 <span>✓ Monthly Target Tracking</span>
               </div>
             </div>
@@ -365,7 +365,7 @@ export const AboutPage = () => {
           <ScrollReveal>
             <div className="text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8">
               <div className="space-y-2 max-w-2xl">
-                <span className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] block">
+                <span className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9] block">
                   Experience the Difference
                 </span>
                 <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
@@ -377,7 +377,7 @@ export const AboutPage = () => {
               </div>
               <Link
                 to="/register"
-                className="px-8 py-4 bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base border border-[#12B7D4] transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
+                className="px-8 py-4 bg-[#07c8f9] hover:bg-[#06b4e0] text-white font-bold text-sm sm:text-base border border-[#07c8f9] transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
               >
                 <span>Register</span>
                 <ArrowRight size={16} />

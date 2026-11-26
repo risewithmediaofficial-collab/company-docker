@@ -271,7 +271,7 @@ export default function ForecastReportsSection() {
                       }}
                     />
                     <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                    <Line type="monotone" dataKey="closingCash" stroke="#12B7D4" strokeWidth={3} name="Closing Cash" dot={{ r: 4, fill: '#12B7D4' }} />
+                    <Line type="monotone" dataKey="closingCash" stroke="#07c8f9" strokeWidth={3} name="Closing Cash" dot={{ r: 4, fill: '#07c8f9' }} />
                     <Line type="monotone" dataKey="projectedInflow" stroke="#0891b2" strokeWidth={2} name="Projected Collections" strokeDasharray="4 4" />
                     <Line type="monotone" dataKey="projectedOutflow" stroke="#94a3b8" strokeWidth={2} name="Projected Disbursements" strokeDasharray="2 3" />
                   </LineChart>

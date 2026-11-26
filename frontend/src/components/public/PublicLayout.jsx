@@ -47,11 +47,11 @@ const PublicLayout = ({
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-[#12B7D4]/25 selection:text-slate-900 relative overflow-x-hidden antialiased flex flex-col justify-between">
+    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-[#07c8f9]/25 selection:text-slate-900 relative overflow-x-hidden antialiased flex flex-col justify-between">
       
-      {/* ── AMBIENT LOGO BLUE SIDE GLOWS (Only #12B7D4) ── */}
-      <div className="fixed top-1/4 -left-36 w-80 sm:w-96 h-[500px] bg-gradient-to-r from-[#12B7D4]/12 via-[#12B7D4]/6 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
-      <div className="fixed top-1/3 -right-36 w-80 sm:w-96 h-[500px] bg-gradient-to-l from-[#12B7D4]/10 via-[#12B7D4]/5 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
+      {/* ── AMBIENT LOGO BLUE SIDE GLOWS (Only #07c8f9) ── */}
+      <div className="fixed top-1/4 -left-36 w-80 sm:w-96 h-[500px] bg-gradient-to-r from-[#07c8f9]/12 via-[#07c8f9]/6 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
+      <div className="fixed top-1/3 -right-36 w-80 sm:w-96 h-[500px] bg-gradient-to-l from-[#07c8f9]/10 via-[#07c8f9]/5 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
 
       {/* ── FIXED TOP NAVIGATION BAR ── */}
       <header className="fixed top-0 inset-x-0 z-50 h-16 sm:h-20 bg-white/95 backdrop-blur-md border-b border-slate-200/80 transition-all flex items-center shadow-2xs">
@@ -68,7 +68,7 @@ const PublicLayout = ({
               />
             </div>
             <div className="flex flex-col">
-              <span className="font-extrabold text-lg sm:text-2xl text-slate-950 tracking-tight group-hover:text-[#12B7D4] transition-colors leading-tight">
+              <span className="font-extrabold text-lg sm:text-2xl text-slate-950 tracking-tight group-hover:text-[#07c8f9] transition-colors leading-tight">
                 RiseWithMedia
               </span>
               <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden sm:block -mt-0.5">
@@ -87,7 +87,7 @@ const PublicLayout = ({
                   to={item.path}
                   className={`px-3 py-1.5 transition-all text-sm ${
                     active
-                      ? 'text-[#12B7D4] font-black'
+                      ? 'text-[#07c8f9] font-black'
                       : 'hover:text-slate-950 text-slate-700 font-bold'
                   }`}
                 >
@@ -107,7 +107,7 @@ const PublicLayout = ({
             </Link>
             <Link
               to="/register"
-              className="px-5 sm:px-6 py-2.5 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs sm:text-sm font-bold shadow-md shadow-[#12B7D4]/25 transition-all flex items-center gap-2 cursor-pointer"
+              className="px-5 sm:px-6 py-2.5 rounded-full bg-[#07c8f9] hover:bg-[#06b4e0] text-white text-xs sm:text-sm font-bold shadow-md shadow-[#07c8f9]/25 transition-all flex items-center gap-2 cursor-pointer"
             >
               <span>Register</span>
               <ArrowRight size={14} />
@@ -145,12 +145,12 @@ const PublicLayout = ({
                       onClick={() => setMobileMenuOpen(false)}
                       className={`text-base font-extrabold px-3 py-2.5 rounded-xl transition-all flex items-center justify-between ${
                         active
-                          ? 'text-[#12B7D4] bg-[#12B7D4]/10 font-black'
+                          ? 'text-[#07c8f9] bg-[#07c8f9]/10 font-black'
                           : 'text-slate-800 hover:bg-slate-100'
                       }`}
                     >
                       <span>{item.label}</span>
-                      {active && <span className="w-2 h-2 rounded-full bg-[#12B7D4]" />}
+                      {active && <span className="w-2 h-2 rounded-full bg-[#07c8f9]" />}
                     </Link>
                   );
                 })}
@@ -167,7 +167,7 @@ const PublicLayout = ({
                 <Link
                   to="/register"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="py-3 text-center text-sm font-bold text-white bg-[#12B7D4] hover:bg-[#0ea5c6] rounded-xl shadow-md shadow-[#12B7D4]/25 flex items-center justify-center gap-1.5 transition-colors"
+                  className="py-3 text-center text-sm font-bold text-white bg-[#07c8f9] hover:bg-[#06b4e0] rounded-xl shadow-md shadow-[#07c8f9]/25 flex items-center justify-center gap-1.5 transition-colors"
                 >
                   <span>Register</span>
                   <ArrowRight size={14} />
@@ -186,7 +186,7 @@ const PublicLayout = ({
       {/* ── FLOATING OVERLAPPING CTA BANNER (Centered across the white/dark boundary) ── */}
       {!hideCta && (
         <section className="relative z-20 -mb-28 sm:-mb-24 lg:-mb-24 max-w-6xl mx-auto px-4 sm:px-8 w-full">
-          <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#12B7D4] via-[#0ea5c6] to-[#0284c7] p-6 sm:p-10 lg:p-12 text-white flex flex-col lg:flex-row items-start md:items-center justify-between gap-6 sm:gap-8 border border-white/20 relative overflow-hidden">
+          <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#07c8f9] via-[#06b4e0] to-[#0284c7] p-6 sm:p-10 lg:p-12 text-white flex flex-col lg:flex-row items-start md:items-center justify-between gap-6 sm:gap-8 border border-white/20 relative overflow-hidden">
             
             {/* Subtle Inner Glow Shapes */}
             <div className="absolute -top-20 -right-20 w-72 h-72 bg-white/15 rounded-full blur-2xl pointer-events-none" />
@@ -244,7 +244,7 @@ const PublicLayout = ({
                   <span className="font-extrabold text-white text-lg block leading-tight">
                     RiseWithMedia
                   </span>
-                  <span className="text-[11px] font-bold text-[#12B7D4] uppercase tracking-wider">
+                  <span className="text-[11px] font-bold text-[#07c8f9] uppercase tracking-wider">
                     Agency Workspace
                   </span>
                 </div>
@@ -264,12 +264,12 @@ const PublicLayout = ({
                 Quick Links
               </p>
               <ul className="space-y-2.5 text-xs sm:text-sm font-medium">
-                <li><Link to="/" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Home</Link></li>
-                <li><Link to="/our-story" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Our Story</Link></li>
-                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">What We Do</Link></li>
-                <li><Link to="/pricing" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Pricing</Link></li>
-                <li><Link to="/our-impact" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Our Impact</Link></li>
-                <li><Link to="/register" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Register</Link></li>
+                <li><Link to="/" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Home</Link></li>
+                <li><Link to="/our-story" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Our Story</Link></li>
+                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#07c8f9] transition-colors">What We Do</Link></li>
+                <li><Link to="/pricing" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Pricing</Link></li>
+                <li><Link to="/our-impact" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Our Impact</Link></li>
+                <li><Link to="/register" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Register</Link></li>
               </ul>
             </div>
 
@@ -279,11 +279,11 @@ const PublicLayout = ({
                 Platform Solutions
               </p>
               <ul className="space-y-2.5 text-xs sm:text-sm font-medium">
-                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Leads & Deals</Link></li>
-                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Social Media Calendar</Link></li>
-                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">1-Tap Client Approvals</Link></li>
-                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Invoices & Billing</Link></li>
-                <li><Link to="/our-impact" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Private Data & Backups</Link></li>
+                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Leads & Deals</Link></li>
+                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Social Media Calendar</Link></li>
+                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#07c8f9] transition-colors">1-Tap Client Approvals</Link></li>
+                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Invoices & Billing</Link></li>
+                <li><Link to="/our-impact" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Private Data & Backups</Link></li>
               </ul>
             </div>
 

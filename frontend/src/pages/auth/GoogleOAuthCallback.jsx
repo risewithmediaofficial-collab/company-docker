@@ -79,7 +79,7 @@ export default function GoogleOAuthCallback() {
       <div className="w-full max-w-md rounded-3xl border border-border bg-card p-7 shadow-xl text-center space-y-4">
         {status === 'processing' && (
           <>
-            <Loader2 className="h-9 w-9 text-[#12B7D4] animate-spin mx-auto" />
+            <Loader2 className="h-9 w-9 text-[#07c8f9] animate-spin mx-auto" />
             <h2 className="text-lg font-bold text-foreground">Signing you in with Google...</h2>
             <p className="text-xs text-muted-foreground">{message}</p>
           </>
@@ -92,7 +92,7 @@ export default function GoogleOAuthCallback() {
             <p className="text-xs text-muted-foreground leading-relaxed">{message}</p>
             <Link
               to="/login"
-              className="inline-flex items-center justify-center w-full py-2.5 px-4 rounded-xl bg-[#12B7D4] text-white text-xs font-bold hover:bg-[#0ea5c6]"
+              className="inline-flex items-center justify-center w-full py-2.5 px-4 rounded-xl bg-[#07c8f9] text-white text-xs font-bold hover:bg-[#06b4e0]"
             >
               Back to Login
             </Link>
@@ -108,7 +108,7 @@ export default function GoogleOAuthCallback() {
             </p>
             <Link
               to={portalUrl}
-              className="inline-flex items-center justify-center w-full py-2.5 px-4 rounded-xl bg-[#12B7D4] text-white text-xs font-bold hover:bg-[#0ea5c6]"
+              className="inline-flex items-center justify-center w-full py-2.5 px-4 rounded-xl bg-[#07c8f9] text-white text-xs font-bold hover:bg-[#06b4e0]"
             >
               Go to {companyName} Portal →
             </Link>

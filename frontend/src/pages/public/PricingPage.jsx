@@ -52,7 +52,7 @@ const PricingPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-20">
           {/* Hero */}
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-50 border border-cyan-100 text-[#0B8694] text-xs font-extrabold tracking-wide uppercase mb-4">
+            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-50 border border-cyan-100 text-[#0586a8] text-xs font-extrabold tracking-wide uppercase mb-4">
               <HardDrive className="w-3.5 h-3.5" />
               Storage-Based Monthly Pricing
             </span>
@@ -77,7 +77,7 @@ const PricingPage = () => {
           {/* Bottom Guarantee / Upgrade Strip */}
           <div className="mt-14 rounded-3xl bg-slate-900 text-white p-6 sm:p-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div className="space-y-1.5 max-w-2xl">
-              <div className="flex items-center gap-2 text-[#1EC6D7] text-xs font-extrabold uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-[#07c8f9] text-xs font-extrabold uppercase tracking-wider">
                 <ShieldCheck className="w-4 h-4" />
                 Upgrade Anytime Inside Your Dashboard
               </div>
@@ -92,7 +92,7 @@ const PricingPage = () => {
               <button
                 type="button"
                 onClick={() => navigate('/register')}
-                className="px-5 py-3 rounded-xl bg-[#1EC6D7] hover:bg-[#19b5c5] text-slate-950 font-extrabold text-xs inline-flex items-center gap-2 transition"
+                className="px-5 py-3 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-slate-950 font-extrabold text-xs inline-flex items-center gap-2 transition"
               >
                 <Layers className="w-4 h-4" />
                 Create Workspace

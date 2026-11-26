@@ -52,10 +52,10 @@ const Pillar = ({ overline, headline, highlight, body, features, showcase, flip,
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
           {/* Text side */}
           <div className={`lg:col-span-7 space-y-4 text-left ${flip ? 'order-1 lg:order-2' : ''}`}>
-            <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4]">{overline}</p>
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9]">{overline}</p>
             <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
               {headline}
-              <span className="text-[#12B7D4] block mt-1">{highlight}</span>
+              <span className="text-[#07c8f9] block mt-1">{highlight}</span>
             </h2>
             <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-xl">{body}</p>
             <div className="space-y-3 pt-2 max-w-xl">
@@ -78,14 +78,14 @@ const Pillar = ({ overline, headline, highlight, body, features, showcase, flip,
 // ── Compact icon keyword block (for sections with no visual) ────────────────
 const IconBlock = ({ icon: Icon, overline, headline, highlight, features }) => (
   <div className="space-y-4">
-    <p className="text-xs font-bold uppercase tracking-widest text-[#12B7D4]">{overline}</p>
+    <p className="text-xs font-bold uppercase tracking-widest text-[#07c8f9]">{overline}</p>
     <div className="flex items-center gap-3">
-      <div className="w-9 h-9 rounded-xl bg-cyan-50 border border-cyan-100 text-[#12B7D4] flex items-center justify-center shrink-0">
+      <div className="w-9 h-9 rounded-xl bg-cyan-50 border border-cyan-100 text-[#07c8f9] flex items-center justify-center shrink-0">
         <Icon size={18} />
       </div>
       <h3 className="font-extrabold text-lg sm:text-xl text-slate-950 tracking-tight leading-tight">
         {headline}
-        {highlight && <span className="text-[#12B7D4]"> {highlight}</span>}
+        {highlight && <span className="text-[#07c8f9]"> {highlight}</span>}
       </h3>
     </div>
     <div className="space-y-2.5 pt-1">
@@ -106,12 +106,12 @@ export const CapabilitiesPage = () => {
       <section className="relative overflow-hidden pt-12 sm:pt-20 pb-12 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
         <HeroPattern />
         <div className="relative z-10 max-w-4xl mx-auto">
-          <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#12B7D4] uppercase mb-3 sm:mb-4">
+          <p className="text-xs sm:text-sm font-extrabold tracking-widest text-[#07c8f9] uppercase mb-3 sm:mb-4">
             22 Simple Tools for Your Agency
           </p>
           <h1 className="font-extrabold text-3xl sm:text-5xl lg:text-[58px] text-slate-950 tracking-tight leading-[1.15]">
             Everything Built to Help Your
-            <span className="text-[#12B7D4] block mt-1 pb-1">Marketing Agency Grow.</span>
+            <span className="text-[#07c8f9] block mt-1 pb-1">Marketing Agency Grow.</span>
           </h1>
           <p className="mt-4 sm:mt-5 text-base sm:text-lg text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
             From finding new leads and scheduling social posts to sending invoices and tracking staff attendance — all in one simple system.
@@ -119,7 +119,7 @@ export const CapabilitiesPage = () => {
           <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
             <Link
               to="/register"
-              className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#12B7D4]/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#07c8f9] hover:bg-[#06b4e0] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#07c8f9]/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Register</span>
               <ArrowRight size={16} />
@@ -283,10 +283,10 @@ export const CapabilitiesPage = () => {
         <div className="max-w-6xl mx-auto">
           <ScrollReveal>
             <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
-              <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] mb-2">Simple Roles for Everyone</p>
+              <p className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9] mb-2">Simple Roles for Everyone</p>
               <h2 className="text-2xl sm:text-4xl lg:text-[40px] font-extrabold text-white tracking-tight leading-[1.2]">
                 Every Person Sees Exactly
-                <span className="text-[#12B7D4] block mt-1">What They Need.</span>
+                <span className="text-[#07c8f9] block mt-1">What They Need.</span>
               </h2>
               <p className="text-sm sm:text-base text-slate-400 font-medium mt-3 leading-relaxed max-w-xl mx-auto">
                 No clutter. Each team member only sees the tools they need for their job. Agency owners keep complete control over everything.
@@ -298,7 +298,7 @@ export const CapabilitiesPage = () => {
                 {
                   tag: 'Agency Founder',
                   Icon: TrendingUp,
-                  color: 'text-[#12B7D4]',
+                  color: 'text-[#07c8f9]',
                   features: ['Live Profit & Loss', 'Staff Payroll', 'Manager Oversight', 'Password Vault'],
                 },
                 {
@@ -348,12 +348,12 @@ export const CapabilitiesPage = () => {
           <ScrollReveal>
             <div className="text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8">
               <div className="space-y-2 max-w-2xl">
-                <span className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] block">
+                <span className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9] block">
                   Unified Agency OS
                 </span>
                 <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
                   Stop juggling 6 different tools.
-                  <span className="text-[#12B7D4] block mt-1">Run your agency smoothly and without stress.</span>
+                  <span className="text-[#07c8f9] block mt-1">Run your agency smoothly and without stress.</span>
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed pt-1">
                   Register your account, choose your workspace plan, and configure your agency settings in minutes.
@@ -361,7 +361,7 @@ export const CapabilitiesPage = () => {
               </div>
               <Link
                 to="/register"
-                className="px-8 py-4 bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base border border-[#12B7D4] transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
+                className="px-8 py-4 bg-[#07c8f9] hover:bg-[#06b4e0] text-white font-bold text-sm sm:text-base border border-[#07c8f9] transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
               >
                 <span>Register Now</span>
                 <ArrowRight size={16} />

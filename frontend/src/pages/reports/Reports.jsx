@@ -22,7 +22,7 @@ import {
   DialogClose,
 } from '../../components/ui/dialog';
 
-const COLORS = ['#12B7D4', '#0891b2', '#38bdf8', '#0284c7', '#64748b', '#94a3b8'];
+const COLORS = ['#07c8f9', '#0891b2', '#38bdf8', '#0284c7', '#64748b', '#94a3b8'];
 
 const formatTime = (isoString) => {
   if (!isoString) return '--:--';
@@ -511,11 +511,11 @@ const Reports = () => {
                       <Area
                         type="monotone"
                         dataKey="revenue"
-                        stroke="#12B7D4"
+                        stroke="#07c8f9"
                         strokeWidth={2.5}
                         fillOpacity={0.14}
-                        fill="#12B7D4"
-                        dot={{ fill: '#12B7D4', strokeWidth: 0, r: 4 }}
+                        fill="#07c8f9"
+                        dot={{ fill: '#07c8f9', strokeWidth: 0, r: 4 }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -603,7 +603,7 @@ const Reports = () => {
                           fontWeight: '600',
                         }}
                       />
-                      <Bar dataKey="count" fill="#12B7D4" radius={[0, 8, 8, 0]}>
+                      <Bar dataKey="count" fill="#07c8f9" radius={[0, 8, 8, 0]}>
                         {leadFunnel.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
