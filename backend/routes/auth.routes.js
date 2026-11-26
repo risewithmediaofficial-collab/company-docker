@@ -18,6 +18,7 @@ import {
   getCompanyPortal,
   completeOnboarding,
   getCaptchaChallenge,
+  verifyCaptchaStep,
   getGoogleOAuthConfig,
   initiateGoogleOAuth,
   googleOAuthCallback,
@@ -39,6 +40,7 @@ const failedAuthAttemptLimiter = rateLimit({
 });
 
 router.get('/captcha', getCaptchaChallenge);
+router.post('/captcha/verify', verifyCaptchaStep);
 router.post('/register', failedAuthAttemptLimiter, register);
 router.post('/register-company', failedAuthAttemptLimiter, registerCompany);
 router.get('/company-portal/:slug', getCompanyPortal);

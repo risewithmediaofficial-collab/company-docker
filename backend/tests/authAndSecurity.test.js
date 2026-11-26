@@ -289,8 +289,11 @@ test('Google OAuth: Loads client_id config, builds consent redirect URL, and rej
   assert.equal(statusCode, 400);
 });
 
-test('CAPTCHA & Terms Enforcement: Generates single-use robot check challenges and blocks unaccepted terms on login/register', async () => {
-  const [{ generateCaptchaChallenge, verifyCaptchaChallenge, isTermsAccepted }, { login, getCaptchaChallenge }] = await Promise.all([
+test('CAPTCHA & Terms Enforcement: Generates single-use human challenges (and hCaptcha/Turnstile config) and blocks unaccepted terms', async () => {
+  const [
+    { generateCaptchaChallenge, verifyCaptchaChallenge, verifyInteractiveCaptchaStep, getCaptchaProviderConfig, isTermsAccepted },
+    { login, getCaptchaChallenge },
+  ] = await Promise.all([
     import('../utils/captcha.js'),
     import('../controllers/auth.controller.js'),
   ]);
@@ -306,25 +309,66 @@ test('CAPTCHA & Terms Enforcement: Generates single-use robot check challenges a
   assert.equal(endpointChallenge.success, true);
   assert.equal(endpointChallenge.mode, 'robot_check');
   assert.ok(endpointChallenge.captchaToken);
-  assert.ok(endpointChallenge.challengeProof);
+  assert.equal(endpointChallenge.tiles.length, 6);
+  assert.ok(endpointChallenge.targetIcon);
 
-  const firstVerify = await verifyCaptchaChallenge({
-    captchaToken: endpointChallenge.captchaToken,
-    captchaAnswer: endpointChallenge.challengeProof,
-  });
-  assert.equal(firstVerify.valid, true);
+  const expectedAnswer = endpointChallenge.tiles
+    .filter((t) => t.icon === endpointChallenge.targetIcon)
+    .map((t) => t.id)
+    .sort((a, b) => a - b)
+    .join(',');
 
-  // Replay with the same token must fail
-  const replayVerify = await verifyCaptchaChallenge({
+  // Two-step interactive verification -> burns tile challenge and returns single-use pass proof
+  const stepResult = await verifyInteractiveCaptchaStep({
     captchaToken: endpointChallenge.captchaToken,
-    captchaAnswer: endpointChallenge.challengeProof,
+    captchaAnswer: expectedAnswer,
   });
-  assert.equal(replayVerify.valid, false);
+  assert.equal(stepResult.valid, true);
+  assert.ok(stepResult.captchaToken);
+  assert.ok(stepResult.challengeProof);
+
+  // Replay with original tile token must fail
+  const tileReplay = await verifyCaptchaChallenge({
+    captchaToken: endpointChallenge.captchaToken,
+    captchaAnswer: expectedAnswer,
+  });
+  assert.equal(tileReplay.valid, false);
+
+  // Pass token works once on login/register submit and fails on replay
+  const passVerify = await verifyCaptchaChallenge({
+    captchaToken: stepResult.captchaToken,
+    captchaAnswer: stepResult.challengeProof,
+  });
+  assert.equal(passVerify.valid, true);
+
+  const passReplay = await verifyCaptchaChallenge({
+    captchaToken: stepResult.captchaToken,
+    captchaAnswer: stepResult.challengeProof,
+  });
+  assert.equal(passReplay.valid, false);
 
   // Wrong answer must fail
   const wrongChallenge = generateCaptchaChallenge();
-  const wrongVerify = await verifyCaptchaChallenge({ captchaToken: wrongChallenge.captchaToken, captchaAnswer: 'tampered' });
+  const wrongVerify = await verifyCaptchaChallenge({ captchaToken: wrongChallenge.captchaToken, captchaAnswer: '99' });
   assert.equal(wrongVerify.valid, false);
+
+  // hCaptcha provider detection via env vars
+  const prevHSite = process.env.HCAPTCHA_SITE_KEY;
+  const prevHSecret = process.env.HCAPTCHA_SECRET_KEY;
+  try {
+    process.env.HCAPTCHA_SITE_KEY = '10000000-ffff-ffff-ffff-000000000001';
+    process.env.HCAPTCHA_SECRET_KEY = '0x0000000000000000000000000000000000000000';
+    const provider = getCaptchaProviderConfig();
+    assert.equal(provider.mode, 'hcaptcha');
+    const hChallenge = generateCaptchaChallenge();
+    assert.equal(hChallenge.mode, 'hcaptcha');
+    assert.equal(hChallenge.siteKey, '10000000-ffff-ffff-ffff-000000000001');
+  } finally {
+    if (prevHSite === undefined) delete process.env.HCAPTCHA_SITE_KEY;
+    else process.env.HCAPTCHA_SITE_KEY = prevHSite;
+    if (prevHSecret === undefined) delete process.env.HCAPTCHA_SECRET_KEY;
+    else process.env.HCAPTCHA_SECRET_KEY = prevHSecret;
+  }
 
   // Terms helper
   assert.equal(isTermsAccepted(true), true);
@@ -336,7 +380,7 @@ test('CAPTCHA & Terms Enforcement: Generates single-use robot check challenges a
   let loginStatus = 200;
   let loginJson = null;
   await login(
-    { body: { email: 'user@example.com', password: 'password123', captchaToken: 't', captchaAnswer: 'ABCDE' } },
+    { body: { email: 'user@example.com', password: 'password123', captchaToken: 't', captchaAnswer: '0,1' } },
     { status(s) { loginStatus = s; return { json(d) { loginJson = d; } }; }, json(d) { loginJson = d; } }
   );
   assert.equal(loginStatus, 400);

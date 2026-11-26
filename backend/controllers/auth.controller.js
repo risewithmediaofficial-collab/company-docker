@@ -11,7 +11,12 @@ import Organization from '../models/organization.model.js';
 import { sendEmail } from '../utils/email.js';
 import { createNotification } from '../utils/notification.js';
 import { createActivityLog } from '../utils/activity.js';
-import { generateCaptchaChallenge, verifyCaptchaChallenge, isTermsAccepted } from '../utils/captcha.js';
+import {
+  generateCaptchaChallenge,
+  verifyCaptchaChallenge,
+  verifyInteractiveCaptchaStep,
+  isTermsAccepted,
+} from '../utils/captcha.js';
 
 const ORG_AUTH_PROJECTION =
   'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients storageLimitMb storageUsedBytes trialEndsAt settings paidAt';
@@ -789,7 +794,7 @@ export const getCompanyPortal = async (req, res) => {
 // CAPTCHA CHALLENGE
 // =============================================
 
-// @desc    Generate HMAC-signed SVG CAPTCHA challenge
+// @desc    Generate CAPTCHA challenge (hCaptcha / Turnstile / reCAPTCHA / Visual Human Check)
 // @route   GET /api/auth/captcha
 // @access  Public
 export const getCaptchaChallenge = (req, res) => {
@@ -798,6 +803,28 @@ export const getCaptchaChallenge = (req, res) => {
   return res.json({
     success: true,
     ...challenge,
+  });
+};
+
+// @desc    Verify interactive visual CAPTCHA selection and issue single-use pass proof
+// @route   POST /api/auth/captcha/verify
+// @access  Public
+export const verifyCaptchaStep = async (req, res) => {
+  const { captchaToken, captchaAnswer } = req.body || {};
+  const result = await verifyInteractiveCaptchaStep({ captchaToken, captchaAnswer });
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  if (!result.valid) {
+    return res.status(400).json({
+      success: false,
+      code: 'CAPTCHA_INVALID',
+      message: result.message || 'Verification failed. Please try again.',
+    });
+  }
+  return res.json({
+    success: true,
+    captchaToken: result.captchaToken,
+    challengeProof: result.challengeProof,
+    expiresInSeconds: result.expiresInSeconds,
   });
 };
 
