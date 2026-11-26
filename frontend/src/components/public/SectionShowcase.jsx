@@ -74,7 +74,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
 
           <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-2xl p-2.5 text-left space-y-1">
             <p className="text-[11px] font-semibold text-slate-800 leading-relaxed">
-              "Hi RiseWithMedia! We need full Meta ad management & 12 reels for Diwali. Budget is ₹75,000/mo."
+              "Hi AgencyUpscale! We need full Meta ad management & 12 reels for Diwali. Budget is ₹75,000/mo."
             </p>
             <p className="text-[9px] text-slate-400 text-right">10:42 AM</p>
           </div>
@@ -331,7 +331,7 @@ const SectionShowcase = ({ type = 'leads', person, showPerson = true }) => {
           </div>
 
           <div className="p-2.5 rounded-xl bg-slate-100 space-y-1 text-[11px] font-medium text-slate-700">
-            <p className="font-bold text-slate-900">workspace.risewithmedia.com</p>
+            <p className="font-bold text-slate-900">workspace.agencyupscale.com</p>
             <p className="text-[10px] text-slate-500">Completely Separate from Other Agencies</p>
             <div className="pt-1 flex items-center gap-1.5 text-emerald-600 font-bold text-[10px]">
               <Check size={12} className="stroke-[3]" />

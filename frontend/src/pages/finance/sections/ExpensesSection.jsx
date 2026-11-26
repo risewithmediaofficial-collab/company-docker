@@ -696,7 +696,7 @@ export default function ExpensesSection({ onQuickAdd }) {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>${reportTitle} - RiseWithMedia</title>
+          <title>${reportTitle} - AgencyUpscale</title>
           <style>
             @page { size: landscape; margin: 12mm; }
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #09090b; margin: 0; padding: 20px; font-variant-numeric: tabular-nums; }
@@ -723,11 +723,11 @@ export default function ExpensesSection({ onQuickAdd }) {
           <div class="header">
             <div>
               <h1 class="title">${reportTitle}</h1>
-              <p class="subtitle">${customSubtitle || 'RiseWithMedia Agency OS · Financial Statement & Expense Audit'}</p>
+              <p class="subtitle">${customSubtitle || 'AgencyUpscale · Financial Statement & Expense Audit'}</p>
               <div class="badge">Period: ${dateScope}</div>
             </div>
             <div style="text-align: right;">
-              <div style="font-weight: 800; font-size: 16px; color: #18181b;">RiseWithMedia</div>
+              <div style="font-weight: 800; font-size: 16px; color: #18181b;">AgencyUpscale</div>
               <div style="font-size: 11px; color: #52525b;">Generated: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div>
             </div>
           </div>
@@ -771,7 +771,7 @@ export default function ExpensesSection({ onQuickAdd }) {
           </table>
 
           <div class="footer">
-            <span>RiseWithMedia Agency Management OS · Confidential Finance Record</span>
+            <span>AgencyUpscale · Confidential Finance Record</span>
             <span>Page 1 of 1</span>
           </div>
           <script>

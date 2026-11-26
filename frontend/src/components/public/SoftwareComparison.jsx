@@ -536,7 +536,7 @@ export const SoftwareComparison = () => {
             The Agency Difference
           </p>
           <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
-            Other Softwares vs <span className="marker-highlight">RiseWithMedia OS</span>
+            Other Softwares vs <span className="marker-highlight">AgencyUpscale</span>
           </h2>
           <p className="mt-2.5 sm:mt-3 text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-xl mx-auto">
             Why managing retainers in 6 disconnected apps costs you deals, time, and sanity.
@@ -555,7 +555,7 @@ export const SoftwareComparison = () => {
                 The Messy Way
               </span>
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Without RiseWithMedia
+                Without AgencyUpscale
               </span>
             </div>
 
@@ -590,7 +590,7 @@ export const SoftwareComparison = () => {
           </div>
         </div>
 
-        {/* ── COLUMN 2: RISEWITHMEDIA OS (CLEAN SERPENTINE PIPELINE) ── */}
+        {/* ── COLUMN 2: AGENCYUPSCALE (CLEAN SERPENTINE PIPELINE) ── */}
         <div className="flex flex-col justify-between relative">
           <div className="relative z-10">
             {/* Header Topline */}
@@ -599,14 +599,14 @@ export const SoftwareComparison = () => {
                 The Simple All-in-One Way
               </span>
               <span className="text-[11px] font-bold text-[#07c8f9] uppercase tracking-wider">
-                With RiseWithMedia
+                With AgencyUpscale
               </span>
             </div>
 
             {/* Title & Core Modules */}
             <div className="min-h-[58px] flex flex-col justify-start">
               <h3 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-tight">
-                RiseWithMedia
+                AgencyUpscale
               </h3>
               <p className="text-xs text-slate-500 font-medium mt-1 leading-normal">
                 Proposals • Agreements • Vault • Projects • Tasks • Social Posts • Bills • Profit

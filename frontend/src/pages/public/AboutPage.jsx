@@ -17,7 +17,7 @@ import ScrollReveal from '../../components/public/ScrollReveal';
 export const AboutPage = () => {
   return (
     <PublicLayout
-      ctaTitle="Join the Agencies Running on RiseWithMedia OS."
+      ctaTitle="Join the Agencies Running on AgencyUpscale."
       ctaSubtitle="Get your agency workspace set up in 2 minutes. Free 14-day trial, no credit card required."
     >
       {/* ── 1. HERO HEADER ── */}
@@ -63,7 +63,7 @@ export const AboutPage = () => {
         </div>
       </section>
 
-      {/* ── 2. THE 3 PAIN POINTS THAT SPARKED RISEWITHMEDIA OS ── */}
+      {/* ── 2. THE 3 PAIN POINTS THAT SPARKED AGENCYUPSCALE ── */}
       <section className="py-14 sm:py-20 px-4 sm:px-8 max-w-6xl mx-auto">
         <ScrollReveal delay={0}>
           <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">

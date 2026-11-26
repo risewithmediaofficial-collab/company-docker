@@ -392,7 +392,7 @@ export default function InvoicesSection({ onQuickAdd, onRecordPayment }) {
                       {selectedInvoice.invoiceNumber}
                     </DialogTitle>
                     <DialogDescription className="sr-only">
-                      Tax Invoice • Rise With Media Agency OS
+                      Tax Invoice • AgencyUpscale
                     </DialogDescription>
                   </div>
                 </div>

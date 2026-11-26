@@ -91,7 +91,7 @@ const LoadingScreen = () => (
       <div className="absolute h-3.5 w-3.5 rounded-full bg-zinc-200" />
     </div>
     <p className="mt-6 text-sm font-bold tracking-widest uppercase text-zinc-200">
-      Rise With Media
+      AgencyUpscale
     </p>
     <span className="mt-1 text-[10px] text-zinc-500 tracking-wider">Connecting Hub…</span>
   </div>

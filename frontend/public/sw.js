@@ -1,5 +1,5 @@
 // ==============================================================================
-// RISE WITH MEDIA - PWA & NATIVE WEB PUSH SERVICE WORKER
+// AgencyUpscale - PWA & NATIVE WEB PUSH SERVICE WORKER
 // Supports: Android Chrome, Windows Chrome/Edge, macOS, and iOS 16.4+ Safari PWA
 // Version: 2.1.0 - Enhanced Banner Notifications with Heads-Up & Persistent Display
 // ==============================================================================
@@ -25,14 +25,14 @@ self.addEventListener('push', (event) => {
     } catch (_jsonErr) {
       try {
         const text = event.data.text();
-        data = { title: '🔔 RISE WITH MEDIA Alert', body: text };
+        data = { title: '🔔 AgencyUpscale Alert', body: text };
       } catch (_textErr) {
-        data = { title: '🔔 RISE WITH MEDIA Alert', body: 'New workspace update available.' };
+        data = { title: '🔔 AgencyUpscale Alert', body: 'New workspace update available.' };
       }
     }
   }
 
-  const title = data.title || '🔔 RISE WITH MEDIA Alert';
+  const title = data.title || '🔔 AgencyUpscale Alert';
   const body = data.body || data.message || 'You have a new update in your CRM workspace.';
   const destinationUrl = data.link || data.url || '/';
   const eventId = data.eventId || data.id || `push-${Date.now()}`;

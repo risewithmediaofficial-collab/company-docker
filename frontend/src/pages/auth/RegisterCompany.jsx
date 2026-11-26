@@ -287,16 +287,16 @@ const RegisterCompany = () => {
             <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-white p-2 shadow-md border border-slate-200/80 group-hover:scale-105 transition-transform">
               <img
                 src="/branding/rise-with-media-logo.png"
-                alt="RiseWithMedia logo"
+                alt="AgencyUpscale logo"
                 className="h-full w-full object-contain"
               />
             </div>
             <div className="text-left">
               <span className="text-slate-950 font-extrabold text-lg sm:text-xl tracking-wider block leading-none">
-                RISE WITH MEDIA
+                AGENCYUPSCALE
               </span>
               <span className="text-[#07c8f9] text-[10px] sm:text-[11px] font-bold uppercase tracking-widest mt-1 block">
-                Agency SaaS Operating System
+                AgencyUpscale Platform
               </span>
             </div>
           </Link>
@@ -503,7 +503,7 @@ const RegisterCompany = () => {
                   </div>
                 </div>
 
-                {/* Live Brand Preview Showing Company Name + RWM */}
+                {/* Live Brand Preview Showing Company Name • AgencyUpscale */}
                 <div className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-50/80 via-teal-50/40 to-slate-50 border border-[#07c8f9]/25 shadow-xs flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-xl bg-white border border-[#07c8f9]/30 p-1 flex items-center justify-center shrink-0 shadow-xs">
@@ -523,7 +523,7 @@ const RegisterCompany = () => {
                         Dashboard Display Format
                       </p>
                       <h4 className="text-sm font-black text-slate-900 truncate">
-                        {form.companyName.trim() ? `${form.companyName.trim()} + RWM` : 'Your Company Name + RWM'}
+                        {form.companyName.trim() ? `${form.companyName.trim()} • AgencyUpscale` : 'Your Company Name • AgencyUpscale'}
                       </h4>
                     </div>
                   </div>

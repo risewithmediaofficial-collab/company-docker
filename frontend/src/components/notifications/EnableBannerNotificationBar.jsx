@@ -147,7 +147,7 @@ export const EnableBannerNotificationBar = () => {
               </div>
               <p className="text-[11px] sm:text-xs text-zinc-400 leading-tight truncate sm:whitespace-normal">
                 {isIOSRequiresHomeInstall()
-                  ? 'Add RiseWithMedia to your Home Screen on iPhone/iPad to enable background push alerts.'
+                  ? 'Add AgencyUpscale to your Home Screen on iPhone/iPad to enable background push alerts.'
                   : 'Receive real-time popup banner alerts for tasks, leads, and messages even when the app is closed.'}
               </p>
             </div>

@@ -1,5 +1,5 @@
 // =============================================
-// RISE WITH MEDIA - ADVANCED FINANCE MODULE CONTROLLER
+// AgencyUpscale - ADVANCED FINANCE MODULE CONTROLLER
 // Functional endpoints for Accounts, Invoices, Receipts, Expenses, Transfers,
 // Subscriptions, Payroll, Cost Allocation, Founders, Reports & Exports
 // =============================================

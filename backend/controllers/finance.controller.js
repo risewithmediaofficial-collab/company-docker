@@ -1077,7 +1077,7 @@ export const sendInvoice = async (req, res) => {
       try {
         await sendEmail({
           to: invoice.client.email,
-          subject: `Invoice ${invoice.invoiceNumber} - RISE WITH MEDIA`,
+          subject: `Invoice ${invoice.invoiceNumber} - AgencyUpscale`,
 html: `<p>Dear ${invoice.client.name},</p><p>Your invoice <strong>${invoice.invoiceNumber}</strong> for <strong>Rs. ${invoice.total.toFixed(2)}</strong> is now available.</p>`
         });
         deliveryMessage = 'Invoice sent to client';

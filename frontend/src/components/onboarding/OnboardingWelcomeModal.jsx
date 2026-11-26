@@ -101,7 +101,7 @@ export default function OnboardingWelcomeModal() {
     title: `Welcome to the Crew, ${firstName}! 🚀`,
     tagline: 'High energy, high standards, and continuous growth.',
     message:
-      'We are thrilled to have your craft and energy with us. RiseWithMedia is built on creative courage, rapid execution, and ownership. You are equipped with everything you need to do the best work of your career.',
+      'We are thrilled to have your craft and energy with us. AgencyUpscale is built on creative courage, rapid execution, and ownership. You are equipped with everything you need to do the best work of your career.',
     stickers: [
       {
         icon: Zap,
@@ -162,7 +162,7 @@ export default function OnboardingWelcomeModal() {
       title: `Welcome to Your Client Portal, ${firstName}! 🎉`,
       tagline: 'Complete transparency, live deliverables, and seamless communication.',
       message:
-        'Thank you for partnering with RiseWithMedia! We are excited to elevate your brand. This portal is your dedicated command center where you can view live project progress, track daily tasks, download invoices & proposals, and access your credentials anytime.',
+        'Thank you for partnering with AgencyUpscale! We are excited to elevate your brand. This portal is your dedicated command center where you can view live project progress, track daily tasks, download invoices & proposals, and access your credentials anytime.',
       stickers: [
         {
           icon: Layers,
@@ -263,7 +263,7 @@ export default function OnboardingWelcomeModal() {
         <div className="p-6 sm:p-7 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border/40 bg-card/60 mt-3">
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <Heart size={14} className="text-primary" />
-            <span>RiseWithMedia Agency OS</span>
+            <span>AgencyUpscale</span>
           </div>
 
           <button

@@ -62,14 +62,14 @@ const PublicLayout = ({
             <div className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center p-1 sm:p-1.5 overflow-hidden transition-transform group-hover:scale-105 shrink-0">
               <img
                 src="/branding/rise-with-media-logo.png"
-                alt="RiseWithMedia Logo"
+                alt="AgencyUpscale Logo"
                 className="h-full w-full object-contain"
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
             </div>
             <div className="flex flex-col">
               <span className="font-extrabold text-lg sm:text-2xl text-slate-950 tracking-tight group-hover:text-[#07c8f9] transition-colors leading-tight">
-                RiseWithMedia
+                AgencyUpscale
               </span>
               <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden sm:block -mt-0.5">
                 Digital Marketing App
@@ -235,14 +235,14 @@ const PublicLayout = ({
                 <div className="h-10 w-10 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 shadow-xs">
                   <img
                     src="/branding/rise-with-media-logo.png"
-                    alt="RiseWithMedia Logo"
+                    alt="AgencyUpscale Logo"
                     className="h-full w-full object-contain"
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   />
                 </div>
                 <div>
                   <span className="font-extrabold text-white text-lg block leading-tight">
-                    RiseWithMedia
+                    AgencyUpscale
                   </span>
                   <span className="text-[11px] font-bold text-[#07c8f9] uppercase tracking-wider">
                     Agency Workspace
@@ -291,7 +291,7 @@ const PublicLayout = ({
 
           {/* Bottom Copyright Bar */}
           <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-slate-400 text-center sm:text-left">
-            <p>© {new Date().getFullYear()} RiseWithMedia. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} AgencyUpscale. All rights reserved.</p>
             <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-6">
               <Link to="/login" className="hover:text-white transition-colors">Sign In</Link>
               <span className="text-slate-700">•</span>
@@ -314,7 +314,7 @@ const PublicLayout = ({
 
       {/* ── FLOATING WHATSAPP SUPPORT WIDGET (Positioned to not block UI) ── */}
       <a
-        href="https://api.whatsapp.com/send?phone=919876543210&text=Hi%20RiseWithMedia!%20I%20want%20to%20know%20more%20about%20your%20agency%20CRM."
+        href="https://api.whatsapp.com/send?phone=919876543210&text=Hi%20AgencyUpscale!%20I%20want%20to%20know%20more%20about%20your%20agency%20CRM."
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-transform cursor-pointer border-2 border-white/60"

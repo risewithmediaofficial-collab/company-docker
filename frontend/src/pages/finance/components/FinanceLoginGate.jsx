@@ -78,7 +78,7 @@ export default function FinanceLoginGate({ onAuthenticated, user }) {
 
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
-              RiseWithMedia Finance
+              AgencyUpscale Finance
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               Restricted Financial Access • Master Password Required
@@ -105,7 +105,7 @@ export default function FinanceLoginGate({ onAuthenticated, user }) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full h-11 sm:h-12 px-3.5 rounded-xl bg-background border border-border/60 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
-              placeholder="admin@risewithmedia.com"
+              placeholder="admin@agencyupscale.com"
               disabled={loading}
             />
           </div>

@@ -244,7 +244,7 @@ export default function Finance() {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                RiseWithMedia Financial Operating System
+                AgencyUpscale Financial Operating System
               </p>
             </div>
           </div>

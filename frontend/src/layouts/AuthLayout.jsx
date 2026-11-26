@@ -93,7 +93,7 @@ const AuthLayout = () => {
               ) : (
                 <img
                   src="/branding/rise-with-media-logo.png"
-                  alt="RISE WITH MEDIA logo"
+                  alt="AgencyUpscale logo"
                   className="h-full w-full object-contain"
                 />
               )}
@@ -105,7 +105,7 @@ const AuthLayout = () => {
                   Company Portal
                 </span>
                 <h1 className="text-center text-xl sm:text-2xl font-black tracking-tight text-foreground">
-                  {portalOrg.name} + RWM
+                  {portalOrg.name} • AgencyUpscale
                 </h1>
                 <p className="text-muted-foreground text-xs sm:text-sm mt-0.5 text-center">
                   Account Recovery
@@ -113,7 +113,7 @@ const AuthLayout = () => {
               </>
             ) : (
               <>
-                <h1 className="text-center text-xl sm:text-2xl font-black tracking-tight text-foreground">RISE WITH MEDIA</h1>
+                <h1 className="text-center text-xl sm:text-2xl font-black tracking-tight text-foreground">AgencyUpscale</h1>
                 <p className="text-center text-muted-foreground text-xs sm:text-sm mt-1">Account Recovery</p>
               </>
             )}

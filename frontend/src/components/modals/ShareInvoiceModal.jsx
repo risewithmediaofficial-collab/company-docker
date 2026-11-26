@@ -39,7 +39,7 @@ export const ShareInvoiceModal = ({ open, onOpenChange, invoice }) => {
     : invoice.paymentLink || window.location.href;
 
   const shareText = `Hello ${clientName},\n\n` +
-    `Your invoice *${invoice.invoiceNumber || 'Invoice'}* from Rise With Media is ready.\n\n` +
+    `Your invoice *${invoice.invoiceNumber || 'Invoice'}* from AgencyUpscale is ready.\n\n` +
     `*Amount Due:* ${balanceStr} (Total: ${totalStr})\n` +
     `*Due Date:* ${dueDateStr}\n` +
     (invoice.paymentLink ? `*Payment Link:* ${invoice.paymentLink}\n` : '') +
@@ -84,7 +84,7 @@ export const ShareInvoiceModal = ({ open, onOpenChange, invoice }) => {
       try {
         await navigator.share({
           title: `Invoice ${invoice.invoiceNumber}`,
-          text: `Invoice ${invoice.invoiceNumber} - Rise With Media (${totalStr})`,
+          text: `Invoice ${invoice.invoiceNumber} - AgencyUpscale (${totalStr})`,
           url: publicLink,
         });
       } catch (_) {

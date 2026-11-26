@@ -142,7 +142,7 @@ export const getVapidPublicKey = () => {
 export const subscribeToWebPush = async () => {
   if (isIOSRequiresHomeInstall()) {
     toast.info('iPhone/iPad Setup Required', {
-      description: 'Tap Share (square with arrow) at the bottom of Safari, tap "Add to Home Screen", then open RiseWithMedia from your Home Screen to enable notifications.',
+      description: 'Tap Share (square with arrow) at the bottom of Safari, tap "Add to Home Screen", then open AgencyUpscale from your Home Screen to enable notifications.',
       duration: 8000,
     });
     return { success: false, reason: 'ios_install_required' };

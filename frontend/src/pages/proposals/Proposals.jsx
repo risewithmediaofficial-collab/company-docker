@@ -266,7 +266,7 @@ const Proposals = () => {
 
   return (
     <WorkspacePage
-      breadcrumbs={['RiseWithMedia', 'Growth & Sales', 'Proposals']}
+      breadcrumbs={['AgencyUpscale', 'Growth & Sales', 'Proposals']}
       title="Client Proposals & Pitch Decks"
       icon={FileText}
       properties={[

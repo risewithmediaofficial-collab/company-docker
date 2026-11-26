@@ -20,7 +20,7 @@ export const sendEmail = async ({ to, subject, html, text }) => {
   try {
     const transporter = createTransporter();
     const info = await transporter.sendMail({
-      from: `"RISE WITH MEDIA" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+      from: `"AgencyUpscale" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
       to,
       subject,
       html,

@@ -145,7 +145,7 @@ export const sendPushToUser = async (userId, payload = {}) => {
       return { success: false, reason: 'No subscriptions found for user' };
     }
 
-    const title = payload.title || '🔔 RISE WITH MEDIA Alert';
+    const title = payload.title || '🔔 AgencyUpscale Alert';
     const body = payload.body || payload.message || 'You have a new update in your CRM workspace.';
     const link = payload.link || payload.url || '/';
     const eventId = payload.eventId || payload.id || `notif-${Date.now()}`;

@@ -349,7 +349,7 @@ export const CapabilitiesPage = () => {
             <div className="text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8">
               <div className="space-y-2 max-w-2xl">
                 <span className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9] block">
-                  Unified Agency OS
+                  AgencyUpscale
                 </span>
                 <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
                   Stop juggling 6 different tools.

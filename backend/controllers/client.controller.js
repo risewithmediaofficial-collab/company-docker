@@ -980,7 +980,7 @@ export const activatePortal = async (req, res) => {
     try {
       await sendEmail({
         to: client.email,
-        subject: 'Your Client Portal is Ready - RISE WITH MEDIA',
+        subject: 'Your Client Portal is Ready - AgencyUpscale',
         html: `<h2>Welcome ${client.name}!</h2><p>Your portal is now active.</p><p>Username / Email: <strong>${client.email}</strong></p><p>Password (Phone number): <strong>${portalPassword}</strong></p><p>Login at: ${process.env.CLIENT_URL || 'http://localhost:5175'}/login</p>`,
       });
     } catch (emailErr) {

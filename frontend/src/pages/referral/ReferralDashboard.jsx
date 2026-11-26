@@ -271,7 +271,7 @@ const ReferralDashboard = () => {
 
   return (
     <WorkspacePage
-      breadcrumbs={['RiseWithMedia', 'Growth & Sales', 'Referral Hub']}
+      breadcrumbs={['AgencyUpscale', 'Growth & Sales', 'Referral Hub']}
       title="Partner Referrals & Commission Hub"
       icon={Users}
       properties={[

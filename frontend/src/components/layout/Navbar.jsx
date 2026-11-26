@@ -236,7 +236,7 @@ function NavbarComponent({ onOpenSearch, currentPath }) {
       // 2. Direct browser OS banner notification
       await sendBrowserNotification({
         title: '🔔 Banner Notification Active!',
-        message: 'Rise With Media CRM desktop alerts are connected.',
+        message: 'AgencyUpscale CRM desktop alerts are connected.',
         link: '/settings',
       });
 
@@ -359,7 +359,7 @@ function NavbarComponent({ onOpenSearch, currentPath }) {
               to="/"
               className="font-bold text-foreground/85 hover:text-primary transition-colors hidden md:inline truncate shrink-0"
             >
-              {organization?.name ? `${organization.name} + RWM` : 'RiseWithMedia'}
+              {organization?.name ? `${organization.name} • AgencyUpscale` : 'AgencyUpscale'}
             </Link>
             {breadcrumbs.map((crumb, idx) => {
               const isLast = idx === breadcrumbs.length - 1;

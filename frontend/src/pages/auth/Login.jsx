@@ -36,7 +36,7 @@ const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
   <nav className="card-nav relative flex flex-row md:flex-col items-center justify-between md:justify-start w-full md:w-24 shrink-0 py-2.5 px-3.5 sm:px-4 md:py-8 md:px-0 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800/80 z-30 bg-slate-50/70 dark:bg-slate-900/60 rounded-t-3xl md:rounded-t-none md:rounded-l-3xl">
     {/* Left Side (Mobile Branding) / Top Item (Desktop Logo) */}
     <div className="flex items-center gap-2 md:mb-8 shrink-0 z-10">
-      <Link to="/" className="group flex items-center gap-2" title="RiseWithMedia Home">
+      <Link to="/" className="group flex items-center gap-2" title="AgencyUpscale Home">
         <div className="w-8 h-8 md:w-11 md:h-11 rounded-xl md:rounded-2xl bg-white dark:bg-slate-800 p-1.5 md:p-2 shadow-2xs border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center group-hover:scale-105 transition-transform overflow-hidden">
           {portalOrg?.logo ? (
             <img
@@ -50,13 +50,13 @@ const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
           ) : (
             <img
               src="/branding/rise-with-media-logo.png"
-              alt="RISE WITH MEDIA logo"
+              alt="AgencyUpscale logo"
               className="h-full w-full object-contain"
             />
           )}
         </div>
         <span className="text-xs font-black text-slate-900 dark:text-white tracking-wider hidden sm:inline-block md:hidden uppercase truncate max-w-[140px]">
-          {portalOrg?.name || 'RiseWithMedia'}
+          {portalOrg?.name || 'AgencyUpscale'}
         </span>
       </Link>
     </div>
@@ -140,7 +140,7 @@ const Hero = ({ variant, view, title, subtitle, portalOrg, onOpenTerms }) => {
         ) : (
           <img
             src="/branding/rise-with-media-logo.png"
-            alt="RiseWithMedia logo"
+            alt="AgencyUpscale logo"
             className="h-full w-full object-contain filter drop-shadow-sm"
           />
         )}
@@ -152,7 +152,7 @@ const Hero = ({ variant, view, title, subtitle, portalOrg, onOpenTerms }) => {
       </h3>
 
       <div className="mt-3.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[10px] font-bold text-white tracking-widest uppercase">
-        {portalOrg?.name ? `${portalOrg.name} Portal` : 'RiseWithMedia OS'}
+        {portalOrg?.name ? `${portalOrg.name} Portal` : 'AgencyUpscale'}
       </div>
 
       <button

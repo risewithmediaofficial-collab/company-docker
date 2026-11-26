@@ -623,7 +623,7 @@ export const exportEodReportsDocx = async (req, res) => {
     );
 
     const doc = new Document({
-      creator: 'Rise With Media CRM',
+      creator: 'AgencyUpscale CRM',
       title: `EOD Report - ${userName} - ${rangeLabel}`,
       description: `${typeLabel} EOD Report for ${userName}`,
       sections: [

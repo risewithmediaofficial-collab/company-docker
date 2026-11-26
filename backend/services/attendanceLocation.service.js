@@ -8,7 +8,7 @@ import OfficeLocation from '../models/officeLocation.model.js';
 import { verifyLocationWithinRadius, isValidCoordinates } from '../utils/locationVerification.js';
 
 const defaultOfficeLocation = {
-  name: 'Rise With Media - Main Office',
+  name: 'AgencyUpscale - Main Office',
   latitude: 12.5188125,
   longitude: 78.2333125,
   radiusKm: 0.5,

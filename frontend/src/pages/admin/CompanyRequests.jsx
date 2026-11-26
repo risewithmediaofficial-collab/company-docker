@@ -117,7 +117,7 @@ export default function CompanyRequests() {
     if (queryClient) {
       queryClient.clear();
     }
-    toast.success(`Stealth Live View Activated for "${org.name} + RWM". Tenant is unaware.`);
+    toast.success(`Stealth Live View Activated for "${org.name} • AgencyUpscale". Tenant is unaware.`);
     navigate('/');
   };
 
@@ -347,7 +347,7 @@ export default function CompanyRequests() {
             <div className="flex items-center gap-1.5 flex-wrap">
               <p className="font-bold text-sm text-foreground truncate">{o.name}</p>
               <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 border border-indigo-500/20 whitespace-nowrap">
-                + RWM
+                • AgencyUpscale
               </span>
             </div>
             <p className="text-xs text-muted-foreground">{o.industry || 'General Business'}</p>
@@ -587,7 +587,7 @@ export default function CompanyRequests() {
               <div className="flex items-center gap-1.5 flex-wrap">
                 <h4 className="font-bold text-base text-foreground leading-snug truncate">{o.name}</h4>
                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 border border-indigo-500/20 whitespace-nowrap">
-                  + RWM
+                  • AgencyUpscale
                 </span>
               </div>
               <p className="text-xs text-muted-foreground truncate">{o.industry || 'General Industry'}</p>
@@ -741,7 +741,7 @@ export default function CompanyRequests() {
 
   return (
     <WorkspacePage
-      breadcrumbs={['RiseWithMedia', 'Administration', 'Company Registration Requests']}
+      breadcrumbs={['AgencyUpscale', 'Administration', 'Company Registration Requests']}
       title="Company Registration Requests"
       subtitle="Review, approve, and configure new SaaS company accounts and tenant onboarding requests."
       icon={Building2}
@@ -855,7 +855,7 @@ export default function CompanyRequests() {
                       {selectedOrg?.name}
                     </DialogTitle>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 whitespace-nowrap">
-                      + RWM
+                      • AgencyUpscale
                     </span>
                   </div>
                   <DialogDescription className="text-xs text-muted-foreground mt-0.5">

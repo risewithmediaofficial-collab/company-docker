@@ -222,7 +222,7 @@ export const PushDiagnosticsModal = ({ open, onOpenChange }) => {
                   <br />
                   2. Select <strong>&quot;Add to Home Screen&quot;</strong>.
                   <br />
-                  3. Open <strong>RiseWithMedia</strong> from your Home Screen, then tap <strong>Enable Notifications</strong>.
+                  3. Open <strong>AgencyUpscale</strong> from your Home Screen, then tap <strong>Enable Notifications</strong>.
                 </p>
               </div>
             )}
@@ -372,7 +372,7 @@ export const PushDiagnosticsModal = ({ open, onOpenChange }) => {
                   <strong>Windows:</strong> Check that Windows <em>Focus Assist</em> or <em>Do Not Disturb</em> is not silencing desktop banners.
                 </li>
                 <li>
-                  <strong>iPhone (iOS 16.4+):</strong> Must be launched from Home Screen. Ensure iOS Settings &gt; Notifications &gt; RiseWithMedia is turned ON.
+                  <strong>iPhone (iOS 16.4+):</strong> Must be launched from Home Screen. Ensure iOS Settings &gt; Notifications &gt; AgencyUpscale is turned ON.
                 </li>
                 <li>
                   <strong>Tab Closed vs Browser Closed:</strong> Notifications arrive when the website tab is closed as long as the browser or operating system push daemon remains active.

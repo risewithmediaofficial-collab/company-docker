@@ -203,7 +203,7 @@ const Automations = () => {
 
   return (
     <WorkspacePage
-      breadcrumbs={['RiseWithMedia', 'System & Comms', 'Workflows & Automations']}
+      breadcrumbs={['AgencyUpscale', 'System & Comms', 'Workflows & Automations']}
       title="Agency Workflows & Automations"
       icon={Zap}
       properties={[

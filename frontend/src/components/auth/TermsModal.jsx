@@ -21,7 +21,7 @@ export const TermsModal = ({ open, onClose, onAccept }) => {
                 Terms &amp; Conditions and Privacy Policy
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                RiseWithMedia Agency OS Platform Agreement
+                AgencyUpscale Platform Agreement
               </p>
             </div>
           </div>
@@ -45,7 +45,7 @@ export const TermsModal = ({ open, onClose, onAccept }) => {
           <div>
             <h4 className="font-bold text-slate-900 dark:text-white mb-1">2. Data Confidentiality &amp; Security</h4>
             <p>
-              All client credentials, project assets, invoices, vendor payouts, and reports stored in RiseWithMedia are strictly isolated per organization and subject to audit logging for account protection.
+              All client credentials, project assets, invoices, vendor payouts, and reports stored in AgencyUpscale are strictly isolated per organization and subject to audit logging for account protection.
             </p>
           </div>
           <div>

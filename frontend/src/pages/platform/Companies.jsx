@@ -179,7 +179,7 @@ const Companies = ({ defaultTab }) => {
     if (queryClient) {
       queryClient.clear();
     }
-    toast.success(`Stealth Live View Activated for "${org.name} + RWM". Tenant is unaware.`);
+    toast.success(`Stealth Live View Activated for "${org.name} • AgencyUpscale". Tenant is unaware.`);
     navigate('/');
   };
 

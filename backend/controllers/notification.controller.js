@@ -187,7 +187,7 @@ export const sendTestPushNotification = async (req, res) => {
     }
 
     const testPayload = {
-      title: '🔔 Test Notification | RISE WITH MEDIA',
+      title: '🔔 Test Notification | AgencyUpscale',
       body: delaySeconds > 0
         ? `Delayed push successfully delivered after ${delaySeconds}s while tab/app was closed!`
         : 'Background Web Push is verified and operational across your devices!',

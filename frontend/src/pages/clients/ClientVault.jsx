@@ -1256,8 +1256,8 @@ export default function ClientVault() {
     <WorkspacePage
       breadcrumbs={
         isClientUser
-          ? ['RiseWithMedia', 'Client Portal', 'Client Vault']
-          : ['RiseWithMedia', 'Client Lifecycle', 'Client Vault']
+          ? ['AgencyUpscale', 'Client Portal', 'Client Vault']
+          : ['AgencyUpscale', 'Client Lifecycle', 'Client Vault']
       }
       title={isClientUser ? 'My Secure Credentials & Vault' : 'Client Vault & Credentials'}
       icon={LockKeyhole}

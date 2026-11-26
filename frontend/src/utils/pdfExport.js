@@ -289,7 +289,7 @@ const getCompanyProfileForInvoice = async () => {
     const response = await api.get('/settings');
     const profile = response?.data?.settings?.companyProfile || {};
     return {
-      name: profile.name || 'RISE WITH MEDIA',
+      name: profile.name || 'AgencyUpscale',
       address: profile.address || '',
       email: profile.email || '',
       phone: profile.phone || '',
@@ -299,7 +299,7 @@ const getCompanyProfileForInvoice = async () => {
     };
   } catch {
     return {
-      name: 'RISE WITH MEDIA',
+      name: 'AgencyUpscale',
       address: '',
       email: '',
       phone: '',
@@ -374,7 +374,7 @@ export const exportInvoiceToPDF = async (invoice, options = {}) => {
   pdf.setFontSize(18);
   pdf.setTextColor(255, 255, 255);
   const companyTitleX = logoDataUrl ? margin + 32 : margin;
-  pdf.text(companyProfile.name || 'RISE WITH MEDIA', companyTitleX, 14);
+  pdf.text(companyProfile.name || 'AgencyUpscale', companyTitleX, 14);
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
@@ -653,7 +653,7 @@ export const exportInvoiceToPDF = async (invoice, options = {}) => {
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8);
   pdf.setTextColor(148, 163, 184);
-  pdf.text('Thank you for working with Rise With Media. For support, contact finance@risewithmedia.com', margin, pageHeight - 8);
+  pdf.text('Thank you for working with AgencyUpscale. For support, contact finance@agencyupscale.com', margin, pageHeight - 8);
   pdf.text('Page 1 of 1', pageWidth - margin, pageHeight - 8, { align: 'right' });
 
   const fileName = `${(invoice.invoiceNumber || 'invoice').toLowerCase().replace(/[^a-z0-9_-]/gi, '_')}.pdf`;
@@ -690,7 +690,7 @@ export const exportCompanyDetailsToPDF = (org) => {
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(14);
   pdf.setTextColor(255, 255, 255);
-  pdf.text('RISEWITHMEDIA AGENCY OS', margin + 6, y + 9);
+  pdf.text('AGENCYUPSCALE', margin + 6, y + 9);
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
@@ -739,7 +739,7 @@ export const exportCompanyDetailsToPDF = (org) => {
   pdf.setFont('helvetica', 'bold');
   pdf.text('Company Name:', col1X, y + 14);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(`${org.name || 'N/A'} + RWM`, col1X + 32, y + 14);
+  pdf.text(`${org.name || 'N/A'} • AgencyUpscale`, col1X + 32, y + 14);
 
   pdf.setFont('helvetica', 'bold');
   pdf.text('Industry:', col2X, y + 14);
@@ -912,7 +912,7 @@ export const exportCompanyDetailsToPDF = (org) => {
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(7.5);
   pdf.setTextColor(148, 163, 184);
-  pdf.text('RiseWithMedia Agency OS Platform Administration — Confidential & Proprietary Document', margin, pageHeight - 8);
+  pdf.text('AgencyUpscale Platform Administration — Confidential & Proprietary Document', margin, pageHeight - 8);
   pdf.text(`Page 1 of 1`, pageWidth - margin, pageHeight - 8, { align: 'right' });
 
   // Clean filename
@@ -946,7 +946,7 @@ export const exportCompanyListToPDF = (orgs = [], activeFilter = 'all') => {
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(13);
   pdf.setTextColor(255, 255, 255);
-  pdf.text('RISEWITHMEDIA AGENCY OS — COMPANY REGISTRATIONS REPORT', margin + 6, y + 8);
+  pdf.text('AGENCYUPSCALE — COMPANY REGISTRATIONS REPORT', margin + 6, y + 8);
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8);
@@ -1029,7 +1029,7 @@ export const exportCompanyListToPDF = (orgs = [], activeFilter = 'all') => {
 
     // Company Name
     pdf.setFont('helvetica', 'bold');
-    pdf.text(String(`${o.name || 'N/A'} + RWM`).substring(0, 32), rowX + 2, y + 4.8);
+    pdf.text(String(`${o.name || 'N/A'} • AgencyUpscale`).substring(0, 32), rowX + 2, y + 4.8);
     pdf.setFont('helvetica', 'normal');
     rowX += cols[1].width;
 
@@ -1063,7 +1063,7 @@ export const exportCompanyListToPDF = (orgs = [], activeFilter = 'all') => {
   // Footer
   pdf.setFontSize(7);
   pdf.setTextColor(148, 163, 184);
-  pdf.text(`RiseWithMedia Platform Admin — Report generated on ${new Date().toLocaleString()}`, margin, pageHeight - 6);
+  pdf.text(`AgencyUpscale Platform Admin — Report generated on ${new Date().toLocaleString()}`, margin, pageHeight - 6);
 
   pdf.save(`company-registrations-report-${new Date().toISOString().slice(0, 10)}.pdf`);
 };

@@ -166,7 +166,7 @@ const RenewalFormDialog = ({ open, onOpenChange, record, clients, projects, onSa
                 <Input
                   value={form.itemName}
                   onChange={(e) => updateField('itemName', e.target.value)}
-                  placeholder="e.g. risewithmedia.com, Client AWS Hosting"
+                  placeholder="e.g. agencyupscale.com, Client AWS Hosting"
                   required
                   className="h-11 rounded-xl bg-background px-4 text-sm focus:ring-2 focus:ring-primary/20 "
                 />
@@ -495,7 +495,7 @@ export default function DomainRenewals() {
 
   return (
     <WorkspacePage
-      breadcrumbs={['RiseWithMedia', 'Business & Finance', 'Domain & Hosting Renewals']}
+      breadcrumbs={['AgencyUpscale', 'Business & Finance', 'Domain & Hosting Renewals']}
       title="Domain & Hosting Renewals"
       icon={Globe2}
       properties={[

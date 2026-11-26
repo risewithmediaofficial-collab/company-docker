@@ -81,7 +81,7 @@ export const SAAS_PLANS = [
   {
     id: 'growth',
     name: 'Growth',
-    tagline: 'Complete agency OS with Finance, SMM Tracker & HR',
+    tagline: 'Complete AgencyUpscale suite with Finance, SMM Tracker & HR',
     monthlyPriceInr: 2999,
     annualPriceInr: 28790,
     storageLimitMb: 25600,

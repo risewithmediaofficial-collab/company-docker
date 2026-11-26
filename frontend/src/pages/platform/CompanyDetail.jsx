@@ -68,7 +68,7 @@ const CompanyDetail = () => {
     if (queryClient) {
       queryClient.clear();
     }
-    toast.success(`Stealth Live View Activated for "${org.name} + RWM". Tenant is unaware.`);
+    toast.success(`Stealth Live View Activated for "${org.name} • AgencyUpscale". Tenant is unaware.`);
     navigate('/');
   };
 
@@ -231,7 +231,7 @@ const CompanyDetail = () => {
             )}
           </div>
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">{org.name} + RWM</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">{org.name} • AgencyUpscale</h1>
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusColor}`}>
               {org.planStatus}
             </span>

@@ -73,7 +73,7 @@ export const SocketProvider = ({ children }) => {
           }
         }
 
-        const title = data.title || '\u{1F514} RISE WITH MEDIA Notification';
+        const title = data.title || '\u{1F514} AgencyUpscale Notification';
         const message = data.message || '';
         const link = data.link || '/';
 

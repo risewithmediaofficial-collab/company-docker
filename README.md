@@ -1,4 +1,4 @@
-# 🚀 Rise With Media — Agency CRM & Marketing Operating System
+# 🚀 AgencyUpscale — Agency CRM & Marketing Operating System
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg?style=for-the-badge&logo=vite)](https://vitejs.dev/)
 [![E2E Testing](https://img.shields.io/badge/Playwright-100%25%20Passing%20(39%20Tests)-darkgreen.svg?style=for-the-badge&logo=playwright)](https://playwright.dev/)
@@ -14,7 +14,7 @@ An enterprise-grade, production-ready full-stack Operating System built specific
 
 ```
                     ┌────────────────────────────────────────────────────────┐
-                    │       Rise With Media Agency CRM & Marketing OS        │
+                    │       AgencyUpscale CRM & Marketing Platform               │
                     └───────────────────────────┬────────────────────────────┘
                                                 │
        ┌────────────────────────┬───────────────┴───────────────┬────────────────────────┐
@@ -247,4 +247,4 @@ COMPANY/
 
 ## 📄 License & Intellectual Property
 
-Proprietary Software. Developed for **Rise With Media**. All rights reserved. Unauthorized copying, distribution, or reproduction is strictly prohibited.
+Proprietary Software. Developed for **AgencyUpscale**. All rights reserved. Unauthorized copying, distribution, or reproduction is strictly prohibited.

@@ -60,7 +60,7 @@ export const BannerNotificationHost = () => {
 
       const newBanner = {
         id: bannerData.id || `banner-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        title: bannerData.title || 'RISE WITH MEDIA Notification',
+        title: bannerData.title || 'AgencyUpscale Notification',
         message: bannerData.message || bannerData.body || '',
         link: bannerData.link || bannerData.url || '/',
         type: bannerData.type || 'system',

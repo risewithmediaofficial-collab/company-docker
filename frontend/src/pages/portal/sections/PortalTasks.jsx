@@ -562,7 +562,7 @@ export default function PortalTasks() {
             const isApproved = normalizedStatus === 'Approved' || task.clientResponse === 'yes';
 
             // Clean specialist assignee name & avatar
-            const assigneeName = task.assignedPersonName || task.assignedTo?.map((u) => u.name).join(', ') || 'RiseWithMedia Lead';
+            const assigneeName = task.assignedPersonName || task.assignedTo?.map((u) => u.name).join(', ') || 'AgencyUpscale Lead';
             const assigneeInitials = assigneeName
               .split(' ')
               .map((n) => n[0])

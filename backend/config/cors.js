@@ -9,6 +9,9 @@ export const normalizeOrigin = (url) => {
 };
 
 export const DEFAULT_ALLOWED_ORIGINS = [
+  'https://agencyupscale.com',
+  'http://agencyupscale.com',
+  'https://app.agencyupscale.com',
   'https://company.risewithmedia.com',
   'http://company.risewithmedia.com',
   'https://risewithmedia.com',
@@ -37,6 +40,7 @@ export const DEFAULT_ALLOWED_ORIGINS = [
 ];
 
 export const RISE_WITH_MEDIA_PATTERN = /^https?:\/\/([a-z0-9-]+\.)*risewithmedia\.com(:[0-9]+)?$/i;
+export const AGENCY_UPSCALE_PATTERN = /^https?:\/\/([a-z0-9-]+\.)*agencyupscale\.com(:[0-9]+)?$/i;
 export const LOCALHOST_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1)(:[0-9]+)?$/i;
 export const IP_ORIGIN_PATTERN = /^https?:\/\/(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?::[0-9]+)?$/i;
 
@@ -78,8 +82,8 @@ export const isOriginAllowed = (origin, req = null) => {
     return true;
   }
 
-  // 2. Subdomain wildcard matching for risewithmedia.com
-  if (RISE_WITH_MEDIA_PATTERN.test(normalized)) {
+  // 2. Subdomain wildcard matching for agencyupscale.com / risewithmedia.com
+  if (AGENCY_UPSCALE_PATTERN.test(normalized) || RISE_WITH_MEDIA_PATTERN.test(normalized)) {
     return true;
   }
 

@@ -785,7 +785,7 @@ const Leads = () => {
 
   return (
     <WorkspacePage
-      breadcrumbs={['RiseWithMedia', 'Growth & Sales', 'CRM & Leads']}
+      breadcrumbs={['AgencyUpscale', 'Growth & Sales', 'CRM & Leads']}
       title="Sales Pipeline & Lead Management"
       icon={Target}
       properties={[

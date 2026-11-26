@@ -1,5 +1,5 @@
 // =============================================
-// RISE WITH MEDIA - FINANCE FORMATTERS & UTILITIES
+// AgencyUpscale - FINANCE FORMATTERS & UTILITIES
 // Indian Rupees formatting & Asia/Kolkata Timezone
 // =============================================
 

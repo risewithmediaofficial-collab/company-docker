@@ -459,7 +459,7 @@ const HR = () => {
 
   return (
     <WorkspacePage
-      breadcrumbs={['RiseWithMedia', 'Team & Workload', 'HR & Hiring']}
+      breadcrumbs={['AgencyUpscale', 'Team & Workload', 'HR & Hiring']}
       title={isVendorsTab ? 'External Vendors Directory' : 'HR & Team Directory'}
       icon={isVendorsTab ? Briefcase : Users}
       properties={

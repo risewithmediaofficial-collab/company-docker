@@ -269,7 +269,7 @@ const InfluencersDashboard = () => {
 
   return (
     <WorkspacePage
-      breadcrumbs={['RiseWithMedia', 'Delivery', 'Influencer Hub']}
+      breadcrumbs={['AgencyUpscale', 'Delivery', 'Influencer Hub']}
       title="Influencer Hub & Creator Roster"
       icon={Sparkles}
       properties={[

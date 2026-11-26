@@ -24,11 +24,11 @@ export default function GhostModeBanner() {
       queryClient.clear();
     }
     dispatch(fetchMe());
-    toast.success(`Exited Live View for "${orgName} + RWM". Returned to Platform Super Admin.`);
+    toast.success(`Exited Live View for "${orgName} • AgencyUpscale". Returned to Platform Super Admin.`);
     navigate('/platform/companies');
   };
 
-  const displayName = `${ghostOrg.name} + RWM`;
+  const displayName = `${ghostOrg.name} • AgencyUpscale`;
 
   return (
     <AnimatePresence>

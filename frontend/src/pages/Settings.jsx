@@ -215,7 +215,7 @@ const Settings = () => {
       // 2. Direct browser OS banner notification
       await sendBrowserNotification({
         title: 'Banner Notification Active',
-        message: 'Rise With Media system desktop alerts are connected successfully.',
+        message: 'AgencyUpscale system desktop alerts are connected successfully.',
         link: '/settings',
       });
 
@@ -884,7 +884,7 @@ const Settings = () => {
                             {companyProfile.name || 'Your Agency Name'}
                           </span>
                           <span className="px-2 py-0.5 rounded-full bg-cyan-500/15 text-[#0586a8] dark:text-[#07c8f9] text-[10px] font-extrabold">
-                            + RWM
+                            • AgencyUpscale
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground truncate mt-0.5">
@@ -936,7 +936,7 @@ const Settings = () => {
                           value={companyProfile.name}
                           onChange={(event) => setCompanyProfile((current) => ({ ...current, name: event.target.value }))}
                           className="w-full rounded-xl bg-background px-4 py-3 text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-brand/40"
-                          placeholder="RISE WITH MEDIA"
+                          placeholder="AgencyUpscale"
                         />
                       </label>
                       <label className="space-y-2">
@@ -1064,7 +1064,7 @@ const Settings = () => {
                           value={companyProfile.email}
                           onChange={(event) => setCompanyProfile((current) => ({ ...current, email: event.target.value }))}
                           className="w-full rounded-xl bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand/40"
-                          placeholder="hello@risewithmedia.com"
+                          placeholder="hello@agencyupscale.com"
                         />
                       </label>
                       <label className="space-y-2">

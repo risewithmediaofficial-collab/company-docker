@@ -299,7 +299,7 @@ async function mockAppBackend(page) {
       {
         id: 'free',
         name: 'Free',
-        tagline: 'Solo agencies testing RiseWithMedia OS',
+        tagline: 'Solo agencies testing AgencyUpscale',
         monthlyPriceInr: 0,
         annualPriceInr: 0,
         storageLimitMb: 100,
@@ -325,7 +325,7 @@ async function mockAppBackend(page) {
       {
         id: 'growth',
         name: 'Growth',
-        tagline: 'Complete agency OS with Finance & SMM',
+        tagline: 'Complete AgencyUpscale suite with Finance & SMM',
         monthlyPriceInr: 2999,
         annualPriceInr: 28790,
         storageLimitMb: 25600,
@@ -842,7 +842,7 @@ test.describe('All Role Logins & Workspace Isolation Verification', () => {
     // 5. Fill full registration details (Company Name, Website, City, Timings, Attendance GPS Latitude/Longitude) & Launch Workspace
     await expect(page.getByTestId('settings-static-sidebar')).toBeVisible();
     await expect(page.getByTestId('settings-inline-scroll-view')).toBeVisible();
-    await page.getByPlaceholder('RISE WITH MEDIA').fill('Nikhil Creative Studio');
+    await page.getByPlaceholder('AgencyUpscale', { exact: true }).fill('Nikhil Creative Studio');
     await page.getByPlaceholder('https://youragency.com').fill('https://nikhilcreative.in');
     await page.getByPlaceholder('e.g. Bengaluru / Hosur').fill('Bengaluru');
     await page.getByPlaceholder('e.g. 12.7409').fill('12.9716');

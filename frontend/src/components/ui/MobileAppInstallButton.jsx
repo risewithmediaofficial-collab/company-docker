@@ -35,7 +35,7 @@ export function MobileAppInstallButton() {
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
-      toast.success('RiseWithMedia App installed successfully!');
+      toast.success('AgencyUpscale App installed successfully!');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -60,7 +60,7 @@ export function MobileAppInstallButton() {
         await deferredPrompt.prompt();
         const choiceResult = await deferredPrompt.userChoice;
         if (choiceResult.outcome === 'accepted') {
-          toast.success('Installing RiseWithMedia App...');
+          toast.success('Installing AgencyUpscale App...');
           setDeferredPrompt(null);
         }
       } catch (err) {
@@ -129,7 +129,7 @@ export function MobileAppInstallButton() {
               <span>Install on iPhone / iPad</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-zinc-400">
-              Install RiseWithMedia directly to your home screen for full-screen mobile app experience.
+              Install AgencyUpscale directly to your home screen for full-screen mobile app experience.
             </DialogDescription>
           </DialogHeader>
 
@@ -176,7 +176,7 @@ export function MobileAppInstallButton() {
               <span>Install on Android / Chrome</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-zinc-400">
-              Add RiseWithMedia directly to your phone apps.
+              Add AgencyUpscale directly to your phone apps.
             </DialogDescription>
           </DialogHeader>
 

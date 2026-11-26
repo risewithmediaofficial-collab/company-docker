@@ -396,7 +396,7 @@ const ProposalDetails = () => {
               >
                 <div className="flex items-start justify-between gap-3 sm:gap-4 pb-5 sm:pb-6">
                   <div className="min-w-0">
-                    <p className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.28em] text-neutral-400">Rise With Media Proposal</p>
+                    <p className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.28em] text-neutral-400">AgencyUpscale Proposal</p>
                     <h2 className="mt-2 sm:mt-3 text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-neutral-900 break-words">{page.title}</h2>
                     <p className="mt-1.5 text-xs sm:text-sm text-neutral-500 break-words">{page.subtitle}</p>
                   </div>

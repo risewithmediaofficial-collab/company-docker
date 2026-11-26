@@ -13,7 +13,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* RiseWithMedia Brand Blue (#07c8f9) */
+    /* AgencyUpscale Brand Blue (#07c8f9) */
     --brand: 192 95% 50%;
     --brand-foreground: 194 78% 7%;
 
@@ -61,7 +61,7 @@
     --popover: 222 40% 12%;
     --popover-foreground: 210 40% 98%;
 
-    /* Exact RiseWithMedia Logo Blue (#07c8f9) pops cleanly on dark surfaces */
+    /* Exact AgencyUpscale Logo Blue (#07c8f9) pops cleanly on dark surfaces */
     --brand: 192 95% 50%;
     --brand-foreground: 194 78% 7%;
 

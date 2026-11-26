@@ -611,7 +611,7 @@ const Users = () => {
 
   return (
     <WorkspacePage
-      breadcrumbs={isTenant ? [organization?.name || 'Company', 'Team & Workload', 'User Directory'] : ['RiseWithMedia', 'Team & Workload', 'User Directory']}
+      breadcrumbs={isTenant ? [organization?.name || 'Company', 'Team & Workload', 'User Directory'] : ['AgencyUpscale', 'Team & Workload', 'User Directory']}
       title={isTenant ? `${organization?.name || 'Company'} Team Directory` : 'Team Directory & User Access'}
       icon={UsersIcon}
       properties={[

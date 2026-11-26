@@ -43,7 +43,7 @@ export const DEFAULT_STORAGE_PLANS = [
   {
     id: 'growth',
     name: 'Growth',
-    tagline: 'Complete agency OS with Finance, SMM Tracker & HR',
+    tagline: 'Complete AgencyUpscale suite with Finance, SMM Tracker & HR',
     badge: 'Most Popular',
     storageLabel: '25 GB Storage',
     storageLimitMb: 25600,

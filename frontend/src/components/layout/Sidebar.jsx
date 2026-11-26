@@ -380,7 +380,7 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
             <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand/10 ring-1 ring-brand/25 p-1 shadow-xs overflow-hidden">
               <img
                 src={organization?.logo || "/branding/rise-with-media-logo.png"}
-                alt={organization?.name || "RWM logo"}
+                alt={organization?.name || "AgencyUpscale logo"}
                 className="h-full w-full object-contain"
                 onError={(e) => { e.currentTarget.src = "/branding/rise-with-media-logo.png"; }}
               />
@@ -388,12 +388,12 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
             <div className="flex min-w-0 flex-col leading-tight">
               <span
                 className="truncate text-sm font-extrabold tracking-tight text-foreground font-sans"
-                title={organization?.name ? `${organization.name} + RWM` : 'RiseWithMedia'}
+                title={organization?.name ? `${organization.name} • AgencyUpscale` : 'AgencyUpscale'}
               >
-                {organization?.name ? `${organization.name} + RWM` : 'RiseWithMedia'}
+                {organization?.name ? `${organization.name} • AgencyUpscale` : 'AgencyUpscale'}
               </span>
               <span className="truncate text-[10px] font-bold text-primary uppercase tracking-widest">
-                Agency OS
+                AgencyUpscale
               </span>
             </div>
           </div>

@@ -774,7 +774,7 @@ export default function ClientFollowups() {
 
   return (
     <WorkspacePage
-      breadcrumbs={['RiseWithMedia', 'Client Lifecycle', 'Client Follow-ups']}
+      breadcrumbs={['AgencyUpscale', 'Client Lifecycle', 'Client Follow-ups']}
       title="Client Follow-ups & Touchpoints"
       icon={PhoneCall}
       properties={[

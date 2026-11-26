@@ -80,7 +80,7 @@ export const triggerBannerNotification = (data = {}) => {
 
   const payload = {
     id: data.id || data._id || `banner-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    title: data.title || '🔔 RISE WITH MEDIA Notification',
+    title: data.title || '🔔 AgencyUpscale Notification',
     message: data.message || data.body || '',
     link: data.link || data.url || '/',
     type: data.type || 'system',
@@ -136,7 +136,7 @@ export const requestBrowserNotificationPermission = async () => {
     // Also trigger native desktop banner
     sendBrowserNotification({
       title: '🔔 Banner Notifications Active',
-      message: 'Rise With Media CRM banner alerts are successfully enabled on this device.',
+      message: 'AgencyUpscale CRM banner alerts are successfully enabled on this device.',
       link: '/settings',
     }).catch(() => {});
 
@@ -193,7 +193,7 @@ export const sendBrowserNotification = async ({ title, message, link, icon, tag 
     try {
       const registration = await navigator.serviceWorker.ready;
       if (registration && typeof registration.showNotification === 'function') {
-        await registration.showNotification(title || '🔔 RISE WITH MEDIA Alert', notifOptions);
+        await registration.showNotification(title || '🔔 AgencyUpscale Alert', notifOptions);
         return true;
       }
     } catch (_swErr) {
@@ -203,7 +203,7 @@ export const sendBrowserNotification = async ({ title, message, link, icon, tag 
 
   // Fall back to window.Notification constructor
   try {
-    const notification = new Notification(title || '🔔 RISE WITH MEDIA Alert', notifOptions);
+    const notification = new Notification(title || '🔔 AgencyUpscale Alert', notifOptions);
 
     if (link) {
       notification.onclick = (event) => {
