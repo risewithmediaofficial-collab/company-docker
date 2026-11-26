@@ -20,6 +20,7 @@ export default defineConfig({
       '/api': {
         target: backendTarget,
         changeOrigin: true,
+        xfwd: true,
       },
       '/uploads': {
         target: backendTarget,
