@@ -8,6 +8,8 @@ export const GoogleAuthButton = ({
   companySlug = '',
   label,
   className = '',
+  termsAccepted = true,
+  onRequireTerms,
 }) => {
   const [serverEnabled, setServerEnabled] = useState(true);
 
@@ -29,6 +31,11 @@ export const GoogleAuthButton = ({
   }, []);
 
   const handleClick = () => {
+    if (!termsAccepted) {
+      if (onRequireTerms) onRequireTerms();
+      else toast.error('Please accept the Terms & Conditions before continuing with Google.');
+      return;
+    }
     if (!serverEnabled) {
       toast.error(
         'Google OAuth is not configured on this server yet. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the server .env and restart the backend.'
@@ -39,6 +46,7 @@ export const GoogleAuthButton = ({
       mode: mode === 'signup' ? 'signup' : 'signin',
       role: role || 'employee',
       origin: window.location.origin,
+      acceptTerms: 'true',
     });
     if (companySlug) {
       params.set('companySlug', String(companySlug).trim());

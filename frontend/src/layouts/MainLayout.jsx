@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
 import GhostModeBanner from '../components/layout/GhostModeBanner';
@@ -21,6 +22,7 @@ const PageLoadingFallback = () => (
 
 const MainLayout = () => {
   const location = useLocation();
+  const { user, organization } = useSelector((state) => state.auth);
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
 
   const handleOpenSearch = useCallback(() => {
@@ -35,6 +37,16 @@ const MainLayout = () => {
       mainEl.style.removeProperty('overflow');
     }
   }, [location.pathname]);
+
+  // Enforce post-login SaaS onboarding sequence for newly registered owners without affecting existing tenants
+  if (user?.role === 'organizationOwner') {
+    if (organization?.billingSetupRequired) {
+      return <Navigate to="/select-plan" replace />;
+    }
+    if (organization?.companySetupRequired && location.pathname !== '/settings') {
+      return <Navigate to="/settings?section=company" replace />;
+    }
+  }
 
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">

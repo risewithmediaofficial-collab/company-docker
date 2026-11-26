@@ -12,9 +12,12 @@ const organizationSchema = new mongoose.Schema(
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     industry: { type: String, default: '' },
     website: { type: String, default: '' },
+    email: { type: String, default: '' },
     phone: { type: String, default: '' },
     logo: { type: String, default: '' },
     address: { type: String, default: '' },
+    gstNumber: { type: String, default: '' },
+    services: { type: String, default: '' },
 
     // ── SaaS Plan & Status ───────────────────────────────────────────────────
     plan: {
@@ -22,6 +25,16 @@ const organizationSchema = new mongoose.Schema(
       enum: ['trial', 'starter', 'growth', 'pro'],
       default: 'trial',
     },
+    billingCycle: {
+      type: String,
+      enum: ['monthly', 'annual'],
+      default: 'monthly',
+    },
+    billingSetupRequired: { type: Boolean, default: false },
+    companySetupRequired: { type: Boolean, default: false },
+    lastOrderId: { type: String, default: '' },
+    lastPaymentId: { type: String, default: '' },
+    paidAt: { type: Date },
     planStatus: {
       // pending = registered, not yet approved by super admin
       // active  = approved + using the software

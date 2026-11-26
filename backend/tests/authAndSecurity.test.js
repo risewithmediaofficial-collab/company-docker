@@ -252,10 +252,22 @@ test('Google OAuth: Loads client_id config, builds consent redirect URL, and rej
   assert.equal(configPayload.clientId, env.googleClientId);
   assert.equal(configPayload.clientSecret, undefined, 'Never expose clientSecret publicly');
 
+  let missingTermsRedirect = '';
+  await initiateGoogleOAuth(
+    {
+      query: { mode: 'signin', role: 'employee', origin: 'http://localhost:5175' },
+      headers: { host: 'localhost:5175' },
+      protocol: 'http',
+      get: () => 'localhost:5175',
+    },
+    { redirect(url) { missingTermsRedirect = url; } }
+  );
+  assert.ok(missingTermsRedirect.includes('oauthError='), 'Google OAuth must block redirect without Terms acceptance');
+
   let redirectUrl = '';
   await initiateGoogleOAuth(
     {
-      query: { mode: 'signup', role: 'client', companySlug: 'risewithmedia', origin: 'http://localhost:5175' },
+      query: { mode: 'signup', role: 'client', companySlug: 'risewithmedia', origin: 'http://localhost:5175', acceptTerms: 'true' },
       headers: { host: 'localhost:5175' },
       protocol: 'http',
       get: () => 'localhost:5175',
@@ -274,6 +286,88 @@ test('Google OAuth: Loads client_id config, builds consent redirect URL, and rej
     { status(c) { statusCode = c; return { json() {} }; }, json() {} }
   );
   assert.equal(statusCode, 400);
+});
+
+test('CAPTCHA & Terms Enforcement: Generates single-use robot check challenges and blocks unaccepted terms on login/register', async () => {
+  const [{ generateCaptchaChallenge, verifyCaptchaChallenge, isTermsAccepted }, { login, getCaptchaChallenge }] = await Promise.all([
+    import('../utils/captcha.js'),
+    import('../controllers/auth.controller.js'),
+  ]);
+
+  let endpointChallenge = null;
+  getCaptchaChallenge(
+    {},
+    {
+      set() {},
+      json(payload) { endpointChallenge = payload; },
+    }
+  );
+  assert.equal(endpointChallenge.success, true);
+  assert.equal(endpointChallenge.mode, 'robot_check');
+  assert.ok(endpointChallenge.captchaToken);
+  assert.ok(endpointChallenge.challengeProof);
+
+  const firstVerify = await verifyCaptchaChallenge({
+    captchaToken: endpointChallenge.captchaToken,
+    captchaAnswer: endpointChallenge.challengeProof,
+  });
+  assert.equal(firstVerify.valid, true);
+
+  // Replay with the same token must fail
+  const replayVerify = await verifyCaptchaChallenge({
+    captchaToken: endpointChallenge.captchaToken,
+    captchaAnswer: endpointChallenge.challengeProof,
+  });
+  assert.equal(replayVerify.valid, false);
+
+  // Wrong answer must fail
+  const wrongChallenge = generateCaptchaChallenge();
+  const wrongVerify = await verifyCaptchaChallenge({ captchaToken: wrongChallenge.captchaToken, captchaAnswer: 'tampered' });
+  assert.equal(wrongVerify.valid, false);
+
+  // Terms helper
+  assert.equal(isTermsAccepted(true), true);
+  assert.equal(isTermsAccepted('true'), true);
+  assert.equal(isTermsAccepted(false), false);
+  assert.equal(isTermsAccepted(undefined), false);
+
+  // Login controller must return 400 TERMS_REQUIRED if acceptTerms is missing
+  let loginStatus = 200;
+  let loginJson = null;
+  await login(
+    { body: { email: 'user@example.com', password: 'password123', captchaToken: 't', captchaAnswer: 'ABCDE' } },
+    { status(s) { loginStatus = s; return { json(d) { loginJson = d; } }; }, json(d) { loginJson = d; } }
+  );
+  assert.equal(loginStatus, 400);
+  assert.equal(loginJson.code, 'TERMS_REQUIRED');
+});
+
+test('SaaS Billing & Razorpay: Authoritative plan amounts, HMAC signature verification, and org onboarding flags', async () => {
+  const [{ SAAS_PLANS, getPlanById, computePlanAmountPaise, verifyRazorpaySignature }, { default: crypto }, { default: Organization }] = await Promise.all([
+    import('../controllers/billing.controller.js'),
+    import('crypto'),
+    import('../models/organization.model.js'),
+  ]);
+
+  assert.equal(SAAS_PLANS.length, 3);
+  const growth = getPlanById('growth');
+  assert.ok(growth);
+  assert.equal(computePlanAmountPaise(growth, 'monthly'), 499900);
+  assert.equal(computePlanAmountPaise(growth, 'annual'), 4799000);
+  assert.equal(getPlanById('unknown'), null);
+
+  const secret = 'rzp_test_secret_123';
+  const orderId = 'order_test_001';
+  const paymentId = 'pay_test_001';
+  const validSig = crypto.createHmac('sha256', secret).update(`${orderId}|${paymentId}`).digest('hex');
+
+  assert.equal(verifyRazorpaySignature({ orderId, paymentId, signature: validSig, keySecret: secret }), true);
+  assert.equal(verifyRazorpaySignature({ orderId, paymentId, signature: 'tampered', keySecret: secret }), false);
+
+  // Existing organizations default to false for onboarding gates so legacy users stay unaffected
+  const defaultOrg = new Organization({ name: 'Legacy Agency', ownerId: '650000000000000000000001' });
+  assert.equal(defaultOrg.billingSetupRequired, false);
+  assert.equal(defaultOrg.companySetupRequired, false);
 });
 
 

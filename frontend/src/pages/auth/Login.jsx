@@ -27,6 +27,8 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { toggleDarkMode } from '../../store/slices/uiSlice';
 import { GoogleAuthButton } from '../../components/auth/GoogleAuthButton';
+import { CaptchaWidget } from '../../components/auth/CaptchaWidget';
+import { TermsModal } from '../../components/auth/TermsModal';
 
 // ── Left Navigation Rail / Mobile Header (CardNav) ───────────────────────────
 const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
@@ -59,21 +61,21 @@ const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
     </div>
 
     {/* Center: Modern Segmented Switch Button (Mobile: Exactly Centered / Desktop: Vertical Rail) */}
-    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 md:relative md:top-auto md:left-auto md:translate-x-0 md:translate-y-0 flex flex-row md:flex-col items-center gap-1 md:gap-3 p-1 md:p-0 bg-slate-200/70 dark:bg-slate-800/80 md:bg-transparent md:dark:bg-transparent rounded-2xl md:rounded-none border border-slate-200/70 dark:border-slate-700/60 md:border-none shadow-xs md:shadow-none z-10 w-auto md:w-full md:px-2">
+    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 md:relative md:top-auto md:left-auto md:translate-x-0 md:translate-y-0 flex flex-row md:flex-col items-center gap-1 md:gap-2.5 p-1 md:p-0 bg-slate-200/70 dark:bg-slate-800/80 md:bg-transparent md:dark:bg-transparent rounded-2xl md:rounded-none border border-slate-200/70 dark:border-slate-700/60 md:border-none shadow-xs md:shadow-none z-10 w-auto md:w-full md:px-2.5">
       {/* Sign In Button */}
       <button
         type="button"
         onClick={() => onSelect('signin')}
-        className={`signin group relative flex items-center md:flex-col justify-center gap-1.5 md:gap-1 py-1.5 px-3 md:py-3.5 md:px-1 rounded-xl md:rounded-2xl transition-all duration-200 text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 ${
+        className={`signin group relative flex items-center md:flex-col justify-center gap-1.5 md:gap-1 py-1.5 px-3 md:py-3 md:px-2.5 md:w-full rounded-xl md:rounded-2xl border transition-all duration-200 text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 ${
           view === 'signin'
-            ? 'text-[#12B7D4] bg-white dark:bg-slate-900 shadow-2xs md:shadow-sm md:shadow-[#12B7D4]/15'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            ? 'text-[#12B7D4] bg-white dark:bg-slate-900 border-[#12B7D4]/25 shadow-2xs md:shadow-sm md:shadow-[#12B7D4]/15'
+            : 'text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-700 dark:hover:text-slate-200'
         }`}
       >
         {view === 'signin' && (
-          <span className="hidden md:block active-bar absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#12B7D4] rounded-r-full shadow-xs" />
+          <span className="hidden md:block active-bar absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-7 bg-[#12B7D4] rounded-r-full shadow-xs" />
         )}
-        <UserCheck size={14} className={`transition-transform duration-200 shrink-0 ${view === 'signin' ? 'scale-110 text-[#12B7D4]' : ''}`} />
+        <UserCheck size={15} className={`transition-transform duration-200 shrink-0 ${view === 'signin' ? 'scale-105 text-[#12B7D4]' : ''}`} />
         <span className="leading-none text-[11px] md:text-xs whitespace-nowrap">Sign In</span>
       </button>
 
@@ -81,16 +83,16 @@ const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
       <button
         type="button"
         onClick={() => onSelect('signup')}
-        className={`signup group relative flex items-center md:flex-col justify-center gap-1.5 md:gap-1 py-1.5 px-3 md:py-3.5 md:px-1 rounded-xl md:rounded-2xl transition-all duration-200 text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 ${
+        className={`signup group relative flex items-center md:flex-col justify-center gap-1.5 md:gap-1 py-1.5 px-3 md:py-3 md:px-2.5 md:w-full rounded-xl md:rounded-2xl border transition-all duration-200 text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 ${
           view === 'signup'
-            ? 'text-[#12B7D4] bg-white dark:bg-slate-900 shadow-2xs md:shadow-sm md:shadow-[#12B7D4]/15'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            ? 'text-[#12B7D4] bg-white dark:bg-slate-900 border-[#12B7D4]/25 shadow-2xs md:shadow-sm md:shadow-[#12B7D4]/15'
+            : 'text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-700 dark:hover:text-slate-200'
         }`}
       >
         {view === 'signup' && (
-          <span className="hidden md:block active-bar absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#12B7D4] rounded-r-full shadow-xs" />
+          <span className="hidden md:block active-bar absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-7 bg-[#12B7D4] rounded-r-full shadow-xs" />
         )}
-        <UserPlus size={14} className={`transition-transform duration-200 shrink-0 ${view === 'signup' ? 'scale-110 text-[#12B7D4]' : ''}`} />
+        <UserPlus size={15} className={`transition-transform duration-200 shrink-0 ${view === 'signup' ? 'scale-105 text-[#12B7D4]' : ''}`} />
         <span className="leading-none text-[11px] md:text-xs whitespace-nowrap">Sign Up</span>
       </button>
     </div>
@@ -115,11 +117,11 @@ const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
 );
 
 // ── Hero Banner Section (CardHero) ───────────────────────────────────────────
-const Hero = ({ variant, view, title, subtitle, portalOrg }) => {
+const Hero = ({ variant, view, title, subtitle, portalOrg, onOpenTerms }) => {
   const isActive = view === variant;
   return (
     <div
-      className={`card-hero-content ${variant} h-[480px] md:h-[500px] flex flex-col justify-center items-center text-center px-6 transition-opacity duration-500 ease-in-out ${
+      className={`card-hero-content ${variant} h-[480px] md:h-[630px] flex flex-col justify-center items-center text-center px-6 transition-opacity duration-500 ease-in-out ${
         isActive ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
     >
@@ -152,17 +154,14 @@ const Hero = ({ variant, view, title, subtitle, portalOrg }) => {
         {portalOrg?.name ? `${portalOrg.name} Portal` : 'RiseWithMedia OS'}
       </div>
 
-      <a
-        href="#terms"
-        onClick={(e) => {
-          e.preventDefault();
-          toast.info('RiseWithMedia Security SLA: 99.98% uptime with isolated tenant workspaces.');
-        }}
-        className="terms inline-flex items-center gap-1.5 mt-6 text-xs text-white/70 hover:text-white transition-opacity duration-300 cursor-pointer"
+      <button
+        type="button"
+        onClick={onOpenTerms}
+        className="terms inline-flex items-center gap-1.5 mt-6 text-xs text-white/75 hover:text-white transition-opacity duration-300 cursor-pointer"
       >
         <span>Terms &amp; Conditions</span>
         <Download size={13} />
-      </a>
+      </button>
     </div>
   );
 };
@@ -185,6 +184,14 @@ const SignInForm = ({
   currentOrg,
   navigate,
   dispatch,
+  captcha,
+  setCaptcha,
+  captchaRefreshKey,
+  termsAccepted,
+  setTermsAccepted,
+  localError,
+  setLocalError,
+  onOpenTerms,
 }) => {
   // ── Multi-Tab Active Session Switcher ──────────────────────────────────────
   if (isAuthenticated && user && companySlug) {
@@ -294,10 +301,10 @@ const SignInForm = ({
         </div>
       )}
 
-      {error && !portalRedirect && (
+      {(error || localError) && !portalRedirect && (
         <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-medium flex items-center gap-2">
           <AlertCircle size={15} className="shrink-0" />
-          <span className="leading-tight">{error}</span>
+          <span className="leading-tight">{localError || error}</span>
         </div>
       )}
 
@@ -328,7 +335,7 @@ const SignInForm = ({
           <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300" htmlFor="signin-password">
             Password
           </label>
-          <Link to="/forgot-password" className="text-[11px] text-[#12B7D4] hover:underline font-semibold">
+          <Link to="/forgot-password" className="text-[11px] text-[#0284c7] dark:text-[#38bdf8] underline underline-offset-2 font-semibold">
             Forgot password?
           </Link>
         </div>
@@ -355,11 +362,59 @@ const SignInForm = ({
         </div>
       </div>
 
+      {/* CAPTCHA Verification */}
+      <CaptchaWidget
+        compact
+        inputId="signin-captcha"
+        captchaToken={captcha.captchaToken}
+        captchaAnswer={captcha.captchaAnswer}
+        onChange={(next) => {
+          setLocalError('');
+          setCaptcha(next);
+        }}
+        refreshKey={captchaRefreshKey}
+      />
+
+      {/* Mandatory Terms & Conditions Checkbox */}
+      <div
+        className={`rounded-xl px-2.5 py-2 border transition-colors ${
+          !termsAccepted && localError
+            ? 'border-red-300 dark:border-red-800 bg-red-50/70 dark:bg-red-950/25'
+            : 'border-slate-200/80 dark:border-slate-700/70 bg-slate-50/70 dark:bg-slate-800/40'
+        }`}
+      >
+        <label className="flex items-start gap-2 text-[11px] text-slate-600 dark:text-slate-300 cursor-pointer select-none">
+          <input
+            id="signin-terms"
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={(e) => {
+              setTermsAccepted(e.target.checked);
+              if (e.target.checked) setLocalError('');
+            }}
+            className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-[#12B7D4] focus:ring-[#12B7D4] cursor-pointer shrink-0"
+          />
+          <span className="leading-snug">
+            I accept the{' '}
+            <button
+              type="button"
+              onClick={onOpenTerms}
+              className="text-[#0284c7] dark:text-[#38bdf8] underline underline-offset-2 font-bold cursor-pointer"
+            >
+              Terms &amp; Conditions
+            </button>{' '}
+            &amp; Privacy Policy <span className="text-red-500">*</span>
+          </span>
+        </label>
+      </div>
+
       {/* Submit Button */}
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-2.5 px-4 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-extrabold text-xs transition-all shadow-sm shadow-[#12B7D4]/25 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+        className={`w-full py-2.5 px-4 rounded-xl bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-extrabold text-xs transition-all shadow-sm shadow-[#12B7D4]/25 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer ${
+          !termsAccepted ? 'opacity-80' : ''
+        }`}
       >
         {loading ? (
           <span className="flex items-center gap-2">
@@ -377,6 +432,12 @@ const SignInForm = ({
       <GoogleAuthButton
         mode="signin"
         companySlug={companySlug}
+        termsAccepted={termsAccepted}
+        onRequireTerms={() => {
+          const msg = 'You must accept the Terms & Conditions before continuing with Google.';
+          setLocalError(msg);
+          toast.error(msg);
+        }}
         label={portalOrg ? `Continue with Google (${portalOrg.name})` : 'Continue with Google'}
       />
 
@@ -387,21 +448,11 @@ const SignInForm = ({
           <button
             type="button"
             onClick={onSwitch}
-            className="text-[#12B7D4] hover:underline font-bold cursor-pointer"
+            className="text-[#0284c7] dark:text-[#38bdf8] underline underline-offset-2 font-bold cursor-pointer"
           >
             Sign Up
           </button>
         </p>
-
-        {!portalOrg && (
-          <Link
-            to="/register-company"
-            className="flex items-center justify-center gap-1.5 w-full py-1.5 px-3 rounded-lg border border-[#12B7D4]/30 bg-[#12B7D4]/5 hover:bg-[#12B7D4]/10 text-[#0e7490] dark:text-[#12B7D4] text-[11px] font-bold transition-all"
-          >
-            <Building2 size={13} />
-            <span>Register Your Company (14-Day Free Trial)</span>
-          </Link>
-        )}
 
         <Link
           to="/"
@@ -415,16 +466,18 @@ const SignInForm = ({
 };
 
 // ── Sign Up Form Component ───────────────────────────────────────────────────
-const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate }) => {
+const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms }) => {
   const [signupData, setSignupData] = useState({
     name: '',
     email: '',
     password: '',
-    role: 'employee',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [captcha, setCaptcha] = useState({ captchaToken: '', captchaAnswer: '' });
+  const [captchaRefreshKey, setCaptchaRefreshKey] = useState(0);
 
   const handleSignupChange = (e) => {
     setError('');
@@ -433,18 +486,37 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate }) => {
 
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+    if (!termsAccepted) {
+      const msg = 'You must accept the Terms & Conditions to create an account.';
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    if (!captcha.captchaToken || !captcha.captchaAnswer.trim()) {
+      const msg = 'Please complete the "I\'m not a robot" verification.';
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    setLoading(true);
     try {
-      const res = await axios.post('/api/auth/register', signupData);
+      const res = await axios.post('/api/auth/register', {
+        ...signupData,
+        companySlug: companySlug || undefined,
+        captchaToken: captcha.captchaToken,
+        captchaAnswer: captcha.captchaAnswer.trim(),
+        acceptTerms: true,
+      });
       if (res.data.success) {
-        toast.success(res.data.message || 'Account created! Please sign in with your credentials.');
+        toast.success(res.data.message || 'Account created! Please sign in to choose your plan.');
         onSwitch();
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Registration failed. Please try again.';
       setError(msg);
       toast.error(msg);
+      setCaptchaRefreshKey((k) => k + 1);
     } finally {
       setLoading(false);
     }
@@ -488,7 +560,7 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate }) => {
       {/* Email Field */}
       <div>
         <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-0.5 block" htmlFor="signup-email">
-          Work Email
+          Gmail / Email Address
         </label>
         <div className="relative group">
           <Mail size={15} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none group-focus-within:text-[#12B7D4] transition-colors" />
@@ -499,7 +571,7 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate }) => {
             required
             value={signupData.email}
             onChange={handleSignupChange}
-            placeholder="name@company.com"
+            placeholder="name@gmail.com"
             className="w-full bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 rounded-xl py-2 pl-9 pr-3 text-slate-900 dark:text-white text-xs placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all"
           />
         </div>
@@ -533,22 +605,43 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate }) => {
         </div>
       </div>
 
-      {/* Account Type Role */}
-      <div>
-        <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-0.5 block">
-          Role in Organization
-        </label>
-        <select
-          name="role"
-          value={signupData.role}
-          onChange={handleSignupChange}
-          className="w-full bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl py-2 px-3 text-slate-900 dark:text-white text-xs focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-[#12B7D4] focus:ring-2 focus:ring-[#12B7D4]/20 transition-all cursor-pointer"
-        >
-          <option value="employee">Team Member / Staff</option>
-          <option value="client">Client / External Partner</option>
-          <option value="manager">Project Manager</option>
-        </select>
-      </div>
+      {/* CAPTCHA Verification */}
+      <CaptchaWidget
+        compact
+        inputId="signup-captcha"
+        captchaToken={captcha.captchaToken}
+        captchaAnswer={captcha.captchaAnswer}
+        onChange={(next) => {
+          setError('');
+          setCaptcha(next);
+        }}
+        refreshKey={captchaRefreshKey}
+      />
+
+      {/* Mandatory Terms & Conditions Checkbox */}
+      <label className="flex items-start gap-2 text-[11px] text-slate-600 dark:text-slate-300 cursor-pointer select-none px-1">
+        <input
+          id="signup-terms"
+          type="checkbox"
+          checked={termsAccepted}
+          onChange={(e) => {
+            setTermsAccepted(e.target.checked);
+            if (e.target.checked) setError('');
+          }}
+          className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-[#12B7D4] focus:ring-[#12B7D4] cursor-pointer shrink-0"
+        />
+        <span className="leading-snug">
+          I agree to the{' '}
+          <button
+            type="button"
+            onClick={onOpenTerms}
+            className="text-[#0284c7] dark:text-[#38bdf8] underline underline-offset-2 font-bold cursor-pointer"
+          >
+            Terms &amp; Conditions
+          </button>{' '}
+          <span className="text-red-500">*</span>
+        </span>
+      </label>
 
       {/* Submit Button */}
       <button
@@ -571,31 +664,28 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate }) => {
 
       <GoogleAuthButton
         mode="signup"
-        role={signupData.role}
         companySlug={companySlug}
+        termsAccepted={termsAccepted}
+        onRequireTerms={() => {
+          const msg = 'You must accept the Terms & Conditions before continuing with Google.';
+          setError(msg);
+          toast.error(msg);
+        }}
         label="Sign up with Google"
       />
 
-      {/* Switch to Sign In & Register Company */}
+      {/* Switch to Sign In */}
       <div className="pt-1 text-center space-y-1.5 border-t border-slate-100 dark:border-slate-800/80">
         <p className="text-xs text-slate-600 dark:text-slate-400">
           Already have an account?{' '}
           <button
             type="button"
             onClick={onSwitch}
-            className="text-[#12B7D4] hover:underline font-bold cursor-pointer"
+            className="text-[#0284c7] dark:text-[#38bdf8] underline underline-offset-2 font-bold cursor-pointer"
           >
             Sign In
           </button>
         </p>
-
-        <Link
-          to="/register-company"
-          className="flex items-center justify-center gap-1.5 w-full py-1.5 px-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold transition-all"
-        >
-          <Zap size={13} />
-          <span>Setting up a company? Start Free Trial →</span>
-        </Link>
       </div>
     </form>
   );
@@ -615,6 +705,11 @@ export const Login = ({ initialView }) => {
   const [view, setView] = useState(defaultView);
   const [showPassword, setShowPassword] = useState(false);
   const [portalRedirect, setPortalRedirect] = useState(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [localError, setLocalError] = useState('');
+  const [captcha, setCaptcha] = useState({ captchaToken: '', captchaAnswer: '' });
+  const [captchaRefreshKey, setCaptchaRefreshKey] = useState(0);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -627,6 +722,7 @@ export const Login = ({ initialView }) => {
 
   const handleChange = (e) => {
     if (error) dispatch(clearError());
+    if (localError) setLocalError('');
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (portalRedirect) setPortalRedirect(null);
   };
@@ -634,14 +730,41 @@ export const Login = ({ initialView }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setPortalRedirect(null);
+    setLocalError('');
+
+    if (!termsAccepted) {
+      const msg = 'You must accept the Terms & Conditions to sign in.';
+      setLocalError(msg);
+      toast.error(msg);
+      return;
+    }
+
+    if (!captcha.captchaToken || !captcha.captchaAnswer.trim()) {
+      const msg = 'Please check "I\'m not a robot" before signing in.';
+      setLocalError(msg);
+      toast.error(msg);
+      return;
+    }
+
     const payload = {
       ...formData,
       companySlug: companySlug || undefined,
+      captchaToken: captcha.captchaToken,
+      captchaAnswer: captcha.captchaAnswer.trim(),
+      acceptTerms: true,
     };
     const result = await dispatch(loginUser(payload));
     if (loginUser.fulfilled.match(result)) {
       toast.success('Welcome back!');
-      navigate('/');
+      const loggedUser = result.payload?.user;
+      const loggedOrg = result.payload?.organization;
+      if (loggedUser?.role === 'organizationOwner' && loggedOrg?.billingSetupRequired) {
+        navigate('/select-plan');
+      } else if (loggedUser?.role === 'organizationOwner' && loggedOrg?.companySetupRequired) {
+        navigate('/settings?section=company');
+      } else {
+        navigate('/');
+      }
     } else {
       const errData = result.payload;
       if (errData?.requiresCompanyPortal) {
@@ -649,6 +772,7 @@ export const Login = ({ initialView }) => {
       }
       const errorMsg = errData?.message || 'Invalid email or password. Please check your credentials and try again.';
       toast.error(errorMsg);
+      setCaptchaRefreshKey((k) => k + 1);
     }
   };
 
@@ -693,6 +817,7 @@ export const Login = ({ initialView }) => {
               title="Welcome back"
               subtitle={portalOrg ? `Sign in to ${portalOrg.name} CRM workspace` : 'Please enter your credentials'}
               portalOrg={portalOrg}
+              onOpenTerms={() => setTermsModalOpen(true)}
             />
             <Hero
               variant="signup"
@@ -700,19 +825,20 @@ export const Login = ({ initialView }) => {
               title="Join us today"
               subtitle="Creating an account is quick"
               portalOrg={portalOrg}
+              onOpenTerms={() => setTermsModalOpen(true)}
             />
           </div>
         </div>
 
         {/* 3. Form Container Sliding Area */}
-        <div className="card-form w-full flex-auto min-w-0 relative overflow-hidden h-[460px] sm:h-[490px] md:h-[530px]">
+        <div className="card-form w-full flex-auto min-w-0 relative overflow-hidden h-[610px] sm:h-[620px] md:h-[630px]">
           <div
             className={`forms absolute inset-x-0 top-0 h-[200%] transition-transform duration-500 ease-in-out ${
               view === 'signup' ? '-translate-y-1/2' : 'translate-y-0'
             }`}
           >
             {/* Form 1: Sign In */}
-            <div className="h-1/2 w-full px-4 py-2.5 sm:px-6 sm:py-4 md:p-8 flex flex-col justify-start md:justify-center overflow-y-auto">
+            <div className="h-1/2 w-full px-4 py-2.5 sm:px-6 sm:py-4 md:px-8 md:py-5 flex flex-col justify-start md:justify-center overflow-y-auto">
               <SignInForm
                 formData={formData}
                 handleChange={handleChange}
@@ -730,21 +856,39 @@ export const Login = ({ initialView }) => {
                 currentOrg={currentOrg}
                 navigate={navigate}
                 dispatch={dispatch}
+                captcha={captcha}
+                setCaptcha={setCaptcha}
+                captchaRefreshKey={captchaRefreshKey}
+                termsAccepted={termsAccepted}
+                setTermsAccepted={setTermsAccepted}
+                localError={localError}
+                setLocalError={setLocalError}
+                onOpenTerms={() => setTermsModalOpen(true)}
               />
             </div>
 
             {/* Form 2: Sign Up */}
-            <div className="h-1/2 w-full px-4 py-2.5 sm:px-6 sm:py-4 md:p-8 flex flex-col justify-start md:justify-center overflow-y-auto">
+            <div className="h-1/2 w-full px-4 py-2.5 sm:px-6 sm:py-4 md:px-8 md:py-5 flex flex-col justify-start md:justify-center overflow-y-auto">
               <SignUpForm
                 onSwitch={() => setView('signin')}
                 portalOrg={portalOrg}
                 companySlug={companySlug}
                 navigate={navigate}
+                onOpenTerms={() => setTermsModalOpen(true)}
               />
             </div>
           </div>
         </div>
       </div>
+
+      <TermsModal
+        open={termsModalOpen}
+        onClose={() => setTermsModalOpen(false)}
+        onAccept={() => {
+          setTermsAccepted(true);
+          setLocalError('');
+        }}
+      />
     </div>
   );
 };

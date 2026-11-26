@@ -38,9 +38,16 @@ export default function GoogleOAuthCallback() {
 
       dispatch(fetchMe())
         .unwrap()
-        .then(() => {
+        .then((meData) => {
           toast.success('Signed in with Google!');
-          navigate('/', { replace: true });
+          const org = meData?.organization;
+          if (meData?.user?.role === 'organizationOwner' && org?.billingSetupRequired) {
+            navigate('/select-plan', { replace: true });
+          } else if (meData?.user?.role === 'organizationOwner' && org?.companySetupRequired) {
+            navigate('/settings?section=company', { replace: true });
+          } else {
+            navigate('/', { replace: true });
+          }
         })
         .catch((err) => {
           setStatus('error');

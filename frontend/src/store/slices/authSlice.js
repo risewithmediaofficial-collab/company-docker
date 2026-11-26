@@ -196,6 +196,14 @@ const authSlice = createSlice({
         state.user = { ...state.user, ...action.payload };
       }
     },
+    updateOrganization: (state, action) => {
+      if (action.payload) {
+        state.organization = { ...(state.organization || {}), ...action.payload };
+        try {
+          localStorage.setItem('rwm_user_org', JSON.stringify(state.organization));
+        } catch {}
+      }
+    },
     setActiveWorkspace: (state, action) => {
       state.activeWorkspace = action.payload;
       if (action.payload) {
@@ -280,6 +288,7 @@ export const {
   logout,
   setAuth,
   updateCurrentUser,
+  updateOrganization,
   setActiveWorkspace,
   clearError,
   enterGhostMode,

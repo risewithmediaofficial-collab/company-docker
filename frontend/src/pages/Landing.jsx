@@ -45,32 +45,32 @@ export const Landing = () => {
           {/* CTA Buttons */}
           <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
             <Link
-              to="/register-company"
+              to="/register"
               className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#12B7D4]/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Register Company</span>
+              <span>Register</span>
               <ArrowRight size={16} />
             </Link>
             <Link
               to="/login"
               className="px-7 sm:px-9 py-3.5 sm:py-4 rounded-full bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-bold text-sm sm:text-base transition-all flex items-center justify-center shadow-2xs"
             >
-              Login to Account
+              Sign In
             </Link>
           </div>
 
           {/* Trust Micro-copy */}
           <div className="mt-4 flex items-center justify-center flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-slate-500">
             <span className="flex items-center gap-1">
-              <span className="text-emerald-500 font-bold">✓</span> 14-Day Free Trial
+              <span className="text-emerald-500 font-bold">✓</span> Instant Plan Activation
             </span>
             <span className="hidden sm:inline">•</span>
             <span className="flex items-center gap-1">
-              <span className="text-emerald-500 font-bold">✓</span> No Credit Card Required
+              <span className="text-emerald-500 font-bold">✓</span> Isolated Agency Workspace
             </span>
             <span className="hidden sm:inline">•</span>
             <span className="flex items-center gap-1">
-              <span className="text-emerald-500 font-bold">✓</span> Instant Setup in 2 Mins
+              <span className="text-emerald-500 font-bold">✓</span> Setup Company Details Inside
             </span>
           </div>
         </div>
@@ -318,14 +318,14 @@ export const Landing = () => {
                   <span className="text-[#12B7D4] block mt-1">Run your agency smoothly and without stress.</span>
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed pt-1">
-                  Set up your agency workspace in under 2 minutes. No credit card required. Invite your entire team.
+                  Create your account in seconds, choose your plan inside, and configure your agency details cleanly in Settings.
                 </p>
               </div>
               <Link
-                to="/register-company"
+                to="/register"
                 className="px-8 py-4 bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base border border-[#12B7D4] transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
               >
-                <span>Start 14-Day Free Trial</span>
+                <span>Register Now</span>
                 <ArrowRight size={16} />
               </Link>
             </div>

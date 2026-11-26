@@ -34,7 +34,7 @@ export const useUpdateCompanySettings = () => {
   return useMutation({
     mutationFn: async (data) => {
       const response = await api.put('/settings/company', data);
-      return response.data.settings?.companyProfile || data;
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] });

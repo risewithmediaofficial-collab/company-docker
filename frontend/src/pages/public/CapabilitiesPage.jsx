@@ -118,25 +118,25 @@ export const CapabilitiesPage = () => {
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5">
             <Link
-              to="/register-company"
+              to="/register"
               className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#12B7D4]/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Register Company (14-Day Free Trial)</span>
+              <span>Register</span>
               <ArrowRight size={16} />
             </Link>
             <Link
               to="/login"
               className="px-7 sm:px-9 py-3.5 sm:py-4 rounded-full bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-bold text-sm sm:text-base transition-all flex items-center justify-center shadow-2xs"
             >
-              Login to Workspace
+              Sign In
             </Link>
           </div>
           <div className="mt-4 flex items-center justify-center flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-slate-500">
-            <span className="flex items-center gap-1"><span className="text-emerald-500 font-bold">✓</span> 14-Day Free Trial</span>
+            <span className="flex items-center gap-1"><span className="text-emerald-500 font-bold">✓</span> Flexible Workspace Plans</span>
             <span className="hidden sm:inline">•</span>
-            <span className="flex items-center gap-1"><span className="text-emerald-500 font-bold">✓</span> No Credit Card Required</span>
+            <span className="flex items-center gap-1"><span className="text-emerald-500 font-bold">✓</span> Role-Based Portals</span>
             <span className="hidden sm:inline">•</span>
-            <span className="flex items-center gap-1"><span className="text-emerald-500 font-bold">✓</span> Instant Setup in 2 Mins</span>
+            <span className="flex items-center gap-1"><span className="text-emerald-500 font-bold">✓</span> Instant Activation</span>
           </div>
         </div>
       </section>
@@ -349,21 +349,21 @@ export const CapabilitiesPage = () => {
             <div className="text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8">
               <div className="space-y-2 max-w-2xl">
                 <span className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] block">
-                  Instant 14-Day Free Access
+                  Unified Agency OS
                 </span>
                 <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
                   Stop juggling 6 different tools.
                   <span className="text-[#12B7D4] block mt-1">Run your agency smoothly and without stress.</span>
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed pt-1">
-                  Set up your agency workspace in under 2 minutes. No credit card required. Invite your entire team.
+                  Register your account, choose your workspace plan, and configure your agency settings in minutes.
                 </p>
               </div>
               <Link
-                to="/register-company"
+                to="/register"
                 className="px-8 py-4 bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base border border-[#12B7D4] transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
               >
-                <span>Start 14-Day Free Trial</span>
+                <span>Register Now</span>
                 <ArrowRight size={16} />
               </Link>
             </div>

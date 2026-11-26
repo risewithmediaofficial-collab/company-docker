@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { CaptchaWidget } from '../../components/auth/CaptchaWidget';
+import { TermsModal } from '../../components/auth/TermsModal';
 
 const steps = [
   { id: 1, label: 'Company Details', shortLabel: 'Company', icon: Building2, desc: 'Agency name & industry' },
@@ -76,6 +78,10 @@ const RegisterCompany = () => {
   const [customSlugEdited, setCustomSlugEdited] = useState(false);
   const [createdSlug, setCreatedSlug] = useState('');
   const [errors, setErrors] = useState({});
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [captcha, setCaptcha] = useState({ captchaToken: '', captchaAnswer: '' });
+  const [captchaRefreshKey, setCaptchaRefreshKey] = useState(0);
 
   const update = (field, value) => {
     setForm((f) => ({ ...f, [field]: value }));
@@ -128,6 +134,8 @@ const RegisterCompany = () => {
       if (!form.password) errs.password = 'Password is required';
       else if (form.password.length < 6) errs.password = 'Password must be at least 6 characters';
       if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match';
+      if (!captcha.captchaToken || !captcha.captchaAnswer.trim()) errs.captcha = 'Please complete the CAPTCHA verification code';
+      if (!termsAccepted) errs.terms = 'You must accept the Terms & Conditions to register';
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -154,11 +162,15 @@ const RegisterCompany = () => {
         email: form.email,
         phone: form.phone,
         password: form.password,
+        captchaToken: captcha.captchaToken,
+        captchaAnswer: captcha.captchaAnswer.trim(),
+        acceptTerms: true,
       });
       setCreatedSlug(res.data?.organization?.slug || res.data?.slug || cleanSlug);
       setSuccess(true);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed. Please try again.');
+      setCaptchaRefreshKey((k) => k + 1);
     } finally {
       setLoading(false);
     }
@@ -717,6 +729,48 @@ const RegisterCompany = () => {
                   </div>
                 </div>
 
+                {/* Security CAPTCHA & Terms Acceptance */}
+                <div className="space-y-4 pt-1">
+                  <div>
+                    <CaptchaWidget
+                      inputId="register-company-captcha"
+                      captchaToken={captcha.captchaToken}
+                      captchaAnswer={captcha.captchaAnswer}
+                      onChange={(next) => {
+                        setCaptcha(next);
+                        setErrors((e) => ({ ...e, captcha: '' }));
+                      }}
+                      refreshKey={captchaRefreshKey}
+                    />
+                    {errors.captcha && <p className="text-red-500 text-xs mt-1">{errors.captcha}</p>}
+                  </div>
+
+                  <label className="flex items-start gap-2.5 text-xs text-slate-600 cursor-pointer select-none">
+                    <input
+                      id="register-company-terms"
+                      type="checkbox"
+                      checked={termsAccepted}
+                      onChange={(e) => {
+                        setTermsAccepted(e.target.checked);
+                        setErrors((prev) => ({ ...prev, terms: '' }));
+                      }}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#12B7D4] focus:ring-[#12B7D4] cursor-pointer"
+                    />
+                    <span>
+                      I accept the{' '}
+                      <button
+                        type="button"
+                        onClick={() => setTermsModalOpen(true)}
+                        className="text-[#12B7D4] hover:underline font-bold cursor-pointer"
+                      >
+                        Terms &amp; Conditions
+                      </button>{' '}
+                      and Privacy Policy for our workspace. <span className="text-red-500">*</span>
+                    </span>
+                  </label>
+                  {errors.terms && <p className="text-red-500 text-xs -mt-2">{errors.terms}</p>}
+                </div>
+
                 {/* Plan Highlights Box */}
                 <div className="bg-gradient-to-br from-cyan-50/70 via-teal-50/40 to-slate-50 border border-[#12B7D4]/25 rounded-2xl p-4">
                   <div className="flex items-center gap-2 mb-3">
@@ -795,6 +849,15 @@ const RegisterCompany = () => {
         </div>
 
       </div>
+
+      <TermsModal
+        open={termsModalOpen}
+        onClose={() => setTermsModalOpen(false)}
+        onAccept={() => {
+          setTermsAccepted(true);
+          setErrors((prev) => ({ ...prev, terms: '' }));
+        }}
+      />
     </div>
   );
 };

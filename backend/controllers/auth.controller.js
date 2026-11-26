@@ -11,6 +11,42 @@ import Organization from '../models/organization.model.js';
 import { sendEmail } from '../utils/email.js';
 import { createNotification } from '../utils/notification.js';
 import { createActivityLog } from '../utils/activity.js';
+import { generateCaptchaChallenge, verifyCaptchaChallenge, isTermsAccepted } from '../utils/captcha.js';
+
+const ORG_AUTH_PROJECTION =
+  'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients trialEndsAt settings paidAt';
+
+const createSelfServeWorkspace = async ({ name, email, ownerId }) => {
+  const baseName = String(name || email?.split('@')[0] || 'My Agency').trim();
+  let cleanSlug = baseName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  if (!cleanSlug) cleanSlug = `workspace-${Date.now().toString(36)}`;
+
+  const exists = await Organization.findOne({ slug: cleanSlug }).select('_id').lean();
+  if (exists) {
+    cleanSlug = `${cleanSlug}-${crypto.randomBytes(2).toString('hex')}`;
+  }
+
+  return Organization.create({
+    name: `${baseName}'s Workspace`,
+    slug: cleanSlug,
+    ownerId,
+    email: email || '',
+    plan: 'trial',
+    billingCycle: 'monthly',
+    planStatus: 'pending',
+    billingSetupRequired: true,
+    companySetupRequired: true,
+    enabledModules: {
+      crm: true,
+      clients: true,
+      projects: true,
+      tasks: true,
+    },
+  });
+};
 
 // Generate access token with explicit tokenType
 const generateAccessToken = (id, role) => {
@@ -31,54 +67,103 @@ const generateRefreshToken = (id) => {
 // @access  Public
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, companySlug, captchaToken, captchaAnswer, acceptTerms } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Please provide name, email and password' });
     }
 
-    const existingUser = await User.findOne({ email });
+    if (!isTermsAccepted(acceptTerms)) {
+      return res.status(400).json({
+        success: false,
+        code: 'TERMS_REQUIRED',
+        message: 'You must accept the Terms & Conditions to create an account',
+      });
+    }
+
+    const captchaResult = await verifyCaptchaChallenge({ captchaToken, captchaAnswer });
+    if (!captchaResult.valid) {
+      return res.status(400).json({
+        success: false,
+        code: 'CAPTCHA_INVALID',
+        message: captchaResult.message,
+      });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const existingUser = await User.findOne({ email: cleanEmail });
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'Email already registered' });
     }
 
-    // Only superAdmin can create superAdmin accounts
-    const safeRole = ['employee', 'client', 'referral', 'manager'].includes(role) ? role : 'employee';
+    const cleanCompanySlug = String(companySlug || '').replace(/^\/+|\/+$/g, '').toLowerCase().trim();
 
-    const newUser = await User.create({
-      name,
-      email,
-      password,
-      role: safeRole,
-      isActive: false,
-      approvalStatus: 'pending',
-    });
-
-    // If it's a client, also create a Client profile
-    if (safeRole === 'client') {
-      const client = await Client.create({
-        name,
-        email,
-        company: name, // Default company name to user's name
-        status: 'onboarding',
-        userId: newUser._id,
-        portalEnabled: true,
+    // Joining an existing company portal -> preserves staff approval flow
+    if (cleanCompanySlug) {
+      const orgDoc = await Organization.findOne({ slug: cleanCompanySlug }).select('_id name slug').lean();
+      if (!orgDoc) {
+        return res.status(404).json({ success: false, message: 'Company workspace not found' });
+      }
+      const safeRole = ['employee', 'client', 'manager'].includes(role) ? role : 'employee';
+      const tenantUser = await User.create({
+        name: String(name).trim(),
+        email: cleanEmail,
+        password,
+        role: safeRole,
+        organizationId: orgDoc._id,
+        isActive: false,
+        approvalStatus: 'pending',
       });
 
-      // Update user with clientId
-      newUser.clientId = client._id;
-      await newUser.save();
+      if (safeRole === 'client') {
+        const client = await Client.create({
+          name: tenantUser.name,
+          email: cleanEmail,
+          company: tenantUser.name,
+          status: 'onboarding',
+          userId: tenantUser._id,
+          organizationId: orgDoc._id,
+          portalEnabled: true,
+        });
+        tenantUser.clientId = client._id;
+        await tenantUser.save();
+      }
+
+      const io = req.app.get('io');
+      if (io) io.emit('userCreated', { role: safeRole });
+
+      return res.status(201).json({
+        success: true,
+        message: `Registration submitted to ${orgDoc.name}. Please wait for admin approval before signing in.`,
+      });
     }
 
-    // Emit event for real-time dashboard updates
+    // Public self-service registration -> owner signs in, selects Razorpay plan, then enters company details in Settings
+    const newUser = await User.create({
+      name: String(name).trim(),
+      email: cleanEmail,
+      password,
+      role: 'organizationOwner',
+      isActive: true,
+      approvalStatus: 'approved',
+    });
+
+    const org = await createSelfServeWorkspace({
+      name: newUser.name,
+      email: cleanEmail,
+      ownerId: newUser._id,
+    });
+    newUser.organizationId = org._id;
+    await newUser.save({ validateBeforeSave: false });
+
     const io = req.app.get('io');
-    if (io) {
-      io.emit('userCreated', { role: safeRole });
-    }
+    if (io) io.emit('userCreated', { role: 'organizationOwner' });
 
     res.status(201).json({
       success: true,
-      message: 'Registration submitted. A super admin must approve your account before you can sign in.',
+      requiresPlanSelection: true,
+      companySlug: org.slug,
+      message: 'Account created! Sign in with your email and password to select a plan and complete your setup.',
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -90,10 +175,27 @@ export const register = async (req, res) => {
 // @access  Public
 export const login = async (req, res) => {
   try {
-    const { email, password, companySlug } = req.body;
+    const { email, password, companySlug, captchaToken, captchaAnswer, acceptTerms } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Please provide email and password' });
+    }
+
+    if (!isTermsAccepted(acceptTerms)) {
+      return res.status(400).json({
+        success: false,
+        code: 'TERMS_REQUIRED',
+        message: 'You must accept the Terms & Conditions to sign in',
+      });
+    }
+
+    const captchaResult = await verifyCaptchaChallenge({ captchaToken, captchaAnswer });
+    if (!captchaResult.valid) {
+      return res.status(400).json({
+        success: false,
+        code: 'CAPTCHA_INVALID',
+        message: captchaResult.message,
+      });
     }
 
     const cleanIdentifier = String(email).trim().toLowerCase();
@@ -160,9 +262,7 @@ export const login = async (req, res) => {
     // ── Tenant Portal URL Scoping Enforcement ────────────────────────────────
     let organization = null;
     if (user.organizationId) {
-      organization = await Organization.findById(user.organizationId).select(
-        'name slug logo industry website phone plan planStatus enabledModules maxUsers maxClients trialEndsAt settings'
-      );
+      organization = await Organization.findById(user.organizationId).select(ORG_AUTH_PROJECTION);
       if (organization && !organization.slug) {
         organization.slug = organization.name
           ? organization.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
@@ -171,13 +271,18 @@ export const login = async (req, res) => {
       }
     }
 
+    const isSelfServeOnboarding = Boolean(
+      user.role === 'organizationOwner' &&
+      (organization?.billingSetupRequired || organization?.companySetupRequired)
+    );
+
     // If the user belongs to a company (tenant user) and is not platform superAdmin:
     if (user.role !== 'superAdmin' && user.organizationId) {
       const orgSlug = organization?.slug || (organization?.name ? organization.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '') || String(organization?._id || '');
       const cleanCompanySlug = String(companySlug || '').replace(/^\/+|\/+$/g, '').toLowerCase().trim();
 
-      // Rule 1: Cannot log in from general platform login (/login) without company URL
-      if (!cleanCompanySlug) {
+      // Rule 1: Cannot log in from general platform login (/login) without company URL (except owners finishing plan/company setup)
+      if (!cleanCompanySlug && !isSelfServeOnboarding) {
         return res.status(403).json({
           success: false,
           requiresCompanyPortal: true,
@@ -188,24 +293,26 @@ export const login = async (req, res) => {
         });
       }
 
-      // Rule 2: Cannot log in to a different company's URL
-      const matchesSlug = orgSlug && cleanCompanySlug === orgSlug.toLowerCase().trim();
-      const matchesOrgId = organization && String(organization._id) === cleanCompanySlug;
-      const matchesOrgName = organization?.name && cleanCompanySlug === organization.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      if (cleanCompanySlug) {
+        // Rule 2: Cannot log in to a different company's URL
+        const matchesSlug = orgSlug && cleanCompanySlug === orgSlug.toLowerCase().trim();
+        const matchesOrgId = organization && String(organization._id) === cleanCompanySlug;
+        const matchesOrgName = organization?.name && cleanCompanySlug === organization.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
-      if (!matchesSlug && !matchesOrgId && !matchesOrgName) {
-        return res.status(403).json({
-          success: false,
-          requiresCompanyPortal: true,
-          companySlug: orgSlug,
-          companyName: organization?.name || 'Your Company',
-          portalUrl: `/login/${orgSlug}`,
-          message: `This account does not belong to this portal. Please log in at your own company URL: /login/${orgSlug}`,
-        });
+        if (!matchesSlug && !matchesOrgId && !matchesOrgName) {
+          return res.status(403).json({
+            success: false,
+            requiresCompanyPortal: true,
+            companySlug: orgSlug,
+            companyName: organization?.name || 'Your Company',
+            portalUrl: `/login/${orgSlug}`,
+            message: `This account does not belong to this portal. Please log in at your own company URL: /login/${orgSlug}`,
+          });
+        }
       }
 
-      // Rule 3: Check tenant status
-      if (organization?.planStatus === 'pending') {
+      // Rule 3: Check tenant status (allow owners with billingSetupRequired to reach plan selection/Razorpay checkout)
+      if (organization?.planStatus === 'pending' && !organization?.billingSetupRequired) {
         return res.status(403).json({
           success: false,
           message: `"${organization.name}" registration is pending approval by Platform Super Admin.`,
@@ -341,9 +448,7 @@ export const getMe = async (req, res) => {
       : user.organizationId;
 
     if (targetOrgId && mongoose.Types.ObjectId.isValid(targetOrgId)) {
-      organization = await Organization.findById(targetOrgId).select(
-        'name slug logo industry website phone plan planStatus enabledModules maxUsers maxClients trialEndsAt settings'
-      );
+      organization = await Organization.findById(targetOrgId).select(ORG_AUTH_PROJECTION);
     }
     res.json({ success: true, user, organization, isGhostMode: Boolean(ghostOrgId) });
   } catch (error) {
@@ -509,12 +614,29 @@ export const changePassword = async (req, res) => {
 // @access  Public
 export const registerCompany = async (req, res) => {
   try {
-    const { companyName, ownerName, email, password, phone, industry, website, logo, slug, domainUrl } = req.body;
+    const { companyName, ownerName, email, password, phone, industry, website, logo, slug, domainUrl, captchaToken, captchaAnswer, acceptTerms } = req.body;
 
     if (!companyName || !ownerName || !email || !password) {
       return res.status(400).json({
         success: false,
         message: 'Company name, your name, email and password are required',
+      });
+    }
+
+    if (!isTermsAccepted(acceptTerms)) {
+      return res.status(400).json({
+        success: false,
+        code: 'TERMS_REQUIRED',
+        message: 'You must accept the Terms & Conditions to register your company',
+      });
+    }
+
+    const captchaResult = await verifyCaptchaChallenge({ captchaToken, captchaAnswer });
+    if (!captchaResult.valid) {
+      return res.status(400).json({
+        success: false,
+        code: 'CAPTCHA_INVALID',
+        message: captchaResult.message,
       });
     }
 
@@ -650,6 +772,22 @@ export const getCompanyPortal = async (req, res) => {
 };
 
 // =============================================
+// CAPTCHA CHALLENGE
+// =============================================
+
+// @desc    Generate HMAC-signed SVG CAPTCHA challenge
+// @route   GET /api/auth/captcha
+// @access  Public
+export const getCaptchaChallenge = (req, res) => {
+  const challenge = generateCaptchaChallenge();
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  return res.json({
+    success: true,
+    ...challenge,
+  });
+};
+
+// =============================================
 // GOOGLE OAUTH 2.0 LOGIN & SIGNUP
 // =============================================
 
@@ -717,9 +855,7 @@ export const resolveGoogleUserAndTokens = async ({
 
     let organization = null;
     if (user.organizationId) {
-      organization = await Organization.findById(user.organizationId).select(
-        'name slug logo industry website phone plan planStatus enabledModules maxUsers maxClients trialEndsAt settings'
-      );
+      organization = await Organization.findById(user.organizationId).select(ORG_AUTH_PROJECTION);
       if (organization && !organization.slug) {
         organization.slug = organization.name
           ? organization.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
@@ -727,6 +863,11 @@ export const resolveGoogleUserAndTokens = async ({
         await organization.save();
       }
     }
+
+    const isSelfServeOnboarding = Boolean(
+      user.role === 'organizationOwner' &&
+      (organization?.billingSetupRequired || organization?.companySetupRequired)
+    );
 
     if (user.role !== 'superAdmin' && user.organizationId) {
       const orgSlug =
@@ -737,7 +878,7 @@ export const resolveGoogleUserAndTokens = async ({
         String(organization?._id || '');
       const cleanCompanySlug = String(companySlug || '').replace(/^\/+|\/+$/g, '').toLowerCase().trim();
 
-      if (!cleanCompanySlug) {
+      if (!cleanCompanySlug && !isSelfServeOnboarding) {
         return {
           ok: false,
           status: 403,
@@ -749,25 +890,27 @@ export const resolveGoogleUserAndTokens = async ({
         };
       }
 
-      const matchesSlug = orgSlug && cleanCompanySlug === orgSlug.toLowerCase().trim();
-      const matchesOrgId = organization && String(organization._id) === cleanCompanySlug;
-      const matchesOrgName =
-        organization?.name &&
-        cleanCompanySlug === organization.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      if (cleanCompanySlug) {
+        const matchesSlug = orgSlug && cleanCompanySlug === orgSlug.toLowerCase().trim();
+        const matchesOrgId = organization && String(organization._id) === cleanCompanySlug;
+        const matchesOrgName =
+          organization?.name &&
+          cleanCompanySlug === organization.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
-      if (!matchesSlug && !matchesOrgId && !matchesOrgName) {
-        return {
-          ok: false,
-          status: 403,
-          requiresCompanyPortal: true,
-          companySlug: orgSlug,
-          companyName: organization?.name || 'Your Company',
-          portalUrl: `/login/${orgSlug}`,
-          message: `This account does not belong to this portal. Please log in at your own company URL: /login/${orgSlug}`,
-        };
+        if (!matchesSlug && !matchesOrgId && !matchesOrgName) {
+          return {
+            ok: false,
+            status: 403,
+            requiresCompanyPortal: true,
+            companySlug: orgSlug,
+            companyName: organization?.name || 'Your Company',
+            portalUrl: `/login/${orgSlug}`,
+            message: `This account does not belong to this portal. Please log in at your own company URL: /login/${orgSlug}`,
+          };
+        }
       }
 
-      if (organization?.planStatus === 'pending') {
+      if (organization?.planStatus === 'pending' && !organization?.billingSetupRequired) {
         return {
           ok: false,
           status: 403,
@@ -841,15 +984,55 @@ export const resolveGoogleUserAndTokens = async ({
     };
   }
 
-  const safeRole = ['employee', 'client', 'manager'].includes(role) ? role : 'employee';
   const cleanCompanySlug = String(companySlug || '').replace(/^\/+|\/+$/g, '').toLowerCase().trim();
-  let matchedOrgId;
+  const randomPassword = crypto.randomBytes(24).toString('hex');
+
+  // Joining an existing company portal -> preserves staff approval flow
   if (cleanCompanySlug) {
-    const orgDoc = await Organization.findOne({ slug: cleanCompanySlug }).select('_id').lean();
-    if (orgDoc) matchedOrgId = orgDoc._id;
+    const orgDoc = await Organization.findOne({ slug: cleanCompanySlug }).select('_id name').lean();
+    if (!orgDoc) {
+      return { ok: false, status: 404, message: 'Company workspace not found' };
+    }
+    const safeRole = ['employee', 'client', 'manager'].includes(role) ? role : 'employee';
+    const tenantUser = await User.create({
+      name: String(profile.name || cleanEmail.split('@')[0]).trim().slice(0, 100),
+      email: cleanEmail,
+      password: randomPassword,
+      googleId: googleSub || undefined,
+      authProvider: 'google',
+      avatar: profile.picture || '',
+      role: safeRole,
+      organizationId: orgDoc._id,
+      isActive: false,
+      approvalStatus: 'pending',
+    });
+
+    if (safeRole === 'client') {
+      const client = await Client.create({
+        name: tenantUser.name,
+        email: cleanEmail,
+        company: tenantUser.name,
+        status: 'onboarding',
+        userId: tenantUser._id,
+        organizationId: orgDoc._id,
+        portalEnabled: true,
+      });
+      tenantUser.clientId = client._id;
+      await tenantUser.save({ validateBeforeSave: false });
+    }
+
+    const io = req?.app?.get?.('io');
+    if (io) io.emit('userCreated', { role: safeRole });
+
+    return {
+      ok: true,
+      status: 201,
+      pendingApproval: true,
+      message: `Google registration submitted to ${orgDoc.name}. An administrator must approve your account before you can sign in.`,
+    };
   }
 
-  const randomPassword = crypto.randomBytes(24).toString('hex');
+  // Public Google Sign-Up -> activate owner account & redirect immediately to Razorpay plan selection
   const newUser = await User.create({
     name: String(profile.name || cleanEmail.split('@')[0]).trim().slice(0, 100),
     email: cleanEmail,
@@ -857,34 +1040,43 @@ export const resolveGoogleUserAndTokens = async ({
     googleId: googleSub || undefined,
     authProvider: 'google',
     avatar: profile.picture || '',
-    role: safeRole,
-    organizationId: matchedOrgId,
-    isActive: false,
-    approvalStatus: 'pending',
+    role: 'organizationOwner',
+    isActive: true,
+    approvalStatus: 'approved',
   });
 
-  if (safeRole === 'client') {
-    const client = await Client.create({
-      name: newUser.name,
-      email: cleanEmail,
-      company: newUser.name,
-      status: 'onboarding',
-      userId: newUser._id,
-      organizationId: matchedOrgId,
-      portalEnabled: true,
-    });
-    newUser.clientId = client._id;
-    await newUser.save({ validateBeforeSave: false });
-  }
+  const organization = await createSelfServeWorkspace({
+    name: newUser.name,
+    email: cleanEmail,
+    ownerId: newUser._id,
+  });
+  newUser.organizationId = organization._id;
+  const accessToken = generateAccessToken(newUser._id, newUser.role);
+  const refreshToken = generateRefreshToken(newUser._id);
+  newUser.refreshToken = refreshToken;
+  newUser.lastLogin = new Date();
+  await newUser.save({ validateBeforeSave: false });
 
   const io = req?.app?.get?.('io');
-  if (io) io.emit('userCreated', { role: safeRole });
+  if (io) io.emit('userCreated', { role: 'organizationOwner' });
 
   return {
     ok: true,
     status: 201,
-    pendingApproval: true,
-    message: 'Google registration submitted. An administrator must approve your account before you can sign in.',
+    accessToken,
+    refreshToken,
+    organization,
+    user: {
+      _id: newUser._id,
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+      avatar: newUser.avatar,
+      organizationId: newUser.organizationId,
+      hasSeenOnboarding: false,
+      isFirstLogin: true,
+      createdAt: newUser.createdAt,
+    },
   };
 };
 
@@ -912,12 +1104,18 @@ export const initiateGoogleOAuth = async (req, res) => {
     });
   }
 
+  const returnOrigin = resolveSafeReturnOrigin(req.query.origin, requestOrigin);
+  if (!isTermsAccepted(req.query.acceptTerms)) {
+    return res.redirect(
+      `${returnOrigin}/auth/google/callback?oauthError=${encodeURIComponent('You must accept the Terms & Conditions before continuing with Google.')}`
+    );
+  }
+
   const mode = req.query.mode === 'signup' ? 'signup' : 'signin';
   const role = ['employee', 'client', 'manager'].includes(String(req.query.role || ''))
     ? String(req.query.role)
     : 'employee';
   const companySlug = String(req.query.companySlug || '').trim();
-  const returnOrigin = resolveSafeReturnOrigin(req.query.origin, requestOrigin);
 
   const stateSecret = process.env.JWT_SECRET || 'dev-only-change-me-access-secret';
   const stateToken = jwt.sign(
@@ -1052,9 +1250,17 @@ export const googleOAuthCallback = async (req, res) => {
 // @access  Public
 export const googleTokenAuth = async (req, res) => {
   try {
-    const { idToken, credential, mode = 'signin', role = 'employee', companySlug = '' } = req.body || {};
+    const { idToken, credential, mode = 'signin', role = 'employee', companySlug = '', acceptTerms } = req.body || {};
     const { clientId } = getGoogleOAuthRuntime(req);
     const token = String(idToken || credential || '').trim();
+
+    if (!isTermsAccepted(acceptTerms)) {
+      return res.status(400).json({
+        success: false,
+        code: 'TERMS_REQUIRED',
+        message: 'You must accept the Terms & Conditions to sign in',
+      });
+    }
 
     if (!token) {
       return res.status(400).json({ success: false, message: 'Google credential token is required' });

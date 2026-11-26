@@ -368,12 +368,12 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
       )}
 
       <aside
-        className={`fixed left-0 top-0 h-screen w-[min(270px,calc(100vw-32px))] md:w-[260px] bg-card z-50 flex flex-col select-none transition-transform duration-200 ease-out md:translate-x-0 md:pointer-events-auto ${
+        className={`fixed left-0 top-0 h-screen w-[min(270px,calc(100vw-32px))] md:w-[260px] bg-slate-100 dark:bg-[#090f1d] border-r border-slate-200/90 dark:border-slate-800/90 z-50 flex flex-col select-none transition-transform duration-200 ease-out md:translate-x-0 md:pointer-events-auto ${
           sidebarOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'
         }`}
       >
         {/* Workspace Brand / Header */}
-        <div className="h-16 flex items-center justify-between px-4 pt-1 bg-card shrink-0">
+        <div className="h-16 flex items-center justify-between px-4 pt-1 bg-slate-100 dark:bg-[#090f1d] border-b border-slate-200/70 dark:border-slate-800/80 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand/10 ring-1 ring-brand/25 p-1 shadow-xs overflow-hidden">
               <img
@@ -571,7 +571,7 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
         </div>
 
         {/* Footer / Settings Link */}
-        <div className="p-3 bg-card shrink-0">
+        <div className="p-3 bg-slate-100 dark:bg-[#090f1d] border-t border-slate-200/70 dark:border-slate-800/80 shrink-0">
           <Link
             to="/settings"
             onMouseEnter={() => preloadRoute('/settings')}

@@ -136,6 +136,26 @@ const ROLE_FIXTURES = {
     },
     organization: COMPANY_ORG,
   },
+  'newowner@test.com': {
+    user: {
+      _id: '660000000000000000000111',
+      name: 'Nikhil NewOwner',
+      email: 'newowner@test.com',
+      role: 'organizationOwner',
+      organizationId: '660000000000000000000099',
+      permissions: {},
+    },
+    organization: {
+      _id: '660000000000000000000099',
+      name: "Nikhil NewOwner's Workspace",
+      slug: 'nikhil-newowner',
+      plan: 'trial',
+      planStatus: 'pending',
+      billingSetupRequired: true,
+      companySetupRequired: true,
+      enabledModules: COMPANY_ORG.enabledModules,
+    },
+  },
 };
 
 function makeFakeJwt(user) {
@@ -166,6 +186,20 @@ async function mockAppBackend(page) {
       });
     }
 
+    if (pathname === '/api/auth/captcha') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          mode: 'robot_check',
+          captchaToken: 'mock-captcha-token',
+          challengeProof: 'mock-human-proof',
+          expiresInSeconds: 300,
+        }),
+      });
+    }
+
     if (pathname === '/api/auth/google/config') {
       return route.fulfill({
         status: 200,
@@ -180,6 +214,20 @@ async function mockAppBackend(page) {
 
     if (pathname === '/api/auth/login' && req.method() === 'POST') {
       const body = JSON.parse(req.postData() || '{}');
+      if (body.acceptTerms !== true) {
+        return route.fulfill({
+          status: 400,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: false, code: 'TERMS_REQUIRED', message: 'You must accept the Terms & Conditions to sign in' }),
+        });
+      }
+      if (!body.captchaToken || body.captchaAnswer !== 'mock-human-proof') {
+        return route.fulfill({
+          status: 400,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: false, code: 'CAPTCHA_INVALID', message: 'Please check "I\'m not a robot" to continue.' }),
+        });
+      }
       const email = String(body.email || '').trim().toLowerCase();
       const fixture = ROLE_FIXTURES[email];
       if (!fixture) {
@@ -189,7 +237,11 @@ async function mockAppBackend(page) {
           body: JSON.stringify({ success: false, message: 'Invalid email or password' }),
         });
       }
-      if (fixture.user.organizationId && !body.companySlug) {
+      const isSelfServeOnboarding = Boolean(
+        fixture.user.role === 'organizationOwner' &&
+        (fixture.organization?.billingSetupRequired || fixture.organization?.companySetupRequired)
+      );
+      if (fixture.user.organizationId && !body.companySlug && !isSelfServeOnboarding) {
         return route.fulfill({
           status: 403,
           contentType: 'application/json',
@@ -227,6 +279,129 @@ async function mockAppBackend(page) {
             ? { success: true, user: fixture.user, organization: fixture.organization }
             : { success: false, message: 'Unauthorized' }
         ),
+      });
+    }
+
+    if (pathname === '/api/auth/register' && req.method() === 'POST') {
+      return route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          requiresPlanSelection: true,
+          companySlug: 'nikhil-newowner',
+          message: 'Account created! Sign in with your email and password to select a plan and complete your setup.',
+        }),
+      });
+    }
+
+    if (pathname === '/api/billing/plans') {
+      const org = activeEmail ? ROLE_FIXTURES[activeEmail]?.organization : ROLE_FIXTURES['newowner@test.com'].organization;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          razorpayEnabled: false,
+          plans: [
+            { id: 'starter', name: 'Starter', tagline: 'Lean teams', monthlyPriceInr: 1999, annualPriceInr: 19190, badge: 'Essential', features: ['Up to 5 team members'] },
+            { id: 'growth', name: 'Growth', tagline: 'Scaling agencies', monthlyPriceInr: 4999, annualPriceInr: 47990, badge: 'Most Popular', features: ['Full Finance & SMM'] },
+            { id: 'pro', name: 'Enterprise Pro', tagline: 'Unlimited', monthlyPriceInr: 9999, annualPriceInr: 95990, badge: 'All Features', features: ['Automations & Multi-Branch'] },
+          ],
+          organization: org,
+        }),
+      });
+    }
+
+    if (pathname === '/api/billing/razorpay/order' && req.method() === 'POST') {
+      const body = JSON.parse(req.postData() || '{}');
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          mode: 'sandbox',
+          orderId: 'order_rwm_mock01',
+          sandboxToken: 'mock_sandbox_token',
+          amount: body.planId === 'growth' ? 499900 : 199900,
+          currency: 'INR',
+          planId: body.planId || 'growth',
+        }),
+      });
+    }
+
+    if (pathname === '/api/billing/razorpay/verify' && req.method() === 'POST') {
+      const body = JSON.parse(req.postData() || '{}');
+      if (activeEmail && ROLE_FIXTURES[activeEmail]?.organization) {
+        ROLE_FIXTURES[activeEmail].organization = {
+          ...ROLE_FIXTURES[activeEmail].organization,
+          plan: body.planId || 'growth',
+          billingCycle: body.billingCycle || 'monthly',
+          planStatus: 'active',
+          billingSetupRequired: false,
+        };
+      }
+      const org = activeEmail ? ROLE_FIXTURES[activeEmail]?.organization : null;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          message: 'Growth plan activated successfully via Razorpay!',
+          organization: org,
+          nextRoute: org?.companySetupRequired ? '/settings?section=company' : '/',
+        }),
+      });
+    }
+
+    if (pathname === '/api/settings' && req.method() === 'GET') {
+      const fixture = activeEmail ? ROLE_FIXTURES[activeEmail] : null;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          user: fixture?.user || null,
+          organization: fixture?.organization || null,
+          settings: {
+            companyProfile: {
+              name: fixture?.organization?.companySetupRequired ? '' : (fixture?.organization?.name || ''),
+              slug: fixture?.organization?.slug || '',
+              industry: '',
+              website: '',
+              address: '',
+              email: fixture?.user?.email || '',
+              phone: '',
+              gstNumber: '',
+              services: '',
+              logoUrl: '',
+            },
+            notifications: {},
+            appearance: {},
+            regional: {},
+          },
+        }),
+      });
+    }
+
+    if (pathname === '/api/settings/company' && req.method() === 'PUT') {
+      const body = JSON.parse(req.postData() || '{}');
+      if (activeEmail && ROLE_FIXTURES[activeEmail]?.organization) {
+        ROLE_FIXTURES[activeEmail].organization = {
+          ...ROLE_FIXTURES[activeEmail].organization,
+          name: body.name || ROLE_FIXTURES[activeEmail].organization.name,
+          slug: body.slug || ROLE_FIXTURES[activeEmail].organization.slug,
+          companySetupRequired: false,
+        };
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          settings: { companyProfile: body },
+          organization: activeEmail ? ROLE_FIXTURES[activeEmail]?.organization : null,
+        }),
       });
     }
 
@@ -276,11 +451,22 @@ async function mockAppBackend(page) {
   });
 }
 
+async function completeRobotCheck(page, inputId = 'signin-captcha') {
+  const checkbox = page.locator(`#${inputId}`);
+  await checkbox.click();
+  await expect(checkbox).toBeChecked({ timeout: 5000 });
+}
+
 async function loginAs(page, email, loginPath = '/login/risewithmedia') {
   await page.goto(loginPath);
   await page.waitForSelector('#signin-email');
   await page.fill('#signin-email', email);
   await page.fill('#signin-password', 'password123');
+  await completeRobotCheck(page, 'signin-captcha');
+  const termsCheckbox = page.locator('#signin-terms');
+  if (!(await termsCheckbox.isChecked())) {
+    await termsCheckbox.check();
+  }
   await page.click('button[type="submit"]');
   await page.waitForURL((u) => !u.pathname.includes('/login'), { timeout: 10000 });
 }
@@ -291,16 +477,65 @@ test.describe('All Role Logins & Workspace Isolation Verification', () => {
     await page.goto('/login');
     await page.fill('#signin-email', 'employee@test.com');
     await page.fill('#signin-password', 'password123');
+    await completeRobotCheck(page, 'signin-captcha');
+    await page.check('#signin-terms');
     await page.click('button[type="submit"]');
 
     await expect(page.getByText(/Workspace URL Required/i)).toBeVisible();
     await expect(page.getByRole('link', { name: /Go to Company Portal/i })).toBeVisible();
   });
 
+  test('Sign-In blocks login until Terms & Conditions accepted and CAPTCHA entered', async ({ page }) => {
+    await mockAppBackend(page);
+    await page.goto('/login');
+    await page.waitForSelector('#signin-email');
+    await page.fill('#signin-email', 'superadmin@test.com');
+    await page.fill('#signin-password', 'password123');
+    await completeRobotCheck(page, 'signin-captcha');
+
+    // Attempt login without checking Terms & Conditions -> blocked locally & stays on /login
+    await page.click('button[type="submit"]');
+    await expect(page.getByText(/You must accept the Terms & Conditions to sign in/i).first()).toBeVisible();
+    await expect(page).toHaveURL(/\/login$/);
+
+    // Open Terms modal, click I Accept Terms -> checks checkbox and closes modal
+    await page.locator('form.signin').getByRole('button', { name: /Terms & Conditions/i }).click();
+    await expect(page.getByRole('dialog', { name: /Terms & Conditions/i })).toBeVisible();
+    await page.getByRole('button', { name: /I Accept Terms/i }).click();
+    await expect(page.locator('#signin-terms')).toBeChecked();
+
+    await page.click('button[type="submit"]');
+    await page.waitForURL((u) => !u.pathname.includes('/login'), { timeout: 10000 });
+  });
+
+  test('Cookie & Cache Consent Banner saves Accept All and Essential Only preferences', async ({ page }) => {
+    await mockAppBackend(page);
+    await page.goto('/');
+    const banner = page.getByRole('dialog', { name: /Cookie and Cache Preferences/i });
+    await expect(banner).toBeVisible();
+
+    await banner.getByRole('button', { name: /Customize/i }).click();
+    await expect(banner.getByText(/Browser Cache & Preferences/i)).toBeVisible();
+    await banner.getByRole('button', { name: /Accept All/i }).click();
+    await expect(banner).toBeHidden();
+
+    const saved = await page.evaluate(() => localStorage.getItem('rwm_cookie_consent_v1'));
+    expect(saved).toContain('"preferencesCache":true');
+
+    // Reopen from footer trigger and switch to Essential Only
+    await page.getByRole('button', { name: /Cookies & Cache/i }).click();
+    await expect(banner).toBeVisible();
+    await banner.getByRole('button', { name: /Essential Only/i }).click();
+    await expect(banner).toBeHidden();
+
+    const updated = await page.evaluate(() => localStorage.getItem('rwm_cookie_consent_v1'));
+    expect(updated).toContain('"preferencesCache":false');
+  });
+
   test('SuperAdmin login accesses platform dashboard, HR, and Tasks', async ({ page }) => {
     await mockAppBackend(page);
     await loginAs(page, 'superadmin@test.com', '/login');
-    await expect(page.getByRole('heading', { name: /Good morning, Super Admin/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening), Super Admin/i })).toBeVisible();
     await page.getByRole('button', { name: 'SYSTEM & SETTINGS' }).click();
     await expect(page.getByRole('link', { name: 'Platform Admin' })).toBeVisible();
     await page.goto('/hr');
@@ -414,6 +649,56 @@ test.describe('All Role Logins & Workspace Isolation Verification', () => {
     await loginAs(page, 'superadmin@test.com', '/login');
     await page.goto(`/auth/google/callback#accessToken=${adminToken}&refreshToken=${adminToken}`);
     await page.waitForURL((u) => !u.pathname.includes('/auth/google/callback'), { timeout: 10000 });
-    await expect(page.getByRole('heading', { name: /Good morning, Super Admin/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening), Super Admin/i })).toBeVisible();
+  });
+
+  test('Public signup hides Free Trial & Role dropdown, enforces Razorpay plan selection before Settings Company details', async ({ page }) => {
+    await mockAppBackend(page);
+
+    // 1. Public web & login hide free-trial company links & Role in Organization dropdown
+    await page.goto('/');
+    await expect(page.locator('a[href="/register-company"]')).toHaveCount(0);
+
+    await page.goto('/login');
+    await expect(page.getByText(/Register Your Company/i)).toHaveCount(0);
+    await page.getByRole('button', { name: /Sign Up/i }).first().click();
+    await expect(page.locator('select[name="role"]')).toHaveCount(0);
+    await expect(page.locator('#signup-name')).toBeVisible();
+    await expect(page.locator('#signup-email')).toBeVisible();
+    await expect(page.locator('#signup-password')).toBeVisible();
+
+    // 2. Self-register using only Full Name, Gmail, Password (+ robot check & terms)
+    await page.fill('#signup-name', 'Nikhil NewOwner');
+    await page.fill('#signup-email', 'newowner@test.com');
+    await page.fill('#signup-password', 'password123');
+    await completeRobotCheck(page, 'signup-captcha');
+    await page.check('#signup-terms');
+    await page.locator('form.signup button[type="submit"]').click();
+    await expect(page.locator('#signin-email')).toBeVisible();
+
+    // 3. Log in -> gated at /select-plan before accessing dashboard or tasks
+    await page.fill('#signin-email', 'newowner@test.com');
+    await page.fill('#signin-password', 'password123');
+    await completeRobotCheck(page, 'signin-captcha');
+    await page.check('#signin-terms');
+    await page.locator('form.signin button[type="submit"]').click();
+    await expect(page).toHaveURL(/\/select-plan$/);
+    await expect(page.getByText(/Select a Plan to Activate Your Account/i)).toBeVisible();
+
+    // Direct navigation to /tasks must redirect back to /select-plan until paid
+    await page.goto('/tasks');
+    await expect(page).toHaveURL(/\/select-plan$/);
+
+    // 4. Select Growth Plan & complete Razorpay checkout -> redirects to /settings?section=company
+    await page.getByRole('button', { name: /Pay with Razorpay/i }).nth(1).click();
+    await expect(page.getByRole('dialog', { name: /Razorpay Checkout Confirmation/i })).toBeVisible();
+    await page.getByRole('button', { name: /Confirm Payment & Continue/i }).click();
+    await expect(page).toHaveURL(/\/settings\?section=company/);
+    await expect(page.getByText(/Step 2 of 2/i)).toBeVisible();
+
+    // 5. Fill Company Details inside Settings & Launch Workspace -> unlocks dashboard
+    await page.getByPlaceholder('RISE WITH MEDIA').fill('Nikhil Creative Studio');
+    await page.getByRole('button', { name: /Save Company Details & Launch Workspace/i }).click();
+    await expect(page).toHaveURL(/\/$/);
   });
 });

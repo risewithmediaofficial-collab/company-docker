@@ -13,7 +13,7 @@ const PublicLayout = ({
   children,
   hideCta = false,
   ctaTitle = 'Ready to Organize Your Entire Agency?',
-  ctaSubtitle = 'Register your company in 2 minutes. Keep your clients happy, your team on track, and your bills on time.',
+  ctaSubtitle = 'Register your account in seconds. Select your plan inside and keep your clients happy, your team on track, and your bills on time.',
 }) => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -101,10 +101,10 @@ const PublicLayout = ({
               to="/login"
               className="text-sm font-bold text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-all px-4 py-2 rounded-full border border-slate-200"
             >
-              Login
+              Sign In
             </Link>
             <Link
-              to="/register-company"
+              to="/register"
               className="px-5 sm:px-6 py-2.5 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs sm:text-sm font-bold shadow-md shadow-[#12B7D4]/25 transition-all flex items-center gap-2 cursor-pointer"
             >
               <span>Register</span>
@@ -160,10 +160,10 @@ const PublicLayout = ({
                   onClick={() => setMobileMenuOpen(false)}
                   className="py-3 text-center text-sm font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl border border-slate-200 transition-colors"
                 >
-                  Login
+                  Sign In
                 </Link>
                 <Link
-                  to="/register-company"
+                  to="/register"
                   onClick={() => setMobileMenuOpen(false)}
                   className="py-3 text-center text-sm font-bold text-white bg-[#12B7D4] hover:bg-[#0ea5c6] rounded-xl shadow-md shadow-[#12B7D4]/25 flex items-center justify-center gap-1.5 transition-colors"
                 >
@@ -203,17 +203,17 @@ const PublicLayout = ({
             {/* Right Buttons (Full width on mobile, inline on desktop) */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 relative z-10 w-full lg:w-auto">
               <Link
-                to="/register-company"
+                to="/register"
                 className="w-full sm:w-auto px-7 sm:px-10 py-3.5 sm:py-4 rounded-full bg-white hover:bg-slate-50 text-slate-950 font-extrabold text-sm sm:text-base transition-colors flex items-center justify-center gap-2 group cursor-pointer text-center"
               >
-                <span>Register Company</span>
+                <span>Register</span>
                 <ArrowRight size={16} />
               </Link>
               <Link
                 to="/login"
                 className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 rounded-full bg-slate-950/20 hover:bg-slate-950/30 text-white border border-white/30 font-bold text-sm sm:text-base transition-colors flex items-center justify-center text-center"
               >
-                Login to Account
+                Sign In
               </Link>
             </div>
 
@@ -266,7 +266,7 @@ const PublicLayout = ({
                 <li><Link to="/our-story" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Our Story</Link></li>
                 <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">What We Do</Link></li>
                 <li><Link to="/our-impact" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Our Impact</Link></li>
-                <li><Link to="/register-company" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Register Company</Link></li>
+                <li><Link to="/register" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Register</Link></li>
               </ul>
             </div>
 
@@ -290,9 +290,17 @@ const PublicLayout = ({
           <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-slate-400 text-center sm:text-left">
             <p>© {new Date().getFullYear()} RiseWithMedia. All rights reserved.</p>
             <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-6">
-              <Link to="/login" className="hover:text-white transition-colors">Login to Account</Link>
+              <Link to="/login" className="hover:text-white transition-colors">Sign In</Link>
               <span className="text-slate-700">•</span>
-              <Link to="/register-company" className="hover:text-white transition-colors">Register Company</Link>
+              <Link to="/register" className="hover:text-white transition-colors">Register</Link>
+              <span className="text-slate-700">•</span>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event('rwm:open-cookie-settings'))}
+                className="hover:text-white transition-colors cursor-pointer"
+              >
+                Cookies &amp; Cache
+              </button>
               <span className="text-slate-700 hidden sm:inline">•</span>
               <span className="hidden sm:inline text-slate-400">100% Private Isolated Workspaces</span>
             </div>

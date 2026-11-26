@@ -17,6 +17,7 @@ import {
   registerCompany,
   getCompanyPortal,
   completeOnboarding,
+  getCaptchaChallenge,
   getGoogleOAuthConfig,
   initiateGoogleOAuth,
   googleOAuthCallback,
@@ -37,6 +38,7 @@ const failedAuthAttemptLimiter = rateLimit({
   message: { success: false, message: 'Too many failed auth attempts, please try again later.' },
 });
 
+router.get('/captcha', getCaptchaChallenge);
 router.post('/register', failedAuthAttemptLimiter, register);
 router.post('/register-company', failedAuthAttemptLimiter, registerCompany);
 router.get('/company-portal/:slug', getCompanyPortal);

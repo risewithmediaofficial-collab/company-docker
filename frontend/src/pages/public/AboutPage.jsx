@@ -46,10 +46,10 @@ export const AboutPage = () => {
 
             <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3.5 animate-fade-up">
               <Link
-                to="/register-company"
+                to="/register"
                 className="px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#12B7D4]/25 hover:shadow-[#12B7D4]/40 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>Start Free Trial</span>
+                <span>Register</span>
                 <ArrowRight size={16} />
               </Link>
               <Link
@@ -372,14 +372,14 @@ export const AboutPage = () => {
                   Give your team the <span className="marker-highlight">simple workspace</span> they deserve.
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed pt-1">
-                  Easy 2-minute setup. 14-day free trial. Invite as many team members as you want.
+                  Quick registration. Choose your plan after signing in and invite your entire team.
                 </p>
               </div>
               <Link
-                to="/register-company"
+                to="/register"
                 className="px-8 py-4 bg-[#12B7D4] hover:bg-[#0ea5c6] text-white font-bold text-sm sm:text-base border border-[#12B7D4] transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
               >
-                <span>Get Started Free</span>
+                <span>Register</span>
                 <ArrowRight size={16} />
               </Link>
             </div>

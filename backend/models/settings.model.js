@@ -5,6 +5,9 @@ const settingsSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
     companyProfile: {
       name: { type: String, default: '' },
+      slug: { type: String, default: '' },
+      industry: { type: String, default: '' },
+      website: { type: String, default: '' },
       address: { type: String, default: '' },
       email: { type: String, default: '' },
       phone: { type: String, default: '' },

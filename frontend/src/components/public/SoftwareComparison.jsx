@@ -617,9 +617,9 @@ export const SoftwareComparison = () => {
             <div className="mt-3.5 px-4 py-2.5 min-h-[42px] rounded-xl bg-[#12B7D4]/10 flex items-center justify-between text-xs font-bold text-slate-900">
               <span className="flex items-center gap-1.5 text-[#0d99b2]">
                 <Zap size={13} className="fill-[#12B7D4] shrink-0" />
-                <span>14-Day Free Trial:</span>
+                <span>Flexible Agency Plans:</span>
               </span>
-              <span className="font-extrabold text-slate-950">No Credit Card Needed • Full Access</span>
+              <span className="font-extrabold text-slate-950">Isolated Workspaces • Full Access</span>
             </div>
 
             {/* THE SERPENTINE PIPELINE ILLUSTRATION (NO TEXT PARAGRAPHS) */}
@@ -634,10 +634,10 @@ export const SoftwareComparison = () => {
               <span>✓ Save 12+ hours every week</span>
             </span>
             <Link
-              to="/register-company"
+              to="/register"
               className="px-5 py-2.5 rounded-full bg-[#12B7D4] hover:bg-[#0ea5c6] text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-none shrink-0"
             >
-              <span>Get Started Free</span>
+              <span>Register Now</span>
               <ArrowRight size={13} />
             </Link>
           </div>

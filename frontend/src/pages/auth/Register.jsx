@@ -1,34 +1,56 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Loader2, AlertCircle, Briefcase, Eye, EyeOff } from '@/components/ui/muiIcons';
+import { Mail, Lock, User, Loader2, AlertCircle, Eye, EyeOff } from '@/components/ui/muiIcons';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { SelectDropdown } from '../../components/ui/SelectDropdown';
 import { GoogleAuthButton } from '../../components/auth/GoogleAuthButton';
+import { CaptchaWidget } from '../../components/auth/CaptchaWidget';
+import { TermsModal } from '../../components/auth/TermsModal';
 
 const Register = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [captcha, setCaptcha] = useState({ captchaToken: '', captchaAnswer: '' });
+  const [captchaRefreshKey, setCaptchaRefreshKey] = useState(0);
 
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
-    role: 'employee',
   });
 
   const handleChange = (e) => {
+    setError('');
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+    if (!termsAccepted) {
+      const msg = 'You must accept the Terms & Conditions to create an account.';
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    if (!captcha.captchaToken || !captcha.captchaAnswer.trim()) {
+      const msg = 'Please complete the CAPTCHA verification code.';
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    setLoading(true);
     try {
-      const response = await axios.post('/api/auth/register', formData);
+      const response = await axios.post('/api/auth/register', {
+        ...formData,
+        captchaToken: captcha.captchaToken,
+        captchaAnswer: captcha.captchaAnswer.trim(),
+        acceptTerms: true,
+      });
       if (response.data.success) {
         toast.success(response.data.message || 'Registration submitted for approval.');
         navigate('/login');
@@ -36,6 +58,7 @@ const Register = () => {
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
       toast.error(err.response?.data?.message || 'Registration failed');
+      setCaptchaRefreshKey((k) => k + 1);
     } finally {
       setLoading(false);
     }
@@ -74,7 +97,7 @@ const Register = () => {
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground ml-1" htmlFor="email">
-            Email address
+            Gmail / Email address
           </label>
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground group-focus-within:text-primary transition-colors">
@@ -88,7 +111,7 @@ const Register = () => {
               value={formData.email}
               onChange={handleChange}
               className="block w-full pl-10 pr-3 py-2.5 rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-brand/40 transition-colors text-sm"
-              placeholder="name@company.com"
+              placeholder="name@gmail.com"
             />
           </div>
         </div>
@@ -122,27 +145,37 @@ const Register = () => {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground ml-1" htmlFor="role">
-            Join as
-          </label>
-          <SelectDropdown
-            value={formData.role || 'employee'}
-            onChange={(val) => setFormData({ ...formData, role: val || 'employee' })}
-            options={[
-              { value: 'employee', label: 'Employee' },
-              { value: 'manager', label: 'Manager' },
-              { value: 'intern', label: 'Intern' },
-              { value: 'client', label: 'Client' },
-              { value: 'referral', label: 'Referral Partner' },
-            ]}
-            placeholder="Select Role"
-            allowCustom={false}
-            allowDeselect={false}
-            className="w-full"
-            buttonClassName="min-h-[44px] px-3 py-2.5 rounded-xl bg-background text-foreground text-sm border border-border/50"
+        <CaptchaWidget
+          inputId="register-captcha"
+          captchaToken={captcha.captchaToken}
+          captchaAnswer={captcha.captchaAnswer}
+          onChange={setCaptcha}
+          refreshKey={captchaRefreshKey}
+        />
+
+        <label className="flex items-start gap-2.5 text-xs text-muted-foreground cursor-pointer select-none">
+          <input
+            id="register-terms"
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={(e) => {
+              setTermsAccepted(e.target.checked);
+              setError('');
+            }}
+            className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
           />
-        </div>
+          <span>
+            I agree to the{' '}
+            <button
+              type="button"
+              onClick={() => setTermsModalOpen(true)}
+              className="font-semibold text-primary hover:underline cursor-pointer"
+            >
+              Terms &amp; Conditions
+            </button>{' '}
+            and Privacy Policy.
+          </span>
+        </label>
 
         <button
           type="submit"
@@ -152,8 +185,22 @@ const Register = () => {
           {loading ? <Loader2 className="animate-spin" size={18} /> : 'Create New Account'}
         </button>
 
-        <GoogleAuthButton mode="signup" role={formData.role || 'employee'} />
+        <GoogleAuthButton
+          mode="signup"
+          termsAccepted={termsAccepted}
+          onRequireTerms={() => {
+            const msg = 'Please accept the Terms & Conditions before continuing with Google.';
+            setError(msg);
+            toast.error(msg);
+          }}
+        />
       </form>
+
+      <TermsModal
+        open={termsModalOpen}
+        onClose={() => setTermsModalOpen(false)}
+        onAccept={() => setTermsAccepted(true)}
+      />
 
       <div className="text-center">
         <p className="text-sm text-muted-foreground">

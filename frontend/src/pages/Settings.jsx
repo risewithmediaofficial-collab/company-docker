@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Bell,
@@ -33,7 +33,7 @@ import { toast } from 'sonner';
 import { SelectDropdown } from '../components/ui/SelectDropdown';
 import { ProfileImageCropModal } from '../components/modals/ProfileImageCropModal';
 import { toggleDarkMode } from '../store/slices/uiSlice';
-import { updateCurrentUser } from '../store/slices/authSlice';
+import { updateCurrentUser, updateOrganization } from '../store/slices/authSlice';
 import {
   useChangePassword,
   useSettings,
@@ -65,7 +65,8 @@ const sections = [
 
 const Settings = () => {
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
+  const { user, organization } = useSelector((state) => state.auth);
   const { darkMode } = useSelector((state) => state.ui);
   const { data, isLoading } = useSettings();
   const updateProfile = useUpdateProfileSettings();
@@ -76,15 +77,19 @@ const Settings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSection = searchParams.get('section');
   const [activeSection, setActiveSection] = useState(() => {
-    return urlSection && sections.some((s) => s.id === urlSection) ? urlSection : 'profile';
+    if (urlSection && sections.some((s) => s.id === urlSection)) return urlSection;
+    if (organization?.companySetupRequired) return 'company';
+    return 'profile';
   });
 
   useEffect(() => {
     const s = searchParams.get('section');
     if (s && sections.some((sec) => sec.id === s)) {
       setActiveSection(s);
+    } else if (organization?.companySetupRequired) {
+      setActiveSection('company');
     }
-  }, [searchParams]);
+  }, [searchParams, organization?.companySetupRequired]);
   // Payment modal removed: purchases are disabled in this build.
 
   const settings = data?.settings;
@@ -103,6 +108,9 @@ const Settings = () => {
   const [cropImageFile, setCropImageFile] = useState(null);
   const [companyProfile, setCompanyProfile] = useState({
     name: '',
+    slug: '',
+    industry: '',
+    website: '',
     address: '',
     email: '',
     phone: '',
@@ -228,6 +236,9 @@ const Settings = () => {
     });
     setCompanyProfile({
       name: settings.companyProfile?.name || '',
+      slug: settings.companyProfile?.slug || data?.organization?.slug || '',
+      industry: settings.companyProfile?.industry || data?.organization?.industry || '',
+      website: settings.companyProfile?.website || data?.organization?.website || '',
       address: settings.companyProfile?.address || '',
       email: settings.companyProfile?.email || '',
       phone: settings.companyProfile?.phone || '',
@@ -235,7 +246,26 @@ const Settings = () => {
       services: settings.companyProfile?.services || '',
       logoUrl: settings.companyProfile?.logoUrl || '',
     });
-  }, [settings]);
+    if (data?.organization) {
+      dispatch(updateOrganization(data.organization));
+    }
+  }, [settings, data?.organization, dispatch]);
+
+  const handleSaveCompanyDetails = async () => {
+    if (!String(companyProfile.name || '').trim()) {
+      toast.error('Please enter your Company / Agency Name');
+      return;
+    }
+    const wasOnboarding = Boolean(organization?.companySetupRequired);
+    const res = await updateCompany.mutateAsync(companyProfile);
+    if (res?.organization) {
+      dispatch(updateOrganization(res.organization));
+    }
+    if (wasOnboarding) {
+      toast.success('Workspace company details saved! Redirecting to dashboard...');
+      navigate('/', { replace: true });
+    }
+  };
 
   const permissions = useMemo(() => {
     if (profileUser?.role === 'superAdmin' || profileUser?.role === 'admin') {
@@ -631,8 +661,34 @@ const Settings = () => {
 
             {activeSection === 'company' && (
               <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-bold">Company Details &amp; GST Settings</h3>
+                {organization?.companySetupRequired && (
+                  <div className="p-4 rounded-2xl bg-[#12B7D4]/10 border border-[#12B7D4]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-extrabold uppercase tracking-wider text-[#0e7490] dark:text-[#12B7D4]">
+                        Step 2 of 2 • Complete Workspace Registration
+                      </p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                        Enter your company name, workspace URL slug, and contact details below to finish activating your account.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-bold">Company Details &amp; GST Settings</h3>
+                    {organization?.plan && (
+                      <p className="text-xs text-muted-foreground mt-0.5 capitalize">
+                        Active Plan: <strong className="text-primary">{organization.plan}</strong> ({organization.billingCycle || 'monthly'})
+                      </p>
+                    )}
+                  </div>
+                  <Link
+                    to="/select-plan"
+                    className="px-3.5 py-2 rounded-xl border border-border bg-background hover:bg-secondary text-xs font-bold transition-colors"
+                  >
+                    Manage / Upgrade Plan
+                  </Link>
                 </div>
 
                 <div className="space-y-5">
@@ -640,6 +696,18 @@ const Settings = () => {
                     <label className="space-y-2">
                       <span className="ml-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Company Name *</span>
                       <input value={companyProfile.name} onChange={(event) => setCompanyProfile((current) => ({ ...current, name: event.target.value }))} className="w-full rounded-xl bg-background px-4 py-3 text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-brand/40" placeholder="RISE WITH MEDIA" />
+                    </label>
+                    <label className="space-y-2">
+                      <span className="ml-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Workspace URL Slug</span>
+                      <input value={companyProfile.slug} onChange={(event) => setCompanyProfile((current) => ({ ...current, slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') }))} className="w-full rounded-xl bg-background px-4 py-3 text-sm font-mono text-foreground outline-none focus:ring-2 focus:ring-brand/40" placeholder="your-agency" />
+                    </label>
+                    <label className="space-y-2">
+                      <span className="ml-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Industry / Category</span>
+                      <input value={companyProfile.industry} onChange={(event) => setCompanyProfile((current) => ({ ...current, industry: event.target.value }))} className="w-full rounded-xl bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand/40" placeholder="Digital Marketing Agency" />
+                    </label>
+                    <label className="space-y-2">
+                      <span className="ml-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Website URL</span>
+                      <input value={companyProfile.website} onChange={(event) => setCompanyProfile((current) => ({ ...current, website: event.target.value }))} className="w-full rounded-xl bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand/40" placeholder="https://youragency.com" />
                     </label>
                     <label className="space-y-2">
                       <span className="ml-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">GSTIN / GST Number</span>
@@ -675,8 +743,12 @@ const Settings = () => {
                   </div>
 
                   <div className="flex justify-end pt-2">
-                    <button onClick={() => updateCompany.mutate(companyProfile)} disabled={updateCompany.isPending} className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-60 cursor-pointer">
-                      {updateCompany.isPending ? 'Saving...' : 'Save Company Details & GST Settings'}
+                    <button type="button" onClick={handleSaveCompanyDetails} disabled={updateCompany.isPending} className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-60 cursor-pointer">
+                      {updateCompany.isPending
+                        ? 'Saving...'
+                        : organization?.companySetupRequired
+                        ? 'Save Company Details & Launch Workspace'
+                        : 'Save Company Details & GST Settings'}
                     </button>
                   </div>
                 </div>

@@ -4,6 +4,7 @@ import { Suspense, lazy, useEffect } from 'react';
 import { fetchMe } from './store/slices/authSlice';
 import { Toaster as SonnerToaster } from 'sonner';
 import BannerNotificationHost from './components/notifications/BannerNotificationHost';
+import { CookieConsentBanner } from './components/common/CookieConsentBanner';
 
 // Layouts
 import MainLayout from './layouts/MainLayout';
@@ -17,7 +18,7 @@ const CapabilitiesPage = lazy(() => import('./pages/public/CapabilitiesPage'));
 const MetricsPage = lazy(() => import('./pages/public/MetricsPage'));
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
-const RegisterCompany = lazy(() => import('./pages/auth/RegisterCompany'));
+const SelectPlan = lazy(() => import('./pages/auth/SelectPlan'));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
 const GoogleOAuthCallback = lazy(() => import('./pages/auth/GoogleOAuthCallback'));
@@ -148,7 +149,13 @@ const ProtectedRoute = ({ isAuthenticated, user, loading, allowedRoles, children
 // ─── App ──────────────────────────────────────────────────────────────────────
 const App = () => {
   const dispatch = useDispatch();
-  const { isAuthenticated, user, loading, authChecked } = useSelector((state) => state.auth);
+  const { isAuthenticated, user, organization, loading, authChecked } = useSelector((state) => state.auth);
+  const postLoginTarget =
+    user?.role === 'organizationOwner' && organization?.billingSetupRequired
+      ? '/select-plan'
+      : user?.role === 'organizationOwner' && organization?.companySetupRequired
+      ? '/settings?section=company'
+      : '/';
 
   useEffect(() => {
     // Fetch user profile once: token present, no user object, not already loading, and not yet checked
@@ -173,6 +180,7 @@ const App = () => {
         }}
       />
       <BannerNotificationHost />
+      <CookieConsentBanner />
       <Suspense fallback={null}>
         <Routes>
           {/* ── Public Standalone Pages (gowap.in style) ────────────────── */}
@@ -188,19 +196,29 @@ const App = () => {
           <Route path="/landing" element={<Landing />} />
           {!isAuthenticated && <Route path="/" element={<Landing />} />}
 
-          {/* ── Public Standalone SaaS Registration Page ──────────────── */}
-          <Route path="/register-company" element={!isAuthenticated ? <RegisterCompany /> : <Navigate to="/" />} />
+          {/* ── Redirect legacy external free trial URL to clean Register flow ─ */}
+          <Route path="/register-company" element={<Navigate to={!isAuthenticated ? '/register' : postLoginTarget} replace />} />
+
+          {/* ── Post-Login Plan & Razorpay Checkout Gate ────────────────── */}
+          <Route
+            path="/select-plan"
+            element={(
+              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading}>
+                <SelectPlan />
+              </ProtectedRoute>
+            )}
+          />
 
           {/* ── Auth Routes ─────────────────────────────────────────────── */}
           <Route path="/auth/google/callback" element={<GoogleOAuthCallback />} />
           <Route element={<AuthLayout />}>
-            <Route path="/login"                  element={!isAuthenticated ? <Login />          : <Navigate to="/" replace />} />
+            <Route path="/login"                  element={!isAuthenticated ? <Login />          : <Navigate to={postLoginTarget} replace />} />
             <Route path="/login/:companySlug"      element={<Login />} />
             <Route path="/:companySlug/login"      element={<Login />} />
             <Route path="/:companySlug"            element={<Login />} />
-            <Route path="/register"               element={!isAuthenticated ? <Login initialView="signup" /> : <Navigate to="/" />} />
-            <Route path="/forgot-password"        element={!isAuthenticated ? <ForgotPassword /> : <Navigate to="/" />} />
-            <Route path="/reset-password/:token" element={!isAuthenticated ? <ResetPassword /> : <Navigate to="/" />} />
+            <Route path="/register"               element={!isAuthenticated ? <Login initialView="signup" /> : <Navigate to={postLoginTarget} replace />} />
+            <Route path="/forgot-password"        element={!isAuthenticated ? <ForgotPassword /> : <Navigate to={postLoginTarget} replace />} />
+            <Route path="/reset-password/:token" element={!isAuthenticated ? <ResetPassword /> : <Navigate to={postLoginTarget} replace />} />
           </Route>
 
           {/* ── Platform Admin Routes (superAdmin only) ───────────────────── */}
