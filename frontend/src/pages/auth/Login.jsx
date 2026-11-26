@@ -37,27 +37,31 @@ const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
     {/* Left Side (Mobile Branding) / Top Item (Desktop Logo) */}
     <div className="flex items-center gap-2 md:mb-8 shrink-0 z-10">
       <Link to="/" className="group flex items-center gap-2" title="AgencyUpscale Home">
-        <div className="w-8 h-8 md:w-11 md:h-11 rounded-xl md:rounded-2xl bg-white dark:bg-slate-800 p-1.5 md:p-2 shadow-2xs border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center group-hover:scale-105 transition-transform overflow-hidden">
-          {portalOrg?.logo ? (
+        {portalOrg?.logo ? (
+          <>
+            <div className="w-9 h-9 md:w-11 md:h-11 rounded-xl md:rounded-2xl bg-white dark:bg-slate-800 p-1.5 md:p-2 shadow-2xs border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center group-hover:scale-105 transition-transform overflow-hidden">
+              <img
+                src={portalOrg.logo}
+                alt={portalOrg.name}
+                className="h-full w-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = '/agencyupscalelogo.jpeg';
+                }}
+              />
+            </div>
+            <span className="text-xs font-black text-slate-900 dark:text-white tracking-wider hidden sm:inline-block md:hidden uppercase truncate max-w-[140px]">
+              {portalOrg.name}
+            </span>
+          </>
+        ) : (
+          <div className="w-24 h-10 md:w-[78px] md:h-10 rounded-xl bg-white shadow-2xs border border-slate-200/80 dark:border-slate-700/80 overflow-hidden group-hover:scale-105 transition-transform">
             <img
-              src={portalOrg.logo}
-              alt={portalOrg.name}
-              className="h-full w-full object-contain"
-              onError={(e) => {
-                e.currentTarget.src = '/branding/rise-with-media-logo.png';
-              }}
+              src="/agencyupscalelogo.jpeg"
+              alt="AgencyUpscale"
+              className="h-full w-full object-cover object-center"
             />
-          ) : (
-            <img
-              src="/branding/rise-with-media-logo.png"
-              alt="AgencyUpscale logo"
-              className="h-full w-full object-contain"
-            />
-          )}
-        </div>
-        <span className="text-xs font-black text-slate-900 dark:text-white tracking-wider hidden sm:inline-block md:hidden uppercase truncate max-w-[140px]">
-          {portalOrg?.name || 'AgencyUpscale'}
-        </span>
+          </div>
+        )}
       </Link>
     </div>
 
@@ -127,33 +131,37 @@ const Hero = ({ variant, view, title, subtitle, portalOrg, onOpenTerms }) => {
       }`}
     >
       {/* Brand Logo Emblem */}
-      <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 p-2.5 flex items-center justify-center mb-4 shadow-lg shadow-black/15 overflow-hidden">
-        {portalOrg?.logo ? (
+      {portalOrg?.logo ? (
+        <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 p-2.5 flex items-center justify-center mb-4 shadow-lg shadow-black/15 overflow-hidden">
           <img
             src={portalOrg.logo}
             alt={portalOrg.name}
             className="h-full w-full object-contain filter drop-shadow-sm"
             onError={(e) => {
-              e.currentTarget.src = '/branding/rise-with-media-logo.png';
+              e.currentTarget.src = '/agencyupscalelogo.jpeg';
             }}
           />
-        ) : (
+        </div>
+      ) : (
+        <div className="w-40 h-20 rounded-2xl bg-white border border-white/40 mb-5 shadow-lg shadow-black/20 overflow-hidden">
           <img
-            src="/branding/rise-with-media-logo.png"
-            alt="AgencyUpscale logo"
-            className="h-full w-full object-contain filter drop-shadow-sm"
+            src="/agencyupscalelogo.jpeg"
+            alt="AgencyUpscale"
+            className="h-full w-full object-cover object-center"
           />
-        )}
-      </div>
+        </div>
+      )}
 
       <h2 className="text-2xl font-black text-white tracking-tight leading-tight">{title}</h2>
       <h3 className="text-xs sm:text-sm text-cyan-100/90 font-medium mt-1 max-w-[210px] leading-relaxed">
         {subtitle}
       </h3>
 
-      <div className="mt-3.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[10px] font-bold text-white tracking-widest uppercase">
-        {portalOrg?.name ? `${portalOrg.name} Portal` : 'AgencyUpscale'}
-      </div>
+      {portalOrg?.name && (
+        <div className="mt-3.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[10px] font-bold text-white tracking-widest uppercase">
+          {`${portalOrg.name} Portal`}
+        </div>
+      )}
 
       <button
         type="button"

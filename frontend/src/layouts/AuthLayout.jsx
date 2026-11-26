@@ -78,34 +78,27 @@ const AuthLayout = () => {
       {isSubAuth ? (
         <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-card relative z-10 transition-colors shadow-2xl border border-border/80">
           <div className="flex flex-col items-center mb-8">
-            <div className="mb-4 flex h-16 sm:h-20 w-16 sm:w-20 items-center justify-center rounded-2xl bg-brand/10 ring-1 ring-brand/25 shadow-[0_8px_24px_-8px_hsl(var(--brand)/0.45)] p-2.5 transition-colors overflow-hidden">
-              {portalOrg?.logo ? (
-                <img
-                  src={portalOrg.logo}
-                  alt={portalOrg.name}
-                  className="h-full w-full object-contain"
-                  onError={(e) => {
-                    e.currentTarget.src = '/branding/rise-with-media-logo.png';
-                  }}
-                />
-              ) : portalOrg ? (
-                <Building2 size={36} className="text-primary" />
-              ) : (
-                <img
-                  src="/branding/rise-with-media-logo.png"
-                  alt="AgencyUpscale logo"
-                  className="h-full w-full object-contain"
-                />
-              )}
-            </div>
-
             {portalOrg ? (
               <>
+                <div className="mb-4 flex h-16 sm:h-20 w-16 sm:w-20 items-center justify-center rounded-2xl bg-brand/10 ring-1 ring-brand/25 shadow-[0_8px_24px_-8px_hsl(var(--brand)/0.45)] p-2.5 transition-colors overflow-hidden">
+                  {portalOrg.logo ? (
+                    <img
+                      src={portalOrg.logo}
+                      alt={portalOrg.name}
+                      className="h-full w-full object-contain"
+                      onError={(e) => {
+                        e.currentTarget.src = '/agencyupscalelogo.jpeg';
+                      }}
+                    />
+                  ) : (
+                    <Building2 size={36} className="text-primary" />
+                  )}
+                </div>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 mb-1.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold uppercase tracking-wider border border-blue-500/20">
                   Company Portal
                 </span>
                 <h1 className="text-center text-xl sm:text-2xl font-black tracking-tight text-foreground">
-                  {portalOrg.name} • AgencyUpscale
+                  {portalOrg.name}
                 </h1>
                 <p className="text-muted-foreground text-xs sm:text-sm mt-0.5 text-center">
                   Account Recovery
@@ -113,7 +106,13 @@ const AuthLayout = () => {
               </>
             ) : (
               <>
-                <h1 className="text-center text-xl sm:text-2xl font-black tracking-tight text-foreground">AgencyUpscale</h1>
+                <div className="mb-3 h-20 w-40 rounded-2xl bg-white border border-slate-200/80 shadow-md overflow-hidden">
+                  <img
+                    src="/agencyupscalelogo.jpeg"
+                    alt="AgencyUpscale"
+                    className="h-full w-full object-cover object-center"
+                  />
+                </div>
                 <p className="text-center text-muted-foreground text-xs sm:text-sm mt-1">Account Recovery</p>
               </>
             )}

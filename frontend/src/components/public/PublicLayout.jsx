@@ -57,23 +57,14 @@ const PublicLayout = ({
       <header className="fixed top-0 inset-x-0 z-50 h-16 sm:h-20 bg-white/95 backdrop-blur-md border-b border-slate-200/80 transition-all flex items-center shadow-2xs">
         <div className="max-w-7xl mx-auto px-3.5 sm:px-8 lg:px-12 w-full flex items-center justify-between">
 
-          {/* Brand Logo */}
-          <Link to="/" className="flex items-center gap-2 sm:gap-3.5 group shrink-0">
-            <div className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center p-1 sm:p-1.5 overflow-hidden transition-transform group-hover:scale-105 shrink-0">
+          {/* Brand Logo (wordmark embedded in logo image) */}
+          <Link to="/" className="flex items-center group shrink-0" aria-label="AgencyUpscale Home">
+            <div className="h-12 w-24 sm:h-14 sm:w-28 rounded-xl bg-white border border-slate-200/80 shadow-2xs overflow-hidden transition-transform group-hover:scale-[1.03] shrink-0">
               <img
-                src="/branding/rise-with-media-logo.png"
-                alt="AgencyUpscale Logo"
-                className="h-full w-full object-contain"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                src="/agencyupscalelogo.jpeg"
+                alt="AgencyUpscale"
+                className="h-full w-full object-cover object-center"
               />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-extrabold text-lg sm:text-2xl text-slate-950 tracking-tight group-hover:text-[#07c8f9] transition-colors leading-tight">
-                AgencyUpscale
-              </span>
-              <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden sm:block -mt-0.5">
-                Connect . Grow
-              </span>
             </div>
           </Link>
 
@@ -230,21 +221,12 @@ const PublicLayout = ({
             {/* Col 1: Brand & Mission (6 cols) */}
             <div className="sm:col-span-2 lg:col-span-6 space-y-4 text-left">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 shadow-xs">
+                <div className="h-16 w-32 rounded-2xl bg-white overflow-hidden shrink-0 shadow-xs">
                   <img
-                    src="/branding/rise-with-media-logo.png"
-                    alt="AgencyUpscale Logo"
-                    className="h-full w-full object-contain"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    src="/agencyupscalelogo.jpeg"
+                    alt="AgencyUpscale"
+                    className="h-full w-full object-cover object-center"
                   />
-                </div>
-                <div>
-                  <span className="font-extrabold text-white text-lg block leading-tight">
-                    AgencyUpscale
-                  </span>
-                  <span className="text-[11px] font-bold text-[#07c8f9] uppercase tracking-wider">
-                    Agency Workspace
-                  </span>
                 </div>
               </div>
               <p className="text-xs sm:text-sm text-slate-400 font-medium leading-relaxed max-w-sm">

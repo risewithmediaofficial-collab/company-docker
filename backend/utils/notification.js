@@ -50,8 +50,8 @@ export const createNotification = async ({ recipient, sender, type, title, messa
     sendPushToUser(recipient, {
       title: title || 'New CRM Notification',
       body: message || '',
-      icon: '/branding/rise-with-media-logo.png',
-      badge: '/branding/rise-with-media-logo.png',
+      icon: '/agencyupscalelogo.jpeg',
+      badge: '/agencyupscalelogo.jpeg',
       link: link || '/',
       eventId: notification._id?.toString(),
     }).catch((pushErr) => {

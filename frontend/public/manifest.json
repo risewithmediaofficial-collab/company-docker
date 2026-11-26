@@ -11,15 +11,15 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/branding/rise-with-media-logo.png",
+      "src": "/agencyupscalelogo.jpeg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/branding/rise-with-media-logo.png",
+      "src": "/agencyupscalelogo.jpeg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     }
   ]

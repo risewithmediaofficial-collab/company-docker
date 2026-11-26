@@ -149,8 +149,8 @@ export const sendPushToUser = async (userId, payload = {}) => {
     const body = payload.body || payload.message || 'You have a new update in your CRM workspace.';
     const link = payload.link || payload.url || '/';
     const eventId = payload.eventId || payload.id || `notif-${Date.now()}`;
-    const icon = payload.icon || '/branding/rise-with-media-logo.png';
-    const badge = payload.badge || '/branding/rise-with-media-logo.png';
+    const icon = payload.icon || '/agencyupscalelogo.jpeg';
+    const badge = payload.badge || '/agencyupscalelogo.jpeg';
 
     const pushPayload = JSON.stringify({
       title,

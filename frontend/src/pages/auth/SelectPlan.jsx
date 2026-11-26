@@ -236,12 +236,11 @@ const SelectPlan = () => {
                 <span>Back to Dashboard</span>
               </button>
             )}
-            <div className="h-10 w-10 rounded-xl bg-white border border-slate-200 p-1.5 flex items-center justify-center shadow-2xs">
-              <img src="/branding/rise-with-media-logo.png" alt="AgencyUpscale" className="h-full w-full object-contain" />
+            <div className="h-12 w-24 sm:h-14 sm:w-28 rounded-xl bg-white border border-slate-200 overflow-hidden shadow-2xs shrink-0">
+              <img src="/agencyupscalelogo.jpeg" alt="AgencyUpscale" className="h-full w-full object-cover object-center" />
             </div>
             <div>
-              <p className="text-sm font-black tracking-tight text-slate-900">AgencyUpscale</p>
-              <p className="text-[11px] font-semibold text-[#0586a8]">
+              <p className="text-xs font-semibold text-[#0586a8]">
                 Signed in as {user?.name || user?.email}
               </p>
             </div>

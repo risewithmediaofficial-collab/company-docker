@@ -283,21 +283,13 @@ const RegisterCompany = () => {
 
         {/* Top Header & Official Logo */}
         <div className="text-center mb-6 sm:mb-8">
-          <Link to="/login" className="inline-flex items-center gap-3 mb-3.5 group">
-            <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-white p-2 shadow-md border border-slate-200/80 group-hover:scale-105 transition-transform">
+          <Link to="/login" className="inline-flex items-center justify-center mb-3.5 group">
+            <div className="h-20 w-40 rounded-2xl bg-white shadow-md border border-slate-200/80 group-hover:scale-105 transition-transform overflow-hidden">
               <img
-                src="/branding/rise-with-media-logo.png"
-                alt="AgencyUpscale logo"
-                className="h-full w-full object-contain"
+                src="/agencyupscalelogo.jpeg"
+                alt="AgencyUpscale"
+                className="h-full w-full object-cover object-center"
               />
-            </div>
-            <div className="text-left">
-              <span className="text-slate-950 font-extrabold text-lg sm:text-xl tracking-wider block leading-none">
-                AGENCYUPSCALE
-              </span>
-              <span className="text-[#07c8f9] text-[10px] sm:text-[11px] font-bold uppercase tracking-widest mt-1 block">
-                AgencyUpscale Platform
-              </span>
             </div>
           </Link>
 
