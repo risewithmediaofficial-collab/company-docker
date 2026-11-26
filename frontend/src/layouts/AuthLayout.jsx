@@ -57,7 +57,7 @@ const AuthLayout = () => {
   }, [cleanSlug, isActualCompanySlug]);
 
   return (
-    <div className="min-h-[100dvh] w-full flex items-center justify-center bg-background relative overflow-x-hidden p-2 sm:p-6 py-2 sm:py-12 transition-colors duration-300">
+    <div className="min-h-[100dvh] w-full flex items-center justify-center bg-background relative overflow-x-hidden px-2 pt-2 pb-20 sm:p-6 sm:py-12 transition-colors duration-300">
       {/* Floating Theme Toggle (Only for SubAuth standalone pages like forgot-password, styled with border & shadow) */}
       {isSubAuth && (
         <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
