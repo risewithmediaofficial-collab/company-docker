@@ -48,7 +48,7 @@ const PublicLayout = ({
 
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-[#07c8f9]/25 selection:text-slate-900 relative overflow-x-hidden antialiased flex flex-col justify-between">
-      
+
       {/* ── AMBIENT LOGO BLUE SIDE GLOWS (Only #07c8f9) ── */}
       <div className="fixed top-1/4 -left-36 w-80 sm:w-96 h-[500px] bg-gradient-to-r from-[#07c8f9]/12 via-[#07c8f9]/6 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
       <div className="fixed top-1/3 -right-36 w-80 sm:w-96 h-[500px] bg-gradient-to-l from-[#07c8f9]/10 via-[#07c8f9]/5 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
@@ -56,7 +56,7 @@ const PublicLayout = ({
       {/* ── FIXED TOP NAVIGATION BAR ── */}
       <header className="fixed top-0 inset-x-0 z-50 h-16 sm:h-20 bg-white/95 backdrop-blur-md border-b border-slate-200/80 transition-all flex items-center shadow-2xs">
         <div className="max-w-7xl mx-auto px-3.5 sm:px-8 lg:px-12 w-full flex items-center justify-between">
-          
+
           {/* Brand Logo */}
           <Link to="/" className="flex items-center gap-2 sm:gap-3.5 group shrink-0">
             <div className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center p-1 sm:p-1.5 overflow-hidden transition-transform group-hover:scale-105 shrink-0">
@@ -72,7 +72,7 @@ const PublicLayout = ({
                 AgencyUpscale
               </span>
               <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden sm:block -mt-0.5">
-                Digital Marketing App
+                Connect . Grow
               </span>
             </div>
           </Link>
@@ -85,11 +85,10 @@ const PublicLayout = ({
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`px-3 py-1.5 transition-all text-sm ${
-                    active
+                  className={`px-3 py-1.5 transition-all text-sm ${active
                       ? 'text-[#07c8f9] font-black'
                       : 'hover:text-slate-950 text-slate-700 font-bold'
-                  }`}
+                    }`}
                 >
                   {item.label}
                 </Link>
@@ -143,11 +142,10 @@ const PublicLayout = ({
                       key={item.path}
                       to={item.path}
                       onClick={() => setMobileMenuOpen(false)}
-                      className={`text-base font-extrabold px-3 py-2.5 rounded-xl transition-all flex items-center justify-between ${
-                        active
+                      className={`text-base font-extrabold px-3 py-2.5 rounded-xl transition-all flex items-center justify-between ${active
                           ? 'text-[#07c8f9] bg-[#07c8f9]/10 font-black'
                           : 'text-slate-800 hover:bg-slate-100'
-                      }`}
+                        }`}
                     >
                       <span>{item.label}</span>
                       {active && <span className="w-2 h-2 rounded-full bg-[#07c8f9]" />}
@@ -187,7 +185,7 @@ const PublicLayout = ({
       {!hideCta && (
         <section className="relative z-20 -mb-28 sm:-mb-24 lg:-mb-24 max-w-6xl mx-auto px-4 sm:px-8 w-full">
           <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#07c8f9] via-[#06b4e0] to-[#0284c7] p-6 sm:p-10 lg:p-12 text-white flex flex-col lg:flex-row items-start md:items-center justify-between gap-6 sm:gap-8 border border-white/20 relative overflow-hidden">
-            
+
             {/* Subtle Inner Glow Shapes */}
             <div className="absolute -top-20 -right-20 w-72 h-72 bg-white/15 rounded-full blur-2xl pointer-events-none" />
             <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-black/10 rounded-full blur-2xl pointer-events-none" />
@@ -226,9 +224,9 @@ const PublicLayout = ({
       {/* ── DARK RICH FOOTER (Attached directly behind the floating banner) ── */}
       <footer className="relative z-10 bg-slate-950 text-slate-400 border-t border-slate-800 pt-32 sm:pt-36 lg:pt-40 pb-12 mt-0">
         <div className="max-w-6xl mx-auto px-4 sm:px-8">
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 items-start pb-12 border-b border-slate-800/80">
-            
+
             {/* Col 1: Brand & Mission (6 cols) */}
             <div className="sm:col-span-2 lg:col-span-6 space-y-4 text-left">
               <div className="flex items-center gap-3">
