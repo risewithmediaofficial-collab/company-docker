@@ -26,6 +26,7 @@ import {
 import axios from 'axios';
 import { toast } from 'sonner';
 import { toggleDarkMode } from '../../store/slices/uiSlice';
+import { GoogleAuthButton } from '../../components/auth/GoogleAuthButton';
 
 // ── Left Navigation Rail / Mobile Header (CardNav) ───────────────────────────
 const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
@@ -373,6 +374,12 @@ const SignInForm = ({
         )}
       </button>
 
+      <GoogleAuthButton
+        mode="signin"
+        companySlug={companySlug}
+        label={portalOrg ? `Continue with Google (${portalOrg.name})` : 'Continue with Google'}
+      />
+
       {/* Quick Links & Switchers */}
       <div className="pt-1.5 text-center space-y-1.5 border-t border-slate-100 dark:border-slate-800/80">
         <p className="text-xs text-slate-600 dark:text-slate-400">
@@ -562,6 +569,13 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate }) => {
         )}
       </button>
 
+      <GoogleAuthButton
+        mode="signup"
+        role={signupData.role}
+        companySlug={companySlug}
+        label="Sign up with Google"
+      />
+
       {/* Switch to Sign In & Register Company */}
       <div className="pt-1 text-center space-y-1.5 border-t border-slate-100 dark:border-slate-800/80">
         <p className="text-xs text-slate-600 dark:text-slate-400">
@@ -691,7 +705,7 @@ export const Login = ({ initialView }) => {
         </div>
 
         {/* 3. Form Container Sliding Area */}
-        <div className="card-form w-full flex-auto min-w-0 relative overflow-hidden h-[420px] sm:h-[450px] md:h-[480px]">
+        <div className="card-form w-full flex-auto min-w-0 relative overflow-hidden h-[460px] sm:h-[490px] md:h-[530px]">
           <div
             className={`forms absolute inset-x-0 top-0 h-[200%] transition-transform duration-500 ease-in-out ${
               view === 'signup' ? '-translate-y-1/2' : 'translate-y-0'

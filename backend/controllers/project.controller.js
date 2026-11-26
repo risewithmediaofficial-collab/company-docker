@@ -232,12 +232,15 @@ const normalizeProjectPayload = (body) => {
   return payload;
 };
 
+const PROJECT_STAFF_LIST = ['employee', 'intern', 'editor', 'designer', 'adsManager', 'accountManager', 'financeManager'];
+const PROJECT_CLIENT_LIST = ['client', 'clientAdmin', 'clientMember'];
+
 const assertProjectAccess = async (req, project) => {
   if (!project) return { allowed: false, status: 404, message: 'Project not found' };
-  if (req.user.role === 'superAdmin' || req.user.role === 'admin') return { allowed: true };
+  if (['superAdmin', 'admin', 'organizationOwner'].includes(req.user.role)) return { allowed: true };
   if (req.user.role === 'manager') return { allowed: true };
-  if (req.user.role === 'employee' && project.team?.some((member) => member.toString() === req.user._id.toString())) return { allowed: true };
-  if (req.user.role === 'client') {
+  if (PROJECT_STAFF_LIST.includes(req.user.role) && project.team?.some((member) => member.toString() === req.user._id.toString())) return { allowed: true };
+  if (PROJECT_CLIENT_LIST.includes(req.user.role)) {
     const client = await Client.findOne({ userId: req.user._id }).select('_id');
     const userClientId = client?._id?.toString() || req.user.clientId?.toString();
     const projectClientId = project.client?._id ? project.client._id.toString() : project.client?.toString();
@@ -451,8 +454,8 @@ export const getProjects = async (req, res) => {
       }
     }
     
-    if (req.user.role === 'employee') filter.team = req.user._id;
-    if (req.user.role === 'client') {
+    if (PROJECT_STAFF_LIST.includes(req.user.role)) filter.team = req.user._id;
+    if (PROJECT_CLIENT_LIST.includes(req.user.role)) {
       const clientRecord = await Client.findOne({ userId: req.user._id }).select('_id');
       const targetClientId = clientRecord?._id || req.user.clientId;
       if (targetClientId) {

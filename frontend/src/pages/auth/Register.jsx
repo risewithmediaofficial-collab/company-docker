@@ -4,6 +4,7 @@ import { Mail, Lock, User, Loader2, AlertCircle, Briefcase, Eye, EyeOff } from '
 import axios from 'axios';
 import { toast } from 'sonner';
 import { SelectDropdown } from '../../components/ui/SelectDropdown';
+import { GoogleAuthButton } from '../../components/auth/GoogleAuthButton';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -150,6 +151,8 @@ const Register = () => {
         >
           {loading ? <Loader2 className="animate-spin" size={18} /> : 'Create New Account'}
         </button>
+
+        <GoogleAuthButton mode="signup" role={formData.role || 'employee'} />
       </form>
 
       <div className="text-center">

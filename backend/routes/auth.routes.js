@@ -17,6 +17,10 @@ import {
   registerCompany,
   getCompanyPortal,
   completeOnboarding,
+  getGoogleOAuthConfig,
+  initiateGoogleOAuth,
+  googleOAuthCallback,
+  googleTokenAuth,
 } from '../controllers/auth.controller.js';
 import { getEnv } from '../config/env.js';
 import { protect } from '../middleware/auth.middleware.js';
@@ -37,6 +41,10 @@ router.post('/register', failedAuthAttemptLimiter, register);
 router.post('/register-company', failedAuthAttemptLimiter, registerCompany);
 router.get('/company-portal/:slug', getCompanyPortal);
 router.post('/login', failedAuthAttemptLimiter, login);
+router.get('/google/config', getGoogleOAuthConfig);
+router.get('/google', initiateGoogleOAuth);
+router.get('/google/callback', googleOAuthCallback);
+router.post('/google', failedAuthAttemptLimiter, googleTokenAuth);
 router.post('/refresh', refreshToken);
 router.post('/forgot-password', failedAuthAttemptLimiter, forgotPassword);
 router.put('/reset-password/:token', failedAuthAttemptLimiter, resetPassword);

@@ -258,6 +258,7 @@ export const login = async (req, res) => {
         phone: user.phone,
         department: user.department,
         position: user.position,
+        vendorCompany: user.vendorCompany || '',
         referralCode: user.referralCode,
         permissions: user.permissions,
         clientId: user.clientId,
@@ -642,6 +643,469 @@ export const getCompanyPortal = async (req, res) => {
         industry: org.industry || '',
         planStatus: org.planStatus,
       },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// =============================================
+// GOOGLE OAUTH 2.0 LOGIN & SIGNUP
+// =============================================
+
+const getGoogleOAuthRuntime = (req) => {
+  const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+  const clientSecret = String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
+  const configuredRedirect = String(process.env.GOOGLE_REDIRECT_URI || '').trim();
+
+  const forwardedProto = String(req?.headers?.['x-forwarded-proto'] || '').split(',')[0].trim();
+  const proto = forwardedProto || req?.protocol || 'http';
+  const forwardedHost = String(req?.headers?.['x-forwarded-host'] || '').split(',')[0].trim();
+  const host = forwardedHost || (typeof req?.get === 'function' ? req.get('host') : '') || 'localhost:5001';
+  const dynamicRedirect = `${proto}://${host}/api/auth/google/callback`;
+
+  return {
+    clientId,
+    clientSecret,
+    redirectUri: configuredRedirect || dynamicRedirect,
+    requestOrigin: `${proto}://${host}`,
+  };
+};
+
+const resolveSafeReturnOrigin = (requestedOrigin, fallbackOrigin) => {
+  const clientDefault = process.env.CLIENT_URL || fallbackOrigin || 'http://localhost:5173';
+  if (!requestedOrigin) return clientDefault.replace(/\/+$/, '');
+  try {
+    const parsed = new URL(requestedOrigin);
+    if (['http:', 'https:'].includes(parsed.protocol)) {
+      return parsed.origin;
+    }
+  } catch (_) {}
+  return clientDefault.replace(/\/+$/, '');
+};
+
+export const resolveGoogleUserAndTokens = async ({
+  profile,
+  mode = 'signin',
+  role = 'employee',
+  companySlug = '',
+  req,
+}) => {
+  if (!profile?.email || profile.email_verified === false || profile.email_verified === 'false') {
+    return { ok: false, status: 400, message: 'Verified Google email address is required' };
+  }
+
+  const cleanEmail = String(profile.email).trim().toLowerCase();
+  const googleSub = profile.sub ? String(profile.sub).trim() : '';
+
+  const orQuery = [{ email: cleanEmail }];
+  if (googleSub) orQuery.unshift({ googleId: googleSub });
+
+  let user = await User.findOne({ $or: orQuery }).select('+refreshToken');
+
+  // Existing account -> Sign In (even if initiated from Sign Up button)
+  if (user) {
+    if (user.approvalStatus === 'pending') {
+      return { ok: false, status: 403, message: 'Your account is waiting for super admin approval' };
+    }
+    if (user.approvalStatus === 'rejected') {
+      return { ok: false, status: 403, message: 'Your account request was rejected' };
+    }
+    if (!user.isActive) {
+      return { ok: false, status: 403, message: 'Your account has been deactivated' };
+    }
+
+    let organization = null;
+    if (user.organizationId) {
+      organization = await Organization.findById(user.organizationId).select(
+        'name slug logo industry website phone plan planStatus enabledModules maxUsers maxClients trialEndsAt settings'
+      );
+      if (organization && !organization.slug) {
+        organization.slug = organization.name
+          ? organization.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+          : String(organization._id);
+        await organization.save();
+      }
+    }
+
+    if (user.role !== 'superAdmin' && user.organizationId) {
+      const orgSlug =
+        organization?.slug ||
+        (organization?.name
+          ? organization.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+          : '') ||
+        String(organization?._id || '');
+      const cleanCompanySlug = String(companySlug || '').replace(/^\/+|\/+$/g, '').toLowerCase().trim();
+
+      if (!cleanCompanySlug) {
+        return {
+          ok: false,
+          status: 403,
+          requiresCompanyPortal: true,
+          companySlug: orgSlug,
+          companyName: organization?.name || 'Your Company',
+          portalUrl: `/login/${orgSlug}`,
+          message: `Company members must log in through their company URL: /login/${orgSlug}.`,
+        };
+      }
+
+      const matchesSlug = orgSlug && cleanCompanySlug === orgSlug.toLowerCase().trim();
+      const matchesOrgId = organization && String(organization._id) === cleanCompanySlug;
+      const matchesOrgName =
+        organization?.name &&
+        cleanCompanySlug === organization.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+      if (!matchesSlug && !matchesOrgId && !matchesOrgName) {
+        return {
+          ok: false,
+          status: 403,
+          requiresCompanyPortal: true,
+          companySlug: orgSlug,
+          companyName: organization?.name || 'Your Company',
+          portalUrl: `/login/${orgSlug}`,
+          message: `This account does not belong to this portal. Please log in at your own company URL: /login/${orgSlug}`,
+        };
+      }
+
+      if (organization?.planStatus === 'pending') {
+        return {
+          ok: false,
+          status: 403,
+          message: `"${organization.name}" registration is pending approval by Platform Super Admin.`,
+        };
+      }
+
+      if (organization?.planStatus === 'suspended') {
+        return {
+          ok: false,
+          status: 403,
+          message: `"${organization.name}" workspace has been suspended.`,
+        };
+      }
+    }
+
+    if (googleSub && !user.googleId) user.googleId = googleSub;
+    if (profile.picture && !user.avatar) user.avatar = profile.picture;
+    user.authProvider = user.authProvider === 'local' ? 'both' : 'google';
+
+    const accessToken = generateAccessToken(user._id, user.role);
+    const refreshToken = generateRefreshToken(user._id);
+    const isFirstLogin = !user.lastLogin && !user.hasSeenOnboarding;
+    user.refreshToken = refreshToken;
+    user.lastLogin = new Date();
+    await user.save({ validateBeforeSave: false });
+
+    await createActivityLog({
+      actor: user,
+      action: 'auth.google_login',
+      entityType: 'auth',
+      entityId: user._id,
+      title: 'User logged in with Google',
+      description: `${user.name} (${user.role}) signed in via Google OAuth.`,
+      metadata: { email: user.email, role: user.role },
+    }).catch(() => {});
+
+    return {
+      ok: true,
+      status: 200,
+      accessToken,
+      refreshToken,
+      organization,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+        phone: user.phone,
+        department: user.department,
+        position: user.position,
+        vendorCompany: user.vendorCompany || '',
+        referralCode: user.referralCode,
+        permissions: user.permissions,
+        clientId: user.clientId,
+        organizationId: user.organizationId,
+        hasSeenOnboarding: Boolean(user.hasSeenOnboarding),
+        isFirstLogin: Boolean(isFirstLogin),
+        createdAt: user.createdAt,
+      },
+    };
+  }
+
+  // No existing user
+  if (mode !== 'signup') {
+    return {
+      ok: false,
+      status: 404,
+      message: `No CRM account found for ${cleanEmail}. Please sign up first.`,
+    };
+  }
+
+  const safeRole = ['employee', 'client', 'manager'].includes(role) ? role : 'employee';
+  const cleanCompanySlug = String(companySlug || '').replace(/^\/+|\/+$/g, '').toLowerCase().trim();
+  let matchedOrgId;
+  if (cleanCompanySlug) {
+    const orgDoc = await Organization.findOne({ slug: cleanCompanySlug }).select('_id').lean();
+    if (orgDoc) matchedOrgId = orgDoc._id;
+  }
+
+  const randomPassword = crypto.randomBytes(24).toString('hex');
+  const newUser = await User.create({
+    name: String(profile.name || cleanEmail.split('@')[0]).trim().slice(0, 100),
+    email: cleanEmail,
+    password: randomPassword,
+    googleId: googleSub || undefined,
+    authProvider: 'google',
+    avatar: profile.picture || '',
+    role: safeRole,
+    organizationId: matchedOrgId,
+    isActive: false,
+    approvalStatus: 'pending',
+  });
+
+  if (safeRole === 'client') {
+    const client = await Client.create({
+      name: newUser.name,
+      email: cleanEmail,
+      company: newUser.name,
+      status: 'onboarding',
+      userId: newUser._id,
+      organizationId: matchedOrgId,
+      portalEnabled: true,
+    });
+    newUser.clientId = client._id;
+    await newUser.save({ validateBeforeSave: false });
+  }
+
+  const io = req?.app?.get?.('io');
+  if (io) io.emit('userCreated', { role: safeRole });
+
+  return {
+    ok: true,
+    status: 201,
+    pendingApproval: true,
+    message: 'Google registration submitted. An administrator must approve your account before you can sign in.',
+  };
+};
+
+// @desc    Check if Google OAuth is configured
+// @route   GET /api/auth/google/config
+// @access  Public
+export const getGoogleOAuthConfig = async (req, res) => {
+  const { clientId, clientSecret } = getGoogleOAuthRuntime(req);
+  res.json({
+    success: true,
+    enabled: Boolean(clientId && clientSecret),
+    clientId: clientId || null,
+  });
+};
+
+// @desc    Initiate Google OAuth 2.0 Authorization Code Redirect
+// @route   GET /api/auth/google
+// @access  Public
+export const initiateGoogleOAuth = async (req, res) => {
+  const { clientId, clientSecret, redirectUri, requestOrigin } = getGoogleOAuthRuntime(req);
+  if (!clientId || !clientSecret) {
+    return res.status(503).json({
+      success: false,
+      message: 'Google OAuth is not configured on the server',
+    });
+  }
+
+  const mode = req.query.mode === 'signup' ? 'signup' : 'signin';
+  const role = ['employee', 'client', 'manager'].includes(String(req.query.role || ''))
+    ? String(req.query.role)
+    : 'employee';
+  const companySlug = String(req.query.companySlug || '').trim();
+  const returnOrigin = resolveSafeReturnOrigin(req.query.origin, requestOrigin);
+
+  const stateSecret = process.env.JWT_SECRET || 'dev-only-change-me-access-secret';
+  const stateToken = jwt.sign(
+    {
+      mode,
+      role,
+      companySlug,
+      returnOrigin,
+      nonce: crypto.randomBytes(8).toString('hex'),
+    },
+    stateSecret,
+    { expiresIn: '10m' }
+  );
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'openid email profile',
+    access_type: 'offline',
+    prompt: 'select_account',
+    state: stateToken,
+  });
+
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+};
+
+// @desc    Google OAuth 2.0 Callback
+// @route   GET /api/auth/google/callback
+// @access  Public
+export const googleOAuthCallback = async (req, res) => {
+  const { clientId, clientSecret, redirectUri, requestOrigin } = getGoogleOAuthRuntime(req);
+  const stateSecret = process.env.JWT_SECRET || 'dev-only-change-me-access-secret';
+
+  let decodedState = {};
+  try {
+    if (req.query.state) {
+      decodedState = jwt.verify(String(req.query.state), stateSecret);
+    }
+  } catch (_) {
+    const fallbackOrigin = resolveSafeReturnOrigin(null, requestOrigin);
+    return res.redirect(
+      `${fallbackOrigin}/auth/google/callback?oauthError=${encodeURIComponent('Google sign-in session expired. Please try again.')}`
+    );
+  }
+
+  const returnOrigin = resolveSafeReturnOrigin(decodedState.returnOrigin, requestOrigin);
+  const redirectWithParams = (query = {}, hash = '') => {
+    const sp = new URLSearchParams(query);
+    const qs = sp.toString();
+    const target = `${returnOrigin}/auth/google/callback${qs ? `?${qs}` : ''}${hash ? `#${hash}` : ''}`;
+    return res.redirect(target);
+  };
+
+  if (req.query.error) {
+    return redirectWithParams({ oauthError: String(req.query.error_description || req.query.error) });
+  }
+
+  const code = String(req.query.code || '').trim();
+  if (!code) {
+    return redirectWithParams({ oauthError: 'Missing Google authorization code' });
+  }
+
+  try {
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }).toString(),
+    });
+    const tokenData = await tokenRes.json();
+    if (!tokenRes.ok || !tokenData.access_token) {
+      return redirectWithParams({
+        oauthError: tokenData.error_description || tokenData.error || 'Failed to exchange Google code',
+      });
+    }
+
+    const userinfoRes = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    const profile = await userinfoRes.json();
+    if (!userinfoRes.ok || !profile?.email) {
+      return redirectWithParams({ oauthError: 'Failed to retrieve Google user profile' });
+    }
+
+    const result = await resolveGoogleUserAndTokens({
+      profile,
+      mode: decodedState.mode || 'signin',
+      role: decodedState.role || 'employee',
+      companySlug: decodedState.companySlug || '',
+      req,
+    });
+
+    if (!result.ok) {
+      if (result.requiresCompanyPortal) {
+        return redirectWithParams({
+          requiresCompanyPortal: '1',
+          portalUrl: result.portalUrl || '',
+          companyName: result.companyName || '',
+          companySlug: result.companySlug || '',
+          oauthError: result.message,
+        });
+      }
+      return redirectWithParams({ oauthError: result.message || 'Google login failed' });
+    }
+
+    if (result.pendingApproval) {
+      return redirectWithParams({
+        signupPending: '1',
+        message: result.message,
+      });
+    }
+
+    const hashParams = new URLSearchParams({
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken || '',
+    }).toString();
+
+    return redirectWithParams({}, hashParams);
+  } catch (error) {
+    return redirectWithParams({ oauthError: error.message || 'Google authentication failed' });
+  }
+};
+
+// @desc    Direct Google ID Token or Code Sign-In / Sign-Up (JSON API)
+// @route   POST /api/auth/google
+// @access  Public
+export const googleTokenAuth = async (req, res) => {
+  try {
+    const { idToken, credential, mode = 'signin', role = 'employee', companySlug = '' } = req.body || {};
+    const { clientId } = getGoogleOAuthRuntime(req);
+    const token = String(idToken || credential || '').trim();
+
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Google credential token is required' });
+    }
+
+    const infoRes = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(token)}`
+    );
+    const profile = await infoRes.json();
+    if (!infoRes.ok || !profile?.email) {
+      return res.status(401).json({ success: false, message: 'Invalid Google ID token' });
+    }
+
+    if (clientId && profile.aud && String(profile.aud) !== clientId) {
+      return res.status(401).json({ success: false, message: 'Google token audience mismatch' });
+    }
+
+    const result = await resolveGoogleUserAndTokens({
+      profile,
+      mode,
+      role,
+      companySlug,
+      req,
+    });
+
+    if (!result.ok) {
+      return res.status(result.status || 400).json({
+        success: false,
+        requiresCompanyPortal: result.requiresCompanyPortal,
+        companySlug: result.companySlug,
+        companyName: result.companyName,
+        portalUrl: result.portalUrl,
+        message: result.message,
+      });
+    }
+
+    if (result.pendingApproval) {
+      return res.status(201).json({
+        success: true,
+        pendingApproval: true,
+        message: result.message,
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Login successful',
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      user: result.user,
+      organization: result.organization,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

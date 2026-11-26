@@ -31,24 +31,27 @@ const router = express.Router();
 router.use(protect);
 
 // ─── CLIENT ROUTES ────────────────────────────────────────────────────────────
-router.get('/dashboard', authorize('client'), getPortalDashboard);
-router.get('/content', authorize('client'), getContentItems);
-router.get('/content/:id', authorize('client'), getContentItem);
-router.post('/content/:id/approve', authorize('client'), approveContentItem);
-router.post('/content/:id/revision', authorize('client'), requestRevision);
-router.post('/content/:id/feedback', authorize('client'), addContentFeedback);
-router.get('/reporting', authorize('client', 'superAdmin', 'manager'), getReportingData);
-router.get('/finance', authorize('client'), getClientFinanceOverview);
-router.get('/invoices', authorize('client'), getClientInvoices);
-router.get('/projects', authorize('client'), getClientProjects);
-router.get('/tasks', authorize('client'), getClientTasks);
-router.get('/budget', authorize('client'), getClientAdBudget);
-router.post('/onboarding', authorize('client'), submitClientOnboarding);
-router.get('/onboarding', authorize('client', 'superAdmin', 'admin', 'manager'), getClientOnboarding);
+const CLIENT_ROLES = ['client', 'clientAdmin', 'clientMember'];
+const STAFF_EDIT_ROLES = ['superAdmin', 'admin', 'organizationOwner', 'manager', 'employee', 'intern', 'editor', 'designer', 'adsManager'];
+
+router.get('/dashboard', authorize(...CLIENT_ROLES), getPortalDashboard);
+router.get('/content', authorize(...CLIENT_ROLES), getContentItems);
+router.get('/content/:id', authorize(...CLIENT_ROLES), getContentItem);
+router.post('/content/:id/approve', authorize(...CLIENT_ROLES), approveContentItem);
+router.post('/content/:id/revision', authorize(...CLIENT_ROLES), requestRevision);
+router.post('/content/:id/feedback', authorize(...CLIENT_ROLES), addContentFeedback);
+router.get('/reporting', authorize(...CLIENT_ROLES, 'superAdmin', 'manager'), getReportingData);
+router.get('/finance', authorize(...CLIENT_ROLES), getClientFinanceOverview);
+router.get('/invoices', authorize(...CLIENT_ROLES), getClientInvoices);
+router.get('/projects', authorize(...CLIENT_ROLES), getClientProjects);
+router.get('/tasks', authorize(...CLIENT_ROLES), getClientTasks);
+router.get('/budget', authorize(...CLIENT_ROLES), getClientAdBudget);
+router.post('/onboarding', authorize(...CLIENT_ROLES), submitClientOnboarding);
+router.get('/onboarding', authorize(...CLIENT_ROLES, 'superAdmin', 'admin', 'manager'), getClientOnboarding);
 
 // ─── ADMIN / MANAGER ROUTES ──────────────────────────────────────────────────
-router.post('/content', authorize('superAdmin', 'manager', 'employee'), createContentItem);
-router.put('/content/:id', authorize('superAdmin', 'manager', 'employee'), updateContentItem);
+router.post('/content', authorize(...STAFF_EDIT_ROLES), createContentItem);
+router.put('/content/:id', authorize(...STAFF_EDIT_ROLES), updateContentItem);
 router.delete('/content/:id', authorize('superAdmin', 'manager'), deleteContentItem);
 
 router.post('/reporting', authorize('superAdmin', 'manager'), createReportingEntry);

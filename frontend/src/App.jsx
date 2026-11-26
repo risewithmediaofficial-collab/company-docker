@@ -20,6 +20,7 @@ const Register = lazy(() => import('./pages/auth/Register'));
 const RegisterCompany = lazy(() => import('./pages/auth/RegisterCompany'));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
+const GoogleOAuthCallback = lazy(() => import('./pages/auth/GoogleOAuthCallback'));
 const Leads = lazy(() => import('./pages/crm/Leads'));
 const LeadDetails = lazy(() => import('./pages/crm/LeadDetails'));
 const SOPDashboard = lazy(() => import('./pages/sop/SOPDashboard'));
@@ -94,6 +95,10 @@ const LoadingScreen = () => (
   </div>
 );
 
+const CLIENT_ROLES = ['client', 'clientAdmin', 'clientMember'];
+const STAFF_ROLES = ['employee', 'intern', 'editor', 'designer', 'adsManager', 'accountManager', 'financeManager'];
+const INTERNAL_TEAM_ROLES = ['superAdmin', 'admin', 'organizationOwner', 'manager', ...STAFF_ROLES];
+
 // ─── Protected Route ──────────────────────────────────────────────────────────
 const ProtectedRoute = ({ isAuthenticated, user, loading, allowedRoles, children }) => {
   // Still resolving session — don't redirect prematurely
@@ -105,8 +110,8 @@ const ProtectedRoute = ({ isAuthenticated, user, loading, allowedRoles, children
   // Token valid but user profile not yet fetched (edge case)
   if (!user) return null;
 
-  // SuperAdmin and Admin have unrestricted access everywhere
-  if (user.role === 'superAdmin' || user.role === 'admin') {
+  // SuperAdmin, Admin, and OrganizationOwner have unrestricted workspace access
+  if (user.role === 'superAdmin' || user.role === 'admin' || user.role === 'organizationOwner') {
     return children;
   }
 
@@ -187,6 +192,7 @@ const App = () => {
           <Route path="/register-company" element={!isAuthenticated ? <RegisterCompany /> : <Navigate to="/" />} />
 
           {/* ── Auth Routes ─────────────────────────────────────────────── */}
+          <Route path="/auth/google/callback" element={<GoogleOAuthCallback />} />
           <Route element={<AuthLayout />}>
             <Route path="/login"                  element={!isAuthenticated ? <Login />          : <Navigate to="/" replace />} />
             <Route path="/login/:companySlug"      element={<Login />} />
@@ -226,7 +232,7 @@ const App = () => {
             <Route
               path="/"
               element={
-                user?.role === 'client' ? (
+                CLIENT_ROLES.includes(user?.role) ? (
                   <PortalDashboard user={user} />
                 ) : user?.role === 'vendor' ? (
                   <VendorDashboard />
@@ -239,55 +245,55 @@ const App = () => {
 
           {/* CRM */}
           <Route path="/crm/leads" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'referral']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={[...INTERNAL_TEAM_ROLES, 'referral']}>
               <Leads />
             </ProtectedRoute>
           } />
           <Route path="/crm/leads/:id" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'referral']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={[...INTERNAL_TEAM_ROLES, 'referral']}>
               <LeadDetails />
             </ProtectedRoute>
           } />
 
           <Route path="/sop" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={INTERNAL_TEAM_ROLES}>
               <SOPDashboard />
             </ProtectedRoute>
           } />
 
           <Route path="/proposals" element={
-            user?.role === 'client' ? (
+            CLIENT_ROLES.includes(user?.role) ? (
               <ClientProposals />
             ) : (
-              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'organizationOwner', 'manager']}>
                 <Proposals />
               </ProtectedRoute>
             )
           } />
           <Route path="/proposals/new" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'organizationOwner', 'manager']}>
               <ProposalDetails />
             </ProtectedRoute>
           } />
           <Route path="/proposals/:id" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'client']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'organizationOwner', 'manager', ...CLIENT_ROLES]}>
               <ProposalDetails />
             </ProtectedRoute>
           } />
           <Route path="/client/proposals" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={CLIENT_ROLES}>
               <ClientProposals />
             </ProtectedRoute>
           } />
 
           {/* Projects */}
           <Route path="/projects" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={[...INTERNAL_TEAM_ROLES, ...CLIENT_ROLES]}>
               <Projects />
             </ProtectedRoute>
           } />
           <Route path="/projects/:id" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={[...INTERNAL_TEAM_ROLES, ...CLIENT_ROLES]}>
               <ProjectDetails />
             </ProtectedRoute>
           } />
@@ -318,10 +324,10 @@ const App = () => {
 
           {/* Tasks & Calendar */}
           <Route path="/tasks" element={
-            user?.role === 'client' ? (
+            CLIENT_ROLES.includes(user?.role) ? (
               <PortalTasks />
             ) : (
-              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'vendor']}>
+              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={[...INTERNAL_TEAM_ROLES, 'vendor']}>
                 <Tasks />
               </ProtectedRoute>
             )
@@ -332,12 +338,12 @@ const App = () => {
             </ProtectedRoute>
           } />
           <Route path="/tasks/new" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'organizationOwner', 'manager']}>
               <AddTask />
             </ProtectedRoute>
           } />
           <Route path="/tasks/:id" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'vendor', 'client']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={[...INTERNAL_TEAM_ROLES, 'vendor', ...CLIENT_ROLES]}>
               <TaskDetails />
             </ProtectedRoute>
           } />
@@ -347,17 +353,17 @@ const App = () => {
             </ProtectedRoute>
           } />
           <Route path="/calendar" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client', 'referral']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={[...INTERNAL_TEAM_ROLES, ...CLIENT_ROLES, 'referral']}>
               <ContentCalendar />
             </ProtectedRoute>
           } />
           <Route path="/influencers" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'organizationOwner', 'manager']}>
               <InfluencersDashboard />
             </ProtectedRoute>
           } />
           <Route path="/daily-tasks" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client', 'referral']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={[...INTERNAL_TEAM_ROLES, ...CLIENT_ROLES, 'referral']}>
               <ContentCalendar defaultView="day" />
             </ProtectedRoute>
           } />
@@ -365,57 +371,57 @@ const App = () => {
 
           {/* Finance OS */}
           <Route path="/finance" element={
-            user?.role === 'client' ? <Navigate to="/" replace /> : (
-              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'financeManager', 'accountManager', 'employee']}>
+            CLIENT_ROLES.includes(user?.role) || user?.role === 'vendor' ? <Navigate to="/" replace /> : (
+              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager', 'accountManager', 'employee']}>
                 <Finance />
               </ProtectedRoute>
             )
           } />
           <Route path="/finance/:section" element={
-            user?.role === 'client' ? <Navigate to="/" replace /> : (
-              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'financeManager', 'accountManager', 'employee']}>
+            CLIENT_ROLES.includes(user?.role) || user?.role === 'vendor' ? <Navigate to="/" replace /> : (
+              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager', 'accountManager', 'employee']}>
                 <Finance />
               </ProtectedRoute>
             )
           } />
           <Route path="/call-history" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee', 'intern', 'editor', 'designer', 'adsManager']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={INTERNAL_TEAM_ROLES}>
               <CallHistoryDashboard />
             </ProtectedRoute>
           } />
 
           {/* HR — admin/manager only */}
           <Route path="/hr" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'organizationOwner', 'manager']}>
               <HR />
             </ProtectedRoute>
           } />
 
           {/* Reports — admin/manager only */}
           <Route path="/reports" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'organizationOwner', 'manager']}>
               <Reports />
             </ProtectedRoute>
           } />
           <Route path="/assets" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'organizationOwner', 'manager']}>
               <AssetsLibrary />
             </ProtectedRoute>
           } />
           <Route path="/domain-renewals" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'organizationOwner', 'manager']}>
               <DomainRenewals />
             </ProtectedRoute>
           } />
 
           {/* Attendance */}
           <Route path="/attendance" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={INTERNAL_TEAM_ROLES}>
               <Attendance />
             </ProtectedRoute>
           } />
           <Route path="/my-eod-reports" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={INTERNAL_TEAM_ROLES}>
               <MyEODReports />
             </ProtectedRoute>
           } />
@@ -463,7 +469,7 @@ const App = () => {
 
           {/* Social Media & Ads - One-Page Tracker Only */}
           <Route path="/smm" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={INTERNAL_TEAM_ROLES}>
               <SMMOnePageTracker />
             </ProtectedRoute>
           } />
@@ -472,59 +478,59 @@ const App = () => {
 
           {/* Development Module Routes */}
           <Route path="/development" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={INTERNAL_TEAM_ROLES}>
               <DevelopmentDashboard />
             </ProtectedRoute>
           } />
           <Route path="/development/board" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={INTERNAL_TEAM_ROLES}>
               <DevelopmentBoard />
             </ProtectedRoute>
           } />
           <Route path="/development/my-tasks" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={INTERNAL_TEAM_ROLES}>
               <MyDevTasks />
             </ProtectedRoute>
           } />
           <Route path="/development/sprints" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={INTERNAL_TEAM_ROLES}>
               <DevelopmentSprints />
             </ProtectedRoute>
           } />
           <Route path="/development/reviews" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={INTERNAL_TEAM_ROLES}>
               <DevelopmentReviews />
             </ProtectedRoute>
           } />
           <Route path="/development/qa" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={INTERNAL_TEAM_ROLES}>
               <DevelopmentQA />
             </ProtectedRoute>
           } />
           <Route path="/development/releases" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'admin', 'manager', 'employee']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={INTERNAL_TEAM_ROLES}>
               <DevelopmentReleases />
             </ProtectedRoute>
           } />
 
           {/* Client Portal Sections */}
           <Route path="/portal/invoices" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={[...CLIENT_ROLES, 'superAdmin', 'manager']}>
               <PortalInvoices />
             </ProtectedRoute>
           } />
           <Route path="/portal/tasks" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={[...CLIENT_ROLES, 'superAdmin', 'manager']}>
               <PortalTasks />
             </ProtectedRoute>
           } />
           <Route path="/portal/tracker" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={[...CLIENT_ROLES, 'superAdmin', 'manager']}>
               <PortalSMMTracker />
             </ProtectedRoute>
           } />
           <Route path="/portal/ad-budget" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['client', 'superAdmin', 'manager']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={[...CLIENT_ROLES, 'superAdmin', 'manager']}>
               <PortalAdBudget />
             </ProtectedRoute>
           } />

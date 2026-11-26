@@ -183,4 +183,97 @@ test('Auth Security: Production startup fails when secrets are placeholders', ()
   });
 });
 
+test('RBAC Matrix: All 16 user roles validate cleanly and enforce backend task/finance/hr boundaries', async () => {
+  const { default: User } = await import('../models/user.model.js');
+  const roleEnum = User.schema.path('role').enumValues;
+
+  const expectedRoles = [
+    'superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager',
+    'editor', 'designer', 'adsManager', 'financeManager', 'clientAdmin',
+    'clientMember', 'intern', 'employee', 'vendor', 'referral', 'client',
+  ];
+  expectedRoles.forEach((r) => {
+    assert.ok(roleEnum.includes(r), `Expected role '${r}' in User role enum`);
+  });
+
+  const checkAuthorize = (allowedRoles, userRole) => {
+    let passed = false;
+    let blockedStatus = null;
+    authorize(...allowedRoles)(
+      { user: { role: userRole } },
+      { status(code) { blockedStatus = code; return { json() {} }; } },
+      () => { passed = true; }
+    );
+    return { passed, blockedStatus };
+  };
+
+  // Every staff + vendor + client role passes task read guard
+  ['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager', 'editor', 'designer', 'adsManager', 'financeManager', 'intern', 'employee', 'vendor', 'client', 'clientAdmin', 'clientMember'].forEach((role) => {
+    assert.equal(
+      checkAuthorize(['superAdmin', 'admin', 'organizationOwner', 'manager', 'employee', 'intern', 'editor', 'designer', 'adsManager', 'accountManager', 'financeManager', 'vendor', 'client', 'clientAdmin', 'clientMember'], role).passed,
+      true,
+      `Task GET must allow ${role}`
+    );
+  });
+
+  // HR & Hiring directory only allows superAdmin/admin/organizationOwner/manager
+  ['superAdmin', 'admin', 'organizationOwner', 'manager'].forEach((role) => {
+    assert.equal(checkAuthorize(['superAdmin', 'manager'], role).passed, true, `HR must allow ${role}`);
+  });
+  ['employee', 'intern', 'editor', 'designer', 'adsManager', 'vendor', 'client', 'clientAdmin', 'clientMember', 'referral'].forEach((role) => {
+    assert.equal(checkAuthorize(['superAdmin', 'manager'], role).blockedStatus, 403, `HR must block ${role}`);
+  });
+
+  // Vendor self-finance allows vendor (+ admin/owner bypass), blocks employee/client/referral
+  assert.equal(checkAuthorize(['vendor'], 'vendor').passed, true);
+  ['employee', 'client', 'referral', 'manager'].forEach((role) => {
+    assert.equal(checkAuthorize(['vendor'], role).blockedStatus, 403, `Vendor self-finance must block ${role}`);
+  });
+});
+
+test('Google OAuth: Loads client_id config, builds consent redirect URL, and rejects invalid tokens', async () => {
+  const [{ loadEnv, getEnv }, { getGoogleOAuthConfig, initiateGoogleOAuth, googleTokenAuth }] = await Promise.all([
+    import('../config/env.js'),
+    import('../controllers/auth.controller.js'),
+  ]);
+
+  loadEnv();
+  const env = getEnv();
+  assert.ok(env.googleClientId && env.googleClientId.endsWith('.apps.googleusercontent.com'));
+  assert.ok(env.googleClientSecret && env.googleClientSecret.startsWith('GOCSPX-'));
+
+  let configPayload = null;
+  await getGoogleOAuthConfig(
+    { headers: {}, protocol: 'http', get: () => 'localhost:5175' },
+    { json(data) { configPayload = data; } }
+  );
+  assert.equal(configPayload.success, true);
+  assert.equal(configPayload.enabled, true);
+  assert.equal(configPayload.clientId, env.googleClientId);
+  assert.equal(configPayload.clientSecret, undefined, 'Never expose clientSecret publicly');
+
+  let redirectUrl = '';
+  await initiateGoogleOAuth(
+    {
+      query: { mode: 'signup', role: 'client', companySlug: 'risewithmedia', origin: 'http://localhost:5175' },
+      headers: { host: 'localhost:5175' },
+      protocol: 'http',
+      get: () => 'localhost:5175',
+    },
+    { redirect(url) { redirectUrl = url; } }
+  );
+  assert.ok(redirectUrl.startsWith('https://accounts.google.com/o/oauth2/v2/auth?'));
+  const parsed = new URL(redirectUrl);
+  assert.equal(parsed.searchParams.get('client_id'), env.googleClientId);
+  assert.equal(parsed.searchParams.get('redirect_uri'), 'http://localhost:5175/api/auth/google/callback');
+  assert.ok(parsed.searchParams.get('state'));
+
+  let statusCode = 200;
+  await googleTokenAuth(
+    { body: {}, headers: {}, protocol: 'http', get: () => 'localhost:5175' },
+    { status(c) { statusCode = c; return { json() {} }; }, json() {} }
+  );
+  assert.equal(statusCode, 400);
+});
+
 

@@ -13,7 +13,7 @@ const RESERVED_SLUGS = new Set([
   'client-followups', 'tasks', 'manager-tasks', 'calendar', 'influencers',
   'daily-tasks', 'daily_tasks', 'finance', 'call-history', 'hr', 'reports',
   'assets', 'domain-renewals', 'attendance', 'my-eod-reports', 'referral',
-  'admin', 'audit-logs', 'recycle-bin', 'settings', 'smm', 'development', 'portal', 'api'
+  'admin', 'audit-logs', 'recycle-bin', 'settings', 'smm', 'development', 'portal', 'api', 'my-finance', 'branches', 'auth'
 ]);
 
 const AuthLayout = () => {

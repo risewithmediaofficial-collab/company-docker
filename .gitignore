@@ -13,3 +13,4 @@ blob-report/
 playwright/.cache/
 uploads/
 .playwright-mcp/
+client_secret_*.json

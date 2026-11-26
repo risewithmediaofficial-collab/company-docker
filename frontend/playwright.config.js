@@ -1,5 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const port = Number(process.env.PLAYWRIGHT_PORT || 5175);
+const host = process.env.PLAYWRIGHT_HOST || '127.0.0.1';
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || `http://${host}:${port}`;
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 30 * 1000,
@@ -10,15 +14,15 @@ export default defineConfig({
   workers: 1,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:5175',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
   webServer: {
-    command: 'npm run preview',
-    port: 5175,
-    reuseExistingServer: true,
+    command: `npx vite preview --host ${host} --port ${port}`,
+    port,
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER !== 'false',
     timeout: 60 * 1000,
   },
   projects: [

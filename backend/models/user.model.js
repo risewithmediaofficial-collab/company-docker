@@ -60,7 +60,9 @@ const userSchema = new mongoose.Schema(
     // For referral partners
     referralCode: { type: String, unique: true, sparse: true },
 
-    // Auth tokens
+    // Auth tokens & OAuth
+    googleId: { type: String, unique: true, sparse: true },
+    authProvider: { type: String, enum: ['local', 'google', 'both'], default: 'local' },
     refreshToken: { type: String, select: false },
     resetPasswordToken: { type: String, select: false },
     resetPasswordExpire: { type: Date, select: false },

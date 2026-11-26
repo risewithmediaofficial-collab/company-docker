@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -6,6 +7,27 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const serverRoot = path.resolve(__dirname, '..');
 const workspaceRoot = path.resolve(serverRoot, '..');
+
+const loadLocalGoogleClientSecretJson = () => {
+  for (const dir of [serverRoot, workspaceRoot]) {
+    try {
+      const files = fs.readdirSync(dir);
+      const match = files.find((f) => /^client_secret_.*\.json$/i.test(f));
+      if (!match) continue;
+      const parsed = JSON.parse(fs.readFileSync(path.join(dir, match), 'utf8'));
+      const web = parsed?.web || parsed?.installed || parsed;
+      if (web?.client_id && web?.client_secret) {
+        return {
+          clientId: String(web.client_id).trim(),
+          clientSecret: String(web.client_secret).trim(),
+        };
+      }
+    } catch (_) {
+      // Ignore missing or unreadable local OAuth credential file
+    }
+  }
+  return null;
+};
 
 export const loadEnv = () => {
   dotenv.config({ path: path.join(serverRoot, '.env') });
@@ -49,6 +71,12 @@ export const loadEnv = () => {
   process.env.MAX_FILE_SIZE ||= String(10 * 1024 * 1024);
   process.env.PAGINATION_LIMIT ||= '20';
   process.env.UPLOAD_DIR ||= path.join(serverRoot, 'uploads');
+  const localGoogleCreds = (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET)
+    ? loadLocalGoogleClientSecretJson()
+    : null;
+  process.env.GOOGLE_CLIENT_ID ||= localGoogleCreds?.clientId || '';
+  process.env.GOOGLE_CLIENT_SECRET ||= localGoogleCreds?.clientSecret || '';
+  process.env.GOOGLE_REDIRECT_URI ||= '';
 };
 
 export const getEnv = () => {
@@ -67,5 +95,8 @@ export const getEnv = () => {
     uploadDir: process.env.UPLOAD_DIR,
     maxFileSize: Number(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024,
     paginationLimit: Number(process.env.PAGINATION_LIMIT) || 20,
+    googleClientId: process.env.GOOGLE_CLIENT_ID,
+    googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    googleRedirectUri: process.env.GOOGLE_REDIRECT_URI,
   };
 };

@@ -202,7 +202,8 @@ const uniqueIds = (items = []) => {
   return [...new Set(ids)];
 };
 
-const isEmployeeLikeRole = (role) => ['employee', 'intern', 'editor', 'designer', 'adsManager', 'vendor'].includes(role);
+const isEmployeeLikeRole = (role) => ['employee', 'intern', 'editor', 'designer', 'adsManager', 'accountManager', 'financeManager', 'vendor'].includes(role);
+const isClientLikeRole = (role) => ['client', 'clientAdmin', 'clientMember'].includes(role);
 
 const buildUserTaskAssignmentOr = (userId) => [
   { assignedTo: userId },
@@ -427,7 +428,7 @@ const buildScopedTaskFilter = async (req, baseFilter = {}) => {
     return baseOr ? { ...filter, $and: [{ $or: baseOr }, { $or: scopedOr }] } : { ...filter, $or: scopedOr };
   }
 
-  if (req.user.role === 'client') {
+  if (isClientLikeRole(req.user.role)) {
     const client = await getClientRecordForUser(req.user);
     if (!client) {
       filter._id = null;
@@ -464,7 +465,7 @@ const assertTaskAccess = async (req, task) => {
     return { allowed: false, status: 403, message: 'Access denied' };
   }
 
-  if (req.user.role === 'client') {
+  if (isClientLikeRole(req.user.role)) {
     const client = await getClientRecordForUser(req.user);
     if (client) {
       if (toIdString(task.client) === client._id.toString()) return { allowed: true };

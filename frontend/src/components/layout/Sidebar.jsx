@@ -112,7 +112,7 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
 
   // Build hierarchical workspace navigation per role
   const getNavSections = () => {
-    if (role === 'client') {
+    if (['client', 'clientAdmin', 'clientMember'].includes(role)) {
       return [
         {
           title: 'CLIENT PORTAL',
@@ -157,15 +157,21 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
       ];
     }
 
-    const isStaff = ['employee', 'intern', 'editor', 'designer', 'adsManager'].includes(role);
+    const isStaff = ['employee', 'intern', 'editor', 'designer', 'adsManager', 'accountManager', 'financeManager'].includes(role);
     if (isStaff) {
       const employeeDelivery = [
         { name: 'My Tasks', icon: CheckSquare, path: '/tasks' },
         { name: 'Daily Calendar', icon: Calendar, path: '/daily-tasks' },
         { name: 'Client Vault', icon: KeyRound, path: '/client-vault' },
       ];
-      if (p.canAccessSmm) {
+      if (p.canAccessSmm || role === 'adsManager') {
         employeeDelivery.unshift({ name: 'Social Tracker', icon: Share2, path: '/smm' });
+      }
+      if (role === 'accountManager' || p.canManageLeads) {
+        employeeDelivery.unshift(
+          { name: 'Clients 360', icon: Users, path: '/clients' },
+          { name: 'Client Follow-ups', icon: PhoneCall, path: '/client-followups' },
+        );
       }
 
       return [
@@ -199,7 +205,7 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
             { name: 'SOP Dashboard', icon: BookOpen, path: '/sop' },
           ],
         },
-        ...(p.canManageFinance || p.canViewFinanceOverview ? [
+        ...(role === 'financeManager' || p.canManageFinance || p.canViewFinanceOverview ? [
           {
             title: 'BUSINESS & FINANCE',
             items: [
