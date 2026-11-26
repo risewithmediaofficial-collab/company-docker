@@ -207,15 +207,7 @@ const Register = () => {
           {loading ? <Loader2 className="animate-spin" size={18} /> : 'Create New Account'}
         </button>
 
-        <GoogleAuthButton
-          mode="signup"
-          termsAccepted={termsAccepted}
-          onRequireTerms={() => {
-            const msg = 'Please accept the Terms & Conditions before continuing with Google.';
-            setError(msg);
-            toast.error(msg);
-          }}
-        />
+        <GoogleAuthButton mode="signup" />
       </form>
 
       <TermsModal

@@ -253,7 +253,8 @@ test('Google OAuth: Loads client_id config, builds consent redirect URL, and rej
   assert.equal(configPayload.clientId, env.googleClientId);
   assert.equal(configPayload.clientSecret, undefined, 'Never expose clientSecret publicly');
 
-  let missingTermsRedirect = '';
+  // Google OAuth must initiate directly without requiring Terms & Conditions checkbox
+  let directRedirectUrl = '';
   await initiateGoogleOAuth(
     {
       query: { mode: 'signin', role: 'employee', origin: 'http://localhost:5175' },
@@ -261,14 +262,14 @@ test('Google OAuth: Loads client_id config, builds consent redirect URL, and rej
       protocol: 'http',
       get: () => 'localhost:5175',
     },
-    { redirect(url) { missingTermsRedirect = url; } }
+    { redirect(url) { directRedirectUrl = url; } }
   );
-  assert.ok(missingTermsRedirect.includes('oauthError='), 'Google OAuth must block redirect without Terms acceptance');
+  assert.ok(directRedirectUrl.startsWith('https://accounts.google.com/o/oauth2/v2/auth?'), 'Google OAuth must work without Terms acceptance');
 
   let redirectUrl = '';
   await initiateGoogleOAuth(
     {
-      query: { mode: 'signup', role: 'client', companySlug: 'risewithmedia', origin: 'http://localhost:5175', acceptTerms: 'true' },
+      query: { mode: 'signup', role: 'client', companySlug: 'risewithmedia', origin: 'http://localhost:5175' },
       headers: { host: 'localhost:5175' },
       protocol: 'http',
       get: () => 'localhost:5175',

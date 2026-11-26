@@ -730,11 +730,22 @@ test.describe('All Role Logins & Workspace Isolation Verification', () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test('Google OAuth buttons render cleanly and Google Callback handles token login, pending signup, and workspace redirect', async ({ page }) => {
+  test('Google OAuth buttons render cleanly, bypass Terms requirement, and Google Callback handles token login, pending signup, and workspace redirect', async ({ page }) => {
     await mockAppBackend(page);
+    let googleInitiatedUrl = '';
+    await page.route('**/api/auth/google?*', async (route) => {
+      googleInitiatedUrl = route.request().url();
+      await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Google Redirect OK</body></html>' });
+    });
+
     await page.goto('/login');
     await expect(page.getByRole('button', { name: /Continue with Google/i })).toBeVisible();
+    // Clicking Continue with Google must NOT require Terms & Conditions checkbox
+    await expect(page.locator('#signin-terms')).not.toBeChecked();
+    await page.getByRole('button', { name: /Continue with Google/i }).click();
+    await expect.poll(() => googleInitiatedUrl).toContain('/api/auth/google?');
 
+    await page.goto('/login');
     await page.getByRole('button', { name: /Sign Up/i }).first().click();
     await expect(page.getByRole('button', { name: /Sign up with Google/i })).toBeVisible();
 

@@ -433,12 +433,6 @@ const SignInForm = ({
       <GoogleAuthButton
         mode="signin"
         companySlug={companySlug}
-        termsAccepted={termsAccepted}
-        onRequireTerms={() => {
-          const msg = 'You must accept the Terms & Conditions before continuing with Google.';
-          setLocalError(msg);
-          toast.error(msg);
-        }}
         label={portalOrg ? `Continue with Google (${portalOrg.name})` : 'Continue with Google'}
       />
 
@@ -695,12 +689,6 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms })
       <GoogleAuthButton
         mode="signup"
         companySlug={companySlug}
-        termsAccepted={termsAccepted}
-        onRequireTerms={() => {
-          const msg = 'You must accept the Terms & Conditions before continuing with Google.';
-          setError(msg);
-          toast.error(msg);
-        }}
         label="Sign up with Google"
       />
 

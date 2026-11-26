@@ -71,11 +71,13 @@ export const loadEnv = () => {
   process.env.MAX_FILE_SIZE ||= String(10 * 1024 * 1024);
   process.env.PAGINATION_LIMIT ||= '20';
   process.env.UPLOAD_DIR ||= path.join(serverRoot, 'uploads');
-  const localGoogleCreds = (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET)
+  const isPlaceholderGoogleId = !process.env.GOOGLE_CLIENT_ID || /^your_google_/i.test(process.env.GOOGLE_CLIENT_ID.trim());
+  const isPlaceholderGoogleSecret = !process.env.GOOGLE_CLIENT_SECRET || /^your_google_/i.test(process.env.GOOGLE_CLIENT_SECRET.trim());
+  const localGoogleCreds = (isPlaceholderGoogleId || isPlaceholderGoogleSecret)
     ? loadLocalGoogleClientSecretJson()
     : null;
-  process.env.GOOGLE_CLIENT_ID ||= localGoogleCreds?.clientId || '';
-  process.env.GOOGLE_CLIENT_SECRET ||= localGoogleCreds?.clientSecret || '';
+  process.env.GOOGLE_CLIENT_ID = isPlaceholderGoogleId ? (localGoogleCreds?.clientId || '') : process.env.GOOGLE_CLIENT_ID.trim();
+  process.env.GOOGLE_CLIENT_SECRET = isPlaceholderGoogleSecret ? (localGoogleCreds?.clientSecret || '') : process.env.GOOGLE_CLIENT_SECRET.trim();
   process.env.GOOGLE_REDIRECT_URI ||= '';
 };
 

@@ -11,12 +11,8 @@ import Organization from '../models/organization.model.js';
 import { sendEmail } from '../utils/email.js';
 import { createNotification } from '../utils/notification.js';
 import { createActivityLog } from '../utils/activity.js';
-import {
-  generateCaptchaChallenge,
-  verifyCaptchaChallenge,
-  verifyInteractiveCaptchaStep,
-  isTermsAccepted,
-} from '../utils/captcha.js';
+import { generateCaptchaChallenge, verifyCaptchaChallenge, verifyInteractiveCaptchaStep, isTermsAccepted } from '../utils/captcha.js';
+import { loadEnv } from '../config/env.js';
 
 const ORG_AUTH_PROJECTION =
   'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients storageLimitMb storageUsedBytes trialEndsAt settings paidAt';
@@ -833,9 +829,15 @@ export const verifyCaptchaStep = async (req, res) => {
 // =============================================
 
 const getGoogleOAuthRuntime = (req) => {
-  const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
-  const clientSecret = String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
-  const configuredRedirect = String(process.env.GOOGLE_REDIRECT_URI || '').trim();
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    loadEnv();
+  }
+  const rawId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+  const rawSecret = String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
+  const clientId = /^your_google_/i.test(rawId) ? '' : rawId;
+  const clientSecret = /^your_google_/i.test(rawSecret) ? '' : rawSecret;
+  const rawRedirect = String(process.env.GOOGLE_REDIRECT_URI || '').trim();
+  const configuredRedirect = /your-frontend-domain|your-domain/i.test(rawRedirect) ? '' : rawRedirect;
 
   const forwardedProto = String(req?.headers?.['x-forwarded-proto'] || '').split(',')[0].trim();
   const proto = forwardedProto || req?.protocol || 'http';
@@ -1146,12 +1148,6 @@ export const initiateGoogleOAuth = async (req, res) => {
   }
 
   const returnOrigin = resolveSafeReturnOrigin(req.query.origin, requestOrigin);
-  if (!isTermsAccepted(req.query.acceptTerms)) {
-    return res.redirect(
-      `${returnOrigin}/auth/google/callback?oauthError=${encodeURIComponent('You must accept the Terms & Conditions before continuing with Google.')}`
-    );
-  }
-
   const mode = req.query.mode === 'signup' ? 'signup' : 'signin';
   const role = ['employee', 'client', 'manager'].includes(String(req.query.role || ''))
     ? String(req.query.role)
@@ -1291,17 +1287,9 @@ export const googleOAuthCallback = async (req, res) => {
 // @access  Public
 export const googleTokenAuth = async (req, res) => {
   try {
-    const { idToken, credential, mode = 'signin', role = 'employee', companySlug = '', acceptTerms } = req.body || {};
+    const { idToken, credential, mode = 'signin', role = 'employee', companySlug = '' } = req.body || {};
     const { clientId } = getGoogleOAuthRuntime(req);
     const token = String(idToken || credential || '').trim();
-
-    if (!isTermsAccepted(acceptTerms)) {
-      return res.status(400).json({
-        success: false,
-        code: 'TERMS_REQUIRED',
-        message: 'You must accept the Terms & Conditions to sign in',
-      });
-    }
 
     if (!token) {
       return res.status(400).json({ success: false, message: 'Google credential token is required' });
