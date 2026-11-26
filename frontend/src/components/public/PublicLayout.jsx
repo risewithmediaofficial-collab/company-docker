@@ -54,16 +54,16 @@ const PublicLayout = ({
       <div className="fixed top-1/3 -right-36 w-80 sm:w-96 h-[500px] bg-gradient-to-l from-[#07c8f9]/10 via-[#07c8f9]/5 to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
 
       {/* ── FIXED TOP NAVIGATION BAR ── */}
-      <header className="fixed top-0 inset-x-0 z-50 h-16 sm:h-20 bg-white/95 backdrop-blur-md border-b border-slate-200/80 transition-all flex items-center shadow-2xs">
-        <div className="max-w-7xl mx-auto px-3.5 sm:px-8 lg:px-12 w-full flex items-center justify-between">
+      <header className="fixed top-0 inset-x-0 z-50 h-[72px] sm:h-24 bg-white/95 backdrop-blur-md border-b border-slate-200/80 transition-all flex items-center shadow-2xs">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-8 lg:px-12 w-full flex items-center justify-between gap-4">
 
           {/* Brand Logo (wordmark embedded in logo image) */}
           <Link to="/" className="flex items-center group shrink-0" aria-label="AgencyUpscale Home">
-            <div className="h-12 w-24 sm:h-14 sm:w-28 rounded-xl bg-white border border-slate-200/80 shadow-2xs overflow-hidden transition-transform group-hover:scale-[1.03] shrink-0">
+            <div className="h-14 w-32 sm:h-20 sm:w-44 rounded-xl bg-white overflow-hidden transition-transform group-hover:scale-[1.03] shrink-0">
               <img
                 src="/agencyupscalelogo.jpeg"
                 alt="AgencyUpscale"
-                className="h-full w-full object-cover object-center"
+                className="h-full w-full object-cover object-center scale-[1.12]"
               />
             </div>
           </Link>
@@ -121,10 +121,10 @@ const PublicLayout = ({
         {mobileMenuOpen && (
           <>
             <div
-              className="md:hidden fixed inset-0 top-16 bg-slate-950/60 backdrop-blur-sm z-40 transition-opacity"
+              className="md:hidden fixed inset-0 top-[72px] bg-slate-950/60 backdrop-blur-sm z-40 transition-opacity"
               onClick={() => setMobileMenuOpen(false)}
             />
-            <div className="md:hidden fixed top-16 inset-x-0 z-50 bg-white border-b border-slate-200 shadow-2xl py-5 px-5 flex flex-col gap-2 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="md:hidden fixed top-[72px] inset-x-0 z-50 bg-white border-b border-slate-200 shadow-2xl py-5 px-5 flex flex-col gap-2 animate-in fade-in slide-in-from-top-2 duration-150">
               <nav className="flex flex-col gap-1">
                 {NAV_ITEMS.map((item) => {
                   const active = isActive(item.path);
@@ -168,7 +168,7 @@ const PublicLayout = ({
       </header>
 
       {/* ── MAIN CONTENT (Padded below responsive navbar) ── */}
-      <main className="relative z-10 flex-grow pt-16 sm:pt-20">
+      <main className="relative z-10 flex-grow pt-[72px] sm:pt-24">
         {children}
       </main>
 
