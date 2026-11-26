@@ -337,12 +337,13 @@ const Tasks = () => {
   );
 
   const { user } = useSelector((state) => state.auth);
-  const isEmployee = user?.role === 'employee';
+  const isEmployee = user?.role === 'employee' || user?.role === 'vendor';
   const isClient = user?.role === 'client';
   const isManager = user?.role === 'manager';
+  const isVendor = user?.role === 'vendor';
   const { data: tasks = [], isLoading, refetch } = useTasks(queryFilters);
-  const { data: clients = [] } = useClients();
-  const { data: users = [] } = useUsers();
+  const { data: clients = [] } = useClients({}, { enabled: !isClient && !isVendor });
+  const { data: users = [] } = useUsers({ enabled: !isClient && !isVendor });
   const deleteTaskMutation = useDeleteTask();
   const updateStatusMutation = useUpdateTaskStatus();
 
@@ -434,7 +435,7 @@ const Tasks = () => {
 
       // Role isolation:
       // For employee: only tasks assigned to them (primary assignee, scriptwriter, videographer, editor, designer, voice artist, publisher)
-      if (user?.role === 'employee') {
+      if (user?.role === 'employee' || user?.role === 'vendor') {
         const userId = user._id ? user._id.toString() : '';
         const assignees = extractTaskAssignees(task);
         const isAssigned = (

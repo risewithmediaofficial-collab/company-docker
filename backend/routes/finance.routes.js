@@ -94,6 +94,7 @@ import {
   getFinanceAuditLogs,
   getFinanceBudgets,
   setFinanceBudget,
+  getVendorMyFinance,
 } from '../controllers/financeModule.controller.js';
 
 import {
@@ -177,6 +178,7 @@ router.put('/receipts/:id', authorize('superAdmin', 'admin', 'organizationOwner'
 router.delete('/receipts/:id', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager'), deletePaymentReceipt);
 
 // 6. Expenses & Vendor Bills
+router.get('/vendor/my-finance', authorize('vendor'), getVendorMyFinance);
 router.get('/module/expenses', authorize('superAdmin', 'admin', 'manager', 'financeManager', 'accountManager', 'editor', 'designer', 'employee'), getModuleExpenses);
 router.post('/module/expenses', authorize('superAdmin', 'admin', 'manager', 'financeManager', 'accountManager', 'editor', 'designer', 'employee'), createModuleExpense);
 router.post('/module/expenses/payee-overall-pay', authorize('superAdmin', 'admin', 'manager', 'financeManager'), payeeOverallPay);

@@ -167,7 +167,7 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showCredentials, setShowCredentials] = useState(false);
 
-  const isEmployee = user?.role === 'employee';
+  const isEmployee = user?.role === 'employee' || user?.role === 'vendor';
   const isClient = user?.role === 'client';
   const canEdit = ['superAdmin', 'admin', 'manager', 'organizationOwner'].includes(user?.role);
   const canDelete = ['superAdmin', 'admin', 'manager', 'organizationOwner'].includes(user?.role);
@@ -300,102 +300,100 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="xl" noPadding className="flex flex-col min-h-0 p-0 overflow-hidden bg-card ">
         {/* ── Sticky Pinned Header ── */}
-        <DialogHeader className="px-4 sm:px-6 py-3.5 sm:py-4 bg-card shrink-0 pr-14 sm:pr-24 select-none mb-0 pb-3.5 sm:pb-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary shrink-0">
-                {task ? getCategoryIcon(task.taskCategory, task.taskType) : <CheckSquare size={17} />}
-              </div>
-              <div className="min-w-0">
-                <DialogTitle className="text-sm sm:text-lg font-bold text-foreground truncate">
-                  {isLoading ? 'Loading task...' : task?.taskTitle || task?.title || 'Task Details'}
-                </DialogTitle>
-                <DialogDescription className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
-                  {task?.client?.name && (
-                    <span className="font-semibold text-foreground truncate max-w-[160px]">{task.client.name}</span>
-                  )}
-                  {task?.project?.name && (
-                    <>
-                      <span>•</span>
-                      <span className="truncate max-w-[140px] sm:max-w-none">{task.project.name}</span>
-                    </>
-                  )}
-                  {task?.createdAt && (
-                    <>
-                      <span>•</span>
-                      <span className="inline-flex items-center gap-1 font-semibold text-foreground bg-secondary px-2 py-0.5 rounded-md tabular-nums">
-                        <Calendar size={11} className="text-muted-foreground shrink-0" />
-                        <span>Created {new Date(task.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                      </span>
-                    </>
-                  )}
-                </DialogDescription>
-              </div>
+        <DialogHeader className="px-4 sm:px-6 py-3.5 sm:py-4 bg-card border-b border-border/60 shrink-0 select-none mb-0 space-y-2.5">
+          <div className="flex items-start gap-3 pr-20 min-w-0">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary shrink-0 mt-0.5">
+              {task ? getCategoryIcon(task.taskCategory, task.taskType) : <CheckSquare size={17} />}
             </div>
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="text-base sm:text-lg font-bold text-foreground truncate leading-snug">
+                {isLoading ? 'Loading task...' : task?.taskTitle || task?.title || 'Task Details'}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-1 flex items-center flex-wrap gap-x-2 gap-y-1">
+                {task?.client?.name && (
+                  <span className="font-semibold text-foreground truncate max-w-[180px]">{task.client.name}</span>
+                )}
+                {task?.project?.name && (
+                  <>
+                    {task?.client?.name && <span>•</span>}
+                    <span className="truncate max-w-[180px]">{task.project.name}</span>
+                  </>
+                )}
+                {task?.createdAt && (
+                  <>
+                    {(task?.client?.name || task?.project?.name) && <span>•</span>}
+                    <span className="inline-flex items-center gap-1 font-medium text-foreground bg-secondary px-2 py-0.5 rounded-md whitespace-nowrap tabular-nums shrink-0">
+                      <Calendar size={11} className="text-muted-foreground shrink-0" />
+                      <span>Created {new Date(task.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    </span>
+                  </>
+                )}
+              </DialogDescription>
+            </div>
+          </div>
 
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              {task?._id && (
-                <Link
-                  to={`/tasks/${task._id}`}
-                  className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-xl bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground text-xs font-bold inline-flex items-center gap-1.5 transition-all "
-                  title="Open dedicated full page view"
-                >
-                  <ExternalLink size={12} />
-                  <span>Full View</span>
-                </Link>
-              )}
-              {task?.isOverTarget && (
-                <span className="inline-flex items-center gap-1 rounded-lg bg-primary text-primary-foreground px-2 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase">
-                  <AlertCircle size={11} />
-                  <span>Over Task</span>
-                </span>
-              )}
-              {task?.priority && (
-                <span className={`px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-semibold ${PRIORITY_TONES[task.priority] || PRIORITY_TONES.Medium}`}>
-                  {task.priority}
-                </span>
-              )}
-              {canEdit && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleOpenNextStage}
-                    className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-xl text-xs font-bold text-primary border-primary/30 bg-primary/5 hover:bg-primary/10 inline-flex items-center gap-1.5 cursor-pointer"
-                    title="Create follow-up deliverable task for next stage (e.g. Editor / SMM)"
-                  >
-                    <ArrowRight size={12} />
-                    <span>Next Stage</span>
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsEditing(true)}
-                    className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-xl text-xs font-bold hover:bg-secondary inline-flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Edit size={12} />
-                    <span className="hidden sm:inline">Edit</span>
-                  </Button>
-                </>
-              )}
-              {canDelete && (
+          <div className="flex items-center flex-wrap gap-1.5 pl-12">
+            {task?._id && (
+              <Link
+                to={`/tasks/${task._id}`}
+                className="h-7 px-2.5 rounded-lg bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground text-xs font-semibold inline-flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                title="Open dedicated full page view"
+              >
+                <ExternalLink size={12} />
+                <span>Full View</span>
+              </Link>
+            )}
+            {task?.isOverTarget && (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-primary text-primary-foreground px-2 py-0.5 text-[11px] font-bold uppercase whitespace-nowrap">
+                <AlertCircle size={11} />
+                <span>Over Task</span>
+              </span>
+            )}
+            {task?.priority && (
+              <span className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${PRIORITY_TONES[task.priority] || PRIORITY_TONES.Medium}`}>
+                {task.priority}
+              </span>
+            )}
+            {canEdit && (
+              <>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setShowDeleteConfirm((prev) => !prev)}
-                  className={`h-7 sm:h-8 px-2 sm:px-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer ${
-                    showDeleteConfirm
-                      ? 'bg-primary text-primary-foreground '
-                      : ' text-muted-foreground hover:text-foreground hover:bg-secondary'
-                  }`}
-                  title="Delete Task"
+                  onClick={handleOpenNextStage}
+                  className="h-7 px-2.5 rounded-lg text-xs font-semibold text-primary border-primary/30 bg-primary/5 hover:bg-primary/10 inline-flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                  title="Create follow-up deliverable task for next stage (e.g. Editor / SMM)"
                 >
-                  <Trash2 size={12} />
-                  <span className="hidden sm:inline">Delete</span>
+                  <ArrowRight size={12} />
+                  <span>Next Stage</span>
                 </Button>
-              )}
-            </div>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsEditing(true)}
+                  className="h-7 px-2.5 rounded-lg text-xs font-semibold hover:bg-secondary inline-flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                >
+                  <Edit size={12} />
+                  <span>Edit</span>
+                </Button>
+              </>
+            )}
+            {canDelete && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowDeleteConfirm((prev) => !prev)}
+                className={`h-7 px-2.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap ${
+                  showDeleteConfirm
+                    ? 'bg-primary text-primary-foreground '
+                    : ' text-muted-foreground hover:text-foreground hover:bg-secondary'
+                }`}
+                title="Delete Task"
+              >
+                <Trash2 size={12} />
+                <span>Delete</span>
+              </Button>
+            )}
           </div>
         </DialogHeader>
 
@@ -721,8 +719,8 @@ export const TaskDetailModal = ({ taskId, open, onOpenChange }) => {
                 ) : (
                   <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap">
                     {pendingReasonText || (
-                      <span className="italic text-muted-foreground">
-                        No pending note provided. Team members or managers can click &quot;+ Add Delay Note&quot; to explain reasons for hold or delay.
+                      <span className="text-muted-foreground">
+                        No delay note added.
                       </span>
                     )}
                   </p>

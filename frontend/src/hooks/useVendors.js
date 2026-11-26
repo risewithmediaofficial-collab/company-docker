@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useModuleExpenses, useSubscriptions } from './useFinance';
+import { useVendorsDirectory } from './useHR';
 
 const DEFAULT_PRESET_VENDORS = [
   'Videographer',
@@ -37,6 +38,7 @@ const LOCAL_STORAGE_KEY = 'rwm_saved_vendors';
 export const useVendors = (options = {}) => {
   const { data: expenses = [] } = useModuleExpenses({}, { enabled: options.enabled ?? true });
   const { data: subscriptions = [] } = useSubscriptions({ enabled: options.enabled ?? true });
+  const { data: hrVendors = [] } = useVendorsDirectory({}, { enabled: options.enabled ?? true });
 
   const [cachedVendors, setCachedVendors] = useState(() => {
     try {
@@ -92,6 +94,13 @@ export const useVendors = (options = {}) => {
       }
     };
 
+    // 0. Registered HR Vendor Accounts (prioritized with position)
+    if (Array.isArray(hrVendors)) {
+      hrVendors.forEach((v) => {
+        if (v?.name) addVendor(v.name, v.position ? `Vendor Account · ${v.position}` : 'Vendor Account');
+      });
+    }
+
     // 1. From expenses database
     if (Array.isArray(expenses)) {
       expenses.forEach((e) => {
@@ -125,7 +134,7 @@ export const useVendors = (options = {}) => {
       label: v.name,
       subLabel: v.origin,
     }));
-  }, [expenses, subscriptions, cachedVendors]);
+  }, [hrVendors, expenses, subscriptions, cachedVendors]);
 
   return {
     vendorOptions,

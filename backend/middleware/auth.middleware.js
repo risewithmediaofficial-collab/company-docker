@@ -184,8 +184,8 @@ export const withWorkspaceScope = (req, baseQuery = {}) => {
   } else if (user.organizationId) {
     // Tenant isolation: Match user's organization or legacy unassigned records
     query.organizationId = { $in: [user.organizationId, null] };
-  } else if (['client', 'clientAdmin', 'clientMember'].includes(user.role)) {
-    // Client-side user: scope is enforced by brandId / clientId below
+  } else if (['client', 'clientAdmin', 'clientMember', 'vendor'].includes(user.role)) {
+    // Client-side / vendor user without orgId: downstream query enforces strict clientId / user-id scoping
   } else {
     // Safety net: user with no organization assigned - fail closed safely without CastError
     return { ...baseQuery, _id: BLOCKED_QUERY_ID };

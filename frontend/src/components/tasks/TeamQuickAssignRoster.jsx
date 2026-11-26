@@ -248,11 +248,20 @@ export const TeamQuickAssignRoster = ({
                           )}
 
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs font-semibold">
-                              {member.name}
-                            </p>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <p className="truncate text-xs font-semibold">
+                                {member.name}
+                              </p>
+                              {member.role === 'vendor' && (
+                                <span className="shrink-0 rounded px-1.5 py-0.2 text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                                  Vendor
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground truncate">
-                              <span className="truncate">{deptLabel}</span>
+                              <span className="truncate">
+                                {member.role === 'vendor' && member.position ? member.position : deptLabel}
+                              </span>
                               <span>·</span>
                               <span className="tabular-nums">{activeCount} active</span>
                             </div>

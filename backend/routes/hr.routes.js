@@ -3,15 +3,19 @@ import {
   addApplicant,
   createEmployee,
   createJob,
+  createVendorAccount,
   deleteEmployee,
   deleteJob,
+  deleteVendorAccount,
   getEmployee,
   getJobs,
   getJob,
   getTeamMembers,
+  getVendorsDirectory,
   updateApplicantStage,
   updateJob,
   updateTeamMember,
+  updateVendorAccount,
 } from '../controllers/hr.controller.js';
 import { authorize, protect } from '../middleware/auth.middleware.js';
 
@@ -32,5 +36,11 @@ router.put('/jobs/:id', authorize('superAdmin', 'manager'), updateJob);
 router.delete('/jobs/:id', authorize('superAdmin'), deleteJob);
 router.post('/jobs/:id/applicants', authorize('superAdmin', 'manager', 'employee'), addApplicant);
 router.put('/jobs/:jobId/applicants/:applicantId', authorize('superAdmin', 'manager'), updateApplicantStage);
+
+// Separate Vendor Accounts Management under HR & Hiring
+router.get('/vendors', authorize('superAdmin', 'admin', 'organizationOwner', 'manager', 'financeManager'), getVendorsDirectory);
+router.post('/vendors', authorize('superAdmin', 'admin', 'organizationOwner', 'manager'), createVendorAccount);
+router.put('/vendors/:id', authorize('superAdmin', 'admin', 'organizationOwner', 'manager'), updateVendorAccount);
+router.delete('/vendors/:id', authorize('superAdmin', 'admin', 'organizationOwner', 'manager'), deleteVendorAccount);
 
 export default router;

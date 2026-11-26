@@ -58,6 +58,8 @@ const PortalInvoices = lazy(() => import('./pages/portal/sections/PortalInvoices
 const PortalTasks = lazy(() => import('./pages/portal/sections/PortalTasks'));
 const PortalAdBudget = lazy(() => import('./pages/portal/sections/PortalAdBudget'));
 const PortalSMMTracker = lazy(() => import('./pages/portal/sections/PortalSMMTracker'));
+const VendorDashboard = lazy(() => import('./pages/vendor/VendorDashboard'));
+const VendorFinance = lazy(() => import('./pages/vendor/VendorFinance'));
 
 // Social Media Manager Module Pages - One-Page Tracker Only
 const SMMOnePageTracker = lazy(() => import('./pages/smm/SMMOnePageTracker'));
@@ -223,7 +225,15 @@ const App = () => {
           {isAuthenticated && (
             <Route
               path="/"
-              element={user?.role === 'client' ? <PortalDashboard user={user} /> : <Dashboard />}
+              element={
+                user?.role === 'client' ? (
+                  <PortalDashboard user={user} />
+                ) : user?.role === 'vendor' ? (
+                  <VendorDashboard />
+                ) : (
+                  <Dashboard />
+                )
+              }
             />
           )}
 
@@ -311,7 +321,7 @@ const App = () => {
             user?.role === 'client' ? (
               <PortalTasks />
             ) : (
-              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee']}>
+              <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'vendor']}>
                 <Tasks />
               </ProtectedRoute>
             )
@@ -327,8 +337,13 @@ const App = () => {
             </ProtectedRoute>
           } />
           <Route path="/tasks/:id" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'client']}>
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['superAdmin', 'manager', 'employee', 'vendor', 'client']}>
               <TaskDetails />
+            </ProtectedRoute>
+          } />
+          <Route path="/my-finance" element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading} allowedRoles={['vendor']}>
+              <VendorFinance />
             </ProtectedRoute>
           } />
           <Route path="/calendar" element={

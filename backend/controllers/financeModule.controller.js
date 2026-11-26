@@ -1411,6 +1411,26 @@ export const getModuleExpenses = async (req, res) => {
   }
 };
 
+const resolveVendorUserId = async ({ vendorUser, vendor, organizationId }) => {
+  if (vendorUser && mongoose.Types.ObjectId.isValid(String(vendorUser))) {
+    const found = await User.findById(vendorUser).select('_id role').lean();
+    if (found && found.role === 'vendor') return found._id;
+  }
+  const cleanName = String(vendor || '').trim();
+  if (!cleanName) return undefined;
+  const escaped = cleanName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const query = {
+    role: 'vendor',
+    $or: [
+      { name: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+      { vendorCompany: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+    ],
+  };
+  if (organizationId) query.organizationId = organizationId;
+  const match = await User.findOne(query).select('_id').lean();
+  return match?._id || undefined;
+};
+
 export const createModuleExpense = async (req, res) => {
   try {
     const {
@@ -1419,6 +1439,7 @@ export const createModuleExpense = async (req, res) => {
       category = 'office',
       subcategory = '',
       vendor = '',
+      vendorUser,
       description = '',
       costType = 'agency_overhead',
       client,
@@ -1490,6 +1511,12 @@ export const createModuleExpense = async (req, res) => {
 
     const finalBalanceAmount = Math.max(0, expenseAmount - finalPaidAmount);
 
+    const resolvedVendorUser = await resolveVendorUserId({
+      vendorUser,
+      vendor,
+      organizationId: req.user?.organizationId,
+    });
+
     const expense = await Expense.create({
       title,
       description,
@@ -1500,6 +1527,7 @@ export const createModuleExpense = async (req, res) => {
       category,
       subcategory,
       vendor,
+      vendorUser: resolvedVendorUser || null,
       costType,
       client: client || null,
       project: project || null,
@@ -1900,6 +1928,7 @@ export const updateModuleExpense = async (req, res) => {
       category,
       subcategory,
       vendor,
+      vendorUser,
       description,
       costType,
       paymentStatus,
@@ -1915,6 +1944,14 @@ export const updateModuleExpense = async (req, res) => {
     if (category !== undefined) expense.category = category;
     if (subcategory !== undefined) expense.subcategory = subcategory;
     if (vendor !== undefined) expense.vendor = vendor;
+    if (vendorUser !== undefined || vendor !== undefined) {
+      const resolvedVendorUser = await resolveVendorUserId({
+        vendorUser: vendorUser !== undefined ? vendorUser : expense.vendorUser,
+        vendor: vendor !== undefined ? vendor : expense.vendor,
+        organizationId: req.user?.organizationId,
+      });
+      expense.vendorUser = resolvedVendorUser || null;
+    }
     if (description !== undefined) expense.description = description;
     if (costType !== undefined) expense.costType = costType;
     if (paymentStatus !== undefined) expense.paymentStatus = paymentStatus;
@@ -3114,6 +3151,115 @@ export const setFinanceBudget = async (req, res) => {
 
     const budget = await FinanceBudget.findOneAndUpdate(filter, update, { upsert: true, new: true });
     res.json({ success: true, budget });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// =============================================
+// 13. STRICTLY SCOPED VENDOR SELF-FINANCE PORTAL
+// Returns ONLY bills & payout status belonging to the signed-in vendor user.
+// =============================================
+export const getVendorMyFinance = async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'vendor') {
+      return res.status(403).json({ success: false, message: 'Vendor portal access only' });
+    }
+
+    const orClauses = [{ vendorUser: req.user._id }];
+    const exactNames = [req.user.name, req.user.vendorCompany]
+      .map((v) => String(v || '').trim())
+      .filter(Boolean);
+
+    if (exactNames.length > 0) {
+      const regexList = exactNames.map(
+        (n) => new RegExp(`^${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+      );
+      orClauses.push({
+        $and: [
+          { $or: [{ vendorUser: null }, { vendorUser: { $exists: false } }] },
+          { vendor: { $in: regexList } },
+        ],
+      });
+    }
+
+    const rawBills = await Expense.find({ $or: orClauses })
+      .populate('project', 'name')
+      .populate('submittedBy', 'organizationId')
+      .sort({ date: -1, createdAt: -1 })
+      .lean();
+
+    const userOrgId = req.user.organizationId ? String(req.user.organizationId) : null;
+
+    const bills = rawBills
+      .filter((b) => {
+        if (b.vendorUser && String(b.vendorUser) === String(req.user._id)) return true;
+        if (userOrgId && b.submittedBy?.organizationId) {
+          return String(b.submittedBy.organizationId) === userOrgId;
+        }
+        return true;
+      })
+      .map((e) => {
+        const hasPayments = Array.isArray(e.payments) && e.payments.length > 0;
+        const totalAmount = Number(e.amount || 0);
+        let paidAmount = 0;
+        if (hasPayments) {
+          paidAmount = e.payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+        } else if (e.paidAmount != null && Number(e.paidAmount) > 0) {
+          paidAmount = Number(e.paidAmount);
+        } else if (e.paymentStatus === 'paid') {
+          paidAmount = totalAmount;
+        }
+        paidAmount = Math.min(totalAmount, Math.max(0, paidAmount));
+        const balanceAmount = Math.max(0, totalAmount - paidAmount);
+        const paymentStatus =
+          balanceAmount === 0 && totalAmount > 0
+            ? 'paid'
+            : paidAmount > 0
+            ? 'partially_paid'
+            : 'unpaid';
+
+        return {
+          _id: e._id,
+          title: e.title,
+          description: e.description || '',
+          category: e.category || 'Vendor Service',
+          vendor: e.vendor || req.user.name,
+          project: e.project ? { _id: e.project._id, name: e.project.name } : null,
+          amount: totalAmount,
+          paidAmount,
+          balanceAmount,
+          paymentStatus,
+          paymentMode: e.paymentMode || 'Bank',
+          date: e.date || e.createdAt,
+          paymentDate: e.paymentDate || null,
+          receiptUrl: e.receiptUrl || '',
+          notes: e.notes || '',
+          payments: (Array.isArray(e.payments) ? e.payments : []).map((p) => ({
+            _id: p._id,
+            amount: Number(p.amount || 0),
+            paymentDate: p.paymentDate,
+            paymentMode: p.paymentMode || 'Bank',
+            reference: p.reference || '',
+            notes: p.notes || '',
+          })),
+        };
+      });
+
+    const summary = bills.reduce(
+      (acc, bill) => {
+        acc.totalBilled += bill.amount;
+        acc.totalPaid += bill.paidAmount;
+        acc.totalPending += bill.balanceAmount;
+        acc.billCount += 1;
+        if (bill.paymentStatus === 'paid') acc.paidCount += 1;
+        else acc.unpaidCount += 1;
+        return acc;
+      },
+      { totalBilled: 0, totalPaid: 0, totalPending: 0, billCount: 0, paidCount: 0, unpaidCount: 0 }
+    );
+
+    res.json({ success: true, bills, summary });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

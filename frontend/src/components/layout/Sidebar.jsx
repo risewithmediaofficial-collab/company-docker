@@ -130,6 +130,19 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
       ];
     }
 
+    if (role === 'vendor') {
+      return [
+        {
+          title: 'VENDOR PORTAL',
+          items: [
+            { name: 'My Overview', icon: LayoutDashboard, path: '/' },
+            { name: 'My Tasks', icon: CheckSquare, path: '/tasks' },
+            { name: 'My Finance', icon: IndianRupee, path: '/my-finance' },
+          ],
+        },
+      ];
+    }
+
     if (role === 'referral') {
       return [
         {

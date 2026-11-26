@@ -29,9 +29,11 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager', 'editor', 'designer', 'adsManager', 'financeManager', 'clientAdmin', 'clientMember', 'intern', 'employee', 'referral', 'client'],
+      enum: ['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager', 'editor', 'designer', 'adsManager', 'financeManager', 'clientAdmin', 'clientMember', 'intern', 'employee', 'vendor', 'referral', 'client'],
       default: 'employee',
     },
+    vendorCompany: { type: String, trim: true, default: '' },
+    vendorRateNotes: { type: String, trim: true, default: '' },
     avatar: { type: String, default: '' },
     phone: { type: String, default: '' },
     organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization' },

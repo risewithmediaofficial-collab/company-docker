@@ -202,7 +202,7 @@ const uniqueIds = (items = []) => {
   return [...new Set(ids)];
 };
 
-const isEmployeeLikeRole = (role) => ['employee', 'intern', 'editor', 'designer', 'adsManager'].includes(role);
+const isEmployeeLikeRole = (role) => ['employee', 'intern', 'editor', 'designer', 'adsManager', 'vendor'].includes(role);
 
 const buildUserTaskAssignmentOr = (userId) => [
   { assignedTo: userId },

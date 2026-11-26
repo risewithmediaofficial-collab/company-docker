@@ -23,6 +23,7 @@ const expenseSchema = new mongoose.Schema(
     },
     subcategory: { type: String, trim: true, default: '' },
     vendor: { type: String, trim: true, default: '' },
+    vendorUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
     costType: {
       type: String,
       enum: ['client_project', 'agency_overhead'],

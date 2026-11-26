@@ -87,3 +87,57 @@ test('HR WFH & Leaves: Calculates single-day, multi-day, and half-day durations'
   assert.equal(calculateLeaveDays('2026-10-01', '2026-10-05'), 5, 'Oct 1 to Oct 5 is 5 days');
   assert.equal(calculateLeaveDays('2026-10-01', '2026-10-01', true), 0.5, 'Half-day is 0.5 days');
 });
+
+test('HR Vendors: User and Expense models support vendor role, position, and vendorUser isolation', async () => {
+  const [{ default: User }, { default: Expense }, { authorize }] = await Promise.all([
+    import('../models/user.model.js'),
+    import('../models/expense.model.js'),
+    import('../middleware/auth.middleware.js'),
+  ]);
+  const mongoose = (await import('mongoose')).default;
+
+  const vendor = new User({
+    name: 'Arjun Video Studio',
+    email: 'arjun.vendor@example.com',
+    password: 'Vendor@1234',
+    role: 'vendor',
+    position: 'Video Editor',
+    vendorCompany: 'PixelCraft Studio',
+  });
+  await vendor.validate();
+  assert.equal(vendor.role, 'vendor');
+  assert.equal(vendor.position, 'Video Editor');
+
+  const bill = new Expense({
+    title: 'October Reel Edits',
+    amount: 4500,
+    vendor: 'Arjun Video Studio',
+    vendorUser: vendor._id,
+    paymentStatus: 'unpaid',
+  });
+  await bill.validate();
+  assert.equal(String(bill.vendorUser), String(vendor._id));
+
+  // Role isolation check: vendor allowed on my-finance, denied on general module expenses / HR employees
+  let allowedCalled = false;
+  authorize('vendor')({ user: { role: 'vendor', _id: new mongoose.Types.ObjectId() } }, {}, () => {
+    allowedCalled = true;
+  });
+  assert.equal(allowedCalled, true);
+
+  let deniedStatus = 0;
+  authorize('superAdmin', 'admin', 'manager', 'financeManager', 'employee')(
+    { user: { role: 'vendor', _id: new mongoose.Types.ObjectId() } },
+    {
+      status(code) {
+        deniedStatus = code;
+        return this;
+      },
+      json() {
+        return this;
+      },
+    },
+    () => {}
+  );
+  assert.equal(deniedStatus, 403);
+});

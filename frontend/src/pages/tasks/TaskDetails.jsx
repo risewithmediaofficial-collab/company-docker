@@ -152,7 +152,7 @@ export const TaskDetails = () => {
   const [showCredentials, setShowCredentials] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
-  const isEmployee = user?.role === 'employee';
+  const isEmployee = user?.role === 'employee' || user?.role === 'vendor';
   const isClient = user?.role === 'client';
   const canEdit = ['superAdmin', 'admin', 'manager', 'organizationOwner'].includes(user?.role);
   const canDelete = ['superAdmin', 'admin', 'manager', 'organizationOwner'].includes(user?.role);

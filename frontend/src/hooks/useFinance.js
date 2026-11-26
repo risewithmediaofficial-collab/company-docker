@@ -336,6 +336,18 @@ export const useAddPartialPayment = () => {
   });
 };
 
+export const useVendorMyFinance = (options = {}) => {
+  return useQuery({
+    queryKey: ['vendor-my-finance'],
+    queryFn: async () => {
+      const response = await api.get('/finance/vendor/my-finance');
+      return response.data;
+    },
+    staleTime: 60 * 1000,
+    ...options,
+  });
+};
+
 export const usePayments = (filters = {}, options = {}) => {
   return useQuery({
     queryKey: ['payments', filters],

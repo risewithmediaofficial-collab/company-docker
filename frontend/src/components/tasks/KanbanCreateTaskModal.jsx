@@ -1005,29 +1005,29 @@ export const KanbanCreateTaskModal = ({
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-7 space-y-6 custom-scrollbar text-left">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-5 custom-scrollbar text-left">
           {/* SECTION 1: CORE CLASSIFICATION */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             {/* Task Category Switcher */}
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-1.5">
-                1. Select Task Stream
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                Task Stream
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => {
                     setTaskCategory('content');
                     setSubType('reel');
                   }}
-                  className={`flex h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-all cursor-pointer ${
+                  className={`flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     taskCategory === 'content'
-                      ? 'bg-primary text-primary-foreground'
+                      ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'bg-secondary/75 text-muted-foreground hover:bg-secondary hover:text-foreground'
                   }`}
                 >
                   <Video className="h-4 w-4 shrink-0" />
-                  <span>Content & Media</span>
+                  <span>Content &amp; Media</span>
                 </button>
 
                 <button
@@ -1036,22 +1036,22 @@ export const KanbanCreateTaskModal = ({
                     setTaskCategory('non_content');
                     setSubType('website_development');
                   }}
-                  className={`flex h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-all cursor-pointer ${
+                  className={`flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     taskCategory === 'non_content'
-                      ? 'bg-primary text-primary-foreground'
+                      ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'bg-secondary/75 text-muted-foreground hover:bg-secondary hover:text-foreground'
                   }`}
                 >
                   <Code2 className="h-4 w-4 shrink-0" />
-                  <span>Tech & Ops</span>
+                  <span>Tech &amp; Ops</span>
                 </button>
               </div>
             </div>
 
             {/* Sub-Type Selector */}
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-1.5">
-                2. Deliverable Type
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                Deliverable Type
               </label>
               <SelectDropdown
                 value={subType}
@@ -1063,16 +1063,16 @@ export const KanbanCreateTaskModal = ({
                 allowCustom={false}
                 allowDeselect={false}
                 className="w-full"
-                buttonClassName="h-11 bg-background text-sm font-normal rounded-xl"
+                buttonClassName="h-10 bg-background border border-border/60 text-sm font-normal rounded-xl"
               />
             </div>
           </div>
 
           {/* SECTION 2: TITLE & TARGET CLIENT / PROJECT */}
-          <div className="rounded-2xl bg-muted/40 p-4 sm:p-5 space-y-5">
+          <div className="rounded-2xl bg-muted/40 border border-border/50 p-4 sm:p-5 space-y-4">
             {/* Task Name / Title */}
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-1.5">
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
                 Task Title / Video Title *
               </label>
               <input
@@ -1085,15 +1085,15 @@ export const KanbanCreateTaskModal = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
-                className="h-11 w-full rounded-xl bg-background px-4 text-sm font-normal text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand/40"
+                className="h-10 w-full rounded-xl border border-border/60 bg-background px-3.5 text-sm font-normal text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand/40"
               />
             </div>
 
-            {/* Client & Project Rows (Max 2 columns, Google Form style) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Client & Project Rows */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {/* Client Selection */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">
+                <label className="block text-xs font-semibold text-foreground mb-1.5">
                   Client Name
                 </label>
                 <SelectDropdown
@@ -1104,17 +1104,17 @@ export const KanbanCreateTaskModal = ({
                     label: c.name || c.company,
                     subLabel: c.company && c.name ? c.company : undefined,
                   }))}
-                  placeholder="General / Internal (No Client)"
-                  allOptionLabel="General / Internal (No Client)"
+                  placeholder="General / Internal"
+                  allOptionLabel="General / Internal"
                   allowCustom={false}
                   className="w-full"
-                  buttonClassName="h-11 bg-background text-sm font-normal rounded-xl"
+                  buttonClassName="h-10 bg-background border border-border/60 text-sm font-normal rounded-xl"
                 />
               </div>
 
               {/* Project Selection */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">
+                <label className="block text-xs font-semibold text-foreground mb-1.5">
                   Project
                 </label>
                 <SelectDropdown
@@ -1136,7 +1136,7 @@ export const KanbanCreateTaskModal = ({
                   allOptionLabel="No Project Assigned"
                   allowCustom={false}
                   className="w-full"
-                  buttonClassName="h-11 bg-background text-sm font-normal rounded-xl"
+                  buttonClassName="h-10 bg-background border border-border/60 text-sm font-normal rounded-xl"
                 />
               </div>
             </div>
@@ -1186,11 +1186,11 @@ export const KanbanCreateTaskModal = ({
               />
             )}
 
-            {/* Priority & NF ID (Max 2 columns) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Priority & NF ID */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {/* Priority */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">
+                <label className="block text-xs font-semibold text-foreground mb-1.5">
                   Priority
                 </label>
                 <SelectDropdown
@@ -1205,13 +1205,13 @@ export const KanbanCreateTaskModal = ({
                   allowCustom={false}
                   allowDeselect={false}
                   className="w-full"
-                  buttonClassName="h-11 bg-background text-sm font-normal rounded-xl capitalize"
+                  buttonClassName="h-10 bg-background border border-border/60 text-sm font-normal rounded-xl capitalize"
                 />
               </div>
 
               {/* NF ID (Notion ID / Numbering) */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">
+                <label className="block text-xs font-semibold text-foreground mb-1.5">
                   NF ID / Code
                 </label>
                 <input
@@ -1219,76 +1219,68 @@ export const KanbanCreateTaskModal = ({
                   placeholder="e.g. NF-082"
                   value={nfId}
                   onChange={(e) => setNfId(e.target.value)}
-                  className="h-11 w-full rounded-xl bg-background px-4 text-sm font-normal text-foreground placeholder:text-muted-foreground/60 focus:ring-1 focus:ring-brand/40 focus:outline-none"
+                  className="h-10 w-full rounded-xl border border-border/60 bg-background px-3.5 text-sm font-normal text-foreground placeholder:text-muted-foreground/60 focus:ring-1 focus:ring-brand/40 focus:outline-none"
                 />
               </div>
             </div>
 
-            {/* Deadline Date & Due Time (Max 2 columns) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Deadline Date & Due Time */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">
+                <label className="block text-xs font-semibold text-foreground mb-1.5">
                   Deadline Date
                 </label>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="h-11 w-full rounded-xl bg-background px-4 text-sm font-normal tabular-nums text-foreground focus:ring-1 focus:ring-brand/40 focus:outline-none"
+                  className="h-10 w-full rounded-xl border border-border/60 bg-background px-3.5 text-sm font-normal tabular-nums text-foreground focus:ring-1 focus:ring-brand/40 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">
+                <label className="block text-xs font-semibold text-foreground mb-1.5">
                   Due Time
                 </label>
                 <input
                   type="time"
                   value={dueTime}
                   onChange={(e) => setDueTime(e.target.value)}
-                  className="h-11 w-full rounded-xl bg-background px-4 text-sm font-normal tabular-nums text-foreground focus:ring-1 focus:ring-brand/40 focus:outline-none"
+                  className="h-10 w-full rounded-xl border border-border/60 bg-background px-3.5 text-sm font-normal tabular-nums text-foreground focus:ring-1 focus:ring-brand/40 focus:outline-none"
                 />
               </div>
             </div>
 
-            {/* Allocated Timer (Duration) (Max 2 columns) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">
-                  Allocated Timer (Duration)
-                </label>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      placeholder="0"
-                      value={allocatedHours ?? ''}
-                      onChange={(e) => setAllocatedHours(e.target.value)}
-                      className="h-11 w-full rounded-xl bg-background pl-4 pr-10 text-sm font-normal tabular-nums text-foreground focus:ring-1 focus:ring-brand/40 focus:outline-none"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">hrs</span>
-                  </div>
-                  <div className="relative flex-1">
-                    <input
-                      type="number"
-                      min="0"
-                      max="59"
-                      placeholder="0"
-                      value={allocatedMinutes ?? ''}
-                      onChange={(e) => setAllocatedMinutes(e.target.value)}
-                      className="h-11 w-full rounded-xl bg-background pl-4 pr-12 text-sm font-normal tabular-nums text-foreground focus:ring-1 focus:ring-brand/40 focus:outline-none"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">mins</span>
-                  </div>
+            {/* Allocated Timer (Duration) */}
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                Allocated Timer (Duration)
+              </label>
+              <div className="grid grid-cols-2 gap-3.5">
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    placeholder="0"
+                    value={allocatedHours ?? ''}
+                    onChange={(e) => setAllocatedHours(e.target.value)}
+                    className="h-10 w-full rounded-xl border border-border/60 bg-background pl-3.5 pr-10 text-sm font-normal tabular-nums text-foreground focus:ring-1 focus:ring-brand/40 focus:outline-none"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">hrs</span>
                 </div>
-              </div>
-
-              <div className="flex items-end pb-1">
-                <span className="text-xs text-muted-foreground">
-                  Total active working time allowed for this task before countdown alert.
-                </span>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="59"
+                    placeholder="0"
+                    value={allocatedMinutes ?? ''}
+                    onChange={(e) => setAllocatedMinutes(e.target.value)}
+                    className="h-10 w-full rounded-xl border border-border/60 bg-background pl-3.5 pr-12 text-sm font-normal tabular-nums text-foreground focus:ring-1 focus:ring-brand/40 focus:outline-none"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">mins</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1318,7 +1310,7 @@ export const KanbanCreateTaskModal = ({
                     options={users.map((u) => ({
                       value: u._id,
                       label: u.name,
-                      subLabel: u.position || u.role,
+                      subLabel: u.role === 'vendor' ? `Vendor · ${u.position || 'External'}` : (u.position || u.role),
                     }))}
                     placeholder="Select Developer..."
                     allowCustom={false}
@@ -1516,7 +1508,7 @@ export const KanbanCreateTaskModal = ({
                       options={(roleGroups.scriptwriters.length > 0 ? roleGroups.scriptwriters : users).map((u) => ({
                         value: u._id,
                         label: u.name,
-                        subLabel: u.position || u.role,
+                        subLabel: u.role === 'vendor' ? `Vendor · ${u.position || 'External'}` : (u.position || u.role),
                       }))}
                       placeholder="Unassigned (Optional)"
                       allOptionLabel="Unassigned (Optional)"
@@ -1768,7 +1760,7 @@ export const KanbanCreateTaskModal = ({
                       options={(roleGroups.videographers.length > 0 ? roleGroups.videographers : users).map((u) => ({
                         value: u._id,
                         label: u.name,
-                        subLabel: u.position || u.role,
+                        subLabel: u.role === 'vendor' ? `Vendor · ${u.position || 'External'}` : (u.position || u.role),
                       }))}
                       placeholder="Unassigned (Optional)"
                       allOptionLabel="Unassigned (Optional)"
@@ -1813,7 +1805,7 @@ export const KanbanCreateTaskModal = ({
                           .map((u) => ({
                             value: u._id,
                             label: u.name,
-                            subLabel: u.position || u.role,
+                            subLabel: u.role === 'vendor' ? `Vendor · ${u.position || 'External'}` : (u.position || u.role),
                           }))}
                         placeholder="+ Select Extra Shoot Member"
                         allowCustom={false}
@@ -2202,7 +2194,7 @@ export const KanbanCreateTaskModal = ({
                       options={(roleGroups.editors.length > 0 ? roleGroups.editors : users).map((u) => ({
                         value: u._id,
                         label: u.name,
-                        subLabel: u.position || u.role,
+                        subLabel: u.role === 'vendor' ? `Vendor · ${u.position || 'External'}` : (u.position || u.role),
                       }))}
                       placeholder="Unassigned (Optional)"
                       allOptionLabel="Unassigned (Optional)"
@@ -2513,7 +2505,7 @@ export const KanbanCreateTaskModal = ({
                       options={(roleGroups.smmMembers.length > 0 ? roleGroups.smmMembers : users).map((u) => ({
                         value: u._id,
                         label: u.name,
-                        subLabel: u.position || u.role,
+                        subLabel: u.role === 'vendor' ? `Vendor · ${u.position || 'External'}` : (u.position || u.role),
                       }))}
                       placeholder="Unassigned (Optional)"
                       allOptionLabel="Unassigned (Optional)"
@@ -2782,7 +2774,7 @@ export const KanbanCreateTaskModal = ({
                       options={(roleGroups.designers.length > 0 ? roleGroups.designers : users).map((u) => ({
                         value: u._id,
                         label: u.name,
-                        subLabel: u.position || u.role,
+                        subLabel: u.role === 'vendor' ? `Vendor · ${u.position || 'External'}` : (u.position || u.role),
                       }))}
                       placeholder="Unassigned (Optional)"
                       allOptionLabel="Unassigned (Optional)"
@@ -2821,9 +2813,6 @@ export const KanbanCreateTaskModal = ({
                   <h4 className="text-sm font-bold text-foreground truncate">
                     Auto-Schedule Next Stage (Hand-off)
                   </h4>
-                  <p className="text-xs text-muted-foreground truncate">
-                    Automatically create the follow-up task (e.g. Video Editor or SMM) after a few days
-                  </p>
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer shrink-0">
