@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import { toast } from 'sonner';
 
 export const GoogleAuthButton = ({
   mode = 'signin',
@@ -8,7 +9,7 @@ export const GoogleAuthButton = ({
   label,
   className = '',
 }) => {
-  const [enabled, setEnabled] = useState(true);
+  const [serverEnabled, setServerEnabled] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -16,20 +17,24 @@ export const GoogleAuthButton = ({
       .get('/api/auth/google/config')
       .then((res) => {
         if (mounted && res.data && res.data.enabled === false) {
-          setEnabled(false);
+          setServerEnabled(false);
         }
       })
       .catch(() => {
-        // Keep visible unless explicitly disabled
+        // Keep enabled so user gets direct feedback if endpoint is reachable
       });
     return () => {
       mounted = false;
     };
   }, []);
 
-  if (!enabled) return null;
-
   const handleClick = () => {
+    if (!serverEnabled) {
+      toast.error(
+        'Google OAuth is not configured on this server yet. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the server .env and restart the backend.'
+      );
+      return;
+    }
     const params = new URLSearchParams({
       mode: mode === 'signup' ? 'signup' : 'signin',
       role: role || 'employee',
