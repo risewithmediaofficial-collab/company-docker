@@ -151,6 +151,22 @@ export const requirePermission = (permissionKey) => {
   };
 };
 
+export const getStrictTenantOrgId = (req) => {
+  const user = req?.user;
+  if (!user) return BLOCKED_QUERY_ID;
+  const ghostOrgId =
+    req.headers?.['x-impersonate-org-id'] ||
+    req.headers?.['x-ghost-org-id'] ||
+    (req.isGhostMode ? user.organizationId : null);
+  if (ghostOrgId && (user.role === 'superAdmin' || user.role === 'admin')) {
+    return ghostOrgId;
+  }
+  if ((user.role === 'superAdmin' || user.role === 'admin') && !user.organizationId) {
+    return null;
+  }
+  return user.organizationId || BLOCKED_QUERY_ID;
+};
+
 /**
  * Filter query builder based on workspace
  * Hardened to fail closed and validate membership against x-workspace-id headers
@@ -182,8 +198,8 @@ export const withWorkspaceScope = (req, baseQuery = {}) => {
   } else if ((user.role === 'superAdmin' || user.role === 'admin') && !user.organizationId) {
     // Platform superAdmin / system admin without organizationId — global access across all tenants & legacy data
   } else if (user.organizationId) {
-    // Tenant isolation: Match user's organization or legacy unassigned records
-    query.organizationId = { $in: [user.organizationId, null] };
+    // STRICT tenant isolation: match ONLY this user's exact organizationId (never unscoped/null docs)
+    query.organizationId = user.organizationId;
   } else if (['client', 'clientAdmin', 'clientMember', 'vendor'].includes(user.role)) {
     // Client-side / vendor user without orgId: downstream query enforces strict clientId / user-id scoping
   } else {

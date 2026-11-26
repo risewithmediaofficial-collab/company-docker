@@ -5,6 +5,9 @@ export const getInfluencers = async (req, res) => {
     const { influencerType, platform, category, city, search } = req.query;
     const filter = { isDeleted: false };
 
+    // Tenant isolation
+    if (req.user.organizationId) filter.organizationId = req.user.organizationId;
+
     if (influencerType && influencerType !== 'all') {
       filter.influencerType = influencerType;
     }
@@ -47,6 +50,7 @@ export const createInfluencer = async (req, res) => {
     const influencer = await Influencer.create({
       ...req.body,
       createdBy: req.user._id,
+      organizationId: req.user.organizationId,
     });
 
     res.status(201).json({ success: true, influencer });

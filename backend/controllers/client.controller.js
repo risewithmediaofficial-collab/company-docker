@@ -15,6 +15,7 @@ import { createActivityLog } from '../utils/activity.js';
 import { moveToRecycleBin } from '../utils/recycleBin.js';
 import { emitLiveEvent } from '../utils/socketEmitter.js';
 import { parsePagination } from '../utils/pagination.js';
+import { getStrictTenantOrgId } from '../middleware/auth.middleware.js';
 
 const statusMap = {
   Active: 'active',
@@ -101,6 +102,10 @@ const clientPopulate = [
 
 const assertClientAccess = (req, client) => {
   if (!client) return { allowed: false, status: 404, message: 'Client not found' };
+  const tenantOrgId = getStrictTenantOrgId(req);
+  if (tenantOrgId && String(client.organizationId || '') !== String(tenantOrgId)) {
+    return { allowed: false, status: 403, message: 'Access denied: client belongs to another workspace' };
+  }
   if (['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager', 'editor', 'designer', 'adsManager', 'financeManager', 'employee', 'intern'].includes(req.user.role)) return { allowed: true };
   if (['client', 'clientAdmin', 'clientMember'].includes(req.user.role)) {
     const userClientId = req.user.clientId?._id || req.user.clientId;
@@ -190,29 +195,20 @@ export const getClients = async (req, res) => {
     }
 
     // ── STRICT TENANT ISOLATION (read-only query scoping) ──
-    const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
-    const targetOrgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
-    let otherOrgIds = [];
+    const targetOrgId = getStrictTenantOrgId(req);
     if (targetOrgId) {
-      const otherOrgs = await Organization.find({ _id: { $ne: targetOrgId } }).select('_id').lean();
-      otherOrgIds = otherOrgs.map((o) => o._id);
-
-      // Multi-tenant isolation: exclude records explicitly owned by another valid organization
-      if (otherOrgIds.length > 0) {
-        const orgFilter = { $nin: otherOrgIds };
-        if (filter.$or) {
-          filter.$and = [{ $or: filter.$or }, { organizationId: orgFilter }];
-          delete filter.$or;
-        } else if (filter.$and) {
-          filter.$and.push({ organizationId: orgFilter });
-        } else {
-          filter.organizationId = orgFilter;
-        }
+      if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, { organizationId: targetOrgId }];
+        delete filter.$or;
+      } else if (filter.$and) {
+        filter.$and.push({ organizationId: targetOrgId });
+      } else {
+        filter.organizationId = targetOrgId;
       }
     }
 
     const isPortalClientUser = ['client', 'clientAdmin', 'clientMember'].includes(req.user.role);
-    const smmScope = targetOrgId && otherOrgIds.length > 0 ? { organizationId: { $nin: otherOrgIds } } : {};
+    const smmScope = targetOrgId ? { organizationId: targetOrgId } : {};
 
     let [total, clients, allSmm, allCrmRefs] = await Promise.all([
       Client.countDocuments(filter),
@@ -224,7 +220,7 @@ export const getClients = async (req, res) => {
         .lean(),
       !isPortalClientUser && page === 1 ? SmmClient.find(smmScope).lean() : Promise.resolve([]),
       !isPortalClientUser && page === 1
-        ? Client.find(targetOrgId && otherOrgIds.length > 0 ? { organizationId: { $nin: otherOrgIds } } : {})
+        ? Client.find(targetOrgId ? { organizationId: targetOrgId } : {})
             .select('_id clientId email company')
             .lean()
         : Promise.resolve([]),

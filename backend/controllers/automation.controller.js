@@ -4,6 +4,8 @@ export const getAutomations = async (req, res) => {
   try {
     const { search, enabled, page = 1, limit = 50 } = req.query;
     const filter = {};
+    // Tenant isolation
+    if (req.user.organizationId) filter.organizationId = req.user.organizationId;
     if (enabled !== undefined) filter.enabled = enabled === 'true';
     if (search) {
       filter.$or = [
@@ -39,7 +41,7 @@ export const getAutomation = async (req, res) => {
 
 export const createAutomation = async (req, res) => {
   try {
-    const automation = await Automation.create({ ...req.body, createdBy: req.user._id });
+    const automation = await Automation.create({ ...req.body, createdBy: req.user._id, organizationId: req.user.organizationId });
     res.status(201).json({ success: true, automation });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });

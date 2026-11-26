@@ -1,5 +1,6 @@
 import express from 'express';
 import {
+  getPublicBillingPlans,
   getBillingPlans,
   createRazorpayOrder,
   verifyRazorpayPayment,
@@ -7,6 +8,8 @@ import {
 import { protect, authorize } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
+
+router.get('/public-plans', getPublicBillingPlans);
 
 router.use(protect);
 

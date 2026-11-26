@@ -295,50 +295,152 @@ async function mockAppBackend(page) {
       });
     }
 
+    const E2E_PLANS = [
+      {
+        id: 'free',
+        name: 'Free',
+        tagline: 'Solo agencies testing RiseWithMedia OS',
+        monthlyPriceInr: 0,
+        annualPriceInr: 0,
+        storageLimitMb: 100,
+        storageLabel: '100 MB Storage',
+        maxUsers: 2,
+        maxClients: 3,
+        badge: 'Free Forever',
+        features: ['100 MB Cloud File Storage', 'Up to 3 Active Clients'],
+      },
+      {
+        id: 'starter',
+        name: 'Starter',
+        tagline: 'For growing boutique teams — 5 GB at ₹10/mo',
+        monthlyPriceInr: 10,
+        annualPriceInr: 96,
+        storageLimitMb: 5120,
+        storageLabel: '5 GB Storage',
+        maxUsers: 8,
+        maxClients: 15,
+        badge: '₹10 / mo',
+        features: ['5 GB Cloud File Storage', 'Up to 15 Active Clients'],
+      },
+      {
+        id: 'growth',
+        name: 'Growth',
+        tagline: 'Complete agency OS with Finance & SMM',
+        monthlyPriceInr: 2999,
+        annualPriceInr: 28790,
+        storageLimitMb: 25600,
+        storageLabel: '25 GB Storage',
+        maxUsers: 25,
+        maxClients: 50,
+        badge: 'Most Popular',
+        features: ['25 GB Cloud File Storage', 'Up to 50 Active Clients'],
+      },
+      {
+        id: 'pro',
+        name: 'Enterprise Pro',
+        tagline: 'High-storage multi-branch operations',
+        monthlyPriceInr: 6999,
+        annualPriceInr: 67190,
+        storageLimitMb: 102400,
+        storageLabel: '100 GB Storage',
+        maxUsers: 100,
+        maxClients: 500,
+        badge: 'Max Storage',
+        features: ['100 GB Cloud File Storage', 'Up to 500 Active Clients'],
+      },
+    ];
+
+    if (pathname === '/api/billing/public-plans') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, plans: E2E_PLANS }),
+      });
+    }
+
     if (pathname === '/api/billing/plans') {
       const org = activeEmail ? ROLE_FIXTURES[activeEmail]?.organization : ROLE_FIXTURES['newowner@test.com'].organization;
+      const planMeta = E2E_PLANS.find((p) => p.id === (org?.plan || 'free')) || E2E_PLANS[0];
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           success: true,
           razorpayEnabled: false,
-          plans: [
-            { id: 'starter', name: 'Starter', tagline: 'Lean teams', monthlyPriceInr: 1999, annualPriceInr: 19190, badge: 'Essential', features: ['Up to 5 team members'] },
-            { id: 'growth', name: 'Growth', tagline: 'Scaling agencies', monthlyPriceInr: 4999, annualPriceInr: 47990, badge: 'Most Popular', features: ['Full Finance & SMM'] },
-            { id: 'pro', name: 'Enterprise Pro', tagline: 'Unlimited', monthlyPriceInr: 9999, annualPriceInr: 95990, badge: 'All Features', features: ['Automations & Multi-Branch'] },
-          ],
+          plans: E2E_PLANS,
           organization: org,
+          usage: {
+            clientCount: 1,
+            userCount: 1,
+            storageUsedBytes: 12 * 1024 * 1024,
+            storageUsedMb: 12,
+            storageLimitMb: org?.storageLimitMb || planMeta.storageLimitMb,
+            maxClients: org?.maxClients || planMeta.maxClients,
+            maxUsers: org?.maxUsers || planMeta.maxUsers,
+          },
         }),
       });
     }
 
     if (pathname === '/api/billing/razorpay/order' && req.method() === 'POST') {
       const body = JSON.parse(req.postData() || '{}');
+      const selectedPlan = E2E_PLANS.find((p) => p.id === body.planId) || E2E_PLANS[1];
+      const amountInr = body.billingCycle === 'annual' ? selectedPlan.annualPriceInr : selectedPlan.monthlyPriceInr;
+      if (amountInr <= 0) {
+        if (activeEmail && ROLE_FIXTURES[activeEmail]?.organization) {
+          ROLE_FIXTURES[activeEmail].organization = {
+            ...ROLE_FIXTURES[activeEmail].organization,
+            plan: 'free',
+            billingCycle: 'monthly',
+            planStatus: 'active',
+            billingSetupRequired: false,
+            storageLimitMb: 100,
+            maxUsers: 2,
+            maxClients: 3,
+          };
+        }
+        const org = activeEmail ? ROLE_FIXTURES[activeEmail]?.organization : null;
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            mode: 'free',
+            message: 'Free Plan (100 MB Storage) activated!',
+            organization: org,
+            nextRoute: org?.companySetupRequired ? '/settings?section=company' : '/',
+          }),
+        });
+      }
+
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           success: true,
-          mode: 'sandbox',
-          orderId: 'order_rwm_mock01',
-          sandboxToken: 'mock_sandbox_token',
-          amount: body.planId === 'growth' ? 499900 : 199900,
+          mode: 'razorpay',
+          keyId: 'rzp_live_e2e_test',
+          orderId: `order_rwm_${selectedPlan.id}_01`,
+          amount: amountInr * 100,
           currency: 'INR',
-          planId: body.planId || 'growth',
+          planId: selectedPlan.id,
         }),
       });
     }
 
     if (pathname === '/api/billing/razorpay/verify' && req.method() === 'POST') {
       const body = JSON.parse(req.postData() || '{}');
+      const selectedPlan = E2E_PLANS.find((p) => p.id === body.planId) || E2E_PLANS[2];
       if (activeEmail && ROLE_FIXTURES[activeEmail]?.organization) {
         ROLE_FIXTURES[activeEmail].organization = {
           ...ROLE_FIXTURES[activeEmail].organization,
-          plan: body.planId || 'growth',
+          plan: selectedPlan.id,
           billingCycle: body.billingCycle || 'monthly',
           planStatus: 'active',
           billingSetupRequired: false,
+          storageLimitMb: selectedPlan.storageLimitMb,
+          maxUsers: selectedPlan.maxUsers,
+          maxClients: selectedPlan.maxClients,
         };
       }
       const org = activeEmail ? ROLE_FIXTURES[activeEmail]?.organization : null;
@@ -347,7 +449,7 @@ async function mockAppBackend(page) {
         contentType: 'application/json',
         body: JSON.stringify({
           success: true,
-          message: 'Growth plan activated successfully via Razorpay!',
+          message: `${selectedPlan.name} plan activated successfully via Razorpay!`,
           organization: org,
           nextRoute: org?.companySetupRequired ? '/settings?section=company' : '/',
         }),
@@ -652,10 +754,39 @@ test.describe('All Role Logins & Workspace Isolation Verification', () => {
     await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening), Super Admin/i })).toBeVisible();
   });
 
-  test('Public signup hides Free Trial & Role dropdown, enforces Razorpay plan selection before Settings Company details', async ({ page }) => {
+  test('Public pricing shows Free 100MB & Starter ₹10 (5GB); signup opens Razorpay directly, asks Settings details after & upgrades mid-cycle', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.Razorpay = function MockRazorpay(opts) {
+        this.on = () => {};
+        this.open = () => {
+          window.__rzpOpenedDirectly = { key: opts.key, orderId: opts.order_id, amount: opts.amount };
+          setTimeout(() => {
+            opts.handler({
+              razorpay_order_id: opts.order_id,
+              razorpay_payment_id: `pay_live_${opts.order_id}`,
+              razorpay_signature: 'sig_live_e2e_001',
+            });
+          }, 40);
+        };
+      };
+    });
     await mockAppBackend(page);
 
-    // 1. Public web & login hide free-trial company links & Role in Organization dropdown
+    // 1. Public /pricing displays all 4 monthly storage plans (₹0 Free 100MB -> ₹10 Starter 5GB -> 25GB -> 100GB)
+    await page.goto('/pricing');
+    const cookieAcceptBtn = page.getByRole('button', { name: 'Accept All' });
+    if (await cookieAcceptBtn.isVisible().catch(() => false)) {
+      await cookieAcceptBtn.click();
+    }
+    await expect(page.getByText('Simple Storage Plans That Scale With Your Clients')).toBeVisible();
+    await expect(page.getByTestId('pricing-card-free')).toContainText('₹0');
+    await expect(page.getByTestId('pricing-card-free')).toContainText('100 MB');
+    await expect(page.getByTestId('pricing-card-free')).toContainText('Up to 3');
+    await expect(page.getByTestId('pricing-card-starter')).toContainText('₹10');
+    await expect(page.getByTestId('pricing-card-starter')).toContainText('5 GB');
+    await expect(page.getByTestId('pricing-card-growth')).toContainText('25 GB');
+    await expect(page.getByTestId('pricing-card-pro')).toContainText('100 GB');
+
     await page.goto('/');
     await expect(page.locator('a[href="/register-company"]')).toHaveCount(0);
 
@@ -683,22 +814,39 @@ test.describe('All Role Logins & Workspace Isolation Verification', () => {
     await page.check('#signin-terms');
     await page.locator('form.signin button[type="submit"]').click();
     await expect(page).toHaveURL(/\/select-plan$/);
-    await expect(page.getByText(/Select a Plan to Activate Your Account/i)).toBeVisible();
+    await expect(page.getByText(/Pick a Storage Plan to Activate Your Account/i)).toBeVisible();
 
     // Direct navigation to /tasks must redirect back to /select-plan until paid
     await page.goto('/tasks');
     await expect(page).toHaveURL(/\/select-plan$/);
 
-    // 4. Select Growth Plan & complete Razorpay checkout -> redirects to /settings?section=company
-    await page.getByRole('button', { name: /Pay with Razorpay/i }).nth(1).click();
-    await expect(page.getByRole('dialog', { name: /Razorpay Checkout Confirmation/i })).toBeVisible();
-    await page.getByRole('button', { name: /Confirm Payment & Continue/i }).click();
-    await expect(page).toHaveURL(/\/settings\?section=company/);
+    // 4. Click Starter ₹10 (5 GB) plan -> opens Razorpay directly (amount 1000 paise) -> after payment redirects to /settings?section=company
+    await page.getByTestId('pricing-card-starter').getByRole('button').click();
+    await expect(page).toHaveURL(/\/settings\?section=company/, { timeout: 10000 });
     await expect(page.getByText(/Step 2 of 2/i)).toBeVisible();
+    await expect(page.getByTestId('live-workspace-url')).toContainText('/login/nikhil-newowner');
 
-    // 5. Fill Company Details inside Settings & Launch Workspace -> unlocks dashboard
+    // 5. Fill full registration details (Company Name, Website, City, Timings, Attendance GPS Latitude/Longitude) & Launch Workspace
+    await expect(page.getByTestId('settings-static-sidebar')).toBeVisible();
+    await expect(page.getByTestId('settings-inline-scroll-view')).toBeVisible();
     await page.getByPlaceholder('RISE WITH MEDIA').fill('Nikhil Creative Studio');
+    await page.getByPlaceholder('https://youragency.com').fill('https://nikhilcreative.in');
+    await page.getByPlaceholder('e.g. Bengaluru / Hosur').fill('Bengaluru');
+    await page.getByPlaceholder('e.g. 12.7409').fill('12.9716');
+    await page.getByPlaceholder('e.g. 77.8253').fill('77.5946');
     await page.getByRole('button', { name: /Save Company Details & Launch Workspace/i }).click();
     await expect(page).toHaveURL(/\/$/);
+
+    // 6. Dashboard shows chosen plan (Starter 5 GB), clients (1 / 15), live URL & Upgrade Plan button
+    await expect(page.getByText(/Active Workspace Plan/i)).toBeVisible();
+    await expect(page.getByText(/12 MB \/ 5 GB/i)).toBeVisible();
+    await expect(page.getByText(/Clients: 1 \/ 15/i)).toBeVisible();
+
+    // 7. Upgrade plan mid-cycle to Growth (25 GB) via direct Razorpay Checkout -> returns to Dashboard with 25 GB!
+    await page.getByRole('link', { name: /Upgrade Plan/i }).click();
+    await expect(page).toHaveURL(/\/select-plan$/);
+    await page.getByRole('button', { name: /Upgrade to Growth/i }).click();
+    await expect(page).toHaveURL(/\/$/, { timeout: 10000 });
+    await expect(page.getByText(/12 MB \/ 25 GB/i)).toBeVisible();
   });
 });

@@ -18,7 +18,7 @@ const LEAD_SOURCES = ['website', 'referral', 'social_media', 'cold_call', 'email
 
 export default function CallHistoryDashboard() {
   const { user } = useSelector((state) => state.auth);
-  const canManage = ['superAdmin', 'admin', 'manager', 'employee'].includes(user?.role);
+  const canManage = ['superAdmin', 'admin', 'organizationOwner', 'manager', 'employee'].includes(user?.role);
 
   // Queries
   const { data: clients = [] } = useClients();

@@ -658,7 +658,7 @@ const Projects = () => {
     }
   };
 
-  const canCreate = ['superAdmin', 'admin', 'manager'].includes(user?.role);
+  const canCreate = ['superAdmin', 'admin', 'organizationOwner', 'manager'].includes(user?.role);
 
   // Client dropdown options
   const clientOptions = useMemo(() => {

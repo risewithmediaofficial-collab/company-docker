@@ -71,6 +71,9 @@ export const getSalaries = async (req, res) => {
     const { month, year, status, department, search, employeeId, page = 1, limit = 100 } = req.query;
     const filter = {};
 
+    // Tenant isolation
+    if (req.user.organizationId) filter.organizationId = req.user.organizationId;
+
     if (month && month !== 'all') filter.month = month;
     if (year && year !== 'all') filter.year = Number(year);
     if (status && status !== 'all') filter.status = status;
@@ -125,6 +128,7 @@ export const getSalarySummary = async (req, res) => {
   try {
     const { month, year } = req.query;
     const filter = {};
+    if (req.user.organizationId) filter.organizationId = req.user.organizationId;
     if (month && month !== 'all') filter.month = month;
     if (year && year !== 'all') filter.year = Number(year);
 
@@ -253,6 +257,7 @@ export const createSalary = async (req, res) => {
       transactionReference: transactionReference || '',
       notes: notes || '',
       processedBy: req.user?._id,
+      organizationId: req.user?.organizationId,
     });
 
     await salary.save();

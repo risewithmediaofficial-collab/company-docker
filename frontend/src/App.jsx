@@ -16,6 +16,7 @@ const Landing = lazy(() => import('./pages/Landing'));
 const AboutPage = lazy(() => import('./pages/public/AboutPage'));
 const CapabilitiesPage = lazy(() => import('./pages/public/CapabilitiesPage'));
 const MetricsPage = lazy(() => import('./pages/public/MetricsPage'));
+const PricingPage = lazy(() => import('./pages/public/PricingPage'));
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const SelectPlan = lazy(() => import('./pages/auth/SelectPlan'));
@@ -189,6 +190,7 @@ const App = () => {
           <Route path="/what-we-do" element={<CapabilitiesPage />} />
           <Route path="/capabilities" element={<CapabilitiesPage />} />
           <Route path="/features" element={<CapabilitiesPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
           <Route path="/our-impact" element={<MetricsPage />} />
           <Route path="/metrics" element={<MetricsPage />} />
           <Route path="/overview" element={<MetricsPage />} />

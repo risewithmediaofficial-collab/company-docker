@@ -1,22 +1,63 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import Organization from '../models/organization.model.js';
+import Client from '../models/client.model.js';
+import User from '../models/user.model.js';
+import Asset from '../models/asset.model.js';
 
 export const SAAS_PLANS = [
   {
+    id: 'free',
+    name: 'Free',
+    tagline: 'Start your workspace cleanly with core CRM & client tracking',
+    monthlyPriceInr: 0,
+    annualPriceInr: 0,
+    storageLimitMb: 100,
+    storageLabel: '100 MB Storage',
+    maxUsers: 2,
+    maxClients: 3,
+    badge: 'Free Forever',
+    features: [
+      '100 MB Cloud File Storage',
+      'Up to 3 Active Clients',
+      'Up to 2 Team Members',
+      'CRM Leads, Projects, Tasks & Client Portal',
+    ],
+    enabledModules: {
+      crm: true,
+      clients: true,
+      projects: true,
+      tasks: true,
+      portal: true,
+      sop: false,
+      finance: false,
+      hr: false,
+      attendance: false,
+      smm: false,
+      assets: true,
+      proposals: false,
+      reports: false,
+      automations: false,
+      influencers: false,
+      ai: false,
+    },
+  },
+  {
     id: 'starter',
     name: 'Starter',
-    tagline: 'For lean creative teams launching their agency workspace',
-    monthlyPriceInr: 1999,
-    annualPriceInr: 19190,
-    maxUsers: 5,
+    tagline: 'For growing creative studios — 5 GB storage at just ₹10/mo',
+    monthlyPriceInr: 10,
+    annualPriceInr: 96,
+    storageLimitMb: 5120,
+    storageLabel: '5 GB Storage',
+    maxUsers: 8,
     maxClients: 15,
-    badge: 'Essential',
+    badge: '₹10 / mo',
     features: [
-      'Up to 5 team members & 15 active clients',
-      'CRM Leads, Projects & Task Pipeline',
-      'Client Portal & 1-Tap Approvals',
-      'SOP Library & Basic Reports',
+      '5 GB Cloud File Storage',
+      'Up to 15 Active Clients',
+      'Up to 8 Team Members',
+      'Client Portal, Attendance, SOP & Basic Reports',
     ],
     enabledModules: {
       crm: true,
@@ -30,7 +71,7 @@ export const SAAS_PLANS = [
       attendance: true,
       smm: false,
       assets: true,
-      proposals: false,
+      proposals: true,
       reports: true,
       automations: false,
       influencers: false,
@@ -40,17 +81,19 @@ export const SAAS_PLANS = [
   {
     id: 'growth',
     name: 'Growth',
-    tagline: 'Full operations for scaling digital marketing agencies',
-    monthlyPriceInr: 4999,
-    annualPriceInr: 47990,
+    tagline: 'Complete agency OS with Finance, SMM Tracker & HR',
+    monthlyPriceInr: 2999,
+    annualPriceInr: 28790,
+    storageLimitMb: 25600,
+    storageLabel: '25 GB Storage',
     maxUsers: 25,
-    maxClients: 75,
+    maxClients: 50,
     badge: 'Most Popular',
     features: [
-      'Up to 25 team members & 75 active clients',
-      'Full Finance Hub, GST Invoices & Razorpay Receipts',
-      'SMM Monthly Tracker & Content Calendar',
-      'HR, Attendance, Vendors & Proposals',
+      '25 GB Cloud File Storage',
+      'Up to 50 Active Clients',
+      'Up to 25 Team Members',
+      'Finance Hub, GST Invoices, SMM Tracker, HR & Vendors',
     ],
     enabledModules: {
       crm: true,
@@ -74,17 +117,19 @@ export const SAAS_PLANS = [
   {
     id: 'pro',
     name: 'Enterprise Pro',
-    tagline: 'Unlimited power for multi-branch agencies & partners',
-    monthlyPriceInr: 9999,
-    annualPriceInr: 95990,
+    tagline: 'High-storage multi-branch operations for scaling agencies',
+    monthlyPriceInr: 6999,
+    annualPriceInr: 67190,
+    storageLimitMb: 102400,
+    storageLabel: '100 GB Storage',
     maxUsers: 100,
     maxClients: 500,
-    badge: 'All Features',
+    badge: 'Max Storage',
     features: [
-      'Up to 100 team members & 500 clients',
-      'Everything in Growth + Automations & Multi-Branch',
-      'Client Password Vault & Dedicated SLA',
-      'Priority WhatsApp & Account Support',
+      '100 GB Cloud File Storage',
+      'Up to 500 Active Clients',
+      'Up to 100 Team Members',
+      'All Modules, Multi-Branch, Automations & Priority Support',
     ],
     enabledModules: {
       crm: true,
@@ -107,6 +152,9 @@ export const SAAS_PLANS = [
   },
 ];
 
+const ORG_BILLING_PROJECTION =
+  'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients storageLimitMb storageUsedBytes trialEndsAt settings paidAt';
+
 export const getPlanById = (planId) =>
   SAAS_PLANS.find((p) => p.id === String(planId || '').toLowerCase().trim()) || null;
 
@@ -115,10 +163,21 @@ export const computePlanAmountPaise = (plan, billingCycle = 'monthly') => {
   return Math.round(priceInr * 100);
 };
 
-const getRazorpayKeys = () => ({
-  keyId: String(process.env.RAZORPAY_KEY_ID || '').trim(),
-  keySecret: String(process.env.RAZORPAY_KEY_SECRET || '').trim(),
-});
+const isPlaceholderRazorpayValue = (val) => {
+  const s = String(val || '').trim();
+  if (!s) return true;
+  const lower = s.toLowerCase();
+  return lower.includes('your_key_id') || lower.includes('your_razorpay_key_secret') || lower === 'changeme';
+};
+
+const getRazorpayKeys = () => {
+  const rawId = String(process.env.RAZORPAY_KEY_ID || '').trim();
+  const rawSecret = String(process.env.RAZORPAY_KEY_SECRET || '').trim();
+  if (isPlaceholderRazorpayValue(rawId) || isPlaceholderRazorpayValue(rawSecret)) {
+    return { keyId: '', keySecret: '' };
+  }
+  return { keyId: rawId, keySecret: rawSecret };
+};
 
 const getSandboxSecret = () =>
   process.env.JWT_SECRET || 'dev-only-change-me-access-secret';
@@ -134,17 +193,65 @@ export const verifyRazorpaySignature = ({ orderId, paymentId, signature, keySecr
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 };
 
-// @desc    Get available SaaS plans & Razorpay status
+const computeOrganizationUsage = async (orgId, orgDoc) => {
+  if (!orgId) {
+    return {
+      clientCount: 0,
+      userCount: 0,
+      storageUsedBytes: 0,
+      storageUsedMb: 0,
+      storageLimitMb: orgDoc?.storageLimitMb || 100,
+      maxClients: orgDoc?.maxClients || 3,
+      maxUsers: orgDoc?.maxUsers || 2,
+    };
+  }
+
+  const [clientCount, userCount, assetAgg] = await Promise.all([
+    Client.countDocuments({ organizationId: orgId }),
+    User.countDocuments({ organizationId: orgId }),
+    Asset.aggregate([
+      { $match: { organizationId: orgId } },
+      { $group: { _id: null, totalBytes: { $sum: '$size' } } },
+    ]).catch(() => []),
+  ]);
+
+  const assetBytes = assetAgg?.[0]?.totalBytes || 0;
+  const storageUsedBytes = Math.max(assetBytes, orgDoc?.storageUsedBytes || 0);
+  const storageUsedMb = Number((storageUsedBytes / (1024 * 1024)).toFixed(2));
+  const planMeta = getPlanById(orgDoc?.plan);
+
+  return {
+    clientCount,
+    userCount,
+    storageUsedBytes,
+    storageUsedMb,
+    storageLimitMb: orgDoc?.storageLimitMb || planMeta?.storageLimitMb || 100,
+    maxClients: orgDoc?.maxClients || planMeta?.maxClients || 3,
+    maxUsers: orgDoc?.maxUsers || planMeta?.maxUsers || 2,
+  };
+};
+
+// @desc    Public SaaS plans list for website Pricing page
+// @route   GET /api/billing/public-plans
+// @access  Public
+export const getPublicBillingPlans = (_req, res) => {
+  res.json({
+    success: true,
+    plans: SAAS_PLANS,
+  });
+};
+
+// @desc    Get available SaaS plans, current plan & storage usage
 // @route   GET /api/billing/plans
 // @access  Private
 export const getBillingPlans = async (req, res) => {
   try {
     const { keyId, keySecret } = getRazorpayKeys();
     let organization = null;
+    let usage = null;
     if (req.user?.organizationId) {
-      organization = await Organization.findById(req.user.organizationId).select(
-        'name slug plan billingCycle planStatus billingSetupRequired companySetupRequired maxUsers maxClients paidAt'
-      );
+      organization = await Organization.findById(req.user.organizationId).select(ORG_BILLING_PROJECTION);
+      usage = await computeOrganizationUsage(req.user.organizationId, organization);
     }
 
     res.json({
@@ -153,13 +260,14 @@ export const getBillingPlans = async (req, res) => {
       razorpayEnabled: Boolean(keyId && keySecret),
       razorpayKeyId: keyId || null,
       organization,
+      usage,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// @desc    Create a Razorpay order for workspace plan activation
+// @desc    Activate Free plan or create a Razorpay order for paid plan / mid-cycle upgrade
 // @route   POST /api/billing/razorpay/order
 // @access  Private (organizationOwner, admin, superAdmin)
 export const createRazorpayOrder = async (req, res) => {
@@ -172,8 +280,46 @@ export const createRazorpayOrder = async (req, res) => {
 
     const cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
     const amount = computePlanAmountPaise(plan, cycle);
-    const receipt = `rwm_${String(req.user?.organizationId || req.user?._id).slice(-8)}_${Date.now().toString(36)}`;
 
+    // Zero-amount plans (if any promotional ₹0 tier) activate directly without payment gateway
+    if (amount <= 0) {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ success: false, message: 'No workspace found for this account' });
+      }
+      const organization = await Organization.findByIdAndUpdate(
+        req.user.organizationId,
+        {
+          $set: {
+            plan: 'free',
+            billingCycle: 'monthly',
+            planStatus: 'active',
+            billingSetupRequired: false,
+            maxUsers: plan.maxUsers,
+            maxClients: plan.maxClients,
+            storageLimitMb: plan.storageLimitMb,
+            enabledModules: plan.enabledModules,
+            paidAt: new Date(),
+            isActive: true,
+          },
+        },
+        { new: true }
+      ).select(ORG_BILLING_PROJECTION);
+
+      return res.json({
+        success: true,
+        mode: 'free',
+        planId: plan.id,
+        planName: plan.name,
+        billingCycle: 'monthly',
+        amount: 0,
+        currency: 'INR',
+        message: 'Free Plan (100 MB Storage • Up to 3 Clients) activated!',
+        organization,
+        nextRoute: organization?.companySetupRequired ? '/settings?section=company' : '/',
+      });
+    }
+
+    const receipt = `rwm_${String(req.user?.organizationId || req.user?._id).slice(-8)}_${Date.now().toString(36)}`;
     const { keyId, keySecret } = getRazorpayKeys();
 
     if (keyId && keySecret) {
@@ -250,7 +396,7 @@ export const createRazorpayOrder = async (req, res) => {
   }
 };
 
-// @desc    Verify Razorpay payment & activate workspace subscription
+// @desc    Verify Razorpay payment & activate/upgrade workspace subscription
 // @route   POST /api/billing/razorpay/verify
 // @access  Private (organizationOwner, admin, superAdmin)
 export const verifyRazorpayPayment = async (req, res) => {
@@ -319,6 +465,7 @@ export const verifyRazorpayPayment = async (req, res) => {
           billingSetupRequired: false,
           maxUsers: plan.maxUsers,
           maxClients: plan.maxClients,
+          storageLimitMb: plan.storageLimitMb,
           enabledModules: plan.enabledModules,
           lastOrderId: verifiedOrderId,
           lastPaymentId: verifiedPaymentId,
@@ -327,13 +474,11 @@ export const verifyRazorpayPayment = async (req, res) => {
         },
       },
       { new: true }
-    ).select(
-      'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients trialEndsAt settings paidAt'
-    );
+    ).select(ORG_BILLING_PROJECTION);
 
     return res.json({
       success: true,
-      message: `${plan.name} plan activated successfully via Razorpay!`,
+      message: `${plan.name} plan (${plan.storageLabel}) activated successfully!`,
       organization,
       nextRoute: organization?.companySetupRequired ? '/settings?section=company' : '/',
     });

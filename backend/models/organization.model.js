@@ -22,8 +22,8 @@ const organizationSchema = new mongoose.Schema(
     // ── SaaS Plan & Status ───────────────────────────────────────────────────
     plan: {
       type: String,
-      enum: ['trial', 'starter', 'growth', 'pro'],
-      default: 'trial',
+      enum: ['trial', 'free', 'starter', 'growth', 'pro'],
+      default: 'free',
     },
     billingCycle: {
       type: String,
@@ -74,8 +74,10 @@ const organizationSchema = new mongoose.Schema(
     },
 
     // ── Usage Limits ─────────────────────────────────────────────────────────
-    maxUsers:   { type: Number, default: 3  },
-    maxClients: { type: Number, default: 5  },
+    maxUsers:   { type: Number, default: 2  },
+    maxClients: { type: Number, default: 3  },
+    storageLimitMb: { type: Number, default: 100 },
+    storageUsedBytes: { type: Number, default: 0 },
 
     // ── Settings ─────────────────────────────────────────────────────────────
     settings: {

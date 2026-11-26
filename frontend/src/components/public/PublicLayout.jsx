@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { label: 'Home', path: '/' },
   { label: 'Our Story', path: '/our-story' },
   { label: 'What We Do', path: '/what-we-do' },
+  { label: 'Pricing', path: '/pricing' },
   { label: 'Our Impact', path: '/our-impact' },
 ];
 
@@ -40,6 +41,7 @@ const PublicLayout = ({
     if (path === '/') return location.pathname === '/' || location.pathname === '/home';
     if (path === '/our-story') return location.pathname === '/our-story' || location.pathname === '/about';
     if (path === '/what-we-do') return location.pathname === '/what-we-do' || location.pathname === '/capabilities' || location.pathname === '/features';
+    if (path === '/pricing') return location.pathname === '/pricing';
     if (path === '/our-impact') return location.pathname === '/our-impact' || location.pathname === '/metrics' || location.pathname === '/overview';
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
@@ -265,6 +267,7 @@ const PublicLayout = ({
                 <li><Link to="/" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Home</Link></li>
                 <li><Link to="/our-story" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Our Story</Link></li>
                 <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#12B7D4] transition-colors">What We Do</Link></li>
+                <li><Link to="/pricing" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Pricing</Link></li>
                 <li><Link to="/our-impact" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Our Impact</Link></li>
                 <li><Link to="/register" className="text-slate-400 hover:text-[#12B7D4] transition-colors">Register</Link></li>
               </ul>

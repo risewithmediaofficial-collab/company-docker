@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const clientFollowupSchema = new mongoose.Schema(
   {
+    organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', index: true },
     client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: true },
     project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
     type: {

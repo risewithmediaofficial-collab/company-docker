@@ -105,7 +105,7 @@ const emptyForm = {
 const SOPDashboard = () => {
   const { user } = useSelector((state) => state.auth);
   const isAdmin = user?.role === 'superAdmin' || user?.role === 'admin';
-  const canAdd = ['superAdmin', 'admin', 'manager', 'employee'].includes(user?.role);
+  const canAdd = ['superAdmin', 'admin', 'organizationOwner', 'manager', 'employee'].includes(user?.role);
 
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);

@@ -31,6 +31,9 @@ export const getClientFollowups = async (req, res) => {
     const { search, client, status, type, due, page = 1, limit = 100 } = req.query;
     const filter = {};
 
+    // Tenant isolation — only show followups that belong to this org
+    if (req.user.organizationId) filter.organizationId = req.user.organizationId;
+
     if (client) filter.client = client;
     if (status) filter.status = status;
     if (type) filter.type = type;
@@ -86,6 +89,7 @@ export const createClientFollowup = async (req, res) => {
     const followup = await ClientFollowup.create({
       ...payload,
       createdBy: req.user._id,
+      organizationId: req.user.organizationId,
     });
 
     await Client.findByIdAndUpdate(payload.client, { $set: { lastActivityDate: new Date() } });

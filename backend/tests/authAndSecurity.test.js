@@ -111,9 +111,10 @@ test('Workspace Scope: withWorkspaceScope handles header and role filtering', ()
   const adminWithHeader = { user: { role: 'superAdmin' }, headers: { 'x-workspace-id': 'brand_123' } };
   assert.deepEqual(withWorkspaceScope(adminWithHeader, {}), { brandId: 'brand_123' });
 
+  // Strict tenant isolation: regular users see ONLY their exact org (no null fallback for unscoped docs)
   const clientReq = { user: { role: 'clientAdmin', organizationId: 'org_1', brandId: 'brand_abc' }, headers: {} };
   const scoped = withWorkspaceScope(clientReq, {});
-  assert.deepEqual(scoped.organizationId, { $in: ['org_1', null] });
+  assert.deepEqual(scoped.organizationId, 'org_1');
   assert.equal(scoped.brandId, 'brand_abc');
 });
 
@@ -342,18 +343,39 @@ test('CAPTCHA & Terms Enforcement: Generates single-use robot check challenges a
   assert.equal(loginJson.code, 'TERMS_REQUIRED');
 });
 
-test('SaaS Billing & Razorpay: Authoritative plan amounts, HMAC signature verification, and org onboarding flags', async () => {
+test('SaaS Billing & Razorpay: Authoritative 4 storage plan amounts, HMAC signature verification, and org onboarding flags', async () => {
   const [{ SAAS_PLANS, getPlanById, computePlanAmountPaise, verifyRazorpaySignature }, { default: crypto }, { default: Organization }] = await Promise.all([
     import('../controllers/billing.controller.js'),
     import('crypto'),
     import('../models/organization.model.js'),
   ]);
 
-  assert.equal(SAAS_PLANS.length, 3);
+  assert.equal(SAAS_PLANS.length, 4);
+  const free = getPlanById('free');
+  assert.ok(free);
+  assert.equal(free.storageLimitMb, 100);
+  assert.equal(free.maxClients, 3);
+  assert.equal(computePlanAmountPaise(free, 'monthly'), 0);
+
+  const starter = getPlanById('starter');
+  assert.ok(starter);
+  assert.equal(starter.storageLimitMb, 5120);
+  assert.equal(starter.maxClients, 15);
+  assert.equal(computePlanAmountPaise(starter, 'monthly'), 1000);
+  assert.equal(computePlanAmountPaise(starter, 'annual'), 9600);
+
   const growth = getPlanById('growth');
   assert.ok(growth);
-  assert.equal(computePlanAmountPaise(growth, 'monthly'), 499900);
-  assert.equal(computePlanAmountPaise(growth, 'annual'), 4799000);
+  assert.equal(growth.storageLimitMb, 25600);
+  assert.equal(growth.maxClients, 50);
+  assert.equal(computePlanAmountPaise(growth, 'monthly'), 299900);
+  assert.equal(computePlanAmountPaise(growth, 'annual'), 2879000);
+
+  const pro = getPlanById('pro');
+  assert.ok(pro);
+  assert.equal(pro.storageLimitMb, 102400);
+  assert.equal(pro.maxClients, 500);
+  assert.equal(computePlanAmountPaise(pro, 'monthly'), 699900);
   assert.equal(getPlanById('unknown'), null);
 
   const secret = 'rzp_test_secret_123';

@@ -38,10 +38,12 @@ import {
   Shield,
   Building2,
 } from '@/components/ui/muiIcons';
+import { Lock } from 'lucide-react';
 import { setSidebarOpen } from '../../store/slices/uiSlice';
 import { useSidebarBadges } from '../../hooks/useSidebarBadges';
 import { AppTooltip } from '../ui/tooltip';
 import { preloadRoute } from '../../utils/routePreload';
+import { isModuleLocked } from '../../utils/planModules';
 
 const badgePaths = {
   'Portal Manager': 'accessRequests',
@@ -499,6 +501,7 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
                     const badgeKey = badgePaths[item.name];
                     const count = badgeKey ? badgeCounts?.[badgeKey] || 0 : 0;
                     const isPinned = pinnedPaths.includes(item.path);
+                    const locked = isModuleLocked(item.path, organization, user);
 
                     return (
                       <div
@@ -506,6 +509,8 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
                         className={`group relative flex items-center rounded-xl text-xs font-semibold transition-all ${
                           isActive
                             ? 'bg-primary text-primary-foreground font-bold shadow-[0_6px_16px_-6px_hsl(var(--brand)/0.55)]'
+                            : locked
+                            ? 'text-muted-foreground/70 hover:bg-amber-500/10 hover:text-foreground'
                             : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
                         }`}
                       >
@@ -529,12 +534,25 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
                           </div>
 
                           <span className="ml-2.5 truncate font-sans">{item.name}</span>
+                          {locked && (
+                            <span
+                              data-testid={`sidebar-lock-${item.path}`}
+                              title="Locked on current plan — click to upgrade"
+                              className={`ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold shrink-0 ${
+                                isActive
+                                  ? 'bg-primary-foreground/20 text-primary-foreground'
+                                  : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                              }`}
+                            >
+                              <Lock size={10} />
+                            </span>
+                          )}
                           {item.openInNewTab && (
                             <ArrowUpRight size={11} className="ml-1 text-muted-foreground/60" />
                           )}
 
                           {/* Badge count if pending */}
-                          {count > 0 && (
+                          {!locked && count > 0 && (
                             <span className={`ml-2 px-1.5 py-0.2 rounded-full text-[10px] font-bold tabular-nums ${
                               isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-brand/15 text-primary'
                             }`}>

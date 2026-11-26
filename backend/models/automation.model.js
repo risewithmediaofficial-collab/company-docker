@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const automationSchema = new mongoose.Schema(
   {
+    organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', index: true },
     name: { type: String, required: true, trim: true },
     description: { type: String, default: '' },
     trigger: { type: String, required: true, trim: true, index: true },

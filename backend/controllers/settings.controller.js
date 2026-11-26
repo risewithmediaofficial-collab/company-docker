@@ -1,6 +1,8 @@
 import Settings from '../models/settings.model.js';
 import User from '../models/user.model.js';
 import Organization from '../models/organization.model.js';
+import Branch from '../models/branch.model.js';
+import OfficeLocation from '../models/officeLocation.model.js';
 
 const editableProfileFields = ['name', 'phone', 'department', 'position', 'avatar'];
 const safeUserProjection = '-password -refreshToken -resetPasswordToken -resetPasswordExpire';
@@ -68,6 +70,97 @@ export const updateCompanySettings = async (req, res) => {
         }
         await org.save();
         organization = org;
+
+        // Auto-sync Headquarters Branch & Attendance Geofencing OfficeLocation
+        const rawLat = updates.latitude !== undefined && updates.latitude !== '' ? Number(updates.latitude) : null;
+        const rawLng = updates.longitude !== undefined && updates.longitude !== '' ? Number(updates.longitude) : null;
+        const hasValidCoords = rawLat !== null && rawLng !== null && Number.isFinite(rawLat) && Number.isFinite(rawLng);
+        const radiusKmVal =
+          updates.radiusKm !== undefined && Number.isFinite(Number(updates.radiusKm)) && Number(updates.radiusKm) > 0
+            ? Number(updates.radiusKm)
+            : 0.5;
+        const hqCity = String(updates.city || '').trim() || 'Head Office';
+        const hqAddress = String(updates.address || org.address || '').trim();
+        const hqCountry = String(updates.country || 'India').trim() || 'India';
+        const hqOperatingHours = String(updates.operatingHours || '9:30 AM - 6:30 PM').trim();
+        const hqWorkingDays = String(updates.workingDays || 'Monday - Saturday').trim();
+
+        try {
+          let hqBranch = await Branch.findOne({ organization: org._id, isHeadquarters: true });
+          if (!hqBranch && (hasValidCoords || updates.city || updates.operatingHours || updates.workingDays)) {
+            hqBranch = await Branch.findOne({ organization: org._id });
+          }
+
+          if (hqBranch) {
+            if (updates.name) hqBranch.name = `${org.name} (HQ)`;
+            if (hqAddress) hqBranch.address = hqAddress;
+            if (updates.city) hqBranch.city = hqCity;
+            if (updates.state !== undefined) hqBranch.state = String(updates.state || '').trim();
+            if (hqCountry) hqBranch.country = hqCountry;
+            if (updates.postalCode !== undefined) hqBranch.postalCode = String(updates.postalCode || '').trim();
+            if (updates.phone !== undefined) hqBranch.phone = String(updates.phone || '').trim();
+            if (updates.email !== undefined) hqBranch.email = String(updates.email || '').trim().toLowerCase();
+            hqBranch.operatingHours = hqOperatingHours;
+            hqBranch.workingDays = hqWorkingDays;
+            if (hasValidCoords) {
+              hqBranch.latitude = rawLat;
+              hqBranch.longitude = rawLng;
+              hqBranch.radiusKm = radiusKmVal;
+            }
+            await hqBranch.save();
+          } else if (hasValidCoords || updates.city || hqAddress || updates.operatingHours) {
+            await Branch.create({
+              organization: org._id,
+              name: `${org.name || 'Main'} (HQ)`,
+              code: 'HQ',
+              isHeadquarters: true,
+              phone: org.phone || '',
+              email: (org.email || '').toLowerCase(),
+              address: hqAddress,
+              city: hqCity,
+              state: String(updates.state || '').trim(),
+              country: hqCountry,
+              postalCode: String(updates.postalCode || '').trim(),
+              operatingHours: hqOperatingHours,
+              workingDays: hqWorkingDays,
+              latitude: hasValidCoords ? rawLat : null,
+              longitude: hasValidCoords ? rawLng : null,
+              radiusKm: radiusKmVal,
+              isActive: true,
+              createdBy: req.user._id,
+            });
+          }
+
+          if (hasValidCoords) {
+            const locName = `${org.name || 'Main'} (HQ)`;
+            const existingLoc = await OfficeLocation.findOne({ organization: org._id });
+            if (existingLoc) {
+              existingLoc.name = locName;
+              existingLoc.latitude = rawLat;
+              existingLoc.longitude = rawLng;
+              existingLoc.radiusKm = radiusKmVal;
+              existingLoc.address = hqAddress;
+              existingLoc.city = hqCity;
+              existingLoc.country = hqCountry;
+              existingLoc.isActive = true;
+              await existingLoc.save();
+            } else {
+              await OfficeLocation.create({
+                name: locName,
+                latitude: rawLat,
+                longitude: rawLng,
+                radiusKm: radiusKmVal,
+                address: hqAddress,
+                city: hqCity,
+                country: hqCountry,
+                organization: org._id,
+                isActive: true,
+              });
+            }
+          }
+        } catch (syncErr) {
+          console.warn('[Settings HQ/OfficeLocation Sync Warning]:', syncErr.message);
+        }
       }
     }
 
@@ -84,9 +177,14 @@ export const getSettings = async (req, res) => {
     let organization = null;
     if (req.user?.organizationId) {
       organization = await Organization.findById(req.user.organizationId).select(
-        'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients trialEndsAt settings paidAt'
+        'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients storageLimitMb storageUsedBytes trialEndsAt settings paidAt'
       );
       if (organization) {
+        const [hqBranch, officeLoc] = await Promise.all([
+          Branch.findOne({ organization: organization._id, isHeadquarters: true }).lean(),
+          OfficeLocation.findOne({ organization: organization._id }).lean(),
+        ]);
+
         const currentProfile = settings.companyProfile?.toObject
           ? settings.companyProfile.toObject()
           : settings.companyProfile || {};
@@ -98,10 +196,36 @@ export const getSettings = async (req, res) => {
           website: currentProfile.website || organization.website || '',
           email: currentProfile.email || organization.email || user?.email || '',
           phone: currentProfile.phone || organization.phone || '',
-          address: currentProfile.address || organization.address || '',
+          address: currentProfile.address || organization.address || hqBranch?.address || '',
+          city: currentProfile.city || hqBranch?.city || officeLoc?.city || '',
+          state: currentProfile.state || hqBranch?.state || '',
+          country: currentProfile.country || hqBranch?.country || officeLoc?.country || 'India',
+          postalCode: currentProfile.postalCode || hqBranch?.postalCode || '',
           gstNumber: currentProfile.gstNumber || organization.gstNumber || '',
           services: currentProfile.services || organization.services || '',
           logoUrl: currentProfile.logoUrl || organization.logo || '',
+          openingTime: currentProfile.openingTime || '09:30',
+          closingTime: currentProfile.closingTime || '18:30',
+          operatingHours: currentProfile.operatingHours || hqBranch?.operatingHours || '9:30 AM - 6:30 PM',
+          workingDays: currentProfile.workingDays || hqBranch?.workingDays || 'Monday - Saturday',
+          lateGraceMinutes: currentProfile.lateGraceMinutes ?? 15,
+          latitude:
+            currentProfile.latitude !== undefined && currentProfile.latitude !== ''
+              ? String(currentProfile.latitude)
+              : hqBranch?.latitude != null
+              ? String(hqBranch.latitude)
+              : officeLoc?.latitude != null
+              ? String(officeLoc.latitude)
+              : '',
+          longitude:
+            currentProfile.longitude !== undefined && currentProfile.longitude !== ''
+              ? String(currentProfile.longitude)
+              : hqBranch?.longitude != null
+              ? String(hqBranch.longitude)
+              : officeLoc?.longitude != null
+              ? String(officeLoc.longitude)
+              : '',
+          radiusKm: currentProfile.radiusKm ?? hqBranch?.radiusKm ?? officeLoc?.radiusKm ?? 0.5,
         };
       }
     }

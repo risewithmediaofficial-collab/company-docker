@@ -46,7 +46,7 @@ const Proposals = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const { isDateInRange } = useDateFilter();
-  const canManage = ['superAdmin', 'admin', 'manager'].includes(user?.role);
+  const canManage = ['superAdmin', 'admin', 'organizationOwner', 'manager'].includes(user?.role);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);

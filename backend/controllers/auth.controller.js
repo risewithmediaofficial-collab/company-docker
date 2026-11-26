@@ -14,7 +14,7 @@ import { createActivityLog } from '../utils/activity.js';
 import { generateCaptchaChallenge, verifyCaptchaChallenge, isTermsAccepted } from '../utils/captcha.js';
 
 const ORG_AUTH_PROJECTION =
-  'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients trialEndsAt settings paidAt';
+  'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients storageLimitMb storageUsedBytes trialEndsAt settings paidAt';
 
 const createSelfServeWorkspace = async ({ name, email, ownerId }) => {
   const baseName = String(name || email?.split('@')[0] || 'My Agency').trim();
@@ -34,11 +34,14 @@ const createSelfServeWorkspace = async ({ name, email, ownerId }) => {
     slug: cleanSlug,
     ownerId,
     email: email || '',
-    plan: 'trial',
+    plan: 'free',
     billingCycle: 'monthly',
     planStatus: 'pending',
     billingSetupRequired: true,
     companySetupRequired: true,
+    maxUsers: 2,
+    maxClients: 3,
+    storageLimitMb: 100,
     enabledModules: {
       crm: true,
       clients: true,

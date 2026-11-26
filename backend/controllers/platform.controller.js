@@ -37,7 +37,7 @@ export const getPlatformStats = async (req, res) => {
     ]);
 
     // Build plan breakdown map
-    const planBreakdown = { trial: 0, starter: 0, growth: 0, pro: 0 };
+    const planBreakdown = { trial: 0, free: 0, starter: 0, growth: 0, pro: 0 };
     planCounts.forEach(({ _id, count }) => {
       if (_id in planBreakdown) planBreakdown[_id] = count;
     });
@@ -156,13 +156,14 @@ export const approveOrganization = async (req, res) => {
     const { plan = 'trial', maxUsers = 3, maxClients = 5, enabledModules } = req.body;
 
     const planDefaults = {
-      trial:   { maxUsers: 3,  maxClients: 5,  modules: { crm: true, clients: true, projects: true, tasks: true } },
-      starter: { maxUsers: 10, maxClients: 25, modules: { crm: true, clients: true, projects: true, tasks: true, finance: true, hr: true, attendance: true, portal: true, proposals: true, reports: true } },
-      growth:  { maxUsers: 25, maxClients: 100, modules: { crm: true, clients: true, projects: true, tasks: true, finance: true, hr: true, attendance: true, smm: true, portal: true, sop: true, assets: true, proposals: true, reports: true, automations: true, influencers: true } },
-      pro:     { maxUsers: 999, maxClients: 9999, modules: { crm: true, clients: true, projects: true, tasks: true, finance: true, hr: true, attendance: true, smm: true, portal: true, sop: true, assets: true, proposals: true, reports: true, automations: true, influencers: true, ai: true } },
+      trial:   { maxUsers: 3,   maxClients: 5,   storageLimitMb: 100,    modules: { crm: true, clients: true, projects: true, tasks: true } },
+      free:    { maxUsers: 2,   maxClients: 3,   storageLimitMb: 100,    modules: { crm: true, clients: true, projects: true, tasks: true, reports: true } },
+      starter: { maxUsers: 8,   maxClients: 15,  storageLimitMb: 5120,   modules: { crm: true, clients: true, projects: true, tasks: true, finance: true, hr: true, attendance: true, portal: true, proposals: true, reports: true } },
+      growth:  { maxUsers: 25,  maxClients: 50,  storageLimitMb: 25600,  modules: { crm: true, clients: true, projects: true, tasks: true, finance: true, hr: true, attendance: true, smm: true, portal: true, sop: true, assets: true, proposals: true, reports: true, automations: true, influencers: true } },
+      pro:     { maxUsers: 100, maxClients: 500, storageLimitMb: 102400, modules: { crm: true, clients: true, projects: true, tasks: true, finance: true, hr: true, attendance: true, smm: true, portal: true, sop: true, assets: true, proposals: true, reports: true, automations: true, influencers: true, ai: true } },
     };
 
-    const defaults = planDefaults[plan] || planDefaults.trial;
+    const defaults = planDefaults[plan] || planDefaults.free;
     const modules = enabledModules || defaults.modules;
 
     const org = await Organization.findByIdAndUpdate(
@@ -172,6 +173,7 @@ export const approveOrganization = async (req, res) => {
         plan,
         maxUsers: maxUsers || defaults.maxUsers,
         maxClients: maxClients || defaults.maxClients,
+        storageLimitMb: defaults.storageLimitMb,
         enabledModules: { ...defaults.modules, ...modules },
         approvedAt: new Date(),
         approvedBy: req.user._id,

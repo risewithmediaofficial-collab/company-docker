@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, Sparkles, Zap, Layers, Calendar, CreditCard } from 'lucide-react';
 import PublicLayout from '../components/public/PublicLayout';
 import HeroPattern from '../components/public/HeroPattern';
@@ -7,6 +7,7 @@ import ScrollReveal from '../components/public/ScrollReveal';
 import SectionShowcase from '../components/public/SectionShowcase';
 import StatsBanner from '../components/public/StatsBanner';
 import SoftwareComparison from '../components/public/SoftwareComparison';
+import PricingPlansGrid, { DEFAULT_STORAGE_PLANS } from '../components/billing/PricingPlansGrid';
 import {
   InstagramIcon,
   FacebookIcon,
@@ -16,6 +17,9 @@ import {
 } from '../components/ui/SocialIcons';
 
 export const Landing = () => {
+  const navigate = useNavigate();
+  const [billingCycle, setBillingCycle] = useState('monthly');
+
   return (
     <PublicLayout>
       {/* ── 1. HERO SECTION ── */}
@@ -303,6 +307,41 @@ export const Landing = () => {
         </section>
 
       </div>
+
+      {/* ── 4.5 STORAGE-BASED MONTHLY PRICING SECTION ── */}
+      <section id="pricing" className="w-full bg-slate-50/70 border-y border-slate-100 py-16 sm:py-20 px-4 sm:px-8">
+        <div className="max-w-7xl mx-auto">
+          <ScrollReveal>
+            <div className="text-center max-w-2xl mx-auto mb-10">
+              <p className="text-xs font-extrabold uppercase tracking-widest text-[#12B7D4] mb-2">
+                Transparent Storage Pricing
+              </p>
+              <h2 className="font-extrabold text-2xl sm:text-4xl text-slate-950 tracking-tight">
+                Pick a Storage Plan That Fits Your Agency
+              </h2>
+              <p className="text-sm text-slate-600 mt-3">
+                Start free with <strong className="text-slate-900">100 MB storage</strong> &amp; up to{' '}
+                <strong className="text-slate-900">3 clients</strong>, or unlock <strong className="text-slate-900">5 GB Starter at ₹10/mo</strong>. Upgrade anytime mid-month inside your dashboard.
+              </p>
+            </div>
+            <PricingPlansGrid
+              plans={DEFAULT_STORAGE_PLANS}
+              billingCycle={billingCycle}
+              onBillingCycleChange={setBillingCycle}
+              mode="public"
+              onSelectPlan={(plan) => {
+                try {
+                  sessionStorage.setItem('rwm_selected_plan', plan.id);
+                  sessionStorage.setItem('rwm_selected_cycle', billingCycle);
+                } catch {
+                  // ignore storage errors
+                }
+                navigate(`/register?plan=${encodeURIComponent(plan.id)}&cycle=${encodeURIComponent(billingCycle)}`);
+              }}
+            />
+          </ScrollReveal>
+        </div>
+      </section>
 
       {/* ── 5. FINAL ACTION BANNER (Clean White Fill, Seamless Borderless) ── */}
       <section className="w-full bg-white text-slate-900 py-16 sm:py-20 px-4 sm:px-8">

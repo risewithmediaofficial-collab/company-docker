@@ -10,6 +10,8 @@ import EnableBannerNotificationBar from '../components/notifications/EnableBanne
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import GlobalDateSortBar from '../components/layout/GlobalDateSortBar';
 import OnboardingWelcomeModal from '../components/onboarding/OnboardingWelcomeModal';
+import ModuleUpgradeGate from '../components/billing/ModuleUpgradeGate';
+import { getLockedModuleForPath } from '../utils/planModules';
 
 const PageLoadingFallback = () => (
   <div className="w-full py-12 flex flex-col items-center justify-center space-y-3">
@@ -66,7 +68,13 @@ const MainLayout = () => {
             <GlobalDateSortBar />
             <ErrorBoundary key={location.pathname} locationKey={location.pathname}>
               <Suspense fallback={<PageLoadingFallback />}>
-                <Outlet key={location.pathname} />
+                {(() => {
+                  const lockedModule = getLockedModuleForPath(location.pathname, organization, user);
+                  if (lockedModule) {
+                    return <ModuleUpgradeGate moduleInfo={lockedModule} organization={organization} />;
+                  }
+                  return <Outlet key={location.pathname} />;
+                })()}
               </Suspense>
             </ErrorBoundary>
           </div>

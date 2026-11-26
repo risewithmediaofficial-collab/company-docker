@@ -14,7 +14,7 @@ import Proposal from '../models/proposal.model.js';
 import { createNotification } from '../utils/notification.js';
 import { createActivityLog } from '../utils/activity.js';
 import { moveToRecycleBin } from '../utils/recycleBin.js';
-import { withWorkspaceScope } from '../middleware/auth.middleware.js';
+import { withWorkspaceScope, getStrictTenantOrgId } from '../middleware/auth.middleware.js';
 import { emitLiveEvent } from '../utils/socketEmitter.js';
 
 const projectStatusMap = {
@@ -237,6 +237,10 @@ const PROJECT_CLIENT_LIST = ['client', 'clientAdmin', 'clientMember'];
 
 const assertProjectAccess = async (req, project) => {
   if (!project) return { allowed: false, status: 404, message: 'Project not found' };
+  const tenantOrgId = getStrictTenantOrgId(req);
+  if (tenantOrgId && String(project.organizationId || '') !== String(tenantOrgId)) {
+    return { allowed: false, status: 403, message: 'Access denied: project belongs to another workspace' };
+  }
   if (['superAdmin', 'admin', 'organizationOwner'].includes(req.user.role)) return { allowed: true };
   if (req.user.role === 'manager') return { allowed: true };
   if (PROJECT_STAFF_LIST.includes(req.user.role) && project.team?.some((member) => member.toString() === req.user._id.toString())) return { allowed: true };
@@ -429,12 +433,14 @@ export const getProjects = async (req, res) => {
     }
 
     if (search) {
-      const matchingClients = await Client.find({
-        $or: [
-          { name: { $regex: search, $options: 'i' } },
-          { company: { $regex: search, $options: 'i' } },
-        ],
-      }).select('_id');
+      const matchingClients = await Client.find(
+        withWorkspaceScope(req, {
+          $or: [
+            { name: { $regex: search, $options: 'i' } },
+            { company: { $regex: search, $options: 'i' } },
+          ],
+        })
+      ).select('_id');
       andConditions.push({
         $or: [
           { name: { $regex: search, $options: 'i' } },
@@ -712,6 +718,12 @@ export const updateProject = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Project not found' });
     }
 
+    const existingProject = await Project.findById(req.params.id);
+    const access = await assertProjectAccess(req, existingProject);
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
     const project = await Project.findByIdAndUpdate(req.params.id, normalizeProjectPayload(req.body), { new: true, runValidators: true })
       .populate('client', 'name email logo company')
       .populate('manager', 'name avatar')
@@ -770,7 +782,10 @@ export const updateProject = async (req, res) => {
 export const deleteProject = async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
-    if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+    const access = await assertProjectAccess(req, project);
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
 
     // Find and archive all associated tasks into metadata so they can be restored together
     const associatedTasks = await Task.find({ project: project._id }).lean();
