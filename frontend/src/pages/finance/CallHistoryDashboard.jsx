@@ -7,7 +7,7 @@ import { useLeads, useUpdateLead } from '../../hooks/useLeads';
 import { useCallHistory, useCreateCallHistory, useUpdateCallHistory, useDeleteCallHistory } from '../../hooks/useFinance';
 import { SelectDropdown } from '../../components/ui/SelectDropdown';
 import { Button } from '../../components/ui/button';
-import { PageHeader, PageToolbar, MetricGrid, MetricCard, EmptyState, SearchField, SectionCard } from '../../components/ui/page';
+import { PageHeader, PageToolbar, MetricGrid, MetricCard, EmptyState, SearchField } from '../../components/ui/page';
 import { useDateFilter } from '../../context/DateFilterContext';
 
 const CALL_TYPES = ['Incoming', 'Outgoing', 'Missed', 'WhatsApp Call', 'Google Meet', 'Zoom', 'Direct Meeting'];
@@ -285,18 +285,18 @@ export default function CallHistoryDashboard() {
     <div className="space-y-6">
       <PageHeader title="Call History & Client Touchpoints" />
 
-      <MetricGrid>
+      <MetricGrid className="grid-cols-2 lg:grid-cols-4">
         <MetricCard label="Total Calls" value={stats.total} icon={PhoneCall} />
         <MetricCard label="Client Calls" value={stats.client} icon={User} />
         <MetricCard label="Lead Calls" value={stats.lead} icon={CheckCircle2} />
         <MetricCard label="Follow-ups Set" value={stats.followUps} icon={Calendar} />
       </MetricGrid>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12 items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
         {/* Call History Timeline List */}
-        <div className="xl:col-span-7 space-y-4 min-w-0">
+        <div className="lg:col-span-7 space-y-4 min-w-0">
           <PageToolbar className="border border-border/60 shadow-xs">
-            <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-secondary/50 p-1">
+            <div className="flex w-full sm:w-auto flex-wrap items-center gap-1.5 rounded-xl bg-secondary/50 p-1">
               {[
                 { key: 'all', label: 'All Calls', count: stats.total },
                 { key: 'client', label: 'Client Calls', count: stats.client },
@@ -307,7 +307,7 @@ export default function CallHistoryDashboard() {
                   key={tab.key}
                   type="button"
                   onClick={() => setFilterType(tab.key)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer shrink-0 ${
                     filterType === tab.key
                       ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
@@ -329,12 +329,12 @@ export default function CallHistoryDashboard() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search client, lead, summary, or purpose..."
-              className="min-w-[220px]"
+              className="w-full sm:flex-1 min-w-0"
               inputClassName="h-10 py-2 border border-border/60 bg-background/80"
             />
           </PageToolbar>
 
-          <div className="space-y-4">
+          <div className="space-y-4 lg:max-h-[calc(100dvh-140px)] lg:overflow-y-auto custom-scrollbar lg:pr-1">
             {callHistoryQuery.isLoading ? (
               <div className="flex h-56 items-center justify-center rounded-2xl border border-border/60 bg-card">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
@@ -454,309 +454,315 @@ export default function CallHistoryDashboard() {
           </div>
         </div>
 
-        {/* Add/Edit Call Log Form Card */}
-        <div className="xl:col-span-5 min-w-0">
+        {/* Add/Edit Call Log Form Card (Inline Scrollable + Responsive) */}
+        <div className="lg:col-span-5 min-w-0">
           {canManage ? (
-            <SectionCard
-              title={isEditing ? 'Edit Call Note' : 'Log Call Note'}
-              action={
-                isEditing ? (
+            <section className="rounded-2xl border border-border/60 bg-card shadow-sm flex flex-col overflow-hidden max-h-[78dvh] lg:max-h-[calc(100dvh-140px)] lg:sticky lg:top-6">
+              {/* Pinned Card Header */}
+              <div className="shrink-0 px-4 sm:px-5 py-4 border-b border-border/50 flex items-center justify-between gap-3 bg-card">
+                <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground truncate">
+                  {isEditing ? 'Edit Call Note' : 'Log Call Note'}
+                </h2>
+                {isEditing ? (
                   <button
                     type="button"
                     onClick={cancelEdit}
-                    className="text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
+                    className="text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
                   >
                     Cancel Edit
                   </button>
-                ) : null
-              }
-              className="border border-border/60 shadow-sm xl:sticky xl:top-6"
-            >
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Form Type Selector */}
-                {!isEditing && (
-                  <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-secondary/50 p-1">
-                    <button
-                      type="button"
-                      onClick={() => { setFormType('client'); resetForm(); }}
-                      className={`rounded-lg py-2 px-2 text-xs font-semibold transition-all cursor-pointer ${
-                        formType === 'client' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      Client Call
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setFormType('lead'); resetForm(); }}
-                      className={`rounded-lg py-2 px-2 text-xs font-semibold transition-all cursor-pointer ${
-                        formType === 'lead' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      Lead Call
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setFormType('unregistered'); resetForm(); }}
-                      className={`rounded-lg py-2 px-2 text-xs font-semibold transition-all cursor-pointer ${
-                        formType === 'unregistered' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      New Client
-                    </button>
-                  </div>
-                )}
+                ) : null}
+              </div>
 
-                {/* Contact Selection */}
-                {formType === 'client' && (
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-foreground">Select Client *</label>
-                    <SelectDropdown
-                      value={form.clientId}
-                      onChange={(val) => setForm((prev) => ({ ...prev, clientId: val, projectId: '' }))}
-                      options={clients.map((c) => ({ value: c._id, label: c.company || c.name }))}
-                      placeholder="Choose client"
-                      buttonClassName={selectButtonClass}
-                    />
-                  </div>
-                )}
-                {formType === 'lead' && (
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-foreground">Select Lead *</label>
-                    <SelectDropdown
-                      value={form.leadId}
-                      onChange={(val) => setForm((prev) => ({ ...prev, leadId: val }))}
-                      options={leads.map((l) => ({ value: l._id, label: `${l.name} (${l.company || 'Independent'})` }))}
-                      placeholder="Choose lead"
-                      buttonClassName={selectButtonClass}
-                    />
-                  </div>
-                )}
-                {formType === 'unregistered' && (
-                  <div className="space-y-3 rounded-xl border border-border/50 bg-secondary/20 p-3.5 animate-fadeIn">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">New Client Details</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-semibold text-foreground">Client Name *</label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. John Doe / ABC Inc."
-                          value={form.unregisteredClientName}
-                          onChange={(e) => setForm((prev) => ({ ...prev, unregisteredClientName: e.target.value }))}
-                          className={fieldClass}
+              <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                {/* Inline Scrollable Form Fields */}
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar p-4 sm:p-5 space-y-4">
+                  {/* Form Type Selector */}
+                  {!isEditing && (
+                    <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-secondary/50 p-1">
+                      <button
+                        type="button"
+                        onClick={() => { setFormType('client'); resetForm(); }}
+                        className={`rounded-lg py-2 px-1.5 text-xs font-semibold transition-all cursor-pointer truncate ${
+                          formType === 'client' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Client Call
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setFormType('lead'); resetForm(); }}
+                        className={`rounded-lg py-2 px-1.5 text-xs font-semibold transition-all cursor-pointer truncate ${
+                          formType === 'lead' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Lead Call
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setFormType('unregistered'); resetForm(); }}
+                        className={`rounded-lg py-2 px-1.5 text-xs font-semibold transition-all cursor-pointer truncate ${
+                          formType === 'unregistered' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        New Client
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Contact Selection */}
+                  {formType === 'client' && (
+                    <div className="space-y-1.5 min-w-0">
+                      <label className="block text-xs font-semibold text-foreground">Select Client *</label>
+                      <SelectDropdown
+                        value={form.clientId}
+                        onChange={(val) => setForm((prev) => ({ ...prev, clientId: val, projectId: '' }))}
+                        options={clients.map((c) => ({ value: c._id, label: c.company || c.name }))}
+                        placeholder="Choose client"
+                        buttonClassName={selectButtonClass}
+                      />
+                    </div>
+                  )}
+                  {formType === 'lead' && (
+                    <div className="space-y-1.5 min-w-0">
+                      <label className="block text-xs font-semibold text-foreground">Select Lead *</label>
+                      <SelectDropdown
+                        value={form.leadId}
+                        onChange={(val) => setForm((prev) => ({ ...prev, leadId: val }))}
+                        options={leads.map((l) => ({ value: l._id, label: `${l.name} (${l.company || 'Independent'})` }))}
+                        placeholder="Choose lead"
+                        buttonClassName={selectButtonClass}
+                      />
+                    </div>
+                  )}
+                  {formType === 'unregistered' && (
+                    <div className="space-y-3 rounded-xl border border-border/50 bg-secondary/20 p-3.5 animate-fadeIn">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">New Client Details</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5 min-w-0">
+                          <label className="block text-xs font-semibold text-foreground">Client Name *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. John Doe / ABC Inc."
+                            value={form.unregisteredClientName}
+                            onChange={(e) => setForm((prev) => ({ ...prev, unregisteredClientName: e.target.value }))}
+                            className={fieldClass}
+                          />
+                        </div>
+                        <div className="space-y-1.5 min-w-0">
+                          <label className="block text-xs font-semibold text-foreground">Phone Number</label>
+                          <input
+                            type="text"
+                            placeholder="Phone number"
+                            value={form.unregisteredClientPhone}
+                            onChange={(e) => setForm((prev) => ({ ...prev, unregisteredClientPhone: e.target.value }))}
+                            className={fieldClass}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5 min-w-0">
+                        <label className="block text-xs font-semibold text-foreground">Business Address</label>
+                        <textarea
+                          placeholder="Enter business address..."
+                          rows={2}
+                          value={form.unregisteredClientAddress}
+                          onChange={(e) => setForm((prev) => ({ ...prev, unregisteredClientAddress: e.target.value }))}
+                          className={`${textareaClass} min-h-[72px]`}
                         />
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-semibold text-foreground">Phone Number</label>
+                    </div>
+                  )}
+
+                  {/* Project Selection (Client only) */}
+                  {formType === 'client' && form.clientId && (
+                    <div className="space-y-1.5 min-w-0 animate-fadeIn">
+                      <label className="block text-xs font-semibold text-foreground">Select Project (Optional)</label>
+                      <SelectDropdown
+                        value={form.projectId}
+                        onChange={(val) => setForm((prev) => ({ ...prev, projectId: val }))}
+                        options={filteredProjects.map((p) => ({ value: p._id, label: p.name }))}
+                        placeholder="General / Select project"
+                        buttonClassName={selectButtonClass}
+                      />
+                    </div>
+                  )}
+
+                  {/* Lead CRM Fields (Lead only) */}
+                  {formType === 'lead' && form.leadId && (
+                    <div className="space-y-3 rounded-xl border border-border/50 bg-secondary/20 p-3.5 animate-fadeIn">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Update Lead Details</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5 min-w-0">
+                          <label className="block text-xs font-semibold text-foreground">Lead Stage</label>
+                          <SelectDropdown
+                            value={form.leadStage}
+                            onChange={(val) => setForm((prev) => ({ ...prev, leadStage: val }))}
+                            options={LEAD_STAGES.map((s) => ({ value: s, label: s.replace('_', ' ').toUpperCase() }))}
+                            buttonClassName={selectButtonClass}
+                          />
+                        </div>
+                        <div className="space-y-1.5 min-w-0">
+                          <label className="block text-xs font-semibold text-foreground">Lead Value (INR)</label>
+                          <input
+                            type="number"
+                            value={form.leadValue}
+                            onChange={(e) => setForm((prev) => ({ ...prev, leadValue: e.target.value }))}
+                            className={`${fieldClass} tabular-nums`}
+                          />
+                        </div>
+                        <div className="space-y-1.5 min-w-0">
+                          <label className="block text-xs font-semibold text-foreground">Priority</label>
+                          <SelectDropdown
+                            value={form.leadPriority}
+                            onChange={(val) => setForm((prev) => ({ ...prev, leadPriority: val }))}
+                            options={LEAD_PRIORITIES.map((p) => ({ value: p, label: p.toUpperCase() }))}
+                            buttonClassName={selectButtonClass}
+                          />
+                        </div>
+                        <div className="space-y-1.5 min-w-0">
+                          <label className="block text-xs font-semibold text-foreground">Source</label>
+                          <SelectDropdown
+                            value={form.leadSource}
+                            onChange={(val) => setForm((prev) => ({ ...prev, leadSource: val }))}
+                            options={LEAD_SOURCES.map((s) => ({ value: s, label: s.replace('_', ' ').toUpperCase() }))}
+                            buttonClassName={selectButtonClass}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Call Properties */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="space-y-1.5 min-w-0">
+                      <label className="block text-xs font-semibold text-foreground">Call Type</label>
+                      <SelectDropdown
+                        value={form.callType}
+                        onChange={(val) => setForm((prev) => ({ ...prev, callType: val }))}
+                        options={CALL_TYPES}
+                        buttonClassName={selectButtonClass}
+                      />
+                    </div>
+                    <div className="space-y-1.5 min-w-0">
+                      <label className="block text-xs font-semibold text-foreground">Purpose</label>
+                      <SelectDropdown
+                        value={form.callPurpose}
+                        onChange={(val) => setForm((prev) => ({ ...prev, callPurpose: val }))}
+                        options={CALL_PURPOSES}
+                        buttonClassName={selectButtonClass}
+                      />
+                      {form.callPurpose === 'Other' && (
+                        <input
+                          type="text"
+                          placeholder="Specify call purpose..."
+                          value={form.customCallPurpose || ''}
+                          onChange={(e) => setForm((prev) => ({ ...prev, customCallPurpose: e.target.value }))}
+                          className={`${fieldClass} mt-1.5`}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5 min-w-0">
+                      <label className="block text-xs font-semibold text-foreground">Call Date</label>
+                      <input
+                        type="date"
+                        value={form.callDate}
+                        onChange={(e) => setForm((prev) => ({ ...prev, callDate: e.target.value }))}
+                        onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
+                        className={`${fieldClass} tabular-nums cursor-pointer`}
+                      />
+                    </div>
+                    <div className="space-y-1.5 min-w-0">
+                      <label className="block text-xs font-semibold text-foreground">Call Time</label>
+                      <input
+                        type="time"
+                        value={form.callTime}
+                        onChange={(e) => setForm((prev) => ({ ...prev, callTime: e.target.value }))}
+                        onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
+                        className={`${fieldClass} tabular-nums cursor-pointer`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5 min-w-0">
+                      <label className="block text-xs font-semibold text-foreground">Spoken With</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. CEO, Manager"
+                        value={form.spokenWith}
+                        onChange={(e) => setForm((prev) => ({ ...prev, spokenWith: e.target.value }))}
+                        className={fieldClass}
+                      />
+                    </div>
+                    {formType !== 'unregistered' && (
+                      <div className="space-y-1.5 min-w-0">
+                        <label className="block text-xs font-semibold text-foreground">Contact Number</label>
                         <input
                           type="text"
                           placeholder="Phone number"
-                          value={form.unregisteredClientPhone}
-                          onChange={(e) => setForm((prev) => ({ ...prev, unregisteredClientPhone: e.target.value }))}
+                          value={form.contactNumber}
+                          onChange={(e) => setForm((prev) => ({ ...prev, contactNumber: e.target.value }))}
                           className={fieldClass}
                         />
                       </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-foreground">Business Address</label>
-                      <textarea
-                        placeholder="Enter business address..."
-                        rows={2}
-                        value={form.unregisteredClientAddress}
-                        onChange={(e) => setForm((prev) => ({ ...prev, unregisteredClientAddress: e.target.value }))}
-                        className={`${textareaClass} min-h-[72px]`}
-                      />
-                    </div>
+                    )}
                   </div>
-                )}
 
-                {/* Project Selection (Client only) */}
-                {formType === 'client' && form.clientId && (
-                  <div className="space-y-1.5 animate-fadeIn">
-                    <label className="block text-xs font-semibold text-foreground">Select Project (Optional)</label>
-                    <SelectDropdown
-                      value={form.projectId}
-                      onChange={(val) => setForm((prev) => ({ ...prev, projectId: val }))}
-                      options={filteredProjects.map((p) => ({ value: p._id, label: p.name }))}
-                      placeholder="General / Select project"
-                      buttonClassName={selectButtonClass}
+                  <div className="space-y-1.5 min-w-0">
+                    <label className="block text-xs font-semibold text-foreground">Call Summary</label>
+                    <textarea
+                      placeholder="Key points of discussion..."
+                      rows={3}
+                      value={form.callSummary}
+                      onChange={(e) => setForm((prev) => ({ ...prev, callSummary: e.target.value }))}
+                      className={`${textareaClass} min-h-[84px]`}
                     />
                   </div>
-                )}
 
-                {/* Lead CRM Fields (Lead only) */}
-                {formType === 'lead' && form.leadId && (
-                  <div className="space-y-3 rounded-xl border border-border/50 bg-secondary/20 p-3.5 animate-fadeIn">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Update Lead Details</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-semibold text-foreground">Lead Stage</label>
-                        <SelectDropdown
-                          value={form.leadStage}
-                          onChange={(val) => setForm((prev) => ({ ...prev, leadStage: val }))}
-                          options={LEAD_STAGES.map((s) => ({ value: s, label: s.replace('_', ' ').toUpperCase() }))}
-                          buttonClassName={selectButtonClass}
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-semibold text-foreground">Lead Value (INR)</label>
-                        <input
-                          type="number"
-                          value={form.leadValue}
-                          onChange={(e) => setForm((prev) => ({ ...prev, leadValue: e.target.value }))}
-                          className={`${fieldClass} tabular-nums`}
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-semibold text-foreground">Priority</label>
-                        <SelectDropdown
-                          value={form.leadPriority}
-                          onChange={(val) => setForm((prev) => ({ ...prev, leadPriority: val }))}
-                          options={LEAD_PRIORITIES.map((p) => ({ value: p, label: p.toUpperCase() }))}
-                          buttonClassName={selectButtonClass}
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-semibold text-foreground">Source</label>
-                        <SelectDropdown
-                          value={form.leadSource}
-                          onChange={(val) => setForm((prev) => ({ ...prev, leadSource: val }))}
-                          options={LEAD_SOURCES.map((s) => ({ value: s, label: s.replace('_', ' ').toUpperCase() }))}
-                          buttonClassName={selectButtonClass}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Call Properties */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-foreground">Call Type</label>
-                    <SelectDropdown
-                      value={form.callType}
-                      onChange={(val) => setForm((prev) => ({ ...prev, callType: val }))}
-                      options={CALL_TYPES}
-                      buttonClassName={selectButtonClass}
+                  <div className="space-y-1.5 min-w-0">
+                    <label className="block text-xs font-semibold text-foreground">Client Response / Outcome</label>
+                    <textarea
+                      placeholder="Promises, objections, outcomes..."
+                      rows={2}
+                      value={form.clientResponse}
+                      onChange={(e) => setForm((prev) => ({ ...prev, clientResponse: e.target.value }))}
+                      className={`${textareaClass} min-h-[72px]`}
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-foreground">Purpose</label>
-                    <SelectDropdown
-                      value={form.callPurpose}
-                      onChange={(val) => setForm((prev) => ({ ...prev, callPurpose: val }))}
-                      options={CALL_PURPOSES}
-                      buttonClassName={selectButtonClass}
-                    />
-                    {form.callPurpose === 'Other' && (
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5 min-w-0">
+                      <label className="block text-xs font-semibold text-foreground">Next Follow-up Date</label>
                       <input
-                        type="text"
-                        placeholder="Specify call purpose..."
-                        value={form.customCallPurpose || ''}
-                        onChange={(e) => setForm((prev) => ({ ...prev, customCallPurpose: e.target.value }))}
-                        className={`${fieldClass} mt-1.5`}
+                        type="date"
+                        value={form.nextFollowUpDate}
+                        onChange={(e) => setForm((prev) => ({ ...prev, nextFollowUpDate: e.target.value }))}
+                        onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
+                        className={`${fieldClass} tabular-nums cursor-pointer`}
                       />
+                    </div>
+                    {formType === 'client' && (
+                      <div className="flex items-end min-w-0">
+                        <label className="flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-xl bg-background border border-border/70 px-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/30">
+                          <input
+                            type="checkbox"
+                            checked={form.visibleToClient}
+                            onChange={(e) => setForm((prev) => ({ ...prev, visibleToClient: e.target.checked }))}
+                            className="rounded text-primary focus:ring-primary/20 shrink-0"
+                          />
+                          <span className="truncate">Client Visible</span>
+                        </label>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-foreground">Call Date</label>
-                    <input
-                      type="date"
-                      value={form.callDate}
-                      onChange={(e) => setForm((prev) => ({ ...prev, callDate: e.target.value }))}
-                      onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
-                      className={`${fieldClass} tabular-nums cursor-pointer`}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-foreground">Call Time</label>
-                    <input
-                      type="time"
-                      value={form.callTime}
-                      onChange={(e) => setForm((prev) => ({ ...prev, callTime: e.target.value }))}
-                      onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
-                      className={`${fieldClass} tabular-nums cursor-pointer`}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-foreground">Spoken With</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. CEO, Manager"
-                      value={form.spokenWith}
-                      onChange={(e) => setForm((prev) => ({ ...prev, spokenWith: e.target.value }))}
-                      className={fieldClass}
-                    />
-                  </div>
-                  {formType !== 'unregistered' && (
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-foreground">Contact Number</label>
-                      <input
-                        type="text"
-                        placeholder="Phone number"
-                        value={form.contactNumber}
-                        onChange={(e) => setForm((prev) => ({ ...prev, contactNumber: e.target.value }))}
-                        className={fieldClass}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-foreground">Call Summary</label>
-                  <textarea
-                    placeholder="Key points of discussion..."
-                    rows={3}
-                    value={form.callSummary}
-                    onChange={(e) => setForm((prev) => ({ ...prev, callSummary: e.target.value }))}
-                    className={`${textareaClass} min-h-[84px]`}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-foreground">Client Response / Outcome</label>
-                  <textarea
-                    placeholder="Promises, objections, outcomes..."
-                    rows={2}
-                    value={form.clientResponse}
-                    onChange={(e) => setForm((prev) => ({ ...prev, clientResponse: e.target.value }))}
-                    className={`${textareaClass} min-h-[72px]`}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-foreground">Next Follow-up Date</label>
-                    <input
-                      type="date"
-                      value={form.nextFollowUpDate}
-                      onChange={(e) => setForm((prev) => ({ ...prev, nextFollowUpDate: e.target.value }))}
-                      onClick={(e) => { try { e.target.showPicker(); } catch (_) {} }}
-                      className={`${fieldClass} tabular-nums cursor-pointer`}
-                    />
-                  </div>
-                  {formType === 'client' && (
-                    <div className="flex items-end">
-                      <label className="flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-xl bg-background border border-border/70 px-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/30">
-                        <input
-                          type="checkbox"
-                          checked={form.visibleToClient}
-                          onChange={(e) => setForm((prev) => ({ ...prev, visibleToClient: e.target.checked }))}
-                          className="rounded text-primary focus:ring-primary/20"
-                        />
-                        Client Visible
-                      </label>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-3 pt-2">
+                {/* Pinned Submit Footer */}
+                <div className="shrink-0 px-4 sm:px-5 py-3.5 border-t border-border/50 bg-card flex gap-3">
                   {isEditing ? (
                     <>
                       <Button
@@ -786,7 +792,7 @@ export default function CallHistoryDashboard() {
                   )}
                 </div>
               </form>
-            </SectionCard>
+            </section>
           ) : (
             <div className="rounded-2xl border border-border/60 bg-card p-6 text-center text-sm text-muted-foreground">
               You do not have permissions to log new calls.
