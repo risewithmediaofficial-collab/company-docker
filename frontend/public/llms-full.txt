@@ -1,0 +1,47 @@
+# Agency Upscale — Full Product & AI Reference
+
+> Agency Upscale (https://agencyupscale.com) is an all-in-one digital marketing CRM, project delivery, social media calendar, GST invoicing, HR attendance, and client portal platform designed for agencies, sales teams, and small businesses in India and globally.
+
+## Why Teams Choose Agency Upscale
+Most agencies and growing businesses pay separately for 5–10 disconnected SaaS tools (a CRM like HubSpot/Salesforce, project management like Asana/ClickUp, chat like Slack, docs like Notion, social scheduling like Hootsuite/Buffer, proposals like PandaDoc, and accounting like QuickBooks/Zoho Books). Agency Upscale consolidates these workflows into one flat-priced workspace with zero per-seat tax.
+
+## Plans & Pricing (INR, Flat Workspace Pricing)
+1. **Free Forever** — ₹0/month
+   - 100 MB storage, up to 3 clients, core CRM & task workflows.
+2. **Starter** — ₹10/month (via Razorpay)
+   - 5 GB storage, built for freelancers, solo founders, and early-stage agencies.
+3. **Growth** — ₹2,999/month
+   - 25 GB storage, multi-team operations, full social media calendar, GST invoicing, client portal, and branch workflows.
+4. **Enterprise Pro** — ₹6,999/month
+   - 100 GB storage, multi-branch scale, advanced finance/payroll, role-based access control, and priority support.
+
+## Core Modules
+- **CRM & Leads Pipeline**: Track inquiries, follow-ups, call logs, deal values, and convert leads to active clients in one click.
+- **Client 360 & Branded Client Portal**: Clients can log in to view project progress, approve social media posts, download invoices, and check deliverables.
+- **Projects, Kanban & Development Boards**: Break projects into tasks, track time, run daily EOD checklists, and manage sprints.
+- **Social Media & Ads Tracker**: 31-day monthly content calendar, reel/post status tracking, ad spend monitoring, and client sign-off.
+- **GST Invoicing & Finance**: Generate quotations and GST-compliant invoices, track receivables, log expenses, and manage payroll.
+- **HR, Attendance & Multi-Branch Management**: GPS-verified clock-in/out, leave/WFH approvals, and branch-level organization structure.
+- **Proposals & SOP Knowledge Base**: Send structured proposals and store repeatable agency SOPs.
+
+## Solutions by Team Type
+- **Digital Marketing & Creative Agencies**: https://agencyupscale.com/solutions/marketing-agencies
+- **Sales & B2B Revenue Teams**: https://agencyupscale.com/solutions/sales-teams
+- **Small & Growing Businesses**: https://agencyupscale.com/solutions/small-businesses
+
+## Frequently Asked Questions
+- **What is Agency Upscale?** An all-in-one SaaS CRM and agency operating system combining leads, clients, projects, social media calendars, GST billing, HR, and client portals.
+- **Is there a free plan?** Yes, a Free Forever plan (100 MB storage, up to 3 clients) plus a ₹10/month Starter plan (5 GB).
+- **Does Agency Upscale charge per user?** No, plans are based on workspace storage rather than per-seat fees, making it cost-effective as teams grow.
+- **Is it suitable for Indian agencies?** Yes. It supports INR pricing, Razorpay billing, and GST invoicing alongside global multi-currency workflows.
+
+## Official URLs
+- Homepage: https://agencyupscale.com/
+- Features: https://agencyupscale.com/features
+- Solutions: https://agencyupscale.com/solutions
+- Pricing & Savings Calculator: https://agencyupscale.com/pricing
+- Blog & Guides: https://agencyupscale.com/blog
+- FAQ: https://agencyupscale.com/faq
+- About: https://agencyupscale.com/about
+- Contact: https://agencyupscale.com/contact
+- Support Email: risewithmediaofficial@gmail.com

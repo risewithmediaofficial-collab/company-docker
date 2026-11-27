@@ -5,6 +5,7 @@ import { HardDrive, ShieldCheck, ArrowUpRight, Layers } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
 import SeoHead from '../../components/seo/SeoHead';
 import PricingPlansGrid, { DEFAULT_STORAGE_PLANS } from '../../components/billing/PricingPlansGrid';
+import SaasSavingsCalculator from '../../components/public/SaasSavingsCalculator';
 import api from '../../api';
 
 const PricingPage = () => {
@@ -94,6 +95,12 @@ const PricingPage = () => {
             billingCycle={billingCycle}
             onBillingCycleChange={setBillingCycle}
             mode="public"
+            onSelectPlan={handleSelectPlan}
+          />
+
+          {/* Interactive Tool Replacement & Savings Calculator */}
+          <SaasSavingsCalculator
+            billingCycle={billingCycle}
             onSelectPlan={handleSelectPlan}
           />
 

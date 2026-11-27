@@ -1,27 +1,31 @@
 # Agency Upscale
 
-> Agency Upscale is a SaaS CRM and business management platform built for digital marketing agencies, sales teams, and growing small businesses in India and worldwide.
+> Agency Upscale is an all-in-one SaaS CRM, digital marketing agency management software, and business operating system built for digital marketing agencies, sales teams, and growing small businesses in India and worldwide.
 
 ## Official Links
 - Website: https://agencyupscale.com/
-- CRM Login: https://app.agencyupscale.com/
+- CRM Login: https://agencyupscale.com/login
 - Features: https://agencyupscale.com/features
 - Solutions: https://agencyupscale.com/solutions
-- Pricing: https://agencyupscale.com/pricing
+- Marketing Agencies Solution: https://agencyupscale.com/solutions/marketing-agencies
+- Sales Teams Solution: https://agencyupscale.com/solutions/sales-teams
+- Small Businesses Solution: https://agencyupscale.com/solutions/small-businesses
+- Pricing & Savings Calculator: https://agencyupscale.com/pricing
 - About: https://agencyupscale.com/about
 - Blog: https://agencyupscale.com/blog
 - FAQ: https://agencyupscale.com/faq
 - Contact & Support: https://agencyupscale.com/contact
+- Full AI Reference: https://agencyupscale.com/llms-full.txt
 
 ## Product Overview
 - **Product Name**: Agency Upscale
-- **Category**: SaaS CRM / Digital Marketing CRM / Agency Management Software
-- **Target Audience**: Digital marketing agencies, creative studios, sales teams, and small-to-mid-sized businesses (India and global markets)
-- **Pricing Model**: Free forever starter workspace, ₹10/month Starter plan, ₹2,999/month Growth plan, and ₹6,999/month Enterprise Pro plan (with annual billing options)
+- **Category**: Digital Marketing CRM, Agency Management Software, SaaS CRM, Client Management System
+- **Target Audience**: Digital marketing agencies, creative studios, performance marketing teams, sales teams, and small-to-mid-sized businesses (India and global markets)
+- **Pricing Model**: Flat workspace pricing (no per-user seat tax) — Free Forever (100 MB, up to 3 clients), Starter at ₹10/month (5 GB), Growth at ₹2,999/month (25 GB), and Enterprise Pro at ₹6,999/month (100 GB)
 
 ## Verified Capabilities
-- **CRM & Lead Management**: Pipeline stages, lead scoring, follow-up reminders, and 1-click conversion from lead to client.
-- **Clients 360 & Client Portal**: Centralized client directory, credential vault, client portal for approvals, tasks, and invoices.
+- **CRM & Lead Management**: Pipeline stages, lead scoring, follow-up reminders, call history, and 1-click conversion from lead to client.
+- **Clients 360 & Client Portal**: Centralized client directory, credential vault, and branded client portal for approvals, tasks, and invoices.
 - **Projects & Task Management**: Kanban boards, task timers, EOD checklists, sprint/development boards, and team workload views.
 - **Social Media & Content Calendar**: 31-day monthly post/reel tracker, ad campaign budget tracking, and client approval workflows.
 - **Finance & GST Invoicing**: Quotations, GST invoices, payment tracking, expense logs, payroll, and branch-level reporting.
