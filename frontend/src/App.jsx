@@ -21,6 +21,7 @@ const SolutionsPage = lazy(() => import('./pages/public/SolutionsPage'));
 const FaqPage = lazy(() => import('./pages/public/FaqPage'));
 const BlogPage = lazy(() => import('./pages/public/BlogPage'));
 const ContactPage = lazy(() => import('./pages/public/ContactPage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/public/PrivacyPolicyPage'));
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const SelectPlan = lazy(() => import('./pages/auth/SelectPlan'));
@@ -224,6 +225,8 @@ const App = () => {
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogPage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route path="/our-impact" element={<MetricsPage />} />
           <Route path="/metrics" element={<MetricsPage />} />
           <Route path="/overview" element={<MetricsPage />} />

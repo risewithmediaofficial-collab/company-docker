@@ -256,6 +256,7 @@ const PublicLayout = ({
                 <li><Link to="/blog" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Blog</Link></li>
                 <li><Link to="/faq" className="text-slate-400 hover:text-[#07c8f9] transition-colors">FAQ</Link></li>
                 <li><Link to="/contact" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Contact</Link></li>
+                <li><Link to="/privacy-policy" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Privacy Policy</Link></li>
               </ul>
             </div>
 
