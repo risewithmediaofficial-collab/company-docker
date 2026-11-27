@@ -297,17 +297,18 @@ export default function BranchSelectorPage() {
                     <div className="space-y-4">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          {branch.organization?.logo || /risewithmedia/i.test(branch.organization?.name || orgTitle) ? (
-                            <img
-                              src={branch.organization?.logo || '/rise-with-media-logo.png'}
-                              alt={branch.organization?.name || orgTitle}
-                              className="h-11 sm:h-12 w-auto object-contain mb-1.5"
-                            />
-                          ) : (
-                            <div className="text-base sm:text-lg font-black text-slate-950 tracking-tight leading-snug">
+                          <div className="flex items-center gap-2.5 mb-1">
+                            {(branch.organization?.logo || /risewithmedia/i.test(branch.organization?.name || orgTitle)) && (
+                              <img
+                                src={branch.organization?.logo || '/rise-with-media-logo.png'}
+                                alt={branch.organization?.name || orgTitle}
+                                className="h-9 sm:h-10 w-auto object-contain shrink-0"
+                              />
+                            )}
+                            <span className="text-base sm:text-lg font-black text-slate-950 tracking-tight leading-snug">
                               {branch.organization?.name || orgTitle}
-                            </div>
-                          )}
+                            </span>
+                          </div>
                           <h3 className="text-sm font-extrabold text-[#07c8f9] mt-0.5">
                             {branch.name} Branch
                           </h3>
