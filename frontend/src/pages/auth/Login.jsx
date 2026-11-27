@@ -913,6 +913,8 @@ export const Login = ({ initialView }) => {
         navigate('/select-plan');
       } else if (loggedUser?.role === 'organizationOwner' && loggedOrg?.companySetupRequired) {
         navigate('/settings?section=company');
+      } else if (['superAdmin', 'admin', 'organizationOwner'].includes(loggedUser?.role)) {
+        navigate('/select-branch');
       } else {
         navigate('/');
       }

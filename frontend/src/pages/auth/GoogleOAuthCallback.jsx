@@ -53,6 +53,8 @@ export default function GoogleOAuthCallback() {
               ? '/select-plan'
               : meData?.user?.role === 'organizationOwner' && org?.companySetupRequired
               ? '/settings?section=company'
+              : ['superAdmin', 'admin', 'organizationOwner'].includes(meData?.user?.role)
+              ? '/select-branch'
               : '/';
 
           if (isNewAccount) {

@@ -24,6 +24,7 @@ const ContactPage = lazy(() => import('./pages/public/ContactPage'));
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const SelectPlan = lazy(() => import('./pages/auth/SelectPlan'));
+const BranchSelector = lazy(() => import('./pages/auth/BranchSelectorPage'));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
 const GoogleOAuthCallback = lazy(() => import('./pages/auth/GoogleOAuthCallback'));
@@ -229,6 +230,19 @@ const App = () => {
             element={(
               <ProtectedRoute isAuthenticated={isAuthenticated} user={user} loading={loading}>
                 <SelectPlan />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="/select-branch"
+            element={(
+              <ProtectedRoute
+                isAuthenticated={isAuthenticated}
+                user={user}
+                loading={loading}
+                allowedRoles={['superAdmin', 'admin', 'organizationOwner']}
+              >
+                <BranchSelector />
               </ProtectedRoute>
             )}
           />
