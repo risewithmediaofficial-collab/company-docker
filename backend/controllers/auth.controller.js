@@ -1025,14 +1025,7 @@ export const resolveGoogleUserAndTokens = async ({
     };
   }
 
-  // No existing user
-  if (mode !== 'signup') {
-    return {
-      ok: false,
-      status: 404,
-      message: `No CRM account found for ${cleanEmail}. Please sign up first.`,
-    };
-  }
+  // No existing user -> automatically onboard into Sign-Up flow (even if initiated from Sign-In)
 
   const cleanCompanySlug = String(companySlug || '').replace(/^\/+|\/+$/g, '').toLowerCase().trim();
   const randomPassword = crypto.randomBytes(24).toString('hex');
@@ -1077,6 +1070,7 @@ export const resolveGoogleUserAndTokens = async ({
     return {
       ok: true,
       status: 201,
+      isNewAccount: true,
       pendingApproval: true,
       message: `Google registration submitted to ${orgDoc.name}. An administrator must approve your account before you can sign in.`,
     };
@@ -1113,6 +1107,7 @@ export const resolveGoogleUserAndTokens = async ({
   return {
     ok: true,
     status: 201,
+    isNewAccount: true,
     accessToken,
     refreshToken,
     organization,
@@ -1281,6 +1276,7 @@ export const googleOAuthCallback = async (req, res) => {
     const hashParams = new URLSearchParams({
       accessToken: result.accessToken,
       refreshToken: result.refreshToken || '',
+      ...(result.isNewAccount ? { newAccount: '1' } : {}),
     }).toString();
 
     return redirectWithParams({}, hashParams);

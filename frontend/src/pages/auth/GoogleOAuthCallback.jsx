@@ -11,6 +11,7 @@ export default function GoogleOAuthCallback() {
   const dispatch = useDispatch();
 
   const [status, setStatus] = useState('processing'); // 'processing' | 'pending' | 'portal' | 'error'
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const [message, setMessage] = useState('Completing Google sign-in...');
   const [portalUrl, setPortalUrl] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -22,6 +23,7 @@ export default function GoogleOAuthCallback() {
 
     const accessToken = hashParams.get('accessToken');
     const refreshToken = hashParams.get('refreshToken');
+    const isNewAccount = hashParams.get('newAccount') === '1' || queryParams.get('newAccount') === '1';
     const oauthError = queryParams.get('oauthError');
     const signupPending = queryParams.get('signupPending');
     const requiresPortal = queryParams.get('requiresCompanyPortal');
@@ -30,30 +32,47 @@ export default function GoogleOAuthCallback() {
     const msg = queryParams.get('message');
 
     if (accessToken) {
+      if (isNewAccount) {
+        setIsCreatingAccount(true);
+        setMessage('No existing account found — creating your new Agency Upscale workspace...');
+      }
       localStorage.setItem('accessToken', accessToken);
       if (refreshToken) {
         localStorage.setItem('refreshToken', refreshToken);
       }
       window.history.replaceState({}, document.title, '/auth/google/callback');
 
+      let active = true;
       dispatch(fetchMe())
         .unwrap()
         .then((meData) => {
-          toast.success('Signed in with Google!');
+          if (!active) return;
           const org = meData?.organization;
-          if (meData?.user?.role === 'organizationOwner' && org?.billingSetupRequired) {
-            navigate('/select-plan', { replace: true });
-          } else if (meData?.user?.role === 'organizationOwner' && org?.companySetupRequired) {
-            navigate('/settings?section=company', { replace: true });
+          const destination =
+            meData?.user?.role === 'organizationOwner' && org?.billingSetupRequired
+              ? '/select-plan'
+              : meData?.user?.role === 'organizationOwner' && org?.companySetupRequired
+              ? '/settings?section=company'
+              : '/';
+
+          if (isNewAccount) {
+            toast.success('Account created! Setting up your workspace...');
+            setTimeout(() => {
+              if (active) navigate(destination, { replace: true });
+            }, 850);
           } else {
-            navigate('/', { replace: true });
+            toast.success('Signed in with Google!');
+            navigate(destination, { replace: true });
           }
         })
         .catch((err) => {
+          if (!active) return;
           setStatus('error');
           setMessage(err?.message || 'Failed to load user session');
         });
-      return;
+      return () => {
+        active = false;
+      };
     }
 
     if (signupPending) {
@@ -80,7 +99,9 @@ export default function GoogleOAuthCallback() {
         {status === 'processing' && (
           <>
             <Loader2 className="h-9 w-9 text-[#07c8f9] animate-spin mx-auto" />
-            <h2 className="text-lg font-bold text-foreground">Signing you in with Google...</h2>
+            <h2 className="text-lg font-bold text-foreground">
+              {isCreatingAccount ? 'Creating your account...' : 'Signing you in with Google...'}
+            </h2>
             <p className="text-xs text-muted-foreground">{message}</p>
           </>
         )}
