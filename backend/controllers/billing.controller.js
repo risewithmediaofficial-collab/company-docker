@@ -154,7 +154,7 @@ export const SAAS_PLANS = [
 ];
 
 const ORG_BILLING_PROJECTION =
-  'name slug logo logoSize industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients storageLimitMb storageUsedBytes trialEndsAt settings paidAt';
+  'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients storageLimitMb storageUsedBytes trialEndsAt settings paidAt';
 
 export const getPlanById = (planId) =>
   SAAS_PLANS.find((p) => p.id === String(planId || '').toLowerCase().trim()) || null;

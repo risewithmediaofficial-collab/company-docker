@@ -39,15 +39,16 @@ const AuthTopBar = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
     <Link to="/" className="lg:hidden group flex items-center gap-2 shrink-0" title="AgencyUpscale Home">
       {portalOrg?.logo ? (
         <>
-          <img
-            src={portalOrg.logo}
-            alt={portalOrg.name}
-            style={{ height: `${Math.min(56, Math.max(28, Number(portalOrg.logoSize) || 36))}px` }}
-            className="w-auto max-w-[140px] object-contain shrink-0 rounded-lg"
-            onError={(e) => {
-              e.currentTarget.src = '/agencyupscalelogo.png';
-            }}
-          />
+          <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 p-1 shadow-2xs border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center overflow-hidden">
+            <img
+              src={portalOrg.logo}
+              alt={portalOrg.name}
+              className="h-full w-full object-contain"
+              onError={(e) => {
+                e.currentTarget.src = '/agencyupscalelogo.png';
+              }}
+            />
+          </div>
           <span className="text-xs font-black text-slate-900 dark:text-white tracking-wider uppercase truncate max-w-[120px]">
             {portalOrg.name}
           </span>
@@ -206,15 +207,16 @@ const SplitShowcasePanel = ({ view, portalOrg, onOpenTerms }) => (
       <Link to="/" className="inline-flex items-center gap-3 group" aria-label="AgencyUpscale Home">
         {portalOrg?.logo ? (
           <>
-            <img
-              src={portalOrg.logo}
-              alt={portalOrg.name}
-              style={{ height: `${Math.min(72, Math.max(32, Number(portalOrg.logoSize) || 48))}px` }}
-              className="w-auto max-w-[200px] object-contain rounded-xl drop-shadow-sm"
-              onError={(e) => {
-                e.currentTarget.src = '/agencyupscalelogo-dark.png';
-              }}
-            />
+            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 p-2 flex items-center justify-center shadow-lg shadow-black/15 overflow-hidden">
+              <img
+                src={portalOrg.logo}
+                alt={portalOrg.name}
+                className="h-full w-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = '/agencyupscalelogo-dark.png';
+                }}
+              />
+            </div>
             <span className="text-lg font-black text-white tracking-tight drop-shadow-sm">
               {portalOrg.name}
             </span>

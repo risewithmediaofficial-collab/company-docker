@@ -18,7 +18,6 @@ const settingsSchema = new mongoose.Schema(
       gstNumber: { type: String, default: '' },
       services: { type: String, default: '' },
       logoUrl: { type: String, default: '' },
-      logoSize: { type: Number, default: 44, min: 24, max: 72 },
       openingTime: { type: String, default: '09:30' },
       closingTime: { type: String, default: '18:30' },
       operatingHours: { type: String, default: '9:30 AM - 6:30 PM' },

@@ -153,7 +153,6 @@ const Settings = () => {
     gstNumber: '',
     services: '',
     logoUrl: '',
-    logoSize: 44,
     openingTime: '09:30',
     closingTime: '18:30',
     operatingHours: '9:30 AM - 6:30 PM',
@@ -296,7 +295,6 @@ const Settings = () => {
       gstNumber: settings.companyProfile?.gstNumber || '',
       services: settings.companyProfile?.services || '',
       logoUrl: settings.companyProfile?.logoUrl || '',
-      logoSize: Math.min(72, Math.max(24, Number(settings.companyProfile?.logoSize ?? data?.organization?.logoSize) || 44)),
       openingTime: settings.companyProfile?.openingTime || '09:30',
       closingTime: settings.companyProfile?.closingTime || '18:30',
       operatingHours: settings.companyProfile?.operatingHours || '9:30 AM - 6:30 PM',
@@ -360,6 +358,30 @@ const Settings = () => {
       closingTime: closeTime,
       operatingHours: formatted,
     }));
+  };
+
+  const handleCaptureCompanyGPS = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      return;
+    }
+    toast.info('Capturing current office GPS location...');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCompanyProfile((current) => ({
+          ...current,
+          latitude: Number(pos.coords.latitude.toFixed(6)),
+          longitude: Number(pos.coords.longitude.toFixed(6)),
+        }));
+        toast.success(
+          `Office GPS captured: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`
+        );
+      },
+      (err) => {
+        toast.error(`GPS Error: ${err.message}`);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const handleSaveCompanyDetails = async () => {
@@ -923,7 +945,7 @@ const Settings = () => {
                           placeholder="29ABCDE1234F1Z5"
                         />
                       </label>
-                      <div className="space-y-3 md:col-span-2">
+                      <div className="space-y-2 md:col-span-2">
                         <span className="ml-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
                           Company Logo Upload or Image URL
                         </span>
@@ -954,97 +976,6 @@ const Settings = () => {
                               Remove
                             </button>
                           )}
-                        </div>
-
-                        {/* Interactive Logo Size Adjustment & Live Preview */}
-                        <div className="p-4 rounded-2xl border border-border/80 bg-background/80 grid gap-4 sm:grid-cols-2 items-center">
-                          <div className="space-y-2.5">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="font-bold text-foreground">Logo Display Size</span>
-                              <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary font-mono font-bold">
-                                {companyProfile.logoSize || 44}px
-                              </span>
-                            </div>
-                            <input
-                              type="range"
-                              min={24}
-                              max={72}
-                              step={2}
-                              value={companyProfile.logoSize || 44}
-                              onChange={(event) =>
-                                setCompanyProfile((current) => ({
-                                  ...current,
-                                  logoSize: Number(event.target.value),
-                                }))
-                              }
-                              aria-label="Adjust logo height"
-                              className="w-full accent-[#07c8f9] cursor-pointer"
-                            />
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              {[
-                                { label: 'Compact (32px)', size: 32 },
-                                { label: 'Default (44px)', size: 44 },
-                                { label: 'Large (56px)', size: 56 },
-                                { label: 'XL (68px)', size: 68 },
-                              ].map((preset) => (
-                                <button
-                                  key={preset.size}
-                                  type="button"
-                                  onClick={() =>
-                                    setCompanyProfile((current) => ({ ...current, logoSize: preset.size }))
-                                  }
-                                  className={`px-2 py-1 rounded-lg text-[11px] font-semibold border transition-colors cursor-pointer ${
-                                    Number(companyProfile.logoSize || 44) === preset.size
-                                      ? 'bg-[#07c8f9]/15 border-[#07c8f9] text-[#0586a8] dark:text-[#07c8f9]'
-                                      : 'bg-card border-border text-muted-foreground hover:text-foreground'
-                                  }`}
-                                >
-                                  {preset.label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block">
-                              Live Sidebar Header Preview
-                            </span>
-                            <div className="min-h-[84px] rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-100 dark:bg-[#090f1d] px-4 py-2.5 flex items-center gap-2.5 overflow-hidden">
-                              {companyProfile.logoUrl ? (
-                                <>
-                                  <img
-                                    src={getAssetUrl(companyProfile.logoUrl)}
-                                    alt={companyProfile.name || 'Company Logo'}
-                                    style={{ height: `${Math.min(72, Math.max(24, Number(companyProfile.logoSize) || 44))}px` }}
-                                    className="w-auto max-w-[175px] object-contain shrink-0 rounded-md"
-                                    onError={(e) => {
-                                      e.currentTarget.src = '/agencyupscalelogo.png';
-                                    }}
-                                  />
-                                  {companyProfile.name && Number(companyProfile.logoSize || 44) <= 48 && (
-                                    <span className="truncate text-sm font-extrabold tracking-tight text-foreground">
-                                      {companyProfile.name}
-                                    </span>
-                                  )}
-                                </>
-                              ) : (
-                                <>
-                                  <img
-                                    src="/agencyupscalelogo.png"
-                                    alt="AgencyUpscale"
-                                    style={{ height: `${Math.min(72, Math.max(24, Number(companyProfile.logoSize) || 44))}px` }}
-                                    className="w-auto object-contain shrink-0 dark:hidden"
-                                  />
-                                  <img
-                                    src="/agencyupscalelogo-dark.png"
-                                    alt="AgencyUpscale"
-                                    style={{ height: `${Math.min(72, Math.max(24, Number(companyProfile.logoSize) || 44))}px` }}
-                                    className="w-auto object-contain shrink-0 hidden dark:block"
-                                  />
-                                </>
-                              )}
-                            </div>
-                          </div>
                         </div>
                       </div>
                       <label className="space-y-2 md:col-span-2">
@@ -1204,30 +1135,65 @@ const Settings = () => {
                         </div>
                       </div>
 
-                      {/* Attendance GPS Uses Default HQ Coordinates from Branches & Locations */}
-                      <div className="md:col-span-2 p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="space-y-1">
+                      {/* Attendance GPS Coordinates & Geofencing */}
+                      <div className="md:col-span-2 p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                           <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
                             <Navigation size={14} />
-                            Attendance GPS Coordinates (Using Default from Branches &amp; Locations)
+                            Attendance GPS Coordinates &amp; Geofencing
                           </span>
-                          <p className="text-xs text-slate-600 dark:text-slate-300">
-                            {companyProfile.latitude && companyProfile.longitude
-                              ? `Active default location: ${companyProfile.latitude}, ${companyProfile.longitude} • Geofence ${companyProfile.radiusKm ?? 0.5} km`
-                              : 'Attendance geofencing automatically uses your headquarters coordinates configured in Branches & Locations.'}
-                          </p>
+                          <button
+                            type="button"
+                            onClick={handleCaptureCompanyGPS}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-xs font-bold hover:bg-emerald-100/70 cursor-pointer transition-colors"
+                          >
+                            <Compass size={13} />
+                            <span>Capture My GPS</span>
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveSection('branches');
-                            setSearchParams({ section: 'branches' });
-                          }}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-xs font-bold hover:bg-emerald-100/70 cursor-pointer transition-colors shrink-0"
-                        >
-                          <MapPin size={13} />
-                          <span>Manage in Branches</span>
-                        </button>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <label className="space-y-1">
+                            <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                              <MapPin size={12} />
+                              Attendance Latitude
+                            </span>
+                            <input
+                              type="number"
+                              step="any"
+                              value={companyProfile.latitude ?? ''}
+                              onChange={(event) => setCompanyProfile((current) => ({ ...current, latitude: event.target.value }))}
+                              placeholder="e.g. 12.7409"
+                              className="w-full rounded-xl bg-background px-3 py-2.5 text-sm font-mono outline-none focus:ring-2 focus:ring-brand/40"
+                            />
+                          </label>
+                          <label className="space-y-1">
+                            <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                              <MapPin size={12} />
+                              Attendance Longitude
+                            </span>
+                            <input
+                              type="number"
+                              step="any"
+                              value={companyProfile.longitude ?? ''}
+                              onChange={(event) => setCompanyProfile((current) => ({ ...current, longitude: event.target.value }))}
+                              placeholder="e.g. 77.8253"
+                              className="w-full rounded-xl bg-background px-3 py-2.5 text-sm font-mono outline-none focus:ring-2 focus:ring-brand/40"
+                            />
+                          </label>
+                          <label className="space-y-1">
+                            <span className="text-xs font-semibold text-muted-foreground">Geofence Radius (km)</span>
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0.1"
+                              max="20"
+                              value={companyProfile.radiusKm ?? 0.5}
+                              onChange={(event) => setCompanyProfile((current) => ({ ...current, radiusKm: Number(event.target.value) }))}
+                              placeholder="0.5"
+                              className="w-full rounded-xl bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand/40"
+                            />
+                          </label>
+                        </div>
                       </div>
                     </div>
 

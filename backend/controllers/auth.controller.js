@@ -14,46 +14,9 @@ import { createActivityLog } from '../utils/activity.js';
 import { generateCaptchaChallenge, verifyCaptchaChallenge, verifyInteractiveCaptchaStep, isTermsAccepted } from '../utils/captcha.js';
 import { loadEnv } from '../config/env.js';
 import { sanitizeOrganizationForRole } from '../utils/orgAccess.js';
-import Settings from '../models/settings.model.js';
 
 const ORG_AUTH_PROJECTION =
-  'name slug logo logoSize industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients storageLimitMb storageUsedBytes trialEndsAt settings paidAt';
-
-const resolveEffectiveOrganization = async (user, targetOrgId) => {
-  if (targetOrgId && mongoose.Types.ObjectId.isValid(targetOrgId)) {
-    return await Organization.findById(targetOrgId).select(ORG_AUTH_PROJECTION);
-  }
-  // Global platform users (e.g. main software Super Admin / internal staff without tenant orgId)
-  // inherit branding from the main software Company Profile configured in Super Admin Settings
-  let brandSettings = null;
-  if (user?._id && user.role === 'superAdmin') {
-    brandSettings = await Settings.findOne({ user: user._id }).select('companyProfile').lean();
-  }
-  if (!brandSettings?.companyProfile?.name && !brandSettings?.companyProfile?.logoUrl) {
-    const adminUser = await User.findOne({ role: 'superAdmin' }).select('_id').sort({ createdAt: 1 }).lean();
-    if (adminUser?._id) {
-      brandSettings = await Settings.findOne({ user: adminUser._id }).select('companyProfile').lean();
-    }
-  }
-  const cp = brandSettings?.companyProfile;
-  if (!cp || (!cp.name && !cp.logoUrl && !cp.logoSize)) return null;
-
-  return {
-    _id: null,
-    name: cp.name || 'AgencyUpscale',
-    slug: cp.slug || '',
-    logo: cp.logoUrl || '',
-    logoSize: Math.min(72, Math.max(24, Number(cp.logoSize) || 44)),
-    industry: cp.industry || '',
-    website: cp.website || '',
-    phone: cp.phone || '',
-    email: cp.email || '',
-    address: cp.address || '',
-    gstNumber: cp.gstNumber || '',
-    services: cp.services || '',
-    planStatus: 'active',
-  };
-};
+  'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients storageLimitMb storageUsedBytes trialEndsAt settings paidAt';
 
 const createSelfServeWorkspace = async ({ name, email, phone, ownerId }) => {
   const baseName = String(name || email?.split('@')[0] || 'My Agency').trim();
@@ -313,12 +276,15 @@ export const login = async (req, res) => {
     }
 
     // ── Tenant Portal URL Scoping Enforcement ────────────────────────────────
-    let organization = await resolveEffectiveOrganization(user, user.organizationId);
-    if (user.organizationId && organization && !organization.slug) {
-      organization.slug = organization.name
-        ? organization.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-        : String(organization._id);
-      await organization.save();
+    let organization = null;
+    if (user.organizationId) {
+      organization = await Organization.findById(user.organizationId).select(ORG_AUTH_PROJECTION);
+      if (organization && !organization.slug) {
+        organization.slug = organization.name
+          ? organization.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+          : String(organization._id);
+        await organization.save();
+      }
     }
 
     const isSelfServeOnboarding = Boolean(
@@ -488,6 +454,7 @@ export const getMe = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
+    let organization = null;
     const rawGhostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
     const ghostOrgId = (rawGhostOrgId && rawGhostOrgId !== 'undefined' && rawGhostOrgId !== 'null' && rawGhostOrgId !== 'global')
       ? String(rawGhostOrgId).trim()
@@ -496,7 +463,9 @@ export const getMe = async (req, res) => {
       ? ghostOrgId
       : user.organizationId;
 
-    const organization = await resolveEffectiveOrganization(user, targetOrgId);
+    if (targetOrgId && mongoose.Types.ObjectId.isValid(targetOrgId)) {
+      organization = await Organization.findById(targetOrgId).select(ORG_AUTH_PROJECTION);
+    }
     res.json({
       success: true,
       user,
@@ -814,7 +783,6 @@ export const getCompanyPortal = async (req, res) => {
         name: org.name,
         slug: org.slug || cleanSlug,
         logo: org.logo || '',
-        logoSize: Math.min(72, Math.max(24, Number(org.logoSize) || 44)),
         industry: org.industry || '',
         planStatus: org.planStatus,
       },

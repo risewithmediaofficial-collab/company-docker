@@ -87,13 +87,12 @@ const AuthLayout = () => {
           <div className="flex flex-col items-center mb-8">
             {portalOrg ? (
               <>
-                <div className="mb-4 flex items-center justify-center">
+                <div className="mb-4 flex h-16 sm:h-20 w-16 sm:w-20 items-center justify-center rounded-2xl bg-brand/10 ring-1 ring-brand/25 shadow-[0_8px_24px_-8px_hsl(var(--brand)/0.45)] p-2.5 transition-colors overflow-hidden">
                   {portalOrg.logo ? (
                     <img
                       src={portalOrg.logo}
                       alt={portalOrg.name}
-                      style={{ height: `${Math.min(72, Math.max(32, Number(portalOrg.logoSize) || 52))}px` }}
-                      className="w-auto max-w-[200px] object-contain rounded-xl"
+                      className="h-full w-full object-contain"
                       onError={(e) => {
                         e.currentTarget.src = '/agencyupscalelogo.png';
                       }}

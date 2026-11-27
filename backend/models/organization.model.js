@@ -15,7 +15,6 @@ const organizationSchema = new mongoose.Schema(
     email: { type: String, default: '' },
     phone: { type: String, default: '' },
     logo: { type: String, default: '' },
-    logoSize: { type: Number, default: 44, min: 24, max: 72 },
     address: { type: String, default: '' },
     gstNumber: { type: String, default: '' },
     services: { type: String, default: '' },

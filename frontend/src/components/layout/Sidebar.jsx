@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RiseWithMediaAttribution } from '../common/RiseWithMediaAttribution';
-import { getAssetUrl } from '../../utils/assetUrl';
 import {
   LayoutDashboard,
   Users,
@@ -377,60 +376,50 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
         }`}
       >
         {/* Workspace Brand / Header */}
-        <div className="min-h-16 py-2 flex items-center justify-between px-4 bg-slate-100 dark:bg-[#090f1d] border-b border-slate-200/70 dark:border-slate-800/80 shrink-0">
-          {(() => {
-            const brandLogoSize = Math.min(72, Math.max(24, Number(organization?.logoSize) || 44));
-            const brandLogo = organization?.logo || '';
-            if (brandLogo) {
-              return (
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <img
-                    src={getAssetUrl(brandLogo)}
-                    alt={organization?.name || 'Workspace logo'}
-                    style={{ height: `${brandLogoSize}px` }}
-                    className="w-auto max-w-[165px] object-contain shrink-0 rounded-lg"
-                    onError={(e) => { e.currentTarget.src = '/agencyupscalelogo.png'; }}
-                  />
-                  {organization?.name && brandLogoSize <= 48 && (
-                    <div className="flex min-w-0 flex-col leading-tight">
-                      <span
-                        className="truncate text-sm font-extrabold tracking-tight text-foreground font-sans"
-                        title={organization?.name}
-                      >
-                        {organization.name}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              );
-            }
-            return (
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="shrink-0 flex items-center">
-                  <img
-                    src="/agencyupscalelogo.png"
-                    alt={organization?.name || 'AgencyUpscale'}
-                    style={{ height: `${brandLogoSize}px` }}
-                    className="w-auto object-contain dark:hidden"
-                  />
-                  <img
-                    src="/agencyupscalelogo-dark.png"
-                    alt={organization?.name || 'AgencyUpscale'}
-                    style={{ height: `${brandLogoSize}px` }}
-                    className="w-auto object-contain hidden dark:block"
-                  />
-                </div>
-                {organization?.name && organization.name.toLowerCase() !== 'agencyupscale' && (
-                  <span
-                    className="truncate text-xs font-extrabold tracking-tight text-foreground font-sans"
-                    title={organization.name}
-                  >
-                    {organization.name}
-                  </span>
-                )}
+        <div className="h-16 flex items-center justify-between px-4 pt-1 bg-slate-100 dark:bg-[#090f1d] border-b border-slate-200/70 dark:border-slate-800/80 shrink-0">
+          {organization?.logo ? (
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-brand/25 p-1 shadow-xs overflow-hidden">
+                <img
+                  src={organization.logo}
+                  alt={organization?.name || "Workspace logo"}
+                  className="h-full w-full object-contain"
+                  onError={(e) => { e.currentTarget.src = "/agencyupscalelogo.png"; }}
+                />
               </div>
-            );
-          })()}
+              <div className="flex min-w-0 flex-col leading-tight">
+                <span
+                  className="truncate text-sm font-extrabold tracking-tight text-foreground font-sans"
+                  title={organization?.name}
+                >
+                  {organization?.name || 'Workspace'}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="h-11 shrink-0 flex items-center">
+                <img
+                  src="/agencyupscalelogo.png"
+                  alt="AgencyUpscale"
+                  className="h-11 w-auto object-contain dark:hidden"
+                />
+                <img
+                  src="/agencyupscalelogo-dark.png"
+                  alt="AgencyUpscale"
+                  className="h-11 w-auto object-contain hidden dark:block"
+                />
+              </div>
+              {organization?.name && (
+                <span
+                  className="truncate text-xs font-extrabold tracking-tight text-foreground font-sans"
+                  title={organization.name}
+                >
+                  {organization.name}
+                </span>
+              )}
+            </div>
+          )}
           <button
             onClick={() => dispatch(setSidebarOpen(false))}
             className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-xl hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors md:hidden"
