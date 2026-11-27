@@ -23,5 +23,5 @@ RUN mkdir -p uploads
 # Expose the backend port
 EXPOSE 5001
 
-# Start the server
-CMD ["node", "index.js"]
+# Start the server with multi-worker cluster supervisor & auto-respawn
+CMD ["node", "cluster.js"]

@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Lead from '../models/lead.model.js';
 import Client from '../models/client.model.js';
 import Project from '../models/project.model.js';
@@ -26,12 +27,26 @@ export const clearAdminDashboardCache = () => {
 
 export const getAdminDashboard = async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        code: 'DB_UNAVAILABLE',
+        message: 'Database connection is currently reconnecting. Please retry shortly.',
+      });
+    }
+
     const isManager = req.user?.role === 'manager';
     const now = new Date();
     const period = req.query.period || 'monthly';
     const { startDate: qStartDate, endDate: qEndDate, branchId: qBranchId } = req.query;
 
-    const cacheKey = `${req.user?.organizationId || 'default'}:${req.user?.role || 'user'}:${period}:${qStartDate || ''}:${qEndDate || ''}:${qBranchId || 'all'}`;
+    const rawGhostOrgId =
+      req.headers['x-impersonate-org-id'] ||
+      req.headers['x-ghost-org-id'] ||
+      (req.isGhostMode ? req.user.organizationId : null);
+    const cacheOrgScope = rawGhostOrgId || req.user?.organizationId || 'global';
+
+    const cacheKey = `${cacheOrgScope}:${req.user?.role || 'user'}:${period}:${qStartDate || ''}:${qEndDate || ''}:${qBranchId || 'all'}`;
     const cached = dashboardCache.get(cacheKey);
 
     if (cached && Date.now() - cached.timestamp < DASHBOARD_CACHE_TTL) {
@@ -113,6 +128,9 @@ export const getAdminDashboard = async (req, res) => {
     const ghostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'] || (req.isGhostMode ? req.user.organizationId : null);
     const orgId = ghostOrgId || (req.user.role !== 'superAdmin' ? req.user.organizationId : null);
     const orgFilter = orgId ? { organizationId: orgId } : {};
+    const orgAggFilter = orgId && mongoose.Types.ObjectId.isValid(orgId)
+      ? { organizationId: new mongoose.Types.ObjectId(orgId) }
+      : orgFilter;
 
     // Branch filtering for superadmin, admin, organizationOwner
     let selectedBranchDoc = null;
@@ -177,12 +195,12 @@ export const getAdminDashboard = async (req, res) => {
       Project.countDocuments({ ...orgFilter, status: { $in: ['active', 'In Progress'] } }),
       Task.countDocuments(taskPeriodFilter),
       Task.countDocuments({ parent: null, ...orgFilter, ...(branchUserIds ? { assignedTo: { $in: branchUserIds } } : {}), dueDate: { $lt: now }, status: { $nin: ['done', 'approved', 'Completed', 'Approved'] } }),
-      Invoice.aggregate([{ $match: { ...orgFilter, status: 'paid', paidDate: { $gte: periodStart, $lte: periodEnd } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
-      Invoice.aggregate([{ $match: { ...orgFilter, status: 'paid', paidDate: { $gte: priorPeriodStart, $lte: priorPeriodEnd } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
-      Invoice.aggregate([{ $match: { ...orgFilter, status: 'paid' } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
-      Expense.aggregate([{ $match: { ...orgFilter, status: { $in: ['approved', 'reimbursed'] }, date: { $gte: periodStart, $lte: periodEnd } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+      Invoice.aggregate([{ $match: { ...orgAggFilter, status: 'paid', paidDate: { $gte: periodStart, $lte: periodEnd } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
+      Invoice.aggregate([{ $match: { ...orgAggFilter, status: 'paid', paidDate: { $gte: priorPeriodStart, $lte: priorPeriodEnd } } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
+      Invoice.aggregate([{ $match: { ...orgAggFilter, status: 'paid' } }, { $group: { _id: null, total: { $sum: '$total' } } }]),
+      Expense.aggregate([{ $match: { ...orgAggFilter, status: { $in: ['approved', 'reimbursed'] }, date: { $gte: periodStart, $lte: periodEnd } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
       Project.aggregate([
-        { $match: orgFilter },
+        { $match: orgAggFilter },
         {
           $group: {
             _id: null,
@@ -205,7 +223,7 @@ export const getAdminDashboard = async (req, res) => {
       Invoice.aggregate([
         {
           $match: {
-            ...orgFilter,
+            ...orgAggFilter,
             status: { $in: ['sent', 'viewed', 'partially_paid', 'Sent', 'Partially Paid'] },
           },
         },
@@ -236,7 +254,7 @@ export const getAdminDashboard = async (req, res) => {
     // 2. Revenue Month-by-Month Trend (Past 6 Months)
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
     const rawRevenueChart = await Invoice.aggregate([
-      { $match: { status: 'paid', paidDate: { $gte: sixMonthsAgo, $lte: periodEnd } } },
+      { $match: { ...orgAggFilter, status: 'paid', paidDate: { $gte: sixMonthsAgo, $lte: periodEnd } } },
       { $group: { _id: { year: { $year: '$paidDate' }, month: { $month: '$paidDate' } }, revenue: { $sum: '$total' } } },
       { $sort: { '_id.year': 1, '_id.month': 1 } },
     ]);
@@ -258,7 +276,7 @@ export const getAdminDashboard = async (req, res) => {
 
     // 3. Revenue by Client
     const rawRevenueByClient = await Invoice.aggregate([
-      { $match: { status: 'paid' } },
+      { $match: { ...orgAggFilter, status: 'paid' } },
       { $group: { _id: '$client', totalRevenue: { $sum: '$total' } } },
       { $sort: { totalRevenue: -1 } },
       { $limit: 5 },
@@ -344,6 +362,7 @@ export const getAdminDashboard = async (req, res) => {
     const currentYearNum = now.getFullYear();
 
     const monthlyDeliverablesList = await ProjectMonthlyDeliverable.find({
+      ...orgFilter,
       month: currentMonthNum,
       year: currentYearNum,
     }).populate('projectId', 'name client status').lean();
@@ -461,7 +480,7 @@ export const getAdminDashboard = async (req, res) => {
     const remainingAmount = thisMonthRev - totalExpenses - totalAdsBudget;
     const pendingBalance = pendingBalanceAgg[0]?.pendingBalance || 0;
 
-    const recentActivityLogs = await ActivityLog.find()
+    const recentActivityLogs = await ActivityLog.find(orgFilter)
       .populate('actor', 'name email avatar role')
       .sort({ createdAt: -1 })
       .limit(15)
@@ -559,11 +578,13 @@ export const getAdminDashboard = async (req, res) => {
       console.warn('Error fetching company branches for overview:', bErr.message);
     }
 
-    if (dashboardCache.size >= MAX_DASHBOARD_CACHE_ENTRIES) {
-      const oldestKey = dashboardCache.keys().next().value;
-      dashboardCache.delete(oldestKey);
+    if (mongoose.connection.readyState === 1) {
+      if (dashboardCache.size >= MAX_DASHBOARD_CACHE_ENTRIES) {
+        const oldestKey = dashboardCache.keys().next().value;
+        dashboardCache.delete(oldestKey);
+      }
+      dashboardCache.set(cacheKey, { timestamp: Date.now(), data: responsePayload });
     }
-    dashboardCache.set(cacheKey, { timestamp: Date.now(), data: responsePayload });
 
     res.json({
       ...responsePayload,

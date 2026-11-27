@@ -9,6 +9,7 @@ import User from '../models/user.model.js';
 import BrandWorkspace from '../models/brandWorkspace.model.js';
 import SaasPayment from '../models/saasPayment.model.js';
 import { sanitizeOrganizationForRole } from '../utils/orgAccess.js';
+import { escapeRegex } from '../middleware/security.middleware.js';
 
 // ─── Platform Stats Overview ──────────────────────────────────────────────────
 // GET /api/platform/stats
@@ -79,21 +80,23 @@ export const getAllOrganizations = async (req, res) => {
     if (status) filter.planStatus = status;
     if (plan) filter.plan = plan;
     if (search) {
-      const term = search.trim();
-      const matchingOwners = await User.find({
-        $or: [
-          { name: { $regex: term, $options: 'i' } },
-          { email: { $regex: term, $options: 'i' } },
-          { phone: { $regex: term, $options: 'i' } },
-        ],
-      }).select('_id');
-      const ownerIds = matchingOwners.map((u) => u._id);
+      const term = escapeRegex(search);
+      if (term) {
+        const matchingOwners = await User.find({
+          $or: [
+            { name: { $regex: term, $options: 'i' } },
+            { email: { $regex: term, $options: 'i' } },
+            { phone: { $regex: term, $options: 'i' } },
+          ],
+        }).select('_id');
+        const ownerIds = matchingOwners.map((u) => u._id);
 
-      filter.$or = [
-        { name: { $regex: term, $options: 'i' } },
-        { industry: { $regex: term, $options: 'i' } },
-        { ownerId: { $in: ownerIds } },
-      ];
+        filter.$or = [
+          { name: { $regex: term, $options: 'i' } },
+          { industry: { $regex: term, $options: 'i' } },
+          { ownerId: { $in: ownerIds } },
+        ];
+      }
     }
 
     const skip = (Number(page) - 1) * Number(limit);
@@ -375,17 +378,19 @@ export const getPlatformPayments = async (req, res) => {
       filter.status = String(status).trim().toLowerCase();
     }
     if (search && String(search).trim()) {
-      const term = String(search).trim();
-      filter.$or = [
-        { payerName: { $regex: term, $options: 'i' } },
-        { contactNumber: { $regex: term, $options: 'i' } },
-        { payerEmail: { $regex: term, $options: 'i' } },
-        { companyName: { $regex: term, $options: 'i' } },
-        { planName: { $regex: term, $options: 'i' } },
-        { razorpayOrderId: { $regex: term, $options: 'i' } },
-        { razorpayPaymentId: { $regex: term, $options: 'i' } },
-        { failureReason: { $regex: term, $options: 'i' } },
-      ];
+      const term = escapeRegex(search);
+      if (term) {
+        filter.$or = [
+          { payerName: { $regex: term, $options: 'i' } },
+          { contactNumber: { $regex: term, $options: 'i' } },
+          { payerEmail: { $regex: term, $options: 'i' } },
+          { companyName: { $regex: term, $options: 'i' } },
+          { planName: { $regex: term, $options: 'i' } },
+          { razorpayOrderId: { $regex: term, $options: 'i' } },
+          { razorpayPaymentId: { $regex: term, $options: 'i' } },
+          { failureReason: { $regex: term, $options: 'i' } },
+        ];
+      }
     }
 
     const pageNum = Math.max(1, Number(page) || 1);
@@ -462,6 +467,9 @@ export const getPlatformPayments = async (req, res) => {
 // GET /api/platform/organizations/:id/ghost-context
 export const getGhostContext = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid organization ID' });
+    }
     const org = await Organization.findById(req.params.id)
       .populate('ownerId', 'name email phone');
     if (!org) return res.status(404).json({ success: false, message: 'Organization not found' });

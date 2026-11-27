@@ -65,14 +65,43 @@ export const emitLiveEvent = (event, payload = {}, options = {}) => {
       targetRooms.add(`org:${targetOrgId.toString()}`);
     }
 
-    // Deliver to all targeted rooms
-    targetRooms.forEach((room) => {
+    // Deliver to all targeted rooms on this worker
+    const roomsList = Array.from(targetRooms);
+    roomsList.forEach((room) => {
       io.to(room).emit(event, payload);
       io.to(room).emit('crmLiveUpdate', minimalPayload);
     });
+
+    // Relay across sibling cluster workers when running under cluster.js
+    if (process.env.CLUSTER_WORKER_ACTIVE === 'true' && typeof process.send === 'function') {
+      try {
+        process.send({
+          type: 'SOCKET_RELAY',
+          rooms: roomsList,
+          event,
+          payload,
+          minimalPayload,
+        });
+      } catch {
+        // Ignore disconnected IPC channel during shutdown
+      }
+    }
   } catch (err) {
     console.error(`[SocketEmitter] Error emitting ${event}:`, err.message);
   }
+};
+
+let relayRegistered = false;
+export const registerClusterSocketRelay = () => {
+  if (relayRegistered || process.env.CLUSTER_WORKER_ACTIVE !== 'true') return;
+  relayRegistered = true;
+  process.on('message', (msg) => {
+    if (!msg || msg.type !== 'SOCKET_RELAY' || !global.io || !Array.isArray(msg.rooms)) return;
+    msg.rooms.forEach((room) => {
+      global.io.to(room).emit(msg.event, msg.payload);
+      global.io.to(room).emit('crmLiveUpdate', msg.minimalPayload);
+    });
+  });
 };
 
 export default emitLiveEvent;

@@ -90,6 +90,7 @@ const Dashboard = () => {
   const queryClient = useQueryClient();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastSynced, setLastSynced] = useState(new Date());
   const [activeTab, setActiveTab] = useState('command'); // 'command' | 'todos' | 'metrics' | 'team'
@@ -210,6 +211,7 @@ const Dashboard = () => {
 
   const fetchStats = async (showLoader = true, branchOverride = undefined) => {
     if (showLoader) setLoading(true);
+    setFetchError('');
     setIsRefreshing(true);
     try {
       const endpoint = ['superAdmin', 'admin', 'organizationOwner', 'manager'].includes(user.role)
@@ -236,6 +238,8 @@ const Dashboard = () => {
       setLastSynced(new Date());
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
+      const msg = err.response?.data?.message || 'Unable to reach workspace database. Please retry.';
+      setFetchError(msg);
     } finally {
       if (showLoader) setLoading(false);
       setIsRefreshing(false);
@@ -312,7 +316,7 @@ const Dashboard = () => {
     year: 'numeric',
   });
 
-  if (!user || loading || !data) {
+  if (!user || loading) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="h-28 bg-card rounded-2xl"></div>
@@ -321,6 +325,28 @@ const Dashboard = () => {
             <div key={i} className="h-24 bg-card rounded-2xl"></div>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="rounded-2xl bg-card border border-destructive/30 p-8 text-center space-y-4">
+        <div className="mx-auto w-12 h-12 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center">
+          <AlertTriangle size={22} />
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-lg font-bold text-foreground">Unable to load dashboard metrics</h2>
+          <p className="text-sm text-muted-foreground">{fetchError || 'Database connection is temporarily unavailable.'}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => fetchStats(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition cursor-pointer"
+        >
+          <RefreshCw size={14} />
+          Retry Connection
+        </button>
       </div>
     );
   }

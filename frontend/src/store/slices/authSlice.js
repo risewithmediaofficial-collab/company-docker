@@ -256,10 +256,17 @@ const authSlice = createSlice({
           try {
             localStorage.setItem('rwm_user_org', JSON.stringify(action.payload.organization));
           } catch {}
+        } else if (!action.payload.organization && !action.payload.isGhostMode) {
+          localStorage.removeItem('rwm_user_org');
         }
         if (action.payload.isGhostMode && action.payload.organization) {
           state.ghostMode = true;
           state.ghostOrg = action.payload.organization;
+        } else {
+          state.ghostMode = false;
+          state.ghostOrg = null;
+          localStorage.removeItem('rwm_ghost_org_id');
+          localStorage.removeItem('rwm_ghost_org_data');
         }
         state.isAuthenticated = true;
         state.authChecked = true;

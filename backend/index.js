@@ -20,6 +20,13 @@ import { getEnv, loadEnv } from './config/env.js';
 import { corsOptions, corsOptionsDelegate } from './config/cors.js';
 import { initSocket } from './config/socket.js';
 import { initCronJobs } from './services/cron.service.js';
+import { registerClusterSocketRelay } from './utils/socketEmitter.js';
+import {
+  hppProtection,
+  requestShield,
+  payloadErrorHandler,
+  createLoadShedder,
+} from './middleware/security.middleware.js';
 import User from './models/user.model.js';
 import mongoose from 'mongoose';
 
@@ -125,7 +132,7 @@ mongoose.connection.on('connected', () => {
   runDatabaseStartupTasks();
 });
 
-const dbConn = await connectDB();
+const dbConn = process.env.SKIP_DB_CONNECT === 'true' ? null : await connectDB();
 if (dbConn) {
   await runDatabaseStartupTasks();
 } else {
@@ -133,7 +140,14 @@ if (dbConn) {
 }
 
 const app = express();
+app.disable('x-powered-by');
 const httpServer = http.createServer(app);
+
+// Slowloris & socket exhaustion timeouts
+httpServer.requestTimeout = 30000;
+httpServer.headersTimeout = 15000;
+httpServer.keepAliveTimeout = 65000;
+httpServer.maxHeadersCount = 64;
 
 // Configure trust proxy
 if (process.env.TRUST_PROXY) {
@@ -147,11 +161,16 @@ const io = new SocketIO(httpServer, {
 });
 
 initSocket(io);
-initCronJobs(io);
+registerClusterSocketRelay();
+if (process.env.SKIP_CRON !== 'true') {
+  initCronJobs(io);
+}
 
 app.set('io', io);
 global.io = io;
 
+const loadShedder = createLoadShedder();
+app.use(loadShedder);
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors(corsOptionsDelegate));
 
@@ -202,10 +221,13 @@ export const uploadLimiter = rateLimit({
   message: { success: false, message: 'Too many upload requests. Please slow down.' },
 });
 
-// Parse body BEFORE mongoSanitize so req.body is sanitized properly
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Parse body BEFORE mongoSanitize/requestShield so req.body & req.query are validated and sanitized
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+app.use(payloadErrorHandler);
+app.use(hppProtection);
 app.use(mongoSanitize());
+app.use(requestShield);
 
 // Secure static uploads serving with browser & CDN caching policies
 const safeUploadStatic = express.static(env.uploadDir, {
@@ -247,11 +269,26 @@ if (env.nodeEnv === 'development') {
 }
 
 app.get('/api/health', (req, res) => {
+  const readyState = mongoose.connection.readyState;
   res.json({
     success: true,
     message: 'Agency CRM API is running',
     timestamp: new Date().toISOString(),
     env: env.nodeEnv,
+    workerPid: process.pid,
+    dbConnected: readyState === 1,
+    dbState: readyState,
+    uptimeSeconds: Math.round(process.uptime()),
+    load: loadShedder.getMetrics(),
+  });
+});
+
+app.get('/api/ready', (req, res) => {
+  const isReady = mongoose.connection.readyState === 1;
+  res.status(isReady ? 200 : 503).json({
+    success: isReady,
+    dbState: mongoose.connection.readyState,
+    workerPid: process.pid,
   });
 });
 
@@ -392,11 +429,26 @@ const handleShutdown = (signal) => {
 process.on('SIGTERM', () => handleShutdown('SIGTERM'));
 process.on('SIGINT', () => handleShutdown('SIGINT'));
 
-httpServer.listen(env.port, () => {
-  console.log(`\nAgency CRM Server running on port ${env.port}`);
-  console.log(`Environment: ${env.nodeEnv}`);
-  console.log(`Client URL: ${env.clientUrl}`);
-  console.log(`API Health: http://localhost:${env.port}/api/health\n`);
+// Process-level anti-crash guards so unhandled async faults never take down traffic abruptly
+process.on('unhandledRejection', (reason) => {
+  console.error('[Process Guard] Unhandled Promise Rejection:', reason instanceof Error ? reason.stack || reason.message : reason);
 });
 
+process.on('uncaughtException', (err) => {
+  console.error('[Process Guard] Uncaught Exception:', err?.stack || err?.message || err);
+  if (process.env.CLUSTER_WORKER_ACTIVE === 'true') {
+    handleShutdown('uncaughtException');
+  }
+});
+
+if (process.env.NO_LISTEN !== 'true') {
+  httpServer.listen(env.port, () => {
+    console.log(`\nAgency CRM Server running on port ${env.port} (PID ${process.pid})`);
+    console.log(`Environment: ${env.nodeEnv}`);
+    console.log(`Client URL: ${env.clientUrl}`);
+    console.log(`API Health: http://localhost:${env.port}/api/health\n`);
+  });
+}
+
+export { app, httpServer };
 export default app;

@@ -31,11 +31,11 @@ export const SocketProvider = ({ children }) => {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
 
-    // Connect to the same origin with authenticated handshake
+    // Connect to the same origin with authenticated handshake (WebSocket first for multi-worker affinity)
     const newSocket = io(window.location.origin, {
       auth: { token },
       withCredentials: true,
-      transports: ['polling', 'websocket'],
+      transports: ['websocket', 'polling'],
       reconnectionAttempts: 5,
       reconnectionDelay: 2000,
       autoConnect: true,
