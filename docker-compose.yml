@@ -23,8 +23,8 @@ services:
       MAX_CONCURRENT_REQUESTS: ${MAX_CONCURRENT_REQUESTS:-500}
       # External production MongoDB container (company_crm_mongodb)
       MONGO_URI: ${MONGO_URI:-mongodb://company-crm-mongodb:27017/company_crm}
-      CLIENT_URL: ${CLIENT_URL:-https://company.risewithmedia.com}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      CLIENT_URL: ${CLIENT_URL:-https://agencyupscale.com}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://agencyupscale.com,https://www.agencyupscale.com}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in environment}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET must be set in environment}
       JWT_EXPIRE: ${JWT_EXPIRE:-15m}

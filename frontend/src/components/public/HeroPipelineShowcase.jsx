@@ -49,7 +49,7 @@ export const HeroPipelineShowcase = () => {
           {/* Center Address Pill */}
           <div className="hidden xs:flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-mono text-slate-500">
             <span className="text-emerald-500">https://</span>
-            <span>app.agencyupscale.com/crm/leads</span>
+            <span>agencyupscale.com/crm/leads</span>
           </div>
 
           {/* Quick Metrics Bar */}
