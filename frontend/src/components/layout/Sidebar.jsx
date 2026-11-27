@@ -371,7 +371,7 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
       )}
 
       <aside
-        className={`fixed left-0 top-0 h-screen w-[min(270px,calc(100vw-32px))] md:w-[260px] bg-slate-100 dark:bg-[#090f1d] border-r border-slate-200/90 dark:border-slate-800/90 z-50 flex flex-col select-none transition-transform duration-200 ease-out md:translate-x-0 md:pointer-events-auto ${
+        className={`fixed inset-y-0 left-0 h-[100dvh] max-h-[100dvh] w-[min(270px,calc(100vw-32px))] md:w-[260px] bg-slate-100 dark:bg-[#090f1d] border-r border-slate-200/90 dark:border-slate-800/90 z-50 flex flex-col select-none transition-transform duration-200 ease-out md:translate-x-0 md:pointer-events-auto ${
           sidebarOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'
         }`}
       >
@@ -433,7 +433,10 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
 
 
         {/* Navigation Scrollable Body */}
-        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4 custom-scrollbar">
+        <div
+          className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y px-3 py-3 space-y-4 custom-scrollbar"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {/* Quick Search Shortcut */}
           <button
             onClick={() => onOpenSearch && onOpenSearch()}
@@ -612,7 +615,7 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
         </div>
 
         {/* Footer / Settings Link */}
-        <div className="p-3 bg-slate-100 dark:bg-[#090f1d] border-t border-slate-200/70 dark:border-slate-800/80 shrink-0 space-y-1.5">
+        <div className="px-3 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] bg-slate-100 dark:bg-[#090f1d] border-t border-slate-200/70 dark:border-slate-800/80 shrink-0 space-y-1">
           <Link
             to="/settings"
             onMouseEnter={() => preloadRoute('/settings')}

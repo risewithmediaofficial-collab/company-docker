@@ -110,7 +110,7 @@ export const CookieConsentBanner = () => {
     <aside
       role="dialog"
       aria-label="Cookie and Cache Preferences"
-      className="fixed bottom-3 left-3 right-3 sm:bottom-5 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto sm:w-full sm:max-w-[480px] z-[70] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700/80 shadow-2xl p-4 text-left animate-in fade-in slide-in-from-bottom-3 duration-200"
+      className="fixed bottom-3 left-3 right-3 sm:bottom-5 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto sm:w-full sm:max-w-[480px] z-30 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700/80 shadow-2xl p-4 text-left animate-in fade-in slide-in-from-bottom-3 duration-200"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2.5">

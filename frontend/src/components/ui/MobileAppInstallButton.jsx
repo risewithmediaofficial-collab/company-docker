@@ -91,8 +91,8 @@ export function MobileAppInstallButton() {
 
   return (
     <>
-      {/* Floating Bottom-Right Install Button (Mobile Only) */}
-      <div className="md:hidden fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] right-4 z-50 flex items-center animate-in fade-in slide-in-from-bottom-4 duration-300">
+      {/* Floating Bottom-Right Install Button (Mobile Only, beneath Sidebar drawer) */}
+      <div className="md:hidden fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] right-4 z-30 flex items-center animate-in fade-in slide-in-from-bottom-4 duration-300">
         <div className="relative group">
           <button
             type="button"

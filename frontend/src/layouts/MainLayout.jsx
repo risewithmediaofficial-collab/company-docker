@@ -52,12 +52,12 @@ const MainLayout = () => {
   }
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
+    <div className="flex h-[100dvh] bg-background text-foreground overflow-hidden">
       {/* Sidebar with stable search callback and path */}
       <Sidebar onOpenSearch={handleOpenSearch} currentPath={location.pathname} />
 
       {/* Main Content Area */}
-      <div className="flex min-w-0 flex-1 flex-col h-full min-h-0 max-h-screen overflow-hidden transition-all duration-250 md:ml-[260px] w-full max-w-full">
+      <div className="flex min-w-0 flex-1 flex-col h-full min-h-0 max-h-[100dvh] overflow-hidden transition-all duration-250 md:ml-[260px] w-full max-w-full">
         <GhostModeBanner />
         <Navbar onOpenSearch={handleOpenSearch} currentPath={location.pathname} />
         <EnableBannerNotificationBar />

@@ -58,7 +58,7 @@ const PlatformLayout = () => {
   if (!user || user.role !== 'superAdmin') return null;
 
   const renderNavLinks = (isMobile = false) => (
-    <nav className="flex-1 p-3 sm:p-4 space-y-1">
+    <nav className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y p-3 sm:p-4 space-y-1">
       {navItems.map((item) => {
         const isRequests = item.id === 'requests';
         const isCompanies = item.id === 'companies';
@@ -204,7 +204,7 @@ const PlatformLayout = () => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 26, stiffness: 280 }}
-              className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-white flex flex-col shadow-2xl lg:hidden"
+              className="fixed inset-y-0 left-0 h-[100dvh] max-h-[100dvh] z-50 w-72 max-w-[85vw] bg-white flex flex-col shadow-2xl lg:hidden"
             >
               <div className="h-16 flex items-center justify-between px-5 border-b border-slate-100">
                 <div className="flex items-center gap-3">
