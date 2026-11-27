@@ -191,8 +191,8 @@ export const sendTestPushNotification = async (req, res) => {
       body: delaySeconds > 0
         ? `Delayed push successfully delivered after ${delaySeconds}s while tab/app was closed!`
         : 'Background Web Push is verified and operational across your devices!',
-      icon: '/agencyupscalelogo.jpeg',
-      badge: '/agencyupscalelogo.jpeg',
+      icon: '/agencyupscalelogo.png',
+      badge: '/agencyupscalelogo.png',
       link: '/settings',
       eventId: `test-push-${Date.now()}`,
     };

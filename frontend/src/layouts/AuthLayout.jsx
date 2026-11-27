@@ -87,7 +87,7 @@ const AuthLayout = () => {
                       alt={portalOrg.name}
                       className="h-full w-full object-contain"
                       onError={(e) => {
-                        e.currentTarget.src = '/agencyupscalelogo.jpeg';
+                        e.currentTarget.src = '/agencyupscalelogo.png';
                       }}
                     />
                   ) : (
@@ -106,11 +106,16 @@ const AuthLayout = () => {
               </>
             ) : (
               <>
-                <div className="mb-3 h-20 w-40 rounded-2xl bg-white border border-slate-200/80 shadow-md overflow-hidden">
+                <div className="mb-3 h-20 flex items-center justify-center">
                   <img
-                    src="/agencyupscalelogo.jpeg"
+                    src="/agencyupscalelogo.png"
                     alt="AgencyUpscale"
-                    className="h-full w-full object-cover object-center"
+                    className="h-full w-auto object-contain dark:hidden"
+                  />
+                  <img
+                    src="/agencyupscalelogo-dark.png"
+                    alt="AgencyUpscale"
+                    className="h-full w-auto object-contain hidden dark:block"
                   />
                 </div>
                 <p className="text-center text-muted-foreground text-xs sm:text-sm mt-1">Account Recovery</p>

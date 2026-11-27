@@ -170,7 +170,7 @@ export const sendBrowserNotification = async ({ title, message, link, icon, tag 
   // Play subtle audible chime
   playNotificationChime();
 
-  const cleanIcon = icon || '/agencyupscalelogo.jpeg';
+  const cleanIcon = icon || '/agencyupscalelogo.png';
   const notifOptions = {
     body: message || '',
     icon: cleanIcon,

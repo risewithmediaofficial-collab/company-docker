@@ -36,8 +36,8 @@ self.addEventListener('push', (event) => {
   const body = data.body || data.message || 'You have a new update in your CRM workspace.';
   const destinationUrl = data.link || data.url || '/';
   const eventId = data.eventId || data.id || `push-${Date.now()}`;
-  const icon = data.icon || '/agencyupscalelogo.jpeg';
-  const badge = data.badge || '/agencyupscalelogo.jpeg';
+  const icon = data.icon || '/agencyupscalelogo.png';
+  const badge = data.badge || '/agencyupscalelogo.png';
 
   // Rich banner options supported across Android, Windows, macOS, and iOS PWA
   const options = {
@@ -79,7 +79,7 @@ self.addEventListener('push', (event) => {
       console.error('[SW] Standard showNotification failed, attempting minimal fallback:', err);
       return self.registration.showNotification(title, {
         body,
-        icon: '/agencyupscalelogo.jpeg',
+        icon: '/agencyupscalelogo.png',
         tag: eventId,
         data: { url: destinationUrl },
       });

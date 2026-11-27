@@ -45,7 +45,7 @@ const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
                 alt={portalOrg.name}
                 className="h-full w-full object-contain"
                 onError={(e) => {
-                  e.currentTarget.src = '/agencyupscalelogo.jpeg';
+                  e.currentTarget.src = '/agencyupscalelogo.png';
                 }}
               />
             </div>
@@ -54,11 +54,16 @@ const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
             </span>
           </>
         ) : (
-          <div className="w-20 h-10 sm:w-24 sm:h-11 md:w-[78px] md:h-10 rounded-xl bg-white shadow-2xs border border-slate-200/80 dark:border-slate-700/80 overflow-hidden group-hover:scale-105 transition-transform">
+          <div className="h-10 sm:h-11 md:h-10 shrink-0 flex items-center group-hover:scale-105 transition-transform">
             <img
-              src="/agencyupscalelogo.jpeg"
+              src="/agencyupscalelogo.png"
               alt="AgencyUpscale"
-              className="h-full w-full object-cover object-center"
+              className="h-full w-auto object-contain dark:hidden"
+            />
+            <img
+              src="/agencyupscalelogo-dark.png"
+              alt="AgencyUpscale"
+              className="h-full w-auto object-contain hidden dark:block"
             />
           </div>
         )}
@@ -138,16 +143,16 @@ const Hero = ({ variant, view, title, subtitle, portalOrg, onOpenTerms }) => {
             alt={portalOrg.name}
             className="h-full w-full object-contain filter drop-shadow-sm"
             onError={(e) => {
-              e.currentTarget.src = '/agencyupscalelogo.jpeg';
+              e.currentTarget.src = '/agencyupscalelogo-dark.png';
             }}
           />
         </div>
       ) : (
-        <div className="w-40 h-20 rounded-2xl bg-white border border-white/40 mb-5 shadow-lg shadow-black/20 overflow-hidden">
+        <div className="mb-5 flex items-center">
           <img
-            src="/agencyupscalelogo.jpeg"
+            src="/agencyupscalelogo-dark.png"
             alt="AgencyUpscale"
-            className="h-full w-full object-cover object-center"
+            className="h-20 w-auto object-contain drop-shadow-[0_2px_10px_rgba(0,0,0,0.35)]"
           />
         </div>
       )}

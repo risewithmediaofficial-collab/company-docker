@@ -383,7 +383,7 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
                   src={organization.logo}
                   alt={organization?.name || "Workspace logo"}
                   className="h-full w-full object-contain"
-                  onError={(e) => { e.currentTarget.src = "/agencyupscalelogo.jpeg"; }}
+                  onError={(e) => { e.currentTarget.src = "/agencyupscalelogo.png"; }}
                 />
               </div>
               <div className="flex min-w-0 flex-col leading-tight">
@@ -397,11 +397,16 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
             </div>
           ) : (
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="h-11 w-24 rounded-xl bg-white border border-slate-200/80 shadow-xs overflow-hidden shrink-0">
+              <div className="h-11 shrink-0 flex items-center">
                 <img
-                  src="/agencyupscalelogo.jpeg"
+                  src="/agencyupscalelogo.png"
                   alt="AgencyUpscale"
-                  className="h-full w-full object-cover object-center"
+                  className="h-11 w-auto object-contain dark:hidden"
+                />
+                <img
+                  src="/agencyupscalelogo-dark.png"
+                  alt="AgencyUpscale"
+                  className="h-11 w-auto object-contain hidden dark:block"
                 />
               </div>
               {organization?.name && (

@@ -284,11 +284,16 @@ const RegisterCompany = () => {
         {/* Top Header & Official Logo */}
         <div className="text-center mb-6 sm:mb-8">
           <Link to="/login" className="inline-flex items-center justify-center mb-3.5 group">
-            <div className="h-20 w-40 rounded-2xl bg-white shadow-md border border-slate-200/80 group-hover:scale-105 transition-transform overflow-hidden">
+            <div className="h-20 flex items-center justify-center group-hover:scale-105 transition-transform">
               <img
-                src="/agencyupscalelogo.jpeg"
+                src="/agencyupscalelogo.png"
                 alt="AgencyUpscale"
-                className="h-full w-full object-cover object-center"
+                className="h-full w-auto object-contain dark:hidden"
+              />
+              <img
+                src="/agencyupscalelogo-dark.png"
+                alt="AgencyUpscale"
+                className="h-full w-auto object-contain hidden dark:block"
               />
             </div>
           </Link>

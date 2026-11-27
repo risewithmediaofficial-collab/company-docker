@@ -11,15 +11,15 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/agencyupscalelogo.jpeg",
+      "src": "/agencyupscalelogo.png",
       "sizes": "192x192",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/agencyupscalelogo.jpeg",
+      "src": "/agencyupscalelogo.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

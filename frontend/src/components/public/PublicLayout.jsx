@@ -59,13 +59,16 @@ const PublicLayout = ({
 
           {/* Brand Logo (wordmark embedded in logo image) */}
           <Link to="/" className="flex items-center group shrink-0" aria-label="AgencyUpscale Home">
-            <div className="h-14 w-32 sm:h-20 sm:w-44 rounded-xl bg-white overflow-hidden transition-transform group-hover:scale-[1.03] shrink-0">
-              <img
-                src="/agencyupscalelogo.jpeg"
-                alt="AgencyUpscale"
-                className="h-full w-full object-cover object-center scale-[1.12]"
-              />
-            </div>
+            <img
+              src="/agencyupscalelogo.png"
+              alt="AgencyUpscale"
+              className="h-14 sm:h-20 w-auto object-contain transition-transform group-hover:scale-[1.03] shrink-0 dark:hidden"
+            />
+            <img
+              src="/agencyupscalelogo-dark.png"
+              alt="AgencyUpscale"
+              className="h-14 sm:h-20 w-auto object-contain transition-transform group-hover:scale-[1.03] shrink-0 hidden dark:block"
+            />
           </Link>
 
           {/* Desktop Navigation Links */}
@@ -221,13 +224,11 @@ const PublicLayout = ({
             {/* Col 1: Brand & Mission (6 cols) */}
             <div className="sm:col-span-2 lg:col-span-6 space-y-4 text-left">
               <div className="flex items-center gap-3">
-                <div className="h-16 w-32 rounded-2xl bg-white overflow-hidden shrink-0 shadow-xs">
-                  <img
-                    src="/agencyupscalelogo.jpeg"
-                    alt="AgencyUpscale"
-                    className="h-full w-full object-cover object-center"
-                  />
-                </div>
+                <img
+                  src="/agencyupscalelogo-dark.png"
+                  alt="AgencyUpscale"
+                  className="h-16 w-auto object-contain shrink-0"
+                />
               </div>
               <p className="text-xs sm:text-sm text-slate-400 font-medium leading-relaxed max-w-sm">
                 A simple, all-in-one workspace made for digital marketing agencies. Follow up on leads, get quick client approvals, and send bills in one easy place.

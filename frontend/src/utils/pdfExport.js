@@ -295,7 +295,7 @@ const getCompanyProfileForInvoice = async () => {
       phone: profile.phone || '',
       gstNumber: profile.gstNumber || '',
       services: profile.services || 'Media & Marketing Operations Platform',
-      logoUrl: profile.logoUrl || '/agencyupscalelogo.jpeg',
+      logoUrl: profile.logoUrl || '/agencyupscalelogo-dark.png',
     };
   } catch {
     return {
@@ -305,14 +305,14 @@ const getCompanyProfileForInvoice = async () => {
       phone: '',
       gstNumber: '',
       services: 'Media & Marketing Operations Platform',
-      logoUrl: '/agencyupscalelogo.jpeg',
+      logoUrl: '/agencyupscalelogo-dark.png',
     };
   }
 };
 
 const loadLogoImage = async (logoUrl) => {
   const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5175';
-  const defaultAssetLogo = `${origin}/agencyupscalelogo.jpeg`;
+  const defaultAssetLogo = `${origin}/agencyupscalelogo-dark.png`;
   const targetUrl = logoUrl
     ? (logoUrl.startsWith('http') ? logoUrl : `${origin}${logoUrl.startsWith('/') ? '' : '/'}${logoUrl}`)
     : defaultAssetLogo;
@@ -362,15 +362,21 @@ export const exportInvoiceToPDF = async (invoice, options = {}) => {
   pdf.setFillColor(24, 24, 27); // neutral zinc-900 header
   pdf.rect(0, 0, pageWidth, 28, 'F');
 
+  const isDefaultPlatformLogo = !companyProfile.logoUrl || companyProfile.logoUrl === '/agencyupscalelogo-dark.png';
+
   if (logoDataUrl) {
     try {
       const imgFmt =
         logoDataUrl.startsWith('data:image/jpeg') || logoDataUrl.startsWith('data:image/jpg')
           ? 'JPEG'
           : 'PNG';
-      pdf.setFillColor(255, 255, 255);
-      pdf.roundedRect(margin, 5, 18, 18, 2, 2, 'F');
-      pdf.addImage(logoDataUrl, imgFmt, margin + 1, 6, 16, 16);
+      if (isDefaultPlatformLogo) {
+        pdf.addImage(logoDataUrl, imgFmt, margin, 7, 25.5, 14);
+      } else {
+        pdf.setFillColor(255, 255, 255);
+        pdf.roundedRect(margin, 5, 18, 18, 2, 2, 'F');
+        pdf.addImage(logoDataUrl, imgFmt, margin + 1, 6, 16, 16);
+      }
     } catch {
       // Ignore logo render issues and fall back to text branding
     }
@@ -379,7 +385,7 @@ export const exportInvoiceToPDF = async (invoice, options = {}) => {
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(18);
   pdf.setTextColor(255, 255, 255);
-  const companyTitleX = logoDataUrl ? margin + 24 : margin;
+  const companyTitleX = logoDataUrl ? margin + (isDefaultPlatformLogo ? 30 : 24) : margin;
   pdf.text(companyProfile.name || 'AgencyUpscale', companyTitleX, 14);
 
   pdf.setFont('helvetica', 'normal');
