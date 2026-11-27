@@ -1032,10 +1032,10 @@ const Projects = () => {
                         setDragOverColumn(null);
                         setDragOverProjectIndex(null);
                       }}
-                      className={`flex flex-col min-h-[520px] max-h-[calc(100vh-320px)] rounded-2xl transition-all p-3 space-y-3 shadow-sm ${
+                      className={`flex flex-col min-h-[520px] max-h-[calc(100vh-320px)] rounded-2xl transition-all p-4 space-y-3 shadow-sm ${
                         boardGroupBy === 'status' && boardColumns.length <= 4
                           ? 'w-full'
-                          : 'w-[300px] shrink-0'
+                          : 'w-[296px] sm:w-[316px] shrink-0'
                       } ${col.surface || 'bg-secondary/15 border border-border/50'} ${
                         isColActive
                           ? ' !bg-primary/10 ring-2 ring-primary/30 shadow-md'

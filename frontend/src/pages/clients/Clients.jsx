@@ -612,7 +612,7 @@ const Clients = () => {
           {/* Board View (Clean, Modern Kanban by Client Status - matching Tasks board design) */}
           {(currentView === 'board' || currentView === 'kanban') && (
             <div ref={clientsBoardRef} className="w-full overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory responsive-table-container">
-              <div className="grid w-max min-w-full auto-cols-[minmax(270px,85vw)] sm:auto-cols-[minmax(315px,360px)] grid-flow-col gap-4">
+              <div className="grid w-max min-w-full auto-cols-[296px] sm:auto-cols-[316px] grid-flow-col gap-4 sm:gap-5">
                 {STATUS_COLUMNS.map((status) => {
                   const statusClients = displayedClients.filter((c) => {
                     const norm = normalizeClientStatus(c.status);
@@ -649,7 +649,7 @@ const Clients = () => {
                         setDragOverStatus(null);
                         setDragOverClientIndex(null);
                       }}
-                      className={`flex flex-col min-h-[520px] max-h-[calc(100vh-270px)] rounded-2xl ${conf.surface} transition-all p-3.5 space-y-3 snap-center sm:snap-align-none ${
+                      className={`flex flex-col min-h-[520px] max-h-[calc(100vh-270px)] rounded-2xl ${conf.surface} transition-all p-4 space-y-3 snap-center sm:snap-align-none ${
                         isColActive
                           ? ' bg-primary/10 ring-2 ring-primary/30'
                           : ''

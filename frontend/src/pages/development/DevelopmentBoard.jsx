@@ -522,7 +522,7 @@ export default function DevelopmentBoard() {
 
       {/* ── Kanban Columns Horizon ───────────────────────────────────── */}
       <div className="responsive-table-container overflow-x-auto pb-4 custom-scrollbar">
-        <div className="flex items-start gap-3 min-w-[2800px] pt-1">
+        <div className="flex items-start gap-4 sm:gap-5 w-max min-w-full pt-1">
           {PIPELINE_COLUMNS.map((column) => {
             const colTasks = groupedTasks[column.id] || [];
             const isColumnDraggedOver = dragOverColId === column.id;
@@ -558,7 +558,7 @@ export default function DevelopmentBoard() {
                   setDraggingTaskId(null);
                   setDragOverColId(null);
                 }}
-                className={`w-[260px] rounded-2xl p-3 flex flex-col shrink-0 h-[calc(100vh-270px)] min-h-[480px] max-h-[750px] transition-all duration-150 ${
+                className={`w-[296px] sm:w-[316px] rounded-2xl p-4 flex flex-col shrink-0 h-[calc(100vh-270px)] min-h-[480px] max-h-[750px] transition-all duration-150 ${
                   isColumnDraggedOver
                     ? 'ring-2 ring-primary ring-offset-2 bg-primary/10 shadow-lg scale-[1.01]'
                     : column.color

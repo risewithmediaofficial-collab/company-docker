@@ -313,7 +313,7 @@ export function DatabaseView({
           {/* 3. KANBAN BOARD VIEW (With Smooth Click & Drag Between Columns & Up/Down Reordering) */}
           {(currentView === 'kanban' || currentView === 'board') && (
             <div ref={kanbanScrollRef} className="w-full overflow-x-auto pb-4 custom-scrollbar responsive-table-container">
-              <div className="grid w-max min-w-full auto-cols-[minmax(260px,320px)] grid-flow-col gap-4">
+              <div className="grid w-max min-w-full auto-cols-[296px] sm:auto-cols-[316px] grid-flow-col gap-4 sm:gap-5">
                 {kanbanColumns.map((col) => {
                   const colItems = items.filter((item) => {
                     const val = item[groupBy];
@@ -331,7 +331,7 @@ export function DatabaseView({
                         }
                       }}
                       onDrop={(e) => handleDrop(e, col.key)}
-                      className={`flex flex-col min-h-[500px] max-h-[calc(100vh-300px)] rounded-2xl transition-colors p-3 space-y-3 ${
+                      className={`flex flex-col min-h-[500px] max-h-[calc(100vh-300px)] rounded-2xl transition-colors p-4 space-y-3 ${
                         isColActive
                           ? 'bg-brand/5 ring-2 ring-brand/45'
                           : 'bg-card'
