@@ -151,9 +151,19 @@ export default function BranchSelectorPage() {
               alt="AgencyUpscale"
               className="h-10 w-auto object-contain"
             />
-            <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-cyan-50 text-[#0586a8] border border-cyan-100">
-              {orgTitle}
-            </span>
+            {organization?.logo || /risewithmedia/i.test(orgTitle) ? (
+              <span className="hidden sm:inline-flex items-center pl-3 border-l border-slate-200">
+                <img
+                  src={organization?.logo || '/rise-with-media-logo.png'}
+                  alt={orgTitle}
+                  className="h-7 w-auto object-contain"
+                />
+              </span>
+            ) : (
+              <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-cyan-50 text-[#0586a8] border border-cyan-100">
+                {orgTitle}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
@@ -287,9 +297,17 @@ export default function BranchSelectorPage() {
                     <div className="space-y-4">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <div className="text-base sm:text-lg font-black text-slate-950 tracking-tight leading-snug">
-                            {branch.organization?.name || orgTitle}
-                          </div>
+                          {branch.organization?.logo || /risewithmedia/i.test(branch.organization?.name || orgTitle) ? (
+                            <img
+                              src={branch.organization?.logo || '/rise-with-media-logo.png'}
+                              alt={branch.organization?.name || orgTitle}
+                              className="h-8 sm:h-9 w-auto object-contain mb-1.5"
+                            />
+                          ) : (
+                            <div className="text-base sm:text-lg font-black text-slate-950 tracking-tight leading-snug">
+                              {branch.organization?.name || orgTitle}
+                            </div>
+                          )}
                           <h3 className="text-sm font-extrabold text-[#07c8f9] mt-0.5">
                             {branch.name} Branch
                           </h3>
