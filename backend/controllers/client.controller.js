@@ -890,39 +890,81 @@ export const updateClient = async (req, res) => {
 export const deleteClient = async (req, res) => {
   try {
     const client = await Client.findById(req.params.id);
-    if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
+    if (client) {
+      const access = assertClientAccess(req, client);
+      if (!access.allowed) {
+        return res.status(access.status).json({ success: false, message: access.message });
+      }
 
+      await moveToRecycleBin({
+        entityType: 'client',
+        originalId: client._id,
+        title: client.company || client.name,
+        subtitle: client.email || client.phone || '',
+        originalLocation: 'Clients 360',
+        modelName: 'Client',
+        documentData: client,
+        user: req.user,
+      });
+
+      await Client.findByIdAndDelete(req.params.id);
+
+      // Also remove client portal user if linked
+      if (client.userId) {
+        await User.findByIdAndDelete(client.userId).catch(() => {});
+      }
+
+      await createActivityLog({
+        actor: req.user,
+        action: 'client.deleted',
+        entityType: 'client',
+        entityId: client._id,
+        title: 'Client deleted',
+        description: `${client.company || client.name} was deleted.`,
+        relatedClient: client._id,
+      });
+
+      emitLiveEvent('clientDeleted', req.params.id);
+      return res.json({ success: true, message: 'Client deleted' });
+    }
+
+    // Fallback: delete standalone SMM client shown as virtual card in Clients 360
+    const smmClient = await SmmClient.findById(req.params.id);
+    if (!smmClient) {
+      return res.status(404).json({ success: false, message: 'Client not found' });
+    }
+
+    const tenantOrgId = getStrictTenantOrgId(req);
+    if (tenantOrgId && String(smmClient.organizationId || '') !== String(tenantOrgId)) {
+      return res.status(403).json({ success: false, message: 'Access denied: client belongs to another workspace' });
+    }
+
+    const smmTitle = smmClient.companyName || smmClient.clientName || smmClient.primaryContact || 'SMM Client';
     await moveToRecycleBin({
       entityType: 'client',
-      originalId: client._id,
-      title: client.company || client.name,
-      subtitle: client.email || client.phone || '',
+      originalId: smmClient._id,
+      title: smmTitle,
+      subtitle: smmClient.email || smmClient.phone || '',
       originalLocation: 'Clients 360',
-      modelName: 'Client',
-      documentData: client,
+      modelName: 'SmmClient',
+      documentData: smmClient,
       user: req.user,
     });
 
-    await Client.findByIdAndDelete(req.params.id);
-
-    // Also remove client portal user if linked
-    if (client.userId) {
-      await User.findByIdAndDelete(client.userId).catch(() => {});
-    }
+    await SmmClient.findByIdAndDelete(req.params.id);
 
     await createActivityLog({
       actor: req.user,
       action: 'client.deleted',
       entityType: 'client',
-      entityId: client._id,
+      entityId: smmClient._id,
       title: 'Client deleted',
-      description: `${client.company || client.name} was deleted.`,
-      relatedClient: client._id,
+      description: `${smmTitle} was deleted.`,
+      relatedClient: smmClient._id,
     });
 
     emitLiveEvent('clientDeleted', req.params.id);
-
-    res.json({ success: true, message: 'Client deleted' });
+    return res.json({ success: true, message: 'Client deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -13,6 +13,7 @@ import SOP from '../models/sop.model.js';
 import ActivityLog from '../models/activityLog.model.js';
 import ProjectMonthlyDeliverable from '../models/projectMonthlyDeliverable.model.js';
 import Branch from '../models/branch.model.js';
+import SmmClient from '../models/smm/smmClient.model.js';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -185,6 +186,7 @@ export const getAdminDashboard = async (req, res) => {
       allClients,
       allUsers,
       leadsList,
+      allSmmClients,
     ] = await Promise.all([
       Lead.countDocuments(orgFilter),
       Lead.countDocuments({ ...orgFilter, createdAt: { $gte: periodStart, $lte: periodEnd } }),
@@ -236,7 +238,7 @@ export const getAdminDashboard = async (req, res) => {
       ]),
       Project.find(orgFilter, 'name status priority startDate dueDate endDate progress budget client').populate('client', 'name company').lean(),
       Task.find(taskPeriodFilter, 'title taskTitle status priority dueDate taskCategory postingPlatforms shootStatus editingStatus reviewStatus postingStatus assignedTo').populate('assignedTo', 'name email avatar role department').lean(),
-      Client.find(orgFilter, 'name company status monthlyRetainer service createdAt').lean(),
+      Client.find(orgFilter, 'name company email clientId status monthlyRetainer service createdAt').lean(),
       User.find(
         {
           isActive: true,
@@ -249,7 +251,37 @@ export const getAdminDashboard = async (req, res) => {
         'name email role department avatar position branchId'
       ).lean(),
       Lead.find(orgFilter, 'name company stage value createdAt source').lean(),
+      SmmClient.find(orgFilter, 'companyName clientName clientId email status').lean(),
     ]);
+
+    // Include standalone SMM clients not already linked to a CRM Client record so Overview matches Clients 360
+    let mergedTotalClients = totalClients;
+    let mergedActiveClients = activeClients;
+    if (Array.isArray(allSmmClients) && allSmmClients.length > 0) {
+      const crmIds = new Set(allClients.map((c) => String(c._id)));
+      const crmClientIds = new Set(allClients.map((c) => c.clientId).filter(Boolean));
+      const crmEmails = new Set(allClients.map((c) => c.email?.toLowerCase().trim()).filter(Boolean));
+      const crmCompanies = new Set(allClients.map((c) => c.company?.toLowerCase().trim()).filter(Boolean));
+
+      for (const smm of allSmmClients) {
+        const cName = (smm.companyName || smm.clientName || '').trim();
+        if (!cName) continue;
+        const emailNorm = smm.email ? smm.email.toLowerCase().trim() : '';
+        if (
+          crmIds.has(String(smm._id)) ||
+          (smm.clientId && crmClientIds.has(smm.clientId)) ||
+          (emailNorm && crmEmails.has(emailNorm)) ||
+          crmCompanies.has(cName.toLowerCase())
+        ) {
+          continue;
+        }
+        mergedTotalClients += 1;
+        const st = String(smm.status || 'Active').toLowerCase().trim();
+        if (['active', 'ongoing', 'live', 'running', 'enabled', 'approved'].includes(st)) {
+          mergedActiveClients += 1;
+        }
+      }
+    }
 
     // 2. Revenue Month-by-Month Trend (Past 6 Months)
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
@@ -504,8 +536,8 @@ export const getAdminDashboard = async (req, res) => {
         newLeadsThisMonth,
         wonLeads,
         conversionRate: totalLeads > 0 ? ((wonLeads / totalLeads) * 100).toFixed(1) : 0,
-        totalClients,
-        activeClients,
+        totalClients: mergedTotalClients,
+        activeClients: mergedActiveClients,
         totalProjects,
         activeProjects,
         totalTasks,
