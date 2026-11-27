@@ -13,11 +13,13 @@ export const DEFAULT_STORAGE_PLANS = [
     annualPriceInr: 0,
     maxUsers: 2,
     maxClients: 3,
+    maxBranches: 1,
     popular: false,
     features: [
       '100 MB Cloud File Storage',
       'Up to 3 Active Clients',
       'Up to 2 Team Members',
+      '1 Branch / Office Location',
       'CRM Leads, Projects, Tasks & Client Portal',
     ],
   },
@@ -32,11 +34,13 @@ export const DEFAULT_STORAGE_PLANS = [
     annualPriceInr: 96,
     maxUsers: 8,
     maxClients: 15,
+    maxBranches: 2,
     popular: false,
     features: [
       '5 GB Cloud File Storage',
       'Up to 15 Active Clients',
       'Up to 8 Team Members',
+      'Up to 2 Branches / Office Locations',
       'Client Portal, Attendance, SOP & Basic Reports',
     ],
   },
@@ -51,11 +55,13 @@ export const DEFAULT_STORAGE_PLANS = [
     annualPriceInr: 28790,
     maxUsers: 25,
     maxClients: 50,
+    maxBranches: 5,
     popular: true,
     features: [
       '25 GB Cloud File Storage',
       'Up to 50 Active Clients',
       'Up to 25 Team Members',
+      'Up to 5 Branches / Office Locations',
       'Finance Hub, GST Invoices, SMM Tracker, HR & Vendors',
     ],
   },
@@ -70,11 +76,13 @@ export const DEFAULT_STORAGE_PLANS = [
     annualPriceInr: 67190,
     maxUsers: 100,
     maxClients: 500,
+    maxBranches: 25,
     popular: false,
     features: [
       '100 GB Cloud File Storage',
       'Up to 500 Active Clients',
       'Up to 100 Team Members',
+      'Up to 25 Branches & Multi-Branch Operations',
       'All Modules, Multi-Branch, Automations & Priority Support',
     ],
   },
@@ -252,7 +260,10 @@ const PricingPlansGrid = ({
                   ))}
                   <li className="flex items-start gap-2 text-slate-500">
                     <Layers className="w-4 h-4 text-[#07c8f9] shrink-0 mt-0.5" />
-                    <span>Up to {plan.maxUsers} team seats included</span>
+                    <span>
+                      Up to {plan.maxUsers} team seats • {plan.maxBranches ?? 1}{' '}
+                      {(plan.maxBranches ?? 1) === 1 ? 'branch' : 'branches'}
+                    </span>
                   </li>
                 </ul>
               </div>

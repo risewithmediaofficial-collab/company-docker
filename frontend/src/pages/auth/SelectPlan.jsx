@@ -356,6 +356,11 @@ const SelectPlan = () => {
                   Clients: {usage?.clientCount ?? 0} / {usage?.maxClients ?? organization.maxClients ?? 3}
                 </span>
               </div>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="font-bold text-slate-800">
+                  Branches: {usage?.branchCount ?? 0} / {usage?.maxBranches ?? organization.maxBranches ?? 1}
+                </span>
+              </div>
             </div>
           </div>
         )}

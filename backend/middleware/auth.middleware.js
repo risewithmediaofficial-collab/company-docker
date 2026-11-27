@@ -5,6 +5,7 @@
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import User from '../models/user.model.js';
+import { checkPlanWriteAccess } from './planGate.middleware.js';
 
 const BLOCKED_QUERY_ID = new mongoose.Types.ObjectId('000000000000000000000000');
 
@@ -98,6 +99,9 @@ export const protect = async (req, res, next) => {
       req.ghostOrgId = ghostOrgId;
       req.user.organizationId = ghostOrgId;
     }
+
+    const canWrite = await checkPlanWriteAccess(req, res);
+    if (!canWrite) return;
 
     next();
   } catch (error) {

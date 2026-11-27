@@ -4,7 +4,9 @@ import Organization from '../models/organization.model.js';
 import Client from '../models/client.model.js';
 import User from '../models/user.model.js';
 import Asset from '../models/asset.model.js';
+import Branch from '../models/branch.model.js';
 import SaasPayment from '../models/saasPayment.model.js';
+import { clearOrgPlanCache } from '../middleware/planGate.middleware.js';
 
 export const SAAS_PLANS = [
   {
@@ -17,11 +19,13 @@ export const SAAS_PLANS = [
     storageLabel: '100 MB Storage',
     maxUsers: 2,
     maxClients: 3,
+    maxBranches: 1,
     badge: 'Free Forever',
     features: [
       '100 MB Cloud File Storage',
       'Up to 3 Active Clients',
       'Up to 2 Team Members',
+      '1 Branch / Office Location',
       'CRM Leads, Projects, Tasks & Client Portal',
     ],
     enabledModules: {
@@ -53,11 +57,13 @@ export const SAAS_PLANS = [
     storageLabel: '5 GB Storage',
     maxUsers: 8,
     maxClients: 15,
+    maxBranches: 2,
     badge: '₹10 / mo',
     features: [
       '5 GB Cloud File Storage',
       'Up to 15 Active Clients',
       'Up to 8 Team Members',
+      'Up to 2 Branches / Office Locations',
       'Client Portal, Attendance, SOP & Basic Reports',
     ],
     enabledModules: {
@@ -89,11 +95,13 @@ export const SAAS_PLANS = [
     storageLabel: '25 GB Storage',
     maxUsers: 25,
     maxClients: 50,
+    maxBranches: 5,
     badge: 'Most Popular',
     features: [
       '25 GB Cloud File Storage',
       'Up to 50 Active Clients',
       'Up to 25 Team Members',
+      'Up to 5 Branches / Office Locations',
       'Finance Hub, GST Invoices, SMM Tracker, HR & Vendors',
     ],
     enabledModules: {
@@ -125,11 +133,13 @@ export const SAAS_PLANS = [
     storageLabel: '100 GB Storage',
     maxUsers: 100,
     maxClients: 500,
+    maxBranches: 25,
     badge: 'Max Storage',
     features: [
       '100 GB Cloud File Storage',
       'Up to 500 Active Clients',
       'Up to 100 Team Members',
+      'Up to 25 Branches & Multi-Branch Operations',
       'All Modules, Multi-Branch, Automations & Priority Support',
     ],
     enabledModules: {
@@ -154,7 +164,7 @@ export const SAAS_PLANS = [
 ];
 
 const ORG_BILLING_PROJECTION =
-  'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients storageLimitMb storageUsedBytes trialEndsAt settings paidAt';
+  'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients maxBranches storageLimitMb storageUsedBytes trialEndsAt settings paidAt';
 
 export const getPlanById = (planId) =>
   SAAS_PLANS.find((p) => p.id === String(planId || '').toLowerCase().trim()) || null;
@@ -199,17 +209,20 @@ const computeOrganizationUsage = async (orgId, orgDoc) => {
     return {
       clientCount: 0,
       userCount: 0,
+      branchCount: 0,
       storageUsedBytes: 0,
       storageUsedMb: 0,
       storageLimitMb: orgDoc?.storageLimitMb || 100,
       maxClients: orgDoc?.maxClients || 3,
       maxUsers: orgDoc?.maxUsers || 2,
+      maxBranches: orgDoc?.maxBranches || 1,
     };
   }
 
-  const [clientCount, userCount, assetAgg] = await Promise.all([
+  const [clientCount, userCount, branchCount, assetAgg] = await Promise.all([
     Client.countDocuments({ organizationId: orgId }),
     User.countDocuments({ organizationId: orgId }),
+    Branch.countDocuments({ organization: orgId }),
     Asset.aggregate([
       { $match: { organizationId: orgId } },
       { $group: { _id: null, totalBytes: { $sum: '$size' } } },
@@ -224,11 +237,13 @@ const computeOrganizationUsage = async (orgId, orgDoc) => {
   return {
     clientCount,
     userCount,
+    branchCount,
     storageUsedBytes,
     storageUsedMb,
     storageLimitMb: orgDoc?.storageLimitMb || planMeta?.storageLimitMb || 100,
     maxClients: orgDoc?.maxClients || planMeta?.maxClients || 3,
     maxUsers: orgDoc?.maxUsers || planMeta?.maxUsers || 2,
+    maxBranches: orgDoc?.maxBranches || planMeta?.maxBranches || 1,
   };
 };
 
@@ -342,6 +357,7 @@ export const createRazorpayOrder = async (req, res) => {
             billingSetupRequired: false,
             maxUsers: plan.maxUsers,
             maxClients: plan.maxClients,
+            maxBranches: plan.maxBranches,
             storageLimitMb: plan.storageLimitMb,
             enabledModules: plan.enabledModules,
             paidAt: new Date(),
@@ -350,6 +366,7 @@ export const createRazorpayOrder = async (req, res) => {
         },
         { new: true }
       ).select(ORG_BILLING_PROJECTION);
+      clearOrgPlanCache(req.user.organizationId);
 
       await saveSaasPaymentRecord({
         defaults: {
@@ -656,6 +673,7 @@ export const verifyRazorpayPayment = async (req, res) => {
           billingSetupRequired: false,
           maxUsers: plan.maxUsers,
           maxClients: plan.maxClients,
+          maxBranches: plan.maxBranches,
           storageLimitMb: plan.storageLimitMb,
           enabledModules: plan.enabledModules,
           lastOrderId: verifiedOrderId,
@@ -666,6 +684,7 @@ export const verifyRazorpayPayment = async (req, res) => {
       },
       { new: true }
     ).select(ORG_BILLING_PROJECTION);
+    clearOrgPlanCache(req.user.organizationId);
 
     await saveSaasPaymentRecord({
       orderId: verifiedOrderId,

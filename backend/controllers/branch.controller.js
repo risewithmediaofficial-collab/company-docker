@@ -183,6 +183,25 @@ export const createBranch = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Unauthorized to create branches for this company' });
     }
 
+    // Enforce plan branch limit on Save (create)
+    if (!isPlatformAdmin) {
+      const org = await Organization.findById(targetOrgId).select('plan maxBranches').lean();
+      const maxBranches = org?.maxBranches ?? 1;
+      const existingCount = await Branch.countDocuments({ organization: targetOrgId });
+      if (existingCount >= maxBranches) {
+        return res.status(403).json({
+          success: false,
+          code: 'PLAN_UPGRADE_REQUIRED',
+          limitType: 'branches',
+          module: 'branches',
+          moduleName: 'Branches & Locations',
+          currentPlan: org?.plan || 'free',
+          maxBranches,
+          message: `Your current plan allows up to ${maxBranches} branch${maxBranches === 1 ? '' : 'es'}. Upgrade your plan to add more branches.`,
+        });
+      }
+    }
+
     const {
       name,
       code,

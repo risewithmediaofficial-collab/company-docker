@@ -54,6 +54,10 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     if (!originalRequest) return Promise.reject(error);
 
+    if (error.response?.status === 403 && error.response?.data?.code === 'PLAN_UPGRADE_REQUIRED') {
+      window.dispatchEvent(new CustomEvent('rwm-plan-upgrade-required', { detail: error.response.data }));
+    }
+
     const isAuthEndpoint = originalRequest.url?.includes('/auth/');
     const isIdempotent = ['get', 'head', 'options'].includes(originalRequest.method?.toLowerCase());
 

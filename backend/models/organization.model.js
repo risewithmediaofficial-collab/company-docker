@@ -76,6 +76,7 @@ const organizationSchema = new mongoose.Schema(
     // ── Usage Limits ─────────────────────────────────────────────────────────
     maxUsers:   { type: Number, default: 2  },
     maxClients: { type: Number, default: 3  },
+    maxBranches: { type: Number, default: 1 },
     storageLimitMb: { type: Number, default: 100 },
     storageUsedBytes: { type: Number, default: 0 },
 

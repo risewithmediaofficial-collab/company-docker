@@ -14,22 +14,8 @@ import { motion } from 'framer-motion';
  * If the org has the module enabled → renders children.
  * Otherwise → renders the upgrade prompt.
  */
-const ModuleGuard = ({ module: moduleName, children }) => {
-  const { user } = useSelector((state) => state.auth);
-  const organization = user?.organization;
-
-  // Platform super admin bypasses all guards
-  if (user?.role === 'superAdmin') return children;
-
-  // If org data isn't loaded yet, let it through (avoids flash)
-  if (!organization) return children;
-
-  const isEnabled = organization?.enabledModules?.[moduleName];
-
-  if (!isEnabled) {
-    return <UpgradePrompt module={moduleName} />;
-  }
-
+const ModuleGuard = ({ children }) => {
+  // All modules are open for previewing and filling; saving is gated by plan on write requests.
   return children;
 };
 

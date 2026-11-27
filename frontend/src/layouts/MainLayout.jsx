@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
-import { Outlet, Navigate, useLocation } from 'react-router-dom';
+import { Outlet, Navigate, useLocation, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
@@ -10,7 +10,7 @@ import EnableBannerNotificationBar from '../components/notifications/EnableBanne
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import GlobalDateSortBar from '../components/layout/GlobalDateSortBar';
 import OnboardingWelcomeModal from '../components/onboarding/OnboardingWelcomeModal';
-import ModuleUpgradeGate from '../components/billing/ModuleUpgradeGate';
+import PlanUpgradeModal from '../components/billing/PlanUpgradeModal';
 import { getLockedModuleForPath } from '../utils/planModules';
 import { RiseWithMediaAttribution } from '../components/common/RiseWithMediaAttribution';
 
@@ -70,11 +70,29 @@ const MainLayout = () => {
             <ErrorBoundary key={location.pathname} locationKey={location.pathname}>
               <Suspense fallback={<PageLoadingFallback />}>
                 {(() => {
-                  const lockedModule = getLockedModuleForPath(location.pathname, organization, user);
-                  if (lockedModule) {
-                    return <ModuleUpgradeGate moduleInfo={lockedModule} organization={organization} />;
-                  }
-                  return <Outlet key={location.pathname} />;
+                  const previewModule = getLockedModuleForPath(location.pathname, organization, user);
+                  return (
+                    <>
+                      {previewModule && (
+                        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs">
+                          <div className="min-w-0">
+                            <span className="font-bold text-foreground">Preview Mode ({previewModule.name}):</span>{' '}
+                            <span className="text-muted-foreground">
+                              You can explore and fill forms freely. Upgrade to{' '}
+                              <strong className="text-foreground">{previewModule.minPlan}</strong> to save changes.
+                            </span>
+                          </div>
+                          <Link
+                            to="/select-plan"
+                            className="inline-flex items-center justify-center rounded-xl bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground hover:bg-primary/90 shrink-0 transition-colors"
+                          >
+                            Upgrade Plan
+                          </Link>
+                        </div>
+                      )}
+                      <Outlet key={location.pathname} />
+                    </>
+                  );
                 })()}
               </Suspense>
             </ErrorBoundary>
@@ -94,6 +112,9 @@ const MainLayout = () => {
 
       {/* First-Time Login Interactive Onboarding Sticker Modal */}
       <OnboardingWelcomeModal />
+
+      {/* Plan Upgrade Modal (triggered on Save when module/limit requires upgrade) */}
+      <PlanUpgradeModal />
     </div>
   );
 };

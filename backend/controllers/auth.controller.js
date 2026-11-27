@@ -16,7 +16,7 @@ import { loadEnv } from '../config/env.js';
 import { sanitizeOrganizationForRole } from '../utils/orgAccess.js';
 
 const ORG_AUTH_PROJECTION =
-  'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients storageLimitMb storageUsedBytes trialEndsAt settings paidAt';
+  'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients maxBranches storageLimitMb storageUsedBytes trialEndsAt settings paidAt';
 
 const createSelfServeWorkspace = async ({ name, email, phone, ownerId }) => {
   const baseName = String(name || email?.split('@')[0] || 'My Agency').trim();
@@ -44,6 +44,7 @@ const createSelfServeWorkspace = async ({ name, email, phone, ownerId }) => {
     companySetupRequired: true,
     maxUsers: 2,
     maxClients: 3,
+    maxBranches: 1,
     storageLimitMb: 100,
     enabledModules: {
       crm: true,
