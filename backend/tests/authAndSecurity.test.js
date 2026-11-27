@@ -437,4 +437,72 @@ test('SaaS Billing & Razorpay: Authoritative 4 storage plan amounts, HMAC signat
   assert.equal(defaultOrg.companySetupRequired, false);
 });
 
+test('Company & GST visibility: Only superAdmin, organizationOwner, and manager receive company and GST details', async () => {
+  const { canViewCompanyAndGst, sanitizeOrganizationForRole } = await import('../utils/orgAccess.js');
+
+  assert.equal(canViewCompanyAndGst('superAdmin'), true);
+  assert.equal(canViewCompanyAndGst('organizationOwner'), true);
+  assert.equal(canViewCompanyAndGst('manager'), true);
+
+  for (const deniedRole of ['admin', 'employee', 'intern', 'editor', 'designer', 'financeManager', 'client', 'vendor', 'referral']) {
+    assert.equal(canViewCompanyAndGst(deniedRole), false, `${deniedRole} must not view Company & GST details`);
+  }
+
+  const orgPayload = {
+    _id: '650000000000000000000010',
+    name: 'Acme Studio',
+    slug: 'acme-studio',
+    gstNumber: '29ABCDE1234F1Z5',
+    address: '100 MG Road, Bengaluru',
+    phone: '+91 9876543210',
+    email: 'billing@acme.com',
+    website: 'https://acme.com',
+    industry: 'Marketing',
+    services: 'SMM',
+  };
+
+  const ownerView = sanitizeOrganizationForRole(orgPayload, 'organizationOwner');
+  assert.equal(ownerView.gstNumber, '29ABCDE1234F1Z5');
+  assert.equal(ownerView.address, '100 MG Road, Bengaluru');
+
+  const managerView = sanitizeOrganizationForRole(orgPayload, 'manager');
+  assert.equal(managerView.gstNumber, '29ABCDE1234F1Z5');
+
+  const employeeView = sanitizeOrganizationForRole(orgPayload, 'employee');
+  assert.equal(employeeView.name, 'Acme Studio');
+  assert.equal(employeeView.gstNumber, undefined);
+  assert.equal(employeeView.address, undefined);
+  assert.equal(employeeView.phone, undefined);
+  assert.equal(employeeView.email, undefined);
+  assert.equal(employeeView.website, undefined);
+});
+
+test('SaasPayment Model: Captures payer name, contact number, Razorpay IDs, and failed payment status', async () => {
+  const { default: SaasPayment } = await import('../models/saasPayment.model.js');
+  const failedPayment = new SaasPayment({
+    payerName: 'Rohan Sharma',
+    payerEmail: 'rohan@agency.in',
+    contactNumber: '+91 9988776655',
+    companyName: 'Spike Media',
+    planId: 'starter',
+    planName: 'Starter',
+    billingCycle: 'monthly',
+    amountPaise: 1000,
+    amountInr: 10,
+    gateway: 'razorpay',
+    razorpayOrderId: 'order_fail_99',
+    status: 'failed',
+    failureCode: 'BAD_REQUEST_ERROR',
+    failureReason: 'Payment failed due to insufficient bank authorization',
+  });
+
+  const valErr = failedPayment.validateSync();
+  assert.equal(valErr, undefined);
+  assert.equal(failedPayment.payerName, 'Rohan Sharma');
+  assert.equal(failedPayment.contactNumber, '+91 9988776655');
+  assert.equal(failedPayment.status, 'failed');
+  assert.equal(failedPayment.failureCode, 'BAD_REQUEST_ERROR');
+});
+
+
 

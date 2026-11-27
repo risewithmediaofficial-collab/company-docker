@@ -103,6 +103,11 @@ const VALID_TABS = [
 
 export default function Finance() {
   const { user } = useSelector((state) => state.auth);
+  const canViewGstDetails = ['superAdmin', 'organizationOwner', 'manager'].includes(user?.role);
+  const visibleTabs = useMemo(
+    () => TABS.filter((tab) => tab.id !== 'taxes' || canViewGstDetails),
+    [canViewGstDetails]
+  );
   const [searchParams, setSearchParams] = useSearchParams();
   const { section } = useParams();
   const navigate = useNavigate();
@@ -141,16 +146,17 @@ export default function Finance() {
   useEffect(() => {
     const tabFromUrl = section || searchParams.get('tab') || 'overview';
     const normalized = tabFromUrl === 'income' ? 'payments' : tabFromUrl === 'forecast-reports' ? 'reports' : tabFromUrl;
-    const resolvedTab = VALID_TABS.includes(normalized) ? normalized : 'overview';
+    const isGstBlocked = normalized === 'taxes' && !canViewGstDetails;
+    const resolvedTab = VALID_TABS.includes(normalized) && !isGstBlocked ? normalized : 'overview';
     if (resolvedTab !== activeTab) {
       startTransition(() => {
         setActiveTab(resolvedTab);
       });
     }
-    if (searchParams.get('tab') && !VALID_TABS.includes(searchParams.get('tab'))) {
+    if ((searchParams.get('tab') && !VALID_TABS.includes(searchParams.get('tab'))) || isGstBlocked) {
       setSearchParams({ tab: 'overview' }, { replace: true });
     }
-  }, [section, searchParams, activeTab]);
+  }, [section, searchParams, activeTab, canViewGstDetails]);
 
   const handleTabChange = (tabId) => {
     startTransition(() => {
@@ -295,7 +301,7 @@ export default function Finance() {
         {/* ── 14 HORIZONTAL SECTION NAVIGATION TABS (SUGGESTED ORDER) ───── */}
         <div className="mt-4 pt-3 border-t border-border/30 overflow-x-auto custom-scrollbar touch-pan-x -mx-1 px-1 sm:mx-0 sm:px-0">
           <div className="flex items-center gap-1.5 min-w-max pb-1">
-            {TABS.map((tab) => {
+            {visibleTabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
@@ -375,7 +381,7 @@ export default function Finance() {
             <AssetsSection />
           )}
 
-          {activeTab === 'taxes' && (
+          {activeTab === 'taxes' && canViewGstDetails && (
             <GstTaxesSection />
           )}
 

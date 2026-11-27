@@ -73,6 +73,7 @@ const PlatformDashboard = lazy(() => import('./pages/platform/PlatformDashboard'
 const Companies = lazy(() => import('./pages/platform/Companies'));
 const CompanyDetail = lazy(() => import('./pages/platform/CompanyDetail'));
 const PlatformAnalytics = lazy(() => import('./pages/platform/PlatformAnalytics'));
+const PlatformPayments = lazy(() => import('./pages/platform/PlatformPayments'));
 
 // Development Module Pages
 const DevelopmentDashboard = lazy(() => import('./pages/development/DevelopmentDashboard'));
@@ -236,6 +237,7 @@ const App = () => {
             <Route path="/platform/requests" element={<Companies defaultTab="requests" />} />
             <Route path="/platform/company-requests" element={<Companies defaultTab="requests" />} />
             <Route path="/platform/companies/:id" element={<CompanyDetail />} />
+            <Route path="/platform/payments" element={<PlatformPayments />} />
             <Route path="/platform/analytics" element={<PlatformAnalytics />} />
           </Route>
 

@@ -8,7 +8,7 @@ import api from '../../api';
 
 const PricingPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const { isAuthenticated, user, organization } = useSelector((state) => state.auth);
   const [plans, setPlans] = useState(DEFAULT_STORAGE_PLANS);
   const [billingCycle, setBillingCycle] = useState('monthly');
 
@@ -36,8 +36,12 @@ const PricingPage = () => {
     } catch {
       // ignore storage errors
     }
-    if (isAuthenticated && ['organizationOwner', 'admin', 'superAdmin'].includes(user?.role)) {
-      navigate(`/select-plan?plan=${encodeURIComponent(plan.id)}&cycle=${encodeURIComponent(billingCycle)}`);
+    if (isAuthenticated) {
+      if (organization?.billingSetupRequired || user?.role === 'superAdmin') {
+        navigate(`/select-plan?plan=${encodeURIComponent(plan.id)}&cycle=${encodeURIComponent(billingCycle)}`);
+      } else {
+        navigate('/');
+      }
       return;
     }
     navigate(`/register?plan=${encodeURIComponent(plan.id)}&cycle=${encodeURIComponent(billingCycle)}`);

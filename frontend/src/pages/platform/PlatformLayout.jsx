@@ -4,7 +4,7 @@ import { useNavigate, Link, Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Building2, LayoutDashboard, BarChart3, Clock,
-  ChevronLeft, Shield, Menu, X
+  ChevronLeft, Shield, Menu, X, CreditCard
 } from 'lucide-react';
 import axios from 'axios';
 import { RiseWithMediaAttribution } from '../../components/common/RiseWithMediaAttribution';
@@ -13,6 +13,7 @@ const navItems = [
   { label: 'Overview', icon: LayoutDashboard, path: '/platform', id: 'overview' },
   { label: 'Companies', icon: Building2, path: '/platform/companies', id: 'companies' },
   { label: 'Company Requests', icon: Clock, path: '/platform/companies?tab=requests', id: 'requests' },
+  { label: 'Payments', icon: CreditCard, path: '/platform/payments', id: 'payments' },
   { label: 'Analytics', icon: BarChart3, path: '/platform/analytics', id: 'analytics' },
 ];
 

@@ -6,6 +6,8 @@
 import Organization from '../models/organization.model.js';
 import User from '../models/user.model.js';
 import BrandWorkspace from '../models/brandWorkspace.model.js';
+import SaasPayment from '../models/saasPayment.model.js';
+import { sanitizeOrganizationForRole } from '../utils/orgAccess.js';
 
 // ─── Platform Stats Overview ──────────────────────────────────────────────────
 // GET /api/platform/stats
@@ -20,6 +22,8 @@ export const getPlatformStats = async (req, res) => {
       totalUsers,
       planCounts,
       recentOrgs,
+      failedPaymentsCount,
+      paidPaymentsCount,
     ] = await Promise.all([
       Organization.countDocuments(),
       Organization.countDocuments({ planStatus: 'pending' }),
@@ -34,6 +38,8 @@ export const getPlatformStats = async (req, res) => {
         .sort({ createdAt: -1 })
         .limit(5)
         .populate('ownerId', 'name email phone'),
+      SaasPayment.countDocuments({ status: 'failed' }),
+      SaasPayment.countDocuments({ status: 'paid' }),
     ]);
 
     // Build plan breakdown map
@@ -52,6 +58,8 @@ export const getPlatformStats = async (req, res) => {
         expiredOrgs,
         totalUsers,
         planBreakdown,
+        failedPaymentsCount,
+        paidPaymentsCount,
       },
       recentPending: recentOrgs,
     });
@@ -313,7 +321,101 @@ export const getMyOrganization = async (req, res) => {
   try {
     const org = await Organization.findById(req.user.organizationId);
     if (!org) return res.status(404).json({ success: false, message: 'Organization not found' });
-    res.json({ success: true, organization: org });
+    res.json({ success: true, organization: sanitizeOrganizationForRole(org, req.user?.role) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ─── SaaS Payments & Failed Checkout Ledger (Super Admin Only) ────────────────
+// GET /api/platform/payments
+export const getPlatformPayments = async (req, res) => {
+  try {
+    const { status = 'all', search = '', page = 1, limit = 30 } = req.query;
+
+    const filter = {};
+    if (status && status !== 'all') {
+      filter.status = String(status).trim().toLowerCase();
+    }
+    if (search && String(search).trim()) {
+      const term = String(search).trim();
+      filter.$or = [
+        { payerName: { $regex: term, $options: 'i' } },
+        { contactNumber: { $regex: term, $options: 'i' } },
+        { payerEmail: { $regex: term, $options: 'i' } },
+        { companyName: { $regex: term, $options: 'i' } },
+        { planName: { $regex: term, $options: 'i' } },
+        { razorpayOrderId: { $regex: term, $options: 'i' } },
+        { razorpayPaymentId: { $regex: term, $options: 'i' } },
+        { failureReason: { $regex: term, $options: 'i' } },
+      ];
+    }
+
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, Number(limit) || 30));
+    const skip = (pageNum - 1) * limitNum;
+
+    const [docs, total, aggRows] = await Promise.all([
+      SaasPayment.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .populate('organizationId', 'name slug phone email')
+        .populate('userId', 'name email phone')
+        .lean(),
+      SaasPayment.countDocuments(filter),
+      SaasPayment.aggregate([
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 },
+            amountInr: { $sum: '$amountInr' },
+          },
+        },
+      ]),
+    ]);
+
+    const summary = {
+      totalCount: 0,
+      paidCount: 0,
+      failedCount: 0,
+      cancelledCount: 0,
+      createdCount: 0,
+      totalCollectedInr: 0,
+    };
+
+    aggRows.forEach((row) => {
+      const count = Number(row.count || 0);
+      summary.totalCount += count;
+      if (row._id === 'paid') {
+        summary.paidCount += count;
+        summary.totalCollectedInr += Number(row.amountInr || 0);
+      } else if (row._id === 'failed') {
+        summary.failedCount += count;
+      } else if (row._id === 'cancelled') {
+        summary.cancelledCount += count;
+      } else if (row._id === 'created') {
+        summary.createdCount += count;
+      }
+    });
+
+    const payments = docs.map((p) => ({
+      ...p,
+      payerName: p.payerName || p.userId?.name || p.organizationId?.name || 'Unknown User',
+      payerEmail: p.payerEmail || p.userId?.email || p.organizationId?.email || '',
+      contactNumber: p.contactNumber || p.userId?.phone || p.organizationId?.phone || '',
+      companyName: p.companyName || p.organizationId?.name || '',
+      companySlug: p.companySlug || p.organizationId?.slug || '',
+    }));
+
+    res.json({
+      success: true,
+      payments,
+      total,
+      page: pageNum,
+      pages: Math.max(1, Math.ceil(total / limitNum)),
+      summary,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

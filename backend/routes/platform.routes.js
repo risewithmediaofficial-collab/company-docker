@@ -22,6 +22,7 @@ import {
   toggleModule,
   getMyOrganization,
   getGhostContext,
+  getPlatformPayments,
 } from '../controllers/platform.controller.js';
 
 const router = express.Router();
@@ -35,8 +36,9 @@ router.get('/my-organization', getMyOrganization);
 // ── All routes below are superAdmin only ─────────────────────────────────────
 router.use(authorize('superAdmin'));
 
-// Stats overview
+// Stats overview & Payments ledger
 router.get('/stats', getPlatformStats);
+router.get('/payments', getPlatformPayments);
 
 // Organization CRUD
 router.get('/organizations', getAllOrganizations);

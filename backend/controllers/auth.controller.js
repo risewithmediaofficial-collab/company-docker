@@ -13,6 +13,7 @@ import { createNotification } from '../utils/notification.js';
 import { createActivityLog } from '../utils/activity.js';
 import { generateCaptchaChallenge, verifyCaptchaChallenge, verifyInteractiveCaptchaStep, isTermsAccepted } from '../utils/captcha.js';
 import { loadEnv } from '../config/env.js';
+import { sanitizeOrganizationForRole } from '../utils/orgAccess.js';
 
 const ORG_AUTH_PROJECTION =
   'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients storageLimitMb storageUsedBytes trialEndsAt settings paidAt';
@@ -389,7 +390,7 @@ export const login = async (req, res) => {
         isFirstLogin: Boolean(isFirstLogin),
         createdAt: user.createdAt,
       },
-      organization,
+      organization: sanitizeOrganizationForRole(organization, user.role),
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -465,7 +466,12 @@ export const getMe = async (req, res) => {
     if (targetOrgId && mongoose.Types.ObjectId.isValid(targetOrgId)) {
       organization = await Organization.findById(targetOrgId).select(ORG_AUTH_PROJECTION);
     }
-    res.json({ success: true, user, organization, isGhostMode: Boolean(ghostOrgId) });
+    res.json({
+      success: true,
+      user,
+      organization: sanitizeOrganizationForRole(organization, user.role),
+      isGhostMode: Boolean(ghostOrgId),
+    });
   } catch (error) {
     console.error('getMe error:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -996,7 +1002,7 @@ export const resolveGoogleUserAndTokens = async ({
       status: 200,
       accessToken,
       refreshToken,
-      organization,
+      organization: sanitizeOrganizationForRole(organization, user.role),
       user: {
         _id: user._id,
         name: user.name,

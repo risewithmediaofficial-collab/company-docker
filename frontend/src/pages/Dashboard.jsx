@@ -135,20 +135,13 @@ const Dashboard = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Pre-load company branches and billing/storage summary for owners & admins
+  // Pre-load company branches for owners & admins
   useEffect(() => {
     if (isSuperAdminOrOwner) {
       api.get('/branches')
         .then((res) => {
           if (res.data?.branches && Array.isArray(res.data.branches)) {
             setBranches(res.data.branches);
-          }
-        })
-        .catch(() => {});
-      api.get('/billing/plans')
-        .then((res) => {
-          if (res.data?.success) {
-            setBillingSummary(res.data);
           }
         })
         .catch(() => {});
@@ -609,91 +602,28 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Owner Workspace Plan, Storage & Live Portal Banner */}
-        {isSuperAdminOrOwner && (billingSummary?.organization || organization) && (() => {
-          const activeOrg = billingSummary?.organization || organization;
-          const activeUsage = billingSummary?.usage || {};
-          const storageUsedMb = Number(activeUsage.storageUsedMb ?? 0);
-          const storageLimitMb = Number(activeUsage.storageLimitMb ?? activeOrg.storageLimitMb ?? 100);
-          const storagePct = Math.min(100, Math.round((storageUsedMb / Math.max(1, storageLimitMb)) * 100));
-          const clientCount = Number(activeUsage.clientCount ?? 0);
-          const maxClients = Number(activeUsage.maxClients ?? activeOrg.maxClients ?? 3);
-          const planLabel = activeOrg.plan === 'pro' ? 'Enterprise Pro' : (activeOrg.plan || 'Free');
-          const livePortalPath = `/login/${activeOrg.slug || 'workspace'}`;
-          const livePortalUrl = typeof window !== 'undefined' ? `${window.location.origin}${livePortalPath}` : livePortalPath;
-
-          return (
-            <div className="rounded-2xl border border-cyan-200/80 dark:border-cyan-900/50 bg-gradient-to-r from-cyan-50/80 via-white to-slate-50 dark:from-cyan-950/20 dark:via-card dark:to-card p-4 sm:p-5 shadow-xs">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="w-11 h-11 rounded-2xl bg-[#07c8f9] text-white flex items-center justify-center shrink-0 shadow-sm">
-                    <HardDrive size={20} />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-cyan-700 dark:text-cyan-400">
-                        Active Workspace Plan
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#07c8f9]/15 text-[#0586a8] dark:text-[#07c8f9] text-xs font-extrabold capitalize">
-                        {planLabel} ({activeOrg.billingCycle || 'monthly'})
-                      </span>
-                      {activeOrg.companySetupRequired && (
-                        <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold">
-                          Company Details Pending
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
-                      <span className="font-semibold text-foreground">
-                        Storage: {storageUsedMb} MB / {formatStorageQuota(storageLimitMb)} ({storagePct}%)
-                      </span>
-                      <span className="font-semibold text-foreground">
-                        Clients: {clientCount} / {maxClients}
-                      </span>
-                      {activeOrg.slug && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard?.writeText(livePortalUrl);
-                            toast.success('Live workspace URL copied!');
-                          }}
-                          className="inline-flex items-center gap-1 font-mono text-[11px] text-primary hover:underline cursor-pointer"
-                          title="Copy Live Workspace URL"
-                        >
-                          <span>{livePortalUrl}</span>
-                          <Copy size={11} />
-                        </button>
-                      )}
-                    </div>
-                    <div className="w-full max-w-xs h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-[#07c8f9] transition-all"
-                        style={{ width: `${Math.max(4, storagePct)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-                  <Link
-                    to="/settings?section=company"
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-background hover:bg-secondary text-xs font-bold text-foreground transition-colors"
-                  >
-                    <ExternalLink size={13} />
-                    <span>{activeOrg.companySetupRequired ? 'Complete Company Setup' : 'Company Settings'}</span>
-                  </Link>
-                  <Link
-                    to="/select-plan"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white text-xs font-extrabold shadow-xs transition-colors"
-                  >
-                    <CreditCard size={13} />
-                    <span>Upgrade Plan</span>
-                  </Link>
-                </div>
+        {/* Onboarding Company Setup Reminder Banner (plans are never shown inside active owner workspace) */}
+        {isSuperAdminOrOwner && organization?.companySetupRequired && (
+          <div className="rounded-2xl border border-amber-200/80 dark:border-amber-900/50 bg-gradient-to-r from-amber-50/80 via-white to-slate-50 dark:from-amber-950/20 dark:via-card dark:to-card p-4 sm:p-5 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                  Company Details Pending
+                </span>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Complete your company profile and GST settings to finish configuring your workspace.
+                </p>
               </div>
+              <Link
+                to="/settings?section=company"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white text-xs font-extrabold shadow-xs transition-colors shrink-0"
+              >
+                <ExternalLink size={13} />
+                <span>Complete Company Setup</span>
+              </Link>
             </div>
-          );
-        })()}
+          </div>
+        )}
 
         {/* Active Branch Context Banner (when a specific branch is selected) */}
         {isSuperAdminOrOwner && activeBranch && (

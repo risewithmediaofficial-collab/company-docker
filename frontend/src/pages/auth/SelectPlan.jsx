@@ -53,6 +53,13 @@ const SelectPlan = () => {
 
   const isUpgradeMode = Boolean(organization && organization.billingSetupRequired === false);
 
+  // Only new registering companies during onboarding should access plan selection
+  useEffect(() => {
+    if (organization && !organization.billingSetupRequired && user?.role !== 'superAdmin') {
+      navigate('/', { replace: true });
+    }
+  }, [organization, user?.role, navigate]);
+
   // Preload Razorpay Checkout script immediately so clicking a paid plan opens Razorpay directly
   useEffect(() => {
     loadRazorpayScript();
@@ -163,10 +170,24 @@ const SelectPlan = () => {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
+                payerName: user?.name || '',
+                contactNumber: user?.phone || organization?.phone || '',
               });
               completePaymentSuccess(verifyRes.data);
             } catch (verifyErr) {
-              toast.error(verifyErr?.response?.data?.message || 'Payment verification failed');
+              const errMsg = verifyErr?.response?.data?.message || 'Payment verification failed';
+              api.post('/billing/razorpay/failure', {
+                planId: plan.id,
+                billingCycle,
+                razorpay_order_id: response?.razorpay_order_id || order.orderId,
+                razorpay_payment_id: response?.razorpay_payment_id || '',
+                code: 'VERIFY_ERROR',
+                description: errMsg,
+                source: 'frontend_verify',
+                payerName: user?.name || '',
+                contactNumber: user?.phone || organization?.phone || '',
+              }).catch(() => {});
+              toast.error(errMsg);
             } finally {
               setPayingPlanId('');
             }
@@ -174,12 +195,36 @@ const SelectPlan = () => {
           modal: {
             ondismiss: () => {
               setPayingPlanId('');
+              api.post('/billing/razorpay/failure', {
+                planId: plan.id,
+                billingCycle,
+                razorpay_order_id: order.orderId,
+                status: 'cancelled',
+                description: 'Checkout dismissed before completion',
+                source: 'razorpay_modal_dismiss',
+                payerName: user?.name || '',
+                contactNumber: user?.phone || organization?.phone || '',
+              }).catch(() => {});
               toast.info('Payment cancelled. Choose a plan when ready.');
             },
           },
         });
         rzp.on('payment.failed', (resp) => {
           setPayingPlanId('');
+          api.post('/billing/razorpay/failure', {
+            planId: plan.id,
+            billingCycle,
+            razorpay_order_id: resp?.error?.metadata?.order_id || order.orderId,
+            razorpay_payment_id: resp?.error?.metadata?.payment_id || '',
+            code: resp?.error?.code || 'PAYMENT_FAILED',
+            description: resp?.error?.description || 'Payment failed on Razorpay',
+            source: resp?.error?.source || 'razorpay_checkout',
+            step: resp?.error?.step || '',
+            reason: resp?.error?.reason || '',
+            metadata: resp?.error?.metadata || null,
+            payerName: user?.name || '',
+            contactNumber: user?.phone || organization?.phone || '',
+          }).catch(() => {});
           toast.error(resp?.error?.description || 'Payment failed. Please try again.');
         });
         rzp.open();

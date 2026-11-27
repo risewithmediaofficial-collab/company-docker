@@ -3,6 +3,7 @@ import User from '../models/user.model.js';
 import Organization from '../models/organization.model.js';
 import Branch from '../models/branch.model.js';
 import OfficeLocation from '../models/officeLocation.model.js';
+import { canViewCompanyAndGst, sanitizeOrganizationForRole } from '../utils/orgAccess.js';
 
 const editableProfileFields = ['name', 'phone', 'department', 'position', 'avatar'];
 const safeUserProjection = '-password -refreshToken -resetPasswordToken -resetPasswordExpire';
@@ -15,6 +16,13 @@ const getOrCreateSettings = async (userId) => {
 
 export const updateCompanySettings = async (req, res) => {
   try {
+    if (!canViewCompanyAndGst(req.user?.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only Super Admin, Owner, or Manager can update company and GST details.',
+      });
+    }
+
     const settings = await getOrCreateSettings(req.user._id);
     const updates = req.body || {};
 
@@ -31,7 +39,7 @@ export const updateCompanySettings = async (req, res) => {
     let organization = null;
     if (
       req.user?.organizationId &&
-      ['organizationOwner', 'superAdmin', 'admin'].includes(req.user.role)
+      canViewCompanyAndGst(req.user.role)
     ) {
       const org = await Organization.findById(req.user.organizationId);
       if (org) {
@@ -228,6 +236,17 @@ export const getSettings = async (req, res) => {
           radiusKm: currentProfile.radiusKm ?? hqBranch?.radiusKm ?? officeLoc?.radiusKm ?? 0.5,
         };
       }
+    }
+    const roleAllowedCompanyGst = canViewCompanyAndGst(req.user?.role);
+    if (!roleAllowedCompanyGst) {
+      const settingsObj = settings.toObject ? settings.toObject() : { ...settings };
+      settingsObj.companyProfile = null;
+      return res.json({
+        success: true,
+        settings: settingsObj,
+        user,
+        organization: sanitizeOrganizationForRole(organization, req.user?.role),
+      });
     }
     res.json({ success: true, settings, user, organization });
   } catch (error) {

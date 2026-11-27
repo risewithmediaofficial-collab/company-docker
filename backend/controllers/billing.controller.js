@@ -4,6 +4,7 @@ import Organization from '../models/organization.model.js';
 import Client from '../models/client.model.js';
 import User from '../models/user.model.js';
 import Asset from '../models/asset.model.js';
+import SaasPayment from '../models/saasPayment.model.js';
 
 export const SAAS_PLANS = [
   {
@@ -231,6 +232,35 @@ const computeOrganizationUsage = async (orgId, orgDoc) => {
   };
 };
 
+const extractPayerContext = (req, org, body = {}) => ({
+  payerName: String(body.payerName || body.name || req.user?.name || '').trim(),
+  payerEmail: String(body.payerEmail || body.email || req.user?.email || '').trim().toLowerCase(),
+  contactNumber: String(body.contactNumber || body.phone || req.user?.phone || org?.phone || '').trim(),
+  companyName: String(org?.name || body.companyName || '').trim(),
+  companySlug: String(org?.slug || '').trim(),
+});
+
+const saveSaasPaymentRecord = async ({ orderId, updateFields, defaults }) => {
+  try {
+    if (orderId) {
+      const updated = await SaasPayment.findOneAndUpdate(
+        { razorpayOrderId: String(orderId).trim() },
+        { $set: updateFields },
+        { new: true }
+      );
+      if (updated) return updated;
+    }
+    return await SaasPayment.create({
+      ...defaults,
+      ...updateFields,
+      razorpayOrderId: String(orderId || defaults?.razorpayOrderId || '').trim(),
+    });
+  } catch (err) {
+    console.warn('[SaasPayment Log Warning]:', err.message);
+    return null;
+  }
+};
+
 // @desc    Public SaaS plans list for website Pricing page
 // @route   GET /api/billing/public-plans
 // @access  Public
@@ -241,7 +271,7 @@ export const getPublicBillingPlans = (_req, res) => {
   });
 };
 
-// @desc    Get available SaaS plans, current plan & storage usage
+// @desc    Get available SaaS plans (only for newly registering companies / superAdmin)
 // @route   GET /api/billing/plans
 // @access  Private
 export const getBillingPlans = async (req, res) => {
@@ -254,11 +284,14 @@ export const getBillingPlans = async (req, res) => {
       usage = await computeOrganizationUsage(req.user.organizationId, organization);
     }
 
+    const canSelectPlans = Boolean(organization?.billingSetupRequired) || req.user?.role === 'superAdmin';
+
     res.json({
       success: true,
-      plans: SAAS_PLANS,
-      razorpayEnabled: Boolean(keyId && keySecret),
-      razorpayKeyId: keyId || null,
+      plans: canSelectPlans ? SAAS_PLANS : [],
+      canSelectPlans,
+      razorpayEnabled: canSelectPlans ? Boolean(keyId && keySecret) : false,
+      razorpayKeyId: canSelectPlans ? keyId || null : null,
       organization,
       usage,
     });
@@ -267,9 +300,9 @@ export const getBillingPlans = async (req, res) => {
   }
 };
 
-// @desc    Activate Free plan or create a Razorpay order for paid plan / mid-cycle upgrade
+// @desc    Activate Free plan or create a Razorpay order for newly registering company
 // @route   POST /api/billing/razorpay/order
-// @access  Private (organizationOwner, admin, superAdmin)
+// @access  Private (organizationOwner during onboarding, superAdmin, admin during onboarding)
 export const createRazorpayOrder = async (req, res) => {
   try {
     const { planId, billingCycle = 'monthly' } = req.body || {};
@@ -278,10 +311,23 @@ export const createRazorpayOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid subscription plan selected' });
     }
 
+    const existingOrg = req.user?.organizationId
+      ? await Organization.findById(req.user.organizationId).select(ORG_BILLING_PROJECTION)
+      : null;
+
+    if (req.user?.role !== 'superAdmin' && existingOrg && !existingOrg.billingSetupRequired) {
+      return res.status(403).json({
+        success: false,
+        message: 'Plans are only available for new companies during initial registration.',
+      });
+    }
+
     const cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
     const amount = computePlanAmountPaise(plan, cycle);
+    const amountInr = Math.round(amount / 100);
+    const payer = extractPayerContext(req, existingOrg, req.body);
 
-    // Zero-amount plans (if any promotional ₹0 tier) activate directly without payment gateway
+    // Zero-amount plans (Free tier) activate directly without payment gateway
     if (amount <= 0) {
       if (!req.user?.organizationId) {
         return res.status(400).json({ success: false, message: 'No workspace found for this account' });
@@ -304,6 +350,25 @@ export const createRazorpayOrder = async (req, res) => {
         },
         { new: true }
       ).select(ORG_BILLING_PROJECTION);
+
+      await saveSaasPaymentRecord({
+        defaults: {
+          organizationId: organization?._id,
+          userId: req.user._id,
+          ...payer,
+          planId: plan.id,
+          planName: plan.name,
+          billingCycle: 'monthly',
+          amountPaise: 0,
+          amountInr: 0,
+          currency: 'INR',
+          gateway: 'free',
+        },
+        updateFields: {
+          status: 'paid',
+          paidAt: new Date(),
+        },
+      });
 
       return res.json({
         success: true,
@@ -337,6 +402,8 @@ export const createRazorpayOrder = async (req, res) => {
           notes: {
             userId: String(req.user._id),
             organizationId: String(req.user.organizationId || ''),
+            payerName: payer.payerName,
+            contactNumber: payer.contactNumber,
             planId: plan.id,
             billingCycle: cycle,
           },
@@ -344,11 +411,54 @@ export const createRazorpayOrder = async (req, res) => {
       });
       const rzpOrder = await rzpRes.json();
       if (!rzpRes.ok || !rzpOrder?.id) {
+        const errMsg = rzpOrder?.error?.description || 'Failed to initiate Razorpay order';
+        await saveSaasPaymentRecord({
+          defaults: {
+            organizationId: req.user.organizationId,
+            userId: req.user._id,
+            ...payer,
+            planId: plan.id,
+            planName: plan.name,
+            billingCycle: cycle,
+            amountPaise: amount,
+            amountInr,
+            currency: 'INR',
+            gateway: 'razorpay',
+          },
+          updateFields: {
+            status: 'failed',
+            failureCode: String(rzpOrder?.error?.code || 'ORDER_CREATE_FAILED'),
+            failureReason: errMsg,
+            failureSource: 'razorpay_order_api',
+            failedAt: new Date(),
+            failureMetadata: rzpOrder?.error || null,
+          },
+        });
         return res.status(502).json({
           success: false,
-          message: rzpOrder?.error?.description || 'Failed to initiate Razorpay order',
+          message: errMsg,
         });
       }
+
+      await saveSaasPaymentRecord({
+        orderId: rzpOrder.id,
+        defaults: {
+          organizationId: req.user.organizationId,
+          userId: req.user._id,
+          ...payer,
+          planId: plan.id,
+          planName: plan.name,
+          billingCycle: cycle,
+          amountPaise: amount,
+          amountInr,
+          currency: rzpOrder.currency || 'INR',
+          gateway: 'razorpay',
+        },
+        updateFields: {
+          ...payer,
+          status: 'created',
+        },
+      });
 
       return res.json({
         success: true,
@@ -365,6 +475,26 @@ export const createRazorpayOrder = async (req, res) => {
 
     // Signed test-mode order when Razorpay credentials are not yet configured in environment
     const orderId = `order_rwm_${crypto.randomBytes(6).toString('hex')}`;
+    await saveSaasPaymentRecord({
+      orderId,
+      defaults: {
+        organizationId: req.user.organizationId,
+        userId: req.user._id,
+        ...payer,
+        planId: plan.id,
+        planName: plan.name,
+        billingCycle: cycle,
+        amountPaise: amount,
+        amountInr,
+        currency: 'INR',
+        gateway: 'sandbox',
+      },
+      updateFields: {
+        ...payer,
+        status: 'created',
+      },
+    });
+
     const sandboxToken = jwt.sign(
       {
         tokenType: 'razorpay_sandbox_order',
@@ -398,7 +528,7 @@ export const createRazorpayOrder = async (req, res) => {
 
 // @desc    Verify Razorpay payment & activate/upgrade workspace subscription
 // @route   POST /api/billing/razorpay/verify
-// @access  Private (organizationOwner, admin, superAdmin)
+// @access  Private (organizationOwner during onboarding, superAdmin, admin)
 export const verifyRazorpayPayment = async (req, res) => {
   try {
     const {
@@ -415,7 +545,21 @@ export const verifyRazorpayPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid subscription plan selected' });
     }
     const cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
+    const amountPaise = computePlanAmountPaise(plan, cycle);
+    const amountInr = Math.round(amountPaise / 100);
 
+    const existingOrg = req.user?.organizationId
+      ? await Organization.findById(req.user.organizationId).select(ORG_BILLING_PROJECTION)
+      : null;
+
+    if (req.user?.role !== 'superAdmin' && existingOrg && !existingOrg.billingSetupRequired) {
+      return res.status(403).json({
+        success: false,
+        message: 'Plans are only available for new companies during initial registration.',
+      });
+    }
+
+    const payer = extractPayerContext(req, existingOrg, req.body);
     const { keyId, keySecret } = getRazorpayKeys();
     let verifiedOrderId = String(rzpOrderId || '').trim();
     let verifiedPaymentId = String(rzpPaymentId || '').trim();
@@ -428,6 +572,30 @@ export const verifyRazorpayPayment = async (req, res) => {
         keySecret,
       });
       if (!ok) {
+        await saveSaasPaymentRecord({
+          orderId: verifiedOrderId,
+          defaults: {
+            organizationId: req.user.organizationId,
+            userId: req.user._id,
+            ...payer,
+            planId: plan.id,
+            planName: plan.name,
+            billingCycle: cycle,
+            amountPaise,
+            amountInr,
+            currency: 'INR',
+            gateway: 'razorpay',
+          },
+          updateFields: {
+            ...payer,
+            razorpayPaymentId: verifiedPaymentId,
+            status: 'failed',
+            failureCode: 'SIGNATURE_MISMATCH',
+            failureReason: 'Razorpay payment signature verification failed',
+            failureSource: 'server_verify',
+            failedAt: new Date(),
+          },
+        });
         return res.status(400).json({ success: false, message: 'Razorpay payment signature verification failed' });
       }
     } else {
@@ -438,6 +606,29 @@ export const verifyRazorpayPayment = async (req, res) => {
       try {
         decoded = jwt.verify(String(sandboxToken), getSandboxSecret());
       } catch {
+        await saveSaasPaymentRecord({
+          orderId: verifiedOrderId,
+          defaults: {
+            organizationId: req.user.organizationId,
+            userId: req.user._id,
+            ...payer,
+            planId: plan.id,
+            planName: plan.name,
+            billingCycle: cycle,
+            amountPaise,
+            amountInr,
+            currency: 'INR',
+            gateway: 'sandbox',
+          },
+          updateFields: {
+            ...payer,
+            status: 'failed',
+            failureCode: 'SESSION_EXPIRED',
+            failureReason: 'Payment session expired. Please try again.',
+            failureSource: 'server_verify',
+            failedAt: new Date(),
+          },
+        });
         return res.status(400).json({ success: false, message: 'Payment session expired. Please try again.' });
       }
       if (
@@ -476,12 +667,212 @@ export const verifyRazorpayPayment = async (req, res) => {
       { new: true }
     ).select(ORG_BILLING_PROJECTION);
 
+    await saveSaasPaymentRecord({
+      orderId: verifiedOrderId,
+      defaults: {
+        organizationId: organization?._id || req.user.organizationId,
+        userId: req.user._id,
+        ...payer,
+        planId: plan.id,
+        planName: plan.name,
+        billingCycle: cycle,
+        amountPaise,
+        amountInr,
+        currency: 'INR',
+        gateway: keyId && keySecret && !sandboxToken ? 'razorpay' : 'sandbox',
+      },
+      updateFields: {
+        ...payer,
+        companyName: organization?.name || payer.companyName,
+        companySlug: organization?.slug || payer.companySlug,
+        razorpayPaymentId: verifiedPaymentId,
+        razorpaySignature: String(rzpSignature || '').trim(),
+        status: 'paid',
+        failureCode: '',
+        failureReason: '',
+        paidAt: new Date(),
+      },
+    });
+
     return res.json({
       success: true,
       message: `${plan.name} plan (${plan.storageLabel}) activated successfully!`,
       organization,
       nextRoute: organization?.companySetupRequired ? '/settings?section=company' : '/',
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Record Razorpay failed / cancelled checkout event with payer name & contact number
+// @route   POST /api/billing/razorpay/failure
+// @access  Private (organizationOwner, superAdmin, admin)
+export const recordRazorpayFailure = async (req, res) => {
+  try {
+    const {
+      planId,
+      billingCycle = 'monthly',
+      razorpay_order_id: rzpOrderId,
+      razorpay_payment_id: rzpPaymentId,
+      code,
+      description,
+      source,
+      step,
+      reason,
+      status = 'failed',
+      metadata,
+    } = req.body || {};
+
+    const plan = getPlanById(planId);
+    const cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
+    const amountPaise = plan ? computePlanAmountPaise(plan, cycle) : 0;
+    const amountInr = Math.round(amountPaise / 100);
+
+    const org = req.user?.organizationId
+      ? await Organization.findById(req.user.organizationId).select('name slug phone').lean()
+      : null;
+
+    const payer = extractPayerContext(req, org, req.body);
+    const nextStatus = status === 'cancelled' ? 'cancelled' : 'failed';
+    const resolvedReason = String(
+      description || reason || (nextStatus === 'cancelled' ? 'Checkout dismissed by user' : 'Payment failed on Razorpay')
+    ).trim();
+
+    const record = await saveSaasPaymentRecord({
+      orderId: String(rzpOrderId || '').trim(),
+      defaults: {
+        organizationId: req.user?.organizationId || null,
+        userId: req.user?._id || null,
+        ...payer,
+        planId: plan?.id || String(planId || 'unknown').toLowerCase(),
+        planName: plan?.name || String(planId || 'Unknown Plan'),
+        billingCycle: cycle,
+        amountPaise,
+        amountInr,
+        currency: 'INR',
+        gateway: 'razorpay',
+      },
+      updateFields: {
+        ...payer,
+        razorpayPaymentId: String(rzpPaymentId || '').trim(),
+        status: nextStatus,
+        failureCode: String(code || '').trim(),
+        failureReason: resolvedReason,
+        failureSource: String(source || 'razorpay_checkout').trim(),
+        failureStep: String(step || '').trim(),
+        failureMetadata: metadata || null,
+        failedAt: new Date(),
+      },
+    });
+
+    res.json({ success: true, payment: record });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Razorpay server-side webhook handler (captures payment.failed & payment.captured)
+// @route   POST /api/billing/razorpay/webhook
+// @access  Public (verified by RAZORPAY_WEBHOOK_SECRET when configured)
+export const handleRazorpayWebhook = async (req, res) => {
+  try {
+    const webhookSecret = String(process.env.RAZORPAY_WEBHOOK_SECRET || '').trim();
+    const signature = String(req.headers['x-razorpay-signature'] || '').trim();
+
+    if (webhookSecret) {
+      if (!signature) {
+        return res.status(400).json({ success: false, message: 'Missing Razorpay webhook signature' });
+      }
+      const payloadStr = JSON.stringify(req.body || {});
+      const expected = crypto.createHmac('sha256', webhookSecret).update(payloadStr).digest('hex');
+      const a = Buffer.from(expected, 'utf8');
+      const b = Buffer.from(signature, 'utf8');
+      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+        return res.status(400).json({ success: false, message: 'Invalid webhook signature' });
+      }
+    }
+
+    const event = req.body?.event;
+    const entity = req.body?.payload?.payment?.entity;
+    if (!entity || !['payment.failed', 'payment.captured'].includes(event)) {
+      return res.json({ success: true, ignored: true });
+    }
+
+    const orderId = String(entity.order_id || '').trim();
+    const paymentId = String(entity.id || '').trim();
+    const notes = entity.notes || {};
+    const orgId = notes.organizationId || null;
+    const userId = notes.userId || null;
+
+    const [orgDoc, userDoc] = await Promise.all([
+      orgId ? Organization.findById(orgId).select('name slug phone').lean().catch(() => null) : null,
+      userId ? User.findById(userId).select('name email phone').lean().catch(() => null) : null,
+    ]);
+
+    const plan = getPlanById(notes.planId);
+    const amountPaise = Number(entity.amount || (plan ? computePlanAmountPaise(plan, notes.billingCycle || 'monthly') : 0));
+    const amountInr = Math.round(amountPaise / 100);
+
+    const payerFields = {
+      payerName: String(notes.payerName || userDoc?.name || '').trim(),
+      payerEmail: String(entity.email || userDoc?.email || '').trim().toLowerCase(),
+      contactNumber: String(entity.contact || notes.contactNumber || userDoc?.phone || orgDoc?.phone || '').trim(),
+      companyName: String(orgDoc?.name || '').trim(),
+      companySlug: String(orgDoc?.slug || '').trim(),
+    };
+
+    if (event === 'payment.failed') {
+      await saveSaasPaymentRecord({
+        orderId,
+        defaults: {
+          organizationId: orgDoc?._id || orgId || undefined,
+          userId: userDoc?._id || userId || undefined,
+          ...payerFields,
+          planId: plan?.id || String(notes.planId || 'unknown').toLowerCase(),
+          planName: plan?.name || String(notes.planId || 'Plan'),
+          billingCycle: notes.billingCycle === 'annual' ? 'annual' : 'monthly',
+          amountPaise,
+          amountInr,
+          currency: entity.currency || 'INR',
+          gateway: 'razorpay',
+        },
+        updateFields: {
+          ...payerFields,
+          razorpayPaymentId: paymentId,
+          status: 'failed',
+          failureCode: String(entity.error_code || '').trim(),
+          failureReason: String(entity.error_description || entity.error_reason || 'Payment failed on Razorpay').trim(),
+          failureSource: String(entity.error_source || 'razorpay_webhook').trim(),
+          failureStep: String(entity.error_step || '').trim(),
+          failedAt: new Date(),
+        },
+      });
+    } else if (event === 'payment.captured') {
+      await saveSaasPaymentRecord({
+        orderId,
+        defaults: {
+          organizationId: orgDoc?._id || orgId || undefined,
+          userId: userDoc?._id || userId || undefined,
+          ...payerFields,
+          planId: plan?.id || String(notes.planId || 'unknown').toLowerCase(),
+          planName: plan?.name || String(notes.planId || 'Plan'),
+          billingCycle: notes.billingCycle === 'annual' ? 'annual' : 'monthly',
+          amountPaise,
+          amountInr,
+          currency: entity.currency || 'INR',
+          gateway: 'razorpay',
+        },
+        updateFields: {
+          ...payerFields,
+          razorpayPaymentId: paymentId,
+          status: 'paid',
+          paidAt: new Date(),
+        },
+      });
+    }
+
+    return res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -82,13 +82,14 @@ const INDUSTRY_OPTIONS = [
 const sections = [
   { id: 'profile', label: 'Profile Info', icon: User },
   { id: 'company', label: 'Company & GST Details', icon: Briefcase },
-  { id: 'billing', label: 'Plan & Storage', icon: CreditCard },
   { id: 'branches', label: 'Branches & Locations', icon: Building2 },
   { id: 'security', label: 'Security', icon: Lock },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'permissions', label: 'Permissions', icon: Shield },
 ];
+
+const COMPANY_GST_ROLES = ['superAdmin', 'organizationOwner', 'manager'];
 
 const Settings = () => {
   const dispatch = useDispatch();
@@ -102,21 +103,25 @@ const Settings = () => {
   const updatePreferences = useUpdatePreferences();
   const changePassword = useChangePassword();
   const [searchParams, setSearchParams] = useSearchParams();
+  const canViewCompanyAndGst = COMPANY_GST_ROLES.includes(user?.role);
+  const visibleSections = sections.filter((s) => s.id !== 'company' || canViewCompanyAndGst);
   const urlSection = searchParams.get('section');
   const [activeSection, setActiveSection] = useState(() => {
-    if (urlSection && sections.some((s) => s.id === urlSection)) return urlSection;
-    if (organization?.companySetupRequired) return 'company';
+    if (urlSection && visibleSections.some((s) => s.id === urlSection)) return urlSection;
+    if (canViewCompanyAndGst && organization?.companySetupRequired) return 'company';
     return 'profile';
   });
 
   useEffect(() => {
     const s = searchParams.get('section');
-    if (s && sections.some((sec) => sec.id === s)) {
+    if (s && visibleSections.some((sec) => sec.id === s)) {
       setActiveSection(s);
-    } else if (organization?.companySetupRequired) {
+    } else if (canViewCompanyAndGst && organization?.companySetupRequired) {
       setActiveSection('company');
+    } else if (!visibleSections.some((sec) => sec.id === activeSection)) {
+      setActiveSection('profile');
     }
-  }, [searchParams, organization?.companySetupRequired]);
+  }, [searchParams, organization?.companySetupRequired, canViewCompanyAndGst, activeSection]);
   // Payment modal removed: purchases are disabled in this build.
 
   const settings = data?.settings;
@@ -304,21 +309,7 @@ const Settings = () => {
     }
   }, [settings, data?.organization, dispatch]);
 
-  useEffect(() => {
-    if (!['superAdmin', 'admin', 'organizationOwner'].includes(user?.role)) return;
-    let active = true;
-    api
-      .get('/billing/plans')
-      .then((res) => {
-        if (active && res.data?.success) {
-          setBillingInfo(res.data);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [user?.role]);
+  // Plan selection is restricted strictly to new company registration onboarding
 
   const handleCompanyLogoUpload = async (event) => {
     const file = event.target.files?.[0];
@@ -566,7 +557,7 @@ const Settings = () => {
           data-testid="settings-static-sidebar"
           className="lg:col-span-1 flex flex-row overflow-x-auto lg:flex-col gap-1.5 pb-2 lg:pb-0 lg:h-full lg:overflow-y-auto custom-scrollbar lg:pr-1"
         >
-          {sections.map((section) => (
+          {visibleSections.map((section) => (
             <button
               key={section.id}
               onClick={() => setActiveSection(section.id)}
@@ -805,18 +796,13 @@ const Settings = () => {
               </div>
             )}
 
-            {activeSection === 'company' && (() => {
-              const activeOrg = billingInfo?.organization || organization;
+            {activeSection === 'company' && canViewCompanyAndGst && (() => {
+              const activeOrg = organization;
               const liveSlug = (companyProfile.slug || activeOrg?.slug || 'your-agency').trim();
               const liveWorkspaceUrl =
                 typeof window !== 'undefined'
                   ? `${window.location.origin}/login/${liveSlug}`
                   : `/login/${liveSlug}`;
-              const activePlanName =
-                activeOrg?.plan === 'pro' ? 'Enterprise Pro' : activeOrg?.plan || 'Free';
-              const activeStorageLimitMb = Number(
-                billingInfo?.usage?.storageLimitMb ?? activeOrg?.storageLimitMb ?? 100
-              );
 
               return (
                 <div className="space-y-6">
@@ -836,29 +822,9 @@ const Settings = () => {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <h3 className="text-lg font-bold">Company Details &amp; GST Settings</h3>
-                      {activeOrg?.plan && (
-                        <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                          Chosen Plan: <strong className="text-primary">{activePlanName}</strong> ({activeOrg.billingCycle || 'monthly'}) • {formatStorageQuota(activeStorageLimitMb)} Storage
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveSection('billing');
-                          setSearchParams({ section: 'billing' });
-                        }}
-                        className="px-3.5 py-2 rounded-xl border border-border bg-background hover:bg-secondary text-xs font-bold transition-colors cursor-pointer"
-                      >
-                        View Plan &amp; Storage
-                      </button>
-                      <Link
-                        to="/select-plan"
-                        className="px-3.5 py-2 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white text-xs font-extrabold transition-colors"
-                      >
-                        Upgrade Plan
-                      </Link>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Visible only to Super Admin, Owner, and Manager.
+                      </p>
                     </div>
                   </div>
 
@@ -1244,129 +1210,6 @@ const Settings = () => {
                           ? 'Save Company Details & Launch Workspace'
                           : 'Save Company Details & GST Settings'}
                       </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {activeSection === 'billing' && (() => {
-              const activeOrg = billingInfo?.organization || organization || {};
-              const usage = billingInfo?.usage || {};
-              const plansList = billingInfo?.plans || [];
-              const currentPlanObj = plansList.find((p) => p.id === activeOrg.plan);
-              const storageUsedMb = Number(usage.storageUsedMb ?? 0);
-              const storageLimitMb = Number(usage.storageLimitMb ?? activeOrg.storageLimitMb ?? currentPlanObj?.storageLimitMb ?? 100);
-              const storagePercent = Math.min(100, Math.round((storageUsedMb / Math.max(1, storageLimitMb)) * 100));
-              const clientCount = Number(usage.clientCount ?? 0);
-              const maxClients = Number(usage.maxClients ?? activeOrg.maxClients ?? currentPlanObj?.maxClients ?? 3);
-              const clientPercent = Math.min(100, Math.round((clientCount / Math.max(1, maxClients)) * 100));
-              const userCount = Number(usage.userCount ?? 0);
-              const maxUsers = Number(usage.maxUsers ?? activeOrg.maxUsers ?? currentPlanObj?.maxUsers ?? 2);
-              const userPercent = Math.min(100, Math.round((userCount / Math.max(1, maxUsers)) * 100));
-              const planTitle =
-                currentPlanObj?.name ||
-                (activeOrg.plan === 'pro' ? 'Enterprise Pro' : activeOrg.plan || 'Free');
-
-              return (
-                <div className="space-y-6">
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                      <h3 className="text-lg font-bold">Subscription Plan &amp; Storage Usage</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        View your active storage tier, live client capacity, and upgrade mid-cycle anytime.
-                      </p>
-                    </div>
-                    <Link
-                      to="/select-plan"
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-white text-xs font-extrabold shadow-xs transition-colors"
-                    >
-                      <Sparkles size={14} />
-                      <span>Upgrade Plan</span>
-                    </Link>
-                  </div>
-
-                  {/* Active Plan Card */}
-                  <div className="p-5 rounded-2xl border border-cyan-200 dark:border-cyan-900/60 bg-gradient-to-br from-cyan-50/70 via-background to-background flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-extrabold uppercase">
-                          {activeOrg.planStatus || 'active'}
-                        </span>
-                        <span className="text-xs font-semibold text-muted-foreground capitalize">
-                          {activeOrg.billingCycle || 'monthly'} billing
-                        </span>
-                      </div>
-                      <h4 className="text-2xl font-black capitalize">{planTitle} Plan</h4>
-                      <p className="text-xs text-muted-foreground">
-                        {currentPlanObj?.tagline || `${formatStorageQuota(storageLimitMb)} storage • Up to ${maxClients} active clients`}
-                      </p>
-                    </div>
-                    <div className="text-left sm:text-right space-y-1">
-                      <p className="text-2xl font-black tabular-nums">
-                        {currentPlanObj
-                          ? `₹${Number(
-                              activeOrg.billingCycle === 'annual'
-                                ? currentPlanObj.annualPriceInr
-                                : currentPlanObj.monthlyPriceInr
-                            ).toLocaleString('en-IN')}`
-                          : activeOrg.plan === 'free'
-                          ? '₹0'
-                          : 'Active'}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {activeOrg.billingCycle === 'annual' ? 'per year' : 'per month'}
-                        {activeOrg.lastPaymentId ? ` • Ref ${activeOrg.lastPaymentId}` : ''}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Quotas Grid */}
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div className="p-4 rounded-2xl border border-border bg-background space-y-2.5">
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="flex items-center gap-1.5 text-muted-foreground uppercase tracking-wider text-[11px]">
-                          <HardDrive size={14} className="text-[#07c8f9]" />
-                          Cloud Storage
-                        </span>
-                        <span>{storagePercent}%</span>
-                      </div>
-                      <p className="text-base font-black">
-                        {storageUsedMb} MB <span className="text-xs font-semibold text-muted-foreground">/ {formatStorageQuota(storageLimitMb)}</span>
-                      </p>
-                      <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                        <div className="h-full rounded-full bg-[#07c8f9]" style={{ width: `${Math.max(4, storagePercent)}%` }} />
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-2xl border border-border bg-background space-y-2.5">
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="text-muted-foreground uppercase tracking-wider text-[11px]">
-                          Active Clients
-                        </span>
-                        <span>{clientPercent}%</span>
-                      </div>
-                      <p className="text-base font-black">
-                        {clientCount} <span className="text-xs font-semibold text-muted-foreground">/ {maxClients} allowed</span>
-                      </p>
-                      <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.max(4, clientPercent)}%` }} />
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-2xl border border-border bg-background space-y-2.5">
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="text-muted-foreground uppercase tracking-wider text-[11px]">
-                          Team Members
-                        </span>
-                        <span>{userPercent}%</span>
-                      </div>
-                      <p className="text-base font-black">
-                        {userCount} <span className="text-xs font-semibold text-muted-foreground">/ {maxUsers} seats</span>
-                      </p>
-                      <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                        <div className="h-full rounded-full bg-indigo-500" style={{ width: `${Math.max(4, userPercent)}%` }} />
-                      </div>
                     </div>
                   </div>
                 </div>
