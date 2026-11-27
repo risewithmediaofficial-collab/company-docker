@@ -42,7 +42,7 @@ services:
       CLUSTER_WORKERS: ${CLUSTER_WORKERS:-2}
       MAX_CONCURRENT_REQUESTS: ${MAX_CONCURRENT_REQUESTS:-500}
       # Primary production database
-      MONGO_URI: ${MONGO_URI:-mongodb://company-crm-mongodb:27017/company_crm}
+      MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/agency_crm}
       CLIENT_URL: ${CLIENT_URL:-https://company.risewithmedia.com}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
       JWT_SECRET: ${JWT_SECRET:-changeme_strong_jwt_secret_32chars}
