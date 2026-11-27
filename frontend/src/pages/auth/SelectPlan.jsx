@@ -9,6 +9,7 @@ import PricingPlansGrid, {
   DEFAULT_STORAGE_PLANS,
   formatStorageQuota,
 } from '../../components/billing/PricingPlansGrid';
+import { RiseWithMediaAttribution } from '../../components/common/RiseWithMediaAttribution';
 
 const loadRazorpayScript = () =>
   new Promise((resolve) => {
@@ -415,6 +416,10 @@ const SelectPlan = () => {
           </div>
         </div>
       )}
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 pt-2 text-center text-xs text-slate-400">
+        © {new Date().getFullYear()} AgencyUpscale ·{' '}
+        <RiseWithMediaAttribution linkClassName="text-slate-600 hover:text-[#07c8f9]" />
+      </footer>
     </div>
   );
 };

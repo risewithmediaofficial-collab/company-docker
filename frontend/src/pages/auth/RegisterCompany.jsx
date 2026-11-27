@@ -27,6 +27,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { CaptchaWidget } from '../../components/auth/CaptchaWidget';
 import { TermsModal } from '../../components/auth/TermsModal';
+import { RiseWithMediaAttribution } from '../../components/common/RiseWithMediaAttribution';
 
 const steps = [
   { id: 1, label: 'Company Details', shortLabel: 'Company', icon: Building2, desc: 'Agency name & industry' },
@@ -836,12 +837,16 @@ const RegisterCompany = () => {
         </form>
 
         {/* Bottom Login Link */}
-        <div className="text-center mt-6">
+        <div className="text-center mt-6 space-y-2">
           <p className="text-slate-600 text-xs sm:text-sm font-medium">
             Already have an account?{' '}
             <Link to="/login" className="text-[#07c8f9] hover:text-[#06b4e0] font-bold underline underline-offset-4 transition-colors">
               Sign into existing workspace
             </Link>
+          </p>
+          <p className="text-[11px] text-slate-400">
+            © {new Date().getFullYear()} AgencyUpscale ·{' '}
+            <RiseWithMediaAttribution linkClassName="text-slate-600 hover:text-[#07c8f9]" />
           </p>
         </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowRight, Menu, X, MessageSquare } from 'lucide-react';
+import { RiseWithMediaAttribution } from '../common/RiseWithMediaAttribution';
 
 const NAV_ITEMS = [
   { label: 'Home', path: '/' },
@@ -272,7 +273,11 @@ const PublicLayout = ({
 
           {/* Bottom Copyright Bar */}
           <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-slate-400 text-center sm:text-left">
-            <p>© {new Date().getFullYear()} AgencyUpscale. All rights reserved.</p>
+            <p className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1">
+              <span>© {new Date().getFullYear()} AgencyUpscale. All rights reserved.</span>
+              <span className="text-slate-700">•</span>
+              <RiseWithMediaAttribution linkClassName="text-slate-200 hover:text-[#07c8f9]" />
+            </p>
             <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-6">
               <Link to="/login" className="hover:text-white transition-colors">Sign In</Link>
               <span className="text-slate-700">•</span>

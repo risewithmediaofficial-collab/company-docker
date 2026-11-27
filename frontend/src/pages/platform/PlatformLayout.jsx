@@ -7,6 +7,7 @@ import {
   ChevronLeft, Shield, Menu, X
 } from 'lucide-react';
 import axios from 'axios';
+import { RiseWithMediaAttribution } from '../../components/common/RiseWithMediaAttribution';
 
 const navItems = [
   { label: 'Overview', icon: LayoutDashboard, path: '/platform', id: 'overview' },
@@ -134,6 +135,9 @@ const PlatformLayout = () => {
         <ChevronLeft size={16} />
         <span>Back to App</span>
       </Link>
+      <p className="px-3 pt-1 text-[10px] text-slate-400">
+        <RiseWithMediaAttribution linkClassName="text-slate-600 hover:text-[#07c8f9]" />
+      </p>
     </div>
   );
 
@@ -250,8 +254,14 @@ const PlatformLayout = () => {
       </aside>
 
       {/* ── Main Content Area (Fluid & Responsive) ─────────────────────────── */}
-      <main className="flex-1 min-w-0 overflow-y-auto bg-slate-50">
-        <Outlet />
+      <main className="flex-1 min-w-0 overflow-y-auto bg-slate-50 flex flex-col">
+        <div className="flex-1">
+          <Outlet />
+        </div>
+        <footer className="px-6 py-4 border-t border-slate-200/80 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-500">
+          <span>© {new Date().getFullYear()} AgencyUpscale</span>
+          <RiseWithMediaAttribution linkClassName="text-slate-700 hover:text-[#07c8f9]" />
+        </footer>
       </main>
     </div>
   );

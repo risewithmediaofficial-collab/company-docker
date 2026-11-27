@@ -5,6 +5,7 @@ import axios from 'axios';
 import { Sun, Moon, Building2 } from '@/components/ui/muiIcons';
 import { toggleDarkMode } from '../store/slices/uiSlice';
 import MobileAppInstallButton from '../components/ui/MobileAppInstallButton';
+import { RiseWithMediaAttribution } from '../components/common/RiseWithMediaAttribution';
 
 const RESERVED_SLUGS = new Set([
   'login', 'register', 'register-company', 'forgot-password', 'reset-password',
@@ -57,7 +58,13 @@ const AuthLayout = () => {
   }, [cleanSlug, isActualCompanySlug]);
 
   return (
-    <div className="min-h-[100dvh] w-full flex items-center justify-center bg-background relative overflow-x-hidden px-2 pt-2 pb-20 sm:p-6 sm:py-12 transition-colors duration-300">
+    <div
+      className={
+        isSubAuth
+          ? 'min-h-[100dvh] w-full flex flex-col items-center justify-center bg-background relative overflow-x-hidden px-2 pt-2 pb-20 sm:p-6 sm:py-12 transition-colors duration-300'
+          : 'min-h-[100dvh] w-full bg-white dark:bg-slate-950 relative overflow-x-hidden transition-colors duration-300'
+      }
+    >
       {/* Floating Theme Toggle (Only for SubAuth standalone pages like forgot-password, styled with border & shadow) */}
       {isSubAuth && (
         <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
@@ -127,6 +134,13 @@ const AuthLayout = () => {
         </div>
       ) : (
         <Outlet context={{ portalOrg, companySlug, portalLoading, darkMode }} />
+      )}
+
+      {isSubAuth && (
+        <footer className="mt-6 text-center text-xs text-muted-foreground relative z-10">
+          © {new Date().getFullYear()} AgencyUpscale ·{' '}
+          <RiseWithMediaAttribution linkClassName="text-foreground/80 hover:text-[#07c8f9]" />
+        </footer>
       )}
 
       {/* Floating PWA Download / Install App Button (Mobile Only) */}

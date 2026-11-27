@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
+import { RiseWithMediaAttribution } from '../common/RiseWithMediaAttribution';
 import {
   LayoutDashboard,
   Users,
@@ -611,7 +612,7 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
         </div>
 
         {/* Footer / Settings Link */}
-        <div className="p-3 bg-slate-100 dark:bg-[#090f1d] border-t border-slate-200/70 dark:border-slate-800/80 shrink-0">
+        <div className="p-3 bg-slate-100 dark:bg-[#090f1d] border-t border-slate-200/70 dark:border-slate-800/80 shrink-0 space-y-1.5">
           <Link
             to="/settings"
             onMouseEnter={() => preloadRoute('/settings')}
@@ -627,6 +628,9 @@ function SidebarComponent({ onOpenSearch, currentPath }) {
             <Settings size={16} />
             <span className="ml-2.5 font-sans">Settings</span>
           </Link>
+          <p className="px-3 text-[10px] text-muted-foreground/80">
+            <RiseWithMediaAttribution linkClassName="text-foreground/75 hover:text-[#07c8f9]" />
+          </p>
         </div>
       </aside>
     </>

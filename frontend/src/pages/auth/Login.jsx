@@ -30,155 +30,273 @@ import { toggleDarkMode } from '../../store/slices/uiSlice';
 import { GoogleAuthButton } from '../../components/auth/GoogleAuthButton';
 import { CaptchaWidget } from '../../components/auth/CaptchaWidget';
 import { TermsModal } from '../../components/auth/TermsModal';
+import { RiseWithMediaAttribution } from '../../components/common/RiseWithMediaAttribution';
 
-// ── Left Navigation Rail / Mobile Header (CardNav) ───────────────────────────
-const CardNav = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
-  <nav className="card-nav relative flex flex-row md:flex-col items-center justify-between md:justify-start gap-2 md:gap-0 w-full md:w-24 shrink-0 py-2.5 px-2.5 sm:px-4 md:py-8 md:px-0 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800/80 z-30 bg-slate-50/70 dark:bg-slate-900/60 rounded-t-3xl md:rounded-t-none md:rounded-l-3xl">
-    {/* Left Side (Mobile Branding) / Top Item (Desktop Logo) */}
-    <div className="flex items-center gap-1.5 md:mb-8 shrink-0 z-10">
-      <Link to="/" className="group flex items-center gap-1.5" title="AgencyUpscale Home">
+// ── Top Bar Controls (Mobile Logo + Sign In/Up Pill + Theme Toggle) ──────────
+const AuthTopBar = ({ view, onSelect, portalOrg, darkMode, onToggleTheme }) => (
+  <header className="w-full flex items-center justify-between gap-2 pb-2 lg:pb-0">
+    {/* Mobile/Tablet Logo (hidden on lg+ because left split panel shows logo) */}
+    <Link to="/" className="lg:hidden group flex items-center gap-2 shrink-0" title="AgencyUpscale Home">
+      {portalOrg?.logo ? (
+        <>
+          <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 p-1 shadow-2xs border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center overflow-hidden">
+            <img
+              src={portalOrg.logo}
+              alt={portalOrg.name}
+              className="h-full w-full object-contain"
+              onError={(e) => {
+                e.currentTarget.src = '/agencyupscalelogo.png';
+              }}
+            />
+          </div>
+          <span className="text-xs font-black text-slate-900 dark:text-white tracking-wider uppercase truncate max-w-[120px]">
+            {portalOrg.name}
+          </span>
+        </>
+      ) : (
+        <div className="h-10 sm:h-11 shrink-0 flex items-center group-hover:scale-105 transition-transform">
+          <img
+            src="/agencyupscalelogo.png"
+            alt="AgencyUpscale"
+            className="h-full w-auto object-contain dark:hidden"
+          />
+          <img
+            src="/agencyupscalelogo-dark.png"
+            alt="AgencyUpscale"
+            className="h-full w-auto object-contain hidden dark:block"
+          />
+        </div>
+      )}
+    </Link>
+
+    {/* Right-aligned Switcher & Theme Toggle */}
+    <div className="flex items-center gap-2 ml-auto shrink-0">
+      <div className="flex items-center gap-0.5 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+        <button
+          type="button"
+          onClick={() => onSelect('signin')}
+          className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            view === 'signin'
+              ? 'text-[#07c8f9] bg-white dark:bg-slate-800 shadow-2xs border border-[#07c8f9]/25'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent'
+          }`}
+        >
+          <UserCheck size={13} className={view === 'signin' ? 'text-[#07c8f9]' : ''} />
+          <span>Sign In</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onSelect('signup')}
+          className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            view === 'signup'
+              ? 'text-[#07c8f9] bg-white dark:bg-slate-800 shadow-2xs border border-[#07c8f9]/25'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent'
+          }`}
+        >
+          <UserPlus size={13} className={view === 'signup' ? 'text-[#07c8f9]' : ''} />
+          <span>Sign Up</span>
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={onToggleTheme}
+        className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-[#07c8f9] hover:border-[#07c8f9]/40 transition-all shadow-2xs cursor-pointer shrink-0"
+        title={darkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+        aria-label="Toggle theme"
+      >
+        {darkMode ? <Sun size={15} className="text-amber-400" /> : <Moon size={15} className="text-slate-600 dark:text-slate-300" />}
+      </button>
+    </div>
+  </header>
+);
+
+// ── Split Left Abstract Showcase Panel (Desktop lg+) ──────────────────────────
+const SplitShowcasePanel = ({ view, portalOrg, onOpenTerms }) => (
+  <aside className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-10 xl:p-14 bg-[#074d61] select-none shrink-0">
+    {/* Flowing Swirling Abstract Gradient Background (deeper ocean-teal at top-left so logo pops crisply) */}
+    <div
+      className="pointer-events-none absolute inset-0"
+      style={{
+        background:
+          'radial-gradient(circle at 8% 10%, rgba(3, 32, 44, 0.94) 0%, rgba(5, 48, 64, 0.72) 28%, transparent 56%), radial-gradient(circle at 72% 24%, rgba(224, 249, 255, 0.42) 0%, rgba(56, 189, 248, 0.25) 36%, transparent 64%), radial-gradient(circle at 40% 78%, rgba(7, 200, 249, 0.78) 0%, rgba(6, 78, 99, 0.9) 55%, #042b38 100%), linear-gradient(135deg, #042b38 0%, #0b6f8a 48%, #07c8f9 100%)',
+      }}
+    />
+
+    {/* Soft Swirling Mesh Light Streaks */}
+    <div className="pointer-events-none absolute top-10 left-1/3 w-[420px] h-[420px] rounded-full bg-white/20 blur-[95px] mix-blend-screen" />
+    <div className="pointer-events-none absolute top-1/3 -right-10 w-[380px] h-[380px] rounded-full bg-[#38bdf8]/40 blur-[100px]" />
+    <div className="pointer-events-none absolute -bottom-24 left-1/4 w-[420px] h-[320px] rounded-full bg-[#07c8f9]/45 blur-[90px]" />
+
+    {/* Top-Left Corner Abstract Element (Orbital 360° Rings & Faceted Light Rays) */}
+    <svg
+      viewBox="0 0 420 420"
+      fill="none"
+      className="pointer-events-none absolute -top-8 -left-8 w-[360px] h-[360px] xl:w-[420px] xl:h-[420px] opacity-85"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="cornerArcGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
+          <stop offset="60%" stopColor="#67e8f9" stopOpacity="0.24" />
+          <stop offset="100%" stopColor="#07c8f9" stopOpacity="0" />
+        </linearGradient>
+        <radialGradient id="cornerOrbGlow" cx="0.25" cy="0.25" r="0.7">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.34" />
+          <stop offset="100%" stopColor="#07c8f9" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <circle cx="96" cy="96" r="148" fill="url(#cornerOrbGlow)" />
+      <circle cx="88" cy="88" r="196" stroke="url(#cornerArcGrad)" strokeWidth="1.5" strokeDasharray="8 10" />
+      <circle cx="88" cy="88" r="142" stroke="url(#cornerArcGrad)" strokeWidth="2" />
+      <circle cx="88" cy="88" r="88" stroke="#ffffff" strokeOpacity="0.22" strokeWidth="1.2" />
+      <path
+        d="M -20 190 C 90 120, 170 40, 290 -15"
+        stroke="url(#cornerArcGrad)"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M 10 280 C 125 220, 225 140, 355 55"
+        stroke="#ffffff"
+        strokeOpacity="0.16"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <circle cx="230" cy="88" r="5" fill="#ffffff" fillOpacity="0.7" />
+      <circle cx="176" cy="198" r="3.5" fill="#a5f3fc" fillOpacity="0.8" />
+    </svg>
+
+    {/* Organic Flowing Wave Swirl Background Ribbon */}
+    <svg
+      viewBox="0 0 800 900"
+      fill="none"
+      preserveAspectRatio="none"
+      className="pointer-events-none absolute inset-0 w-full h-full opacity-35 mix-blend-soft-light"
+      aria-hidden="true"
+    >
+      <path
+        d="M -80 260 C 120 120, 320 440, 560 220 C 700 90, 790 180, 860 120 L 860 940 L -80 940 Z"
+        fill="url(#swirlGrad)"
+      />
+      <defs>
+        <linearGradient id="swirlGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.7" />
+          <stop offset="50%" stopColor="#38bdf8" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="#042f3d" stopOpacity="0.1" />
+        </linearGradient>
+      </defs>
+    </svg>
+
+    {/* Smooth Organic S-Wave Divider Seam into Right Form Panel */}
+    <svg
+      viewBox="0 0 120 1000"
+      preserveAspectRatio="none"
+      className="pointer-events-none absolute top-0 -right-px h-full w-16 xl:w-24 text-white dark:text-slate-950 z-20"
+      aria-hidden="true"
+    >
+      <path
+        d="M 86 0 C 124 190, 14 370, 60 540 C 106 710, 18 855, 78 1000 L 120 1000 L 120 0 Z"
+        fill="currentColor"
+      />
+    </svg>
+
+    {/* Top-Left Logo */}
+    <div className="relative z-10 flex items-center gap-3 pr-12">
+      <Link to="/" className="inline-flex items-center gap-3 group" aria-label="AgencyUpscale Home">
         {portalOrg?.logo ? (
           <>
-            <div className="w-8 h-8 md:w-11 md:h-11 rounded-xl md:rounded-2xl bg-white dark:bg-slate-800 p-1 md:p-2 shadow-2xs border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center group-hover:scale-105 transition-transform overflow-hidden">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 p-2 flex items-center justify-center shadow-lg shadow-black/15 overflow-hidden">
               <img
                 src={portalOrg.logo}
                 alt={portalOrg.name}
                 className="h-full w-full object-contain"
                 onError={(e) => {
-                  e.currentTarget.src = '/agencyupscalelogo.png';
+                  e.currentTarget.src = '/agencyupscalelogo-dark.png';
                 }}
               />
             </div>
-            <span className="text-xs font-black text-slate-900 dark:text-white tracking-wider hidden sm:inline-block md:hidden uppercase truncate max-w-[120px]">
+            <span className="text-lg font-black text-white tracking-tight drop-shadow-sm">
               {portalOrg.name}
             </span>
           </>
         ) : (
-          <div className="h-10 sm:h-11 md:h-10 shrink-0 flex items-center group-hover:scale-105 transition-transform">
-            <img
-              src="/agencyupscalelogo.png"
-              alt="AgencyUpscale"
-              className="h-full w-auto object-contain dark:hidden"
-            />
-            <img
-              src="/agencyupscalelogo-dark.png"
-              alt="AgencyUpscale"
-              className="h-full w-auto object-contain hidden dark:block"
-            />
-          </div>
+          <img
+            src="/agencyupscalelogo-dark.png"
+            alt="AgencyUpscale"
+            className="h-16 xl:h-20 w-auto object-contain drop-shadow-[0_4px_14px_rgba(0,0,0,0.3)] group-hover:scale-[1.02] transition-transform"
+          />
         )}
       </Link>
     </div>
 
-    {/* Center: Modern Segmented Switch Button (Mobile: Inline Flex / Desktop: Vertical Rail) */}
-    <div className="relative flex flex-row md:flex-col items-center gap-0.5 sm:gap-1 md:gap-2.5 p-1 md:p-0 bg-slate-200/70 dark:bg-slate-800/80 md:bg-transparent md:dark:bg-transparent rounded-xl sm:rounded-2xl md:rounded-none border border-slate-200/70 dark:border-slate-700/60 md:border-none shadow-xs md:shadow-none z-10 w-auto md:w-full md:px-2.5 shrink-0">
-      {/* Sign In Button */}
-      <button
-        type="button"
-        onClick={() => onSelect('signin')}
-        className={`signin group relative flex items-center md:flex-col justify-center gap-1 md:gap-1 py-1.5 px-2.5 sm:px-3 md:py-3 md:px-2.5 md:w-full rounded-lg sm:rounded-xl md:rounded-2xl border transition-all duration-200 text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 ${
-          view === 'signin'
-            ? 'text-[#07c8f9] bg-white dark:bg-slate-900 border-[#07c8f9]/25 shadow-2xs md:shadow-sm md:shadow-[#07c8f9]/15'
-            : 'text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-700 dark:hover:text-slate-200'
-        }`}
-      >
-        {view === 'signin' && (
-          <span className="hidden md:block active-bar absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-7 bg-[#07c8f9] rounded-r-full shadow-xs" />
-        )}
-        <UserCheck size={14} className={`transition-transform duration-200 shrink-0 ${view === 'signin' ? 'scale-105 text-[#07c8f9]' : ''}`} />
-        <span className="leading-none text-[11px] md:text-xs whitespace-nowrap">Sign In</span>
-      </button>
+    {/* Bottom-Left Headline, Tagline & Feature Highlights */}
+    <div className="relative z-10 max-w-lg pr-14 xl:pr-20 space-y-5 my-auto pt-12 pb-2">
+      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-white text-xs font-bold tracking-wide shadow-sm">
+        <Zap size={13} className="text-cyan-200 fill-cyan-200" />
+        <span>
+          {portalOrg?.name ? `${portalOrg.name} Workspace` : '360° Agency Operating System'}
+        </span>
+      </div>
 
-      {/* Sign Up Button */}
-      <button
-        type="button"
-        onClick={() => onSelect('signup')}
-        className={`signup group relative flex items-center md:flex-col justify-center gap-1 md:gap-1 py-1.5 px-2.5 sm:px-3 md:py-3 md:px-2.5 md:w-full rounded-lg sm:rounded-xl md:rounded-2xl border transition-all duration-200 text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 ${
-          view === 'signup'
-            ? 'text-[#07c8f9] bg-white dark:bg-slate-900 border-[#07c8f9]/25 shadow-2xs md:shadow-sm md:shadow-[#07c8f9]/15'
-            : 'text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-700 dark:hover:text-slate-200'
-        }`}
-      >
-        {view === 'signup' && (
-          <span className="hidden md:block active-bar absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-7 bg-[#07c8f9] rounded-r-full shadow-xs" />
-        )}
-        <UserPlus size={14} className={`transition-transform duration-200 shrink-0 ${view === 'signup' ? 'scale-105 text-[#07c8f9]' : ''}`} />
-        <span className="leading-none text-[11px] md:text-xs whitespace-nowrap">Sign Up</span>
-      </button>
-    </div>
-
-    {/* Right Side: Theme Toggle Button (Mobile: Right Edge / Desktop: Bottom of Rail) */}
-    <div className="flex items-center shrink-0 z-10 md:mt-auto md:mb-1 md:w-full md:justify-center md:px-2">
-      <button
-        type="button"
-        onClick={onToggleTheme}
-        className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-[#07c8f9] dark:hover:text-[#07c8f9] hover:border-[#07c8f9]/40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-2xs cursor-pointer shrink-0"
-        title={darkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
-        aria-label="Toggle theme"
-      >
-        {darkMode ? (
-          <Sun size={15} className="text-amber-400 md:w-4 md:h-4" />
+      <h1 className="text-4xl xl:text-5xl font-black text-white tracking-tight leading-[1.08] drop-shadow-sm">
+        {view === 'signup' ? (
+          <>
+            Scale your agency
+            <br />
+            like a pro.
+          </>
         ) : (
-          <Moon size={15} className="text-slate-600 dark:text-slate-300 md:w-4 md:h-4" />
+          <>
+            Run your agency
+            <br />
+            like a pro.
+          </>
         )}
-      </button>
+      </h1>
+
+      <p className="text-base xl:text-lg text-cyan-50/95 font-semibold leading-relaxed">
+        Sign in or sign up to explore our 360° product.
+      </p>
+
+      <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 pt-1 text-xs xl:text-sm font-semibold text-white/95">
+        <span className="flex items-center gap-2">
+          <CheckCircle2 size={15} className="text-cyan-200 shrink-0" />
+          Clients &amp; projects
+        </span>
+        <span className="flex items-center gap-2">
+          <CheckCircle2 size={15} className="text-cyan-200 shrink-0" />
+          Invoices &amp; payments
+        </span>
+        <span className="flex items-center gap-2">
+          <CheckCircle2 size={15} className="text-cyan-200 shrink-0" />
+          Client portal
+        </span>
+        <span className="flex items-center gap-2">
+          <CheckCircle2 size={15} className="text-cyan-200 shrink-0" />
+          360° CRM &amp; campaigns
+        </span>
+      </div>
+
+      <div className="pt-2">
+        <button
+          type="button"
+          onClick={onOpenTerms}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-white/80 hover:text-white underline underline-offset-4 transition-colors cursor-pointer"
+        >
+          <span>Terms &amp; Conditions</span>
+          <Download size={13} />
+        </button>
+      </div>
     </div>
-  </nav>
+
+    {/* Bottom Subtle Tag */}
+    <div className="relative z-10 pr-16 text-xs text-cyan-100/75 font-medium">
+      All-in-one CRM, Projects, SMM, Finance &amp; Client Portal
+    </div>
+  </aside>
 );
-
-// ── Hero Banner Section (CardHero) ───────────────────────────────────────────
-const Hero = ({ variant, view, title, subtitle, portalOrg, onOpenTerms }) => {
-  const isActive = view === variant;
-  return (
-    <div
-      className={`card-hero-content ${variant} h-[480px] md:h-[660px] flex flex-col justify-center items-center text-center px-6 transition-opacity duration-500 ease-in-out ${
-        isActive ? 'opacity-100' : 'opacity-0 pointer-events-none'
-      }`}
-    >
-      {/* Brand Logo Emblem */}
-      {portalOrg?.logo ? (
-        <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 p-2.5 flex items-center justify-center mb-4 shadow-lg shadow-black/15 overflow-hidden">
-          <img
-            src={portalOrg.logo}
-            alt={portalOrg.name}
-            className="h-full w-full object-contain filter drop-shadow-sm"
-            onError={(e) => {
-              e.currentTarget.src = '/agencyupscalelogo-dark.png';
-            }}
-          />
-        </div>
-      ) : (
-        <div className="mb-5 flex items-center">
-          <img
-            src="/agencyupscalelogo-dark.png"
-            alt="AgencyUpscale"
-            className="h-20 w-auto object-contain drop-shadow-[0_2px_10px_rgba(0,0,0,0.35)]"
-          />
-        </div>
-      )}
-
-      <h2 className="text-2xl font-black text-white tracking-tight leading-tight">{title}</h2>
-      <h3 className="text-xs sm:text-sm text-cyan-100/90 font-medium mt-1 max-w-[210px] leading-relaxed">
-        {subtitle}
-      </h3>
-
-      {portalOrg?.name && (
-        <div className="mt-3.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[10px] font-bold text-white tracking-widest uppercase">
-          {`${portalOrg.name} Portal`}
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={onOpenTerms}
-        className="terms inline-flex items-center gap-1.5 mt-6 text-xs text-white/75 hover:text-white transition-opacity duration-300 cursor-pointer"
-      >
-        <span>Terms &amp; Conditions</span>
-        <Download size={13} />
-      </button>
-    </div>
-  );
-};
 
 // ── Sign In Form Component ───────────────────────────────────────────────────
 const SignInForm = ({
@@ -290,10 +408,12 @@ const SignInForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="signin space-y-3 text-left w-full max-w-sm mx-auto">
-      {/* Mobile-Only Heading */}
-      <div className="md:hidden text-center mb-1">
-        <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Welcome back</h2>
-        <p className="text-[11px] text-slate-500 dark:text-slate-400">Please enter your credentials</p>
+      {/* Form Heading (All Screens) */}
+      <div className="text-center lg:text-left mb-1.5">
+        <h2 className="text-lg lg:text-2xl font-black text-slate-900 dark:text-white tracking-tight">Welcome back</h2>
+        <p className="text-[11px] lg:text-xs text-slate-500 dark:text-slate-400">
+          {portalOrg ? `Sign in to ${portalOrg.name} workspace` : 'Please enter your credentials'}
+        </p>
       </div>
 
       {/* Redirect / Review Alerts */}
@@ -541,10 +661,10 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms })
 
   return (
     <form onSubmit={handleSignupSubmit} className="signup space-y-2.5 sm:space-y-3 text-left w-full max-w-sm mx-auto">
-      {/* Mobile-Only Heading */}
-      <div className="md:hidden text-center mb-1">
-        <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Join us today</h2>
-        <p className="text-[11px] text-slate-500 dark:text-slate-400">Creating an account is quick</p>
+      {/* Form Heading (All Screens) */}
+      <div className="text-center lg:text-left mb-1.5">
+        <h2 className="text-lg lg:text-2xl font-black text-slate-900 dark:text-white tracking-tight">Join us today</h2>
+        <p className="text-[11px] lg:text-xs text-slate-500 dark:text-slate-400">Creating an account is quick</p>
       </div>
 
       {error && (
@@ -808,13 +928,17 @@ export const Login = ({ initialView }) => {
   };
 
   return (
-    <div className="w-full flex items-center justify-center p-1 sm:p-4">
-      {/* 3-Section Card (Nav + Elevated 3D Hero + Forms) */}
-      <div
-        className={`card ${view} relative w-full max-w-[860px] bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl shadow-xl flex flex-col md:flex-row items-stretch overflow-hidden md:overflow-visible transition-all duration-300`}
-      >
-        {/* 1. Left Nav / Mobile Top Header */}
-        <CardNav
+    <div className="min-h-[100dvh] w-full flex flex-col lg:flex-row bg-white dark:bg-slate-950">
+      {/* Left Split Panel: Abstract Swirling Mesh, Left-Corner Abstract Art & 360° Tagline */}
+      <SplitShowcasePanel
+        view={view}
+        portalOrg={portalOrg}
+        onOpenTerms={() => setTermsModalOpen(true)}
+      />
+
+      {/* Right Split Panel: Unmodified Sign In / Sign Up Forms */}
+      <div className="w-full lg:w-1/2 min-h-[100dvh] flex flex-col justify-between px-4 sm:px-8 lg:px-12 xl:px-16 py-3 sm:py-5 bg-white dark:bg-slate-950 relative">
+        <AuthTopBar
           view={view}
           onSelect={setView}
           portalOrg={portalOrg}
@@ -822,94 +946,59 @@ export const Login = ({ initialView }) => {
           onToggleTheme={() => dispatch(toggleDarkMode())}
         />
 
-        {/* 2. Center 3D Elevated Hero Banner (Desktop Only) */}
-        <div className="card-hero relative hidden md:flex flex-col shrink-0 w-[280px] lg:w-[300px] -my-6 rounded-[22px] overflow-hidden shadow-[0_18px_45px_rgba(18,183,212,0.22)] dark:shadow-[0_18px_45px_rgba(0,0,0,0.65)] z-20">
-          {/* Animated Hero Background */}
-          <div
-            className={`card-hero-bg absolute -inset-y-6 inset-x-0 transition-transform duration-500 ease-in-out ${
-              view === 'signup' ? '-translate-y-6' : 'translate-y-0'
-            } bg-gradient-to-br from-[#06242c] via-[#0b5161] to-[#07c8f9]`}
-          >
-            {/* Tech Mesh Overlay */}
-            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#fff_1.2px,transparent_1.2px)] [background-size:18px_18px]" />
-            <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#07c8f9]/30 rounded-full blur-2xl pointer-events-none" />
-            <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-emerald-400/25 rounded-full blur-2xl pointer-events-none" />
-          </div>
-
-          {/* Animated Hero Content Sliding Column */}
-          <div
-            className={`card-hero-inner absolute inset-x-0 transition-all duration-500 ease-in-out ${
-              view === 'signup' ? '-top-full' : 'top-0'
-            } z-10`}
-          >
-            <Hero
-              variant="signin"
-              view={view}
-              title="Welcome back"
-              subtitle={portalOrg ? `Sign in to ${portalOrg.name} CRM workspace` : 'Please enter your credentials'}
-              portalOrg={portalOrg}
-              onOpenTerms={() => setTermsModalOpen(true)}
-            />
-            <Hero
-              variant="signup"
-              view={view}
-              title="Join us today"
-              subtitle="Creating an account is quick"
-              portalOrg={portalOrg}
-              onOpenTerms={() => setTermsModalOpen(true)}
-            />
-          </div>
+        {/* Mobile/Tablet Compact 360° Product Tagline Banner (Desktop sees left panel) */}
+        <div className="lg:hidden mt-2 mb-1 flex justify-center">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/50 border border-[#07c8f9]/30 text-[11px] font-semibold text-[#0b5161] dark:text-cyan-200">
+            <Zap size={12} className="text-[#07c8f9] shrink-0" />
+            <span>Sign in or sign up to explore our 360° product</span>
+          </span>
         </div>
 
-        {/* 3. Form Container Sliding Area */}
-        <div className="card-form w-full flex-auto min-w-0 relative overflow-hidden h-[650px] sm:h-[655px] md:h-[660px]">
-          <div
-            className={`forms absolute inset-x-0 top-0 h-[200%] transition-transform duration-500 ease-in-out ${
-              view === 'signup' ? '-translate-y-1/2' : 'translate-y-0'
-            }`}
-          >
-            {/* Form 1: Sign In */}
-            <div className="h-1/2 w-full px-4 py-2.5 sm:px-6 sm:py-4 md:px-8 md:py-5 flex flex-col justify-start md:justify-center overflow-y-auto">
-              <SignInForm
-                formData={formData}
-                handleChange={handleChange}
-                handleSubmit={handleSubmit}
-                loading={loading}
-                error={error}
-                showPassword={showPassword}
-                setShowPassword={setShowPassword}
-                portalRedirect={portalRedirect}
-                portalOrg={portalOrg}
-                companySlug={companySlug}
-                onSwitch={() => setView('signup')}
-                isAuthenticated={isAuthenticated}
-                user={user}
-                currentOrg={currentOrg}
-                navigate={navigate}
-                dispatch={dispatch}
-                captcha={captcha}
-                setCaptcha={setCaptcha}
-                captchaRefreshKey={captchaRefreshKey}
-                termsAccepted={termsAccepted}
-                setTermsAccepted={setTermsAccepted}
-                localError={localError}
-                setLocalError={setLocalError}
-                onOpenTerms={() => setTermsModalOpen(true)}
-              />
-            </div>
-
-            {/* Form 2: Sign Up */}
-            <div className="h-1/2 w-full px-4 py-2.5 sm:px-6 sm:py-4 md:px-8 md:py-5 flex flex-col justify-start md:justify-center overflow-y-auto">
-              <SignUpForm
-                onSwitch={() => setView('signin')}
-                portalOrg={portalOrg}
-                companySlug={companySlug}
-                navigate={navigate}
-                onOpenTerms={() => setTermsModalOpen(true)}
-              />
-            </div>
-          </div>
+        {/* Centered Form Area (Original Form Design Preserved Intact) */}
+        <div className="my-auto w-full max-w-sm mx-auto py-3">
+          {view === 'signin' ? (
+            <SignInForm
+              formData={formData}
+              handleChange={handleChange}
+              handleSubmit={handleSubmit}
+              loading={loading}
+              error={error}
+              showPassword={showPassword}
+              setShowPassword={setShowPassword}
+              portalRedirect={portalRedirect}
+              portalOrg={portalOrg}
+              companySlug={companySlug}
+              onSwitch={() => setView('signup')}
+              isAuthenticated={isAuthenticated}
+              user={user}
+              currentOrg={currentOrg}
+              navigate={navigate}
+              dispatch={dispatch}
+              captcha={captcha}
+              setCaptcha={setCaptcha}
+              captchaRefreshKey={captchaRefreshKey}
+              termsAccepted={termsAccepted}
+              setTermsAccepted={setTermsAccepted}
+              localError={localError}
+              setLocalError={setLocalError}
+              onOpenTerms={() => setTermsModalOpen(true)}
+            />
+          ) : (
+            <SignUpForm
+              onSwitch={() => setView('signin')}
+              portalOrg={portalOrg}
+              companySlug={companySlug}
+              navigate={navigate}
+              onOpenTerms={() => setTermsModalOpen(true)}
+            />
+          )}
         </div>
+
+        {/* Auth Footer */}
+        <footer className="pt-2 pb-16 sm:pb-2 text-center text-[11px] text-slate-400 dark:text-slate-500">
+          © {new Date().getFullYear()} AgencyUpscale ·{' '}
+          <RiseWithMediaAttribution linkClassName="text-slate-600 dark:text-slate-300 hover:text-[#07c8f9]" />
+        </footer>
       </div>
 
       <TermsModal

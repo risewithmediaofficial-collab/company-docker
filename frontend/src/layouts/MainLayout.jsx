@@ -12,6 +12,7 @@ import GlobalDateSortBar from '../components/layout/GlobalDateSortBar';
 import OnboardingWelcomeModal from '../components/onboarding/OnboardingWelcomeModal';
 import ModuleUpgradeGate from '../components/billing/ModuleUpgradeGate';
 import { getLockedModuleForPath } from '../utils/planModules';
+import { RiseWithMediaAttribution } from '../components/common/RiseWithMediaAttribution';
 
 const PageLoadingFallback = () => (
   <div className="w-full py-12 flex flex-col items-center justify-center space-y-3">
@@ -77,6 +78,10 @@ const MainLayout = () => {
                 })()}
               </Suspense>
             </ErrorBoundary>
+            <footer className="mt-10 pt-4 border-t border-border/60 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-muted-foreground">
+              <span>© {new Date().getFullYear()} AgencyUpscale</span>
+              <RiseWithMediaAttribution linkClassName="text-foreground/80 hover:text-[#07c8f9]" />
+            </footer>
           </div>
         </main>
       </div>
