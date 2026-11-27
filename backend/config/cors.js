@@ -11,8 +11,10 @@ export const normalizeOrigin = (url) => {
 export const DEFAULT_ALLOWED_ORIGINS = [
   'https://agencyupscale.com',
   'https://www.agencyupscale.com',
+  'https://app.agencyupscale.com',
   'http://agencyupscale.com',
   'http://www.agencyupscale.com',
+  'http://app.agencyupscale.com',
   'https://company.risewithmedia.com',
   'http://company.risewithmedia.com',
   'https://risewithmedia.com',

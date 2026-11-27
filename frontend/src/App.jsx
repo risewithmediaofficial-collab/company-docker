@@ -197,7 +197,16 @@ const App = () => {
           <Route path="/overview" element={<MetricsPage />} />
           <Route path="/home" element={<Landing />} />
           <Route path="/landing" element={<Landing />} />
-          {!isAuthenticated && <Route path="/" element={<Login />} />}
+          {!isAuthenticated && (
+            <Route
+              path="/"
+              element={
+                typeof window !== 'undefined' && window.location.hostname.toLowerCase().startsWith('app.')
+                  ? <Login />
+                  : <Landing />
+              }
+            />
+          )}
 
           {/* ── Redirect legacy external free trial URL to clean Register flow ─ */}
           <Route path="/register-company" element={<Navigate to={!isAuthenticated ? '/register' : postLoginTarget} replace />} />
