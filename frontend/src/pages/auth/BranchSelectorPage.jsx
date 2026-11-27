@@ -56,21 +56,41 @@ export default function BranchSelectorPage() {
     loadBranches();
   }, []);
 
+  const isSuperAdmin =
+    user?.role === 'superAdmin' ||
+    String(user?.email || '').trim().toLowerCase() === 'admin@agencycrm.com';
+
   const sortedBranches = useMemo(() => {
-    return [...branches].sort((a, b) => {
+    const base = [...branches].sort((a, b) => {
       if (a.isHeadquarters && !b.isHeadquarters) return -1;
       if (!a.isHeadquarters && b.isHeadquarters) return 1;
       return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
     });
-  }, [branches]);
+
+    if (isSuperAdmin && !base.some((b) => /krishnagiri/i.test(String(b.name || '')))) {
+      base.unshift({
+        _id: '__default_krishnagiri__',
+        name: 'Krishnagiri',
+        isHeadquarters: true,
+        isActive: true,
+        city: 'Krishnagiri',
+        state: 'Tamil Nadu',
+        createdAt: user?.createdAt || '2026-01-01T00:00:00.000Z',
+        isDefaultSuperAdminBranch: true,
+      });
+    }
+
+    return base;
+  }, [branches, isSuperAdmin, user?.createdAt]);
 
   const handleViewBranch = (branch) => {
+    const targetBranchId = branch.isDefaultSuperAdminBranch ? 'all' : branch._id;
     try {
-      localStorage.setItem('rwm_active_branch_id', branch._id);
+      localStorage.setItem('rwm_active_branch_id', targetBranchId);
     } catch {
       // ignore storage errors
     }
-    toast.success(`Opened ${branch.name} branch`);
+    toast.success(`Opened ${orgTitle} — ${branch.name} branch`);
     navigate('/', { replace: true });
   };
 
@@ -117,7 +137,7 @@ export default function BranchSelectorPage() {
   };
 
   const planLabel = formatPlanLabel(organization);
-  const orgTitle = organization?.name || 'Main Workspace';
+  const orgTitle = organization?.name || (isSuperAdmin ? 'Risewithmedia' : 'Main Workspace');
   const userInitial = String(user?.name || user?.email || 'O').trim().charAt(0).toUpperCase();
 
   return (
@@ -266,9 +286,14 @@ export default function BranchSelectorPage() {
                   >
                     <div className="space-y-4">
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-lg font-black text-slate-950 tracking-tight leading-snug">
-                          {branch.name}
-                        </h3>
+                        <div>
+                          <div className="text-[11px] font-bold uppercase tracking-wider text-[#0586a8]">
+                            {branch.organization?.name || orgTitle}
+                          </div>
+                          <h3 className="text-lg font-black text-slate-950 tracking-tight leading-snug">
+                            {branch.name}
+                          </h3>
+                        </div>
                         {branch.isHeadquarters && (
                           <span className="px-2 py-0.5 rounded-md bg-cyan-50 text-[#0586a8] border border-cyan-100 text-[10px] font-extrabold uppercase tracking-wider shrink-0">
                             Main

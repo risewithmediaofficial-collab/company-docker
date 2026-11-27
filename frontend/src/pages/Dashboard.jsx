@@ -397,7 +397,7 @@ const Dashboard = () => {
                     <div className="flex items-center gap-1.5 text-left">
                       <span className="text-[11px] text-muted-foreground hidden sm:inline">Branch:</span>
                       <span className="font-bold truncate max-w-[120px] sm:max-w-[170px]">
-                        {activeBranch ? activeBranch.name : 'All Branches'}
+                        {activeBranch ? activeBranch.name : (user?.role === 'superAdmin' ? 'Krishnagiri' : 'All Branches')}
                       </span>
                     </div>
                     {activeBranch?.isHeadquarters && (
