@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import jwt from 'jsonwebtoken';
 import { encryptData, decryptData } from '../utils/encryption.js';
-import { authorize, requirePermission, withWorkspaceScope } from '../middleware/auth.middleware.js';
+import { authorize, requirePermission, withWorkspaceScope, getStrictTenantOrgId } from '../middleware/auth.middleware.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-super-secret-jwt-key';
 
@@ -547,6 +547,29 @@ test('Ghost Mode Cache Isolation: protect clones cached user so x-ghost-org-id n
     User.findById = originalFindById;
     clearAuthUserCache(fakeUserId);
   }
+});
+
+test('SuperAdmin Global Scope: superAdmin with organizationId has global access unless Ghost Mode is active', () => {
+  const superAdminReq = {
+    user: { role: 'superAdmin', organizationId: '650000000000000000000001' },
+    headers: {},
+  };
+  assert.equal(getStrictTenantOrgId(superAdminReq), null);
+  assert.deepEqual(withWorkspaceScope(superAdminReq, { status: 'active' }), { status: 'active' });
+
+  const ghostReq = {
+    user: { role: 'superAdmin', organizationId: '650000000000000000000001' },
+    headers: { 'x-ghost-org-id': '6500000000000000000000aa' },
+  };
+  assert.equal(getStrictTenantOrgId(ghostReq), '6500000000000000000000aa');
+  assert.deepEqual(withWorkspaceScope(ghostReq, {}), { organizationId: '6500000000000000000000aa' });
+
+  const ownerReq = {
+    user: { role: 'organizationOwner', organizationId: '650000000000000000000001' },
+    headers: {},
+  };
+  assert.equal(getStrictTenantOrgId(ownerReq), '650000000000000000000001');
+  assert.deepEqual(withWorkspaceScope(ownerReq, {}), { organizationId: '650000000000000000000001' });
 });
 
 

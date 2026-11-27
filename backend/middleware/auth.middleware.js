@@ -162,7 +162,7 @@ export const getStrictTenantOrgId = (req) => {
   if (ghostOrgId && (user.role === 'superAdmin' || user.role === 'admin')) {
     return ghostOrgId;
   }
-  if ((user.role === 'superAdmin' || user.role === 'admin') && !user.organizationId) {
+  if (user.role === 'superAdmin' || (user.role === 'admin' && !user.organizationId)) {
     return null;
   }
   return user.organizationId || BLOCKED_QUERY_ID;
@@ -196,8 +196,8 @@ export const withWorkspaceScope = (req, baseQuery = {}) => {
   // Ghost Mode (superAdmin or admin viewing a specific tenant CRM stealthily)
   if (ghostOrgId && (user.role === 'superAdmin' || user.role === 'admin')) {
     query.organizationId = ghostOrgId;
-  } else if ((user.role === 'superAdmin' || user.role === 'admin') && !user.organizationId) {
-    // Platform superAdmin / system admin without organizationId — global access across all tenants & legacy data
+  } else if (user.role === 'superAdmin' || (user.role === 'admin' && !user.organizationId)) {
+    // Platform superAdmin (or system admin without organizationId) — global access across all tenants & legacy data
   } else if (user.organizationId) {
     // STRICT tenant isolation: match ONLY this user's exact organizationId (never unscoped/null docs)
     query.organizationId = user.organizationId;
