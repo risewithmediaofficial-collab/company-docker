@@ -20,7 +20,7 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            set -euo pipefail
+            set -eu
             cd /docker/company
 
             echo "Before deploy: $(git rev-parse --short HEAD)"
@@ -32,6 +32,13 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             echo "Deploying commit: $(git rev-parse --short HEAD)"
+
+            # Ensure required .env keys exist on VPS without overwriting existing values
+            touch .env
+            grep -qE '^MONGO_URI=.+' .env || echo 'MONGO_URI=mongodb://company-crm-mongodb:27017/company_crm' >> .env
+            grep -qE '^JWT_SECRET=.+' .env || echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env
+            grep -qE '^JWT_REFRESH_SECRET=.+' .env || echo "JWT_REFRESH_SECRET=$(openssl rand -hex 32)" >> .env
+            grep -qE '^ENCRYPTION_KEY=.+' .env || echo "ENCRYPTION_KEY=$(openssl rand -hex 16)" >> .env
 
             # Validate Docker Compose configuration before deploying
             docker compose config -q
