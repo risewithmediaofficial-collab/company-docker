@@ -719,13 +719,13 @@ const Companies = ({ defaultTab }) => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    <th className="px-6 py-3.5">Company</th>
-                    <th className="px-6 py-3.5">Owner</th>
-                    <th className="px-6 py-3.5">Status</th>
-                    <th className="px-6 py-3.5">Plan</th>
-                    <th className="px-6 py-3.5">Users</th>
-                    <th className="px-6 py-3.5">Registered</th>
-                    <th className="px-6 py-3.5 text-right">Actions</th>
+                    <th className="px-3.5 xl:px-5 py-3.5">Company</th>
+                    <th className="px-3 xl:px-5 py-3.5">Owner</th>
+                    <th className="px-3 xl:px-4 py-3.5">Status</th>
+                    <th className="px-3 xl:px-4 py-3.5">Plan</th>
+                    <th className="px-3 xl:px-4 py-3.5">Users</th>
+                    <th className="px-3 xl:px-4 py-3.5">Registered</th>
+                    <th className="px-3.5 xl:px-5 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
@@ -759,7 +759,7 @@ const Companies = ({ defaultTab }) => {
                           className="hover:bg-slate-50/70 transition-colors group"
                         >
                           {/* Company Name & Slug */}
-                          <td className="px-6 py-4">
+                          <td className="px-3.5 xl:px-5 py-3.5">
                             <div className="flex items-start gap-3">
                               <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs flex-shrink-0 mt-0.5">
                                 {org.name?.charAt(0)?.toUpperCase()}
@@ -812,15 +812,15 @@ const Companies = ({ defaultTab }) => {
                           </td>
 
                           {/* Owner */}
-                          <td className="px-6 py-4">
-                            <p className="text-slate-900 text-xs font-semibold truncate">{owner.name || '—'}</p>
-                            <p className="text-slate-500 text-[11px] truncate">{owner.email || '—'}</p>
+                          <td className="px-3 xl:px-5 py-3.5">
+                            <p className="text-slate-900 text-xs font-semibold truncate max-w-[140px]">{owner.name || '—'}</p>
+                            <p className="text-slate-500 text-[11px] truncate max-w-[160px]">{owner.email || '—'}</p>
                           </td>
 
                           {/* Status */}
-                          <td className="px-6 py-4">
+                          <td className="px-3 xl:px-4 py-3.5">
                             <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${
                                 statusBadge[org.planStatus] || statusBadge.pending
                               }`}
                             >
@@ -830,9 +830,9 @@ const Companies = ({ defaultTab }) => {
                           </td>
 
                           {/* Plan */}
-                          <td className="px-6 py-4">
+                          <td className="px-3 xl:px-4 py-3.5">
                             <span
-                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border capitalize ${
+                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border capitalize whitespace-nowrap ${
                                 planBadge[org.plan] || planBadge.trial
                               }`}
                             >
@@ -841,7 +841,7 @@ const Companies = ({ defaultTab }) => {
                           </td>
 
                           {/* Users */}
-                          <td className="px-6 py-4">
+                          <td className="px-3 xl:px-4 py-3.5 whitespace-nowrap">
                             <div className="flex items-center gap-1 text-slate-700 text-xs font-medium">
                               <Users2 size={13} className="text-slate-400" />
                               <span>{org.userCount ?? 1}</span>
@@ -850,7 +850,7 @@ const Companies = ({ defaultTab }) => {
                           </td>
 
                           {/* Registered */}
-                          <td className="px-6 py-4 text-slate-500 text-xs">
+                          <td className="px-3 xl:px-4 py-3.5 text-slate-500 text-xs whitespace-nowrap">
                             {new Date(org.createdAt).toLocaleDateString('en-GB', {
                               day: 'numeric',
                               month: 'short',
@@ -859,7 +859,7 @@ const Companies = ({ defaultTab }) => {
                           </td>
 
                           {/* Actions */}
-                          <td className="px-6 py-4 text-right">
+                          <td className="px-3.5 xl:px-5 py-3.5 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
                               {/* If Pending: ACCEPT + REJECT + ALL DETAILS */}
                               {isPending && (
