@@ -85,14 +85,15 @@ export const protect = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Account is deactivated' });
     }
 
-    req.user = user;
+    // Clone user object before attaching request-scoped overrides so Ghost Mode never mutates userAuthCache
+    req.user = { ...user };
 
     // Stealth Ghost Mode: When superAdmin or admin views a tenant company CRM
     const rawGhostOrgId = req.headers['x-impersonate-org-id'] || req.headers['x-ghost-org-id'];
     const ghostOrgId = (rawGhostOrgId && rawGhostOrgId !== 'undefined' && rawGhostOrgId !== 'null' && rawGhostOrgId !== 'global')
       ? String(rawGhostOrgId).trim()
       : null;
-    if (ghostOrgId && (user.role === 'superAdmin' || user.role === 'admin')) {
+    if (ghostOrgId && (req.user.role === 'superAdmin' || req.user.role === 'admin') && mongoose.Types.ObjectId.isValid(ghostOrgId)) {
       req.isGhostMode = true;
       req.ghostOrgId = ghostOrgId;
       req.user.organizationId = ghostOrgId;

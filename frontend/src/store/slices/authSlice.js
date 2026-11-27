@@ -172,16 +172,21 @@ const authSlice = createSlice({
       state.ghostMode = true;
       state.ghostOrg = org;
       state.organization = org;
+      state.activeWorkspace = null;
       localStorage.setItem('rwm_ghost_org_id', String(org._id));
       localStorage.setItem('rwm_ghost_org_data', JSON.stringify(org));
+      localStorage.removeItem('activeWorkspace');
+      purgeQueryCache();
     },
     exitGhostMode: (state) => {
       state.ghostMode = false;
       state.ghostOrg = null;
       state.organization = null;
+      state.activeWorkspace = null;
       localStorage.removeItem('rwm_ghost_org_id');
       localStorage.removeItem('rwm_ghost_org_data');
       localStorage.removeItem('activeWorkspace');
+      purgeQueryCache();
     },
     setAuth: (state, action) => {
       state.user = action.payload.user;

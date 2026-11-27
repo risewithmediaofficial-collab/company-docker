@@ -341,7 +341,7 @@ const Tasks = () => {
   const isClient = user?.role === 'client';
   const isManager = user?.role === 'manager';
   const isVendor = user?.role === 'vendor';
-  const { data: tasks = [], isLoading, refetch } = useTasks(queryFilters);
+  const { data: tasks = [], isLoading, isError, error, refetch } = useTasks(queryFilters);
   const { data: clients = [] } = useClients({}, { enabled: !isClient && !isVendor });
   const { data: users = [] } = useUsers({ enabled: !isClient && !isVendor });
   const deleteTaskMutation = useDeleteTask();
@@ -480,6 +480,16 @@ const Tasks = () => {
     (task) => {
       if (!task) return false;
       if (!globalStartDate && !globalEndDate) return true;
+
+      // Ongoing incomplete tasks remain visible even if their dueDate was earlier or is scheduled next month
+      const isIncomplete = !['Completed', 'Approved', 'done', 'completed'].includes(task.status);
+      if (isIncomplete) {
+        const created = task.createdAt ? new Date(task.createdAt) : null;
+        const rangeEndDate = globalEndDate ? new Date(`${globalEndDate}T23:59:59.999`) : null;
+        if (!created || !rangeEndDate || Number.isNaN(created.getTime()) || created <= rangeEndDate) {
+          return true;
+        }
+      }
 
       // Operational schedule/deadline dates take precedence over createdAt
       const operationalDates = [
@@ -1088,6 +1098,16 @@ const Tasks = () => {
       }
     >
       <div className="space-y-4">
+        {isError && (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 flex items-center justify-between gap-3 text-sm">
+            <span className="text-destructive font-medium">
+              {error?.response?.data?.message || 'Unable to load tasks from the database.'}
+            </span>
+            <Button size="sm" variant="outline" onClick={() => refetch()}>
+              Retry
+            </Button>
+          </div>
+        )}
         {/* Team Quick Assign Roster categorized by Media / Developer / SMM / Management - for managers/admins */}
         {canCreate && (
           <TeamQuickAssignRoster

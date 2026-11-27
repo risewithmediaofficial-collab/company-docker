@@ -504,5 +504,50 @@ test('SaasPayment Model: Captures payer name, contact number, Razorpay IDs, and 
   assert.equal(failedPayment.failureCode, 'BAD_REQUEST_ERROR');
 });
 
+test('Ghost Mode Cache Isolation: protect clones cached user so x-ghost-org-id never mutates superAdmin across requests', async () => {
+  const { protect, clearAuthUserCache } = await import('../middleware/auth.middleware.js');
+  const { default: User } = await import('../models/user.model.js');
+
+  const fakeUserId = '650000000000000000000099';
+  const ghostOrgId = '6500000000000000000000aa';
+  const originalFindById = User.findById;
+
+  clearAuthUserCache(fakeUserId);
+  User.findById = () => ({
+    select() { return this; },
+    lean: async () => ({
+      _id: fakeUserId,
+      role: 'superAdmin',
+      isActive: true,
+      approvalStatus: 'approved',
+      assignedBrands: [],
+    }),
+  });
+
+  try {
+    const activeSecret = process.env.JWT_SECRET || JWT_SECRET;
+    const token = jwt.sign({ id: fakeUserId, role: 'superAdmin', tokenType: 'access' }, activeSecret);
+
+    // 1. Request with Ghost Mode header
+    const ghostReq = { headers: { authorization: `Bearer ${token}`, 'x-ghost-org-id': ghostOrgId } };
+    let ghostNext = false;
+    await protect(ghostReq, { status: () => ({ json: () => {} }) }, () => { ghostNext = true; });
+    assert.equal(ghostNext, true);
+    assert.equal(ghostReq.isGhostMode, true);
+    assert.equal(String(ghostReq.user.organizationId), ghostOrgId);
+
+    // 2. Subsequent normal request (hitting userAuthCache) must NOT retain ghostOrgId
+    const normalReq = { headers: { authorization: `Bearer ${token}` } };
+    let normalNext = false;
+    await protect(normalReq, { status: () => ({ json: () => {} }) }, () => { normalNext = true; });
+    assert.equal(normalNext, true);
+    assert.equal(normalReq.isGhostMode, undefined);
+    assert.equal(normalReq.user.organizationId, undefined);
+  } finally {
+    User.findById = originalFindById;
+    clearAuthUserCache(fakeUserId);
+  }
+});
+
 
 

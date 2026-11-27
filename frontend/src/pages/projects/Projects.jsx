@@ -227,13 +227,13 @@ const Projects = () => {
   );
 
   // Queries
-  const { data: rawProjects = [], isLoading } = useProjects(projectFilters);
+  const { data: rawProjects = [], isLoading, isError, error, refetch } = useProjects(projectFilters);
   const { data: clients = [] } = useClients();
 
   const deleteProjectMutation = useDeleteProject();
   const updateProjectMutation = useUpdateProject();
 
-  // 1. Base projects filtered by global date sort
+  // 1. Base projects filtered by global date sort (keeping ongoing active projects visible)
   const baseDateFilteredProjects = useMemo(() => {
     if (!globalStartDate && !globalEndDate) return rawProjects;
 
@@ -241,6 +241,14 @@ const Projects = () => {
     const rangeEnd = globalEndDate || '9999-99-99';
 
     return rawProjects.filter((project) => {
+      const isOngoingActive = !['Completed', 'Cancelled', 'completed', 'cancelled'].includes(project.status);
+      if (isOngoingActive) {
+        const createdYmd = project.createdAt ? toLocalYMD(project.createdAt) : '';
+        if (!createdYmd || createdYmd <= rangeEnd) {
+          return true;
+        }
+      }
+
       const pStart = project.startDate ? toLocalYMD(project.startDate) : '';
       const pEnd = (project.endDate || project.dueDate) ? toLocalYMD(project.endDate || project.dueDate) : '';
 
@@ -694,6 +702,16 @@ const Projects = () => {
       }
     >
       <div className="space-y-5">
+        {isError && (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 flex items-center justify-between gap-3 text-sm">
+            <span className="text-destructive font-medium">
+              {error?.response?.data?.message || 'Unable to load projects from the database.'}
+            </span>
+            <Button size="sm" variant="outline" onClick={() => refetch()}>
+              Retry
+            </Button>
+          </div>
+        )}
         {/* TOP EXECUTIVE METRICS CARDS WITH ACCURATE NUMBERS */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 tabular-nums">
           {/* Total Projects Card */}

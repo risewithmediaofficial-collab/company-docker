@@ -214,7 +214,7 @@ const Clients = () => {
     ...(serviceFilter ? { service: serviceFilter } : {}),
   };
 
-  const { data: rawClients = [], isLoading } = useClients(filters);
+  const { data: rawClients = [], isLoading, isError, error, refetch } = useClients(filters);
   const clients = rawClients;
 
   const activeFiltersCount = useMemo(() => {
@@ -491,6 +491,16 @@ const Clients = () => {
       }
     >
       <div className="space-y-4">
+        {isError && (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 flex items-center justify-between gap-3 text-sm">
+            <span className="text-destructive font-medium">
+              {error?.response?.data?.message || 'Unable to load clients from the database.'}
+            </span>
+            <Button size="sm" variant="outline" onClick={() => refetch()}>
+              Retry
+            </Button>
+          </div>
+        )}
         {/* Database View Engine */}
         <DatabaseView
           activeView={currentView}
