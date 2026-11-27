@@ -30,9 +30,20 @@ export const updateCompanySettings = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Company Name is required' });
     }
 
+    const clampLogoSize = (val) => {
+      const n = Number(val);
+      if (!Number.isFinite(n) || n <= 0) return 44;
+      return Math.min(72, Math.max(24, Math.round(n)));
+    };
+
+    const sanitizedUpdates = { ...updates };
+    if (sanitizedUpdates.logoSize !== undefined) {
+      sanitizedUpdates.logoSize = clampLogoSize(sanitizedUpdates.logoSize);
+    }
+
     settings.companyProfile = {
       ...(settings.companyProfile?.toObject ? settings.companyProfile.toObject() : settings.companyProfile || {}),
-      ...updates,
+      ...sanitizedUpdates,
     };
     await settings.save();
 
@@ -73,6 +84,7 @@ export const updateCompanySettings = async (req, res) => {
         if (updates.gstNumber !== undefined) org.gstNumber = String(updates.gstNumber || '').trim();
         if (updates.services !== undefined) org.services = String(updates.services || '').trim();
         if (updates.logoUrl !== undefined) org.logo = String(updates.logoUrl || '').trim();
+        if (sanitizedUpdates.logoSize !== undefined) org.logoSize = sanitizedUpdates.logoSize;
         if (org.name && org.name.trim()) {
           org.companySetupRequired = false;
         }
@@ -170,6 +182,24 @@ export const updateCompanySettings = async (req, res) => {
           console.warn('[Settings HQ/OfficeLocation Sync Warning]:', syncErr.message);
         }
       }
+    } else if (req.user?.role === 'superAdmin' && !req.user?.organizationId) {
+      // Main software branding profile configured by global Super Admin
+      const cp = settings.companyProfile || {};
+      organization = {
+        _id: null,
+        name: cp.name || 'AgencyUpscale',
+        slug: cp.slug || '',
+        logo: cp.logoUrl || '',
+        logoSize: clampLogoSize(cp.logoSize),
+        industry: cp.industry || '',
+        website: cp.website || '',
+        phone: cp.phone || '',
+        email: cp.email || '',
+        address: cp.address || '',
+        gstNumber: cp.gstNumber || '',
+        services: cp.services || '',
+        planStatus: 'active',
+      };
     }
 
     res.json({ success: true, settings, organization });
@@ -185,7 +215,7 @@ export const getSettings = async (req, res) => {
     let organization = null;
     if (req.user?.organizationId) {
       organization = await Organization.findById(req.user.organizationId).select(
-        'name slug logo industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients storageLimitMb storageUsedBytes trialEndsAt settings paidAt'
+        'name slug logo logoSize industry website phone email address gstNumber services plan billingCycle planStatus billingSetupRequired companySetupRequired enabledModules maxUsers maxClients storageLimitMb storageUsedBytes trialEndsAt settings paidAt'
       );
       if (organization) {
         const [hqBranch, officeLoc] = await Promise.all([
@@ -212,28 +242,71 @@ export const getSettings = async (req, res) => {
           gstNumber: currentProfile.gstNumber || organization.gstNumber || '',
           services: currentProfile.services || organization.services || '',
           logoUrl: currentProfile.logoUrl || organization.logo || '',
+          logoSize: Math.min(72, Math.max(24, Number(currentProfile.logoSize ?? organization.logoSize) || 44)),
           openingTime: currentProfile.openingTime || '09:30',
           closingTime: currentProfile.closingTime || '18:30',
           operatingHours: currentProfile.operatingHours || hqBranch?.operatingHours || '9:30 AM - 6:30 PM',
           workingDays: currentProfile.workingDays || hqBranch?.workingDays || 'Monday - Saturday',
           lateGraceMinutes: currentProfile.lateGraceMinutes ?? 15,
           latitude:
-            currentProfile.latitude !== undefined && currentProfile.latitude !== ''
-              ? String(currentProfile.latitude)
-              : hqBranch?.latitude != null
+            hqBranch?.latitude != null
               ? String(hqBranch.latitude)
               : officeLoc?.latitude != null
               ? String(officeLoc.latitude)
+              : currentProfile.latitude !== undefined && currentProfile.latitude !== ''
+              ? String(currentProfile.latitude)
               : '',
           longitude:
-            currentProfile.longitude !== undefined && currentProfile.longitude !== ''
-              ? String(currentProfile.longitude)
-              : hqBranch?.longitude != null
+            hqBranch?.longitude != null
               ? String(hqBranch.longitude)
               : officeLoc?.longitude != null
               ? String(officeLoc.longitude)
+              : currentProfile.longitude !== undefined && currentProfile.longitude !== ''
+              ? String(currentProfile.longitude)
               : '',
-          radiusKm: currentProfile.radiusKm ?? hqBranch?.radiusKm ?? officeLoc?.radiusKm ?? 0.5,
+          radiusKm: hqBranch?.radiusKm ?? officeLoc?.radiusKm ?? currentProfile.radiusKm ?? 0.5,
+        };
+      }
+    } else if (req.user?.role === 'superAdmin') {
+      const [hqBranch, officeLoc] = await Promise.all([
+        Branch.findOne({ organization: null, isHeadquarters: true }).lean(),
+        OfficeLocation.findOne({ organization: null }).lean(),
+      ]);
+      const currentProfile = settings.companyProfile?.toObject
+        ? settings.companyProfile.toObject()
+        : settings.companyProfile || {};
+      settings.companyProfile = {
+        ...currentProfile,
+        logoSize: Math.min(72, Math.max(24, Number(currentProfile.logoSize) || 44)),
+        latitude:
+          hqBranch?.latitude != null
+            ? String(hqBranch.latitude)
+            : officeLoc?.latitude != null
+            ? String(officeLoc.latitude)
+            : currentProfile.latitude || '',
+        longitude:
+          hqBranch?.longitude != null
+            ? String(hqBranch.longitude)
+            : officeLoc?.longitude != null
+            ? String(officeLoc.longitude)
+            : currentProfile.longitude || '',
+        radiusKm: hqBranch?.radiusKm ?? officeLoc?.radiusKm ?? currentProfile.radiusKm ?? 0.5,
+      };
+      if (currentProfile.name || currentProfile.logoUrl || currentProfile.logoSize) {
+        organization = {
+          _id: null,
+          name: currentProfile.name || 'AgencyUpscale',
+          slug: currentProfile.slug || '',
+          logo: currentProfile.logoUrl || '',
+          logoSize: settings.companyProfile.logoSize,
+          industry: currentProfile.industry || '',
+          website: currentProfile.website || '',
+          phone: currentProfile.phone || '',
+          email: currentProfile.email || '',
+          address: currentProfile.address || '',
+          gstNumber: currentProfile.gstNumber || '',
+          services: currentProfile.services || '',
+          planStatus: 'active',
         };
       }
     }
