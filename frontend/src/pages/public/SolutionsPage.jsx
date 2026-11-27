@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Check, Building2, TrendingUp, Briefcase, Layers } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
 import SeoHead from '../../components/seo/SeoHead';
+import { renderBrandText } from '../../components/common/BrandText';
 
 const SOLUTIONS_DATA = {
   overview: {
@@ -170,10 +171,10 @@ const SolutionsPage = ({ solutionKey = 'overview' }) => {
             {data.eyebrow}
           </p>
           <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-950 tracking-tight leading-tight">
-            {data.h1}
+            {renderBrandText(data.h1)}
           </h1>
           <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed">
-            {data.intro}
+            {renderBrandText(data.intro)}
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link
@@ -238,8 +239,8 @@ const SolutionsPage = ({ solutionKey = 'overview' }) => {
         <div className="mt-14 space-y-6 max-w-3xl">
           {data.questions.map((item) => (
             <article key={item.q} className="rounded-2xl border border-slate-200 bg-white p-6">
-              <h2 className="text-lg font-bold text-slate-950">{item.q}</h2>
-              <p className="mt-2 text-sm text-slate-600 leading-relaxed">{item.a}</p>
+              <h2 className="text-lg font-bold text-slate-950">{renderBrandText(item.q)}</h2>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">{renderBrandText(item.a)}</p>
             </article>
           ))}
         </div>

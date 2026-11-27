@@ -18,6 +18,7 @@ import {
   ArrowUpRight,
   RotateCcw,
 } from 'lucide-react';
+import { BrandWordmark } from '../common/BrandText';
 
 const REPLACEABLE_TOOLS = [
   {
@@ -213,7 +214,7 @@ const SaasSavingsCalculator = ({ billingCycle = 'monthly', onSelectPlan }) => {
             Cut Your Agency Tool Spend — Compare &amp; Save
           </h2>
           <p className="mt-1.5 text-sm text-slate-600 max-w-2xl">
-            Select the separate apps your team pays for today and see how much you save by consolidating into one Agency Upscale workspace.
+            Select the separate apps your team pays for today and see how much you save by consolidating into one <BrandWordmark spaced /> workspace.
           </p>
         </div>
 
@@ -301,7 +302,7 @@ const SaasSavingsCalculator = ({ billingCycle = 'monthly', onSelectPlan }) => {
                 How many team members?
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Other SaaS tools charge per seat — Agency Upscale charges one flat workspace fee.
+                Other SaaS tools charge per seat — <BrandWordmark spaced /> charges one flat workspace fee.
               </p>
             </div>
 
@@ -404,7 +405,7 @@ const SaasSavingsCalculator = ({ billingCycle = 'monthly', onSelectPlan }) => {
               <div className="flex items-center justify-between gap-2 mb-2.5">
                 <div>
                   <h4 className="text-base font-black text-slate-900">
-                    All Agency Upscale Apps
+                    All <BrandWordmark spaced /> Apps
                   </h4>
                   <p className="text-xs text-slate-500">
                     Flat workspace fee for {users} {users === 1 ? 'user' : 'users'} (

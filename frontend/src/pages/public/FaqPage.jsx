@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout from '../../components/public/PublicLayout';
 import SeoHead from '../../components/seo/SeoHead';
+import { BrandWordmark, renderBrandText } from '../../components/common/BrandText';
 
 const FAQ_ITEMS = [
   {
@@ -65,14 +66,14 @@ const FaqPage = () => {
           Frequently Asked Questions
         </h1>
         <p className="mt-4 text-base text-slate-600 leading-relaxed">
-          Clear, direct answers about how Agency Upscale works for digital marketing agencies, sales teams, and growing businesses.
+          Clear, direct answers about how <BrandWordmark spaced /> works for digital marketing agencies, sales teams, and growing businesses.
         </p>
 
         <div className="mt-10 space-y-5">
           {FAQ_ITEMS.map((item) => (
             <article key={item.q} className="rounded-2xl border border-slate-200 bg-white p-6">
-              <h2 className="text-lg font-bold text-slate-950">{item.q}</h2>
-              <p className="mt-2 text-sm text-slate-600 leading-relaxed">{item.a}</p>
+              <h2 className="text-lg font-bold text-slate-950">{renderBrandText(item.q)}</h2>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">{renderBrandText(item.a)}</p>
             </article>
           ))}
         </div>

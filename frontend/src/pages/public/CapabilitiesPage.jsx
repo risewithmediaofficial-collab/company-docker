@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { BrandWordmark } from '../../components/common/BrandText';
 import {
   ArrowRight,
   Check,
@@ -354,8 +355,8 @@ export const CapabilitiesPage = () => {
           <ScrollReveal>
             <div className="text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8">
               <div className="space-y-2 max-w-2xl">
-                <span className="text-xs font-extrabold uppercase tracking-widest text-[#07c8f9] block">
-                  AgencyUpscale
+                <span className="text-xs font-extrabold uppercase tracking-widest text-slate-900 block">
+                  <BrandWordmark />
                 </span>
                 <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
                   Stop juggling 6 different tools.

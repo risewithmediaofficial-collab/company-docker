@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Calendar } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
 import SeoHead from '../../components/seo/SeoHead';
+import { BrandWordmark } from '../../components/common/BrandText';
 
 const BLOG_ARTICLES = [
   {
@@ -141,7 +142,7 @@ const BlogPage = () => {
 
           <div className="mt-12 rounded-2xl border border-slate-200 bg-slate-50 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold text-slate-950">Try Agency Upscale with your team</h2>
+              <h2 className="text-base font-bold text-slate-950">Try <BrandWordmark spaced /> with your team</h2>
               <p className="text-sm text-slate-600 mt-1">Start free or explore our affordable Starter and Growth plans.</p>
             </div>
             <Link to="/pricing" className="px-5 py-2.5 rounded-full bg-[#07c8f9] text-white text-xs font-bold shrink-0 text-center">
@@ -165,7 +166,7 @@ const BlogPage = () => {
           Resources &amp; Guides
         </p>
         <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-950 tracking-tight">
-          Agency Upscale Blog
+          <BrandWordmark spaced /> Blog
         </h1>
         <p className="mt-4 text-base text-slate-600 max-w-2xl">
           Practical guides on digital marketing CRM software, lead management, client portals, and scaling agency operations.

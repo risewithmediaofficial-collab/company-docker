@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Mail, ArrowRight, HelpCircle, Globe } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
 import SeoHead from '../../components/seo/SeoHead';
+import { BrandWordmark } from '../../components/common/BrandText';
 
 const ContactPage = () => {
   const jsonLd = {
@@ -32,7 +33,7 @@ const ContactPage = () => {
           Contact &amp; Support
         </p>
         <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-950 tracking-tight">
-          Get in Touch With Agency Upscale
+          Get in Touch With <BrandWordmark spaced />
         </h1>
         <p className="mt-4 text-base text-slate-600 leading-relaxed max-w-2xl">
           Have questions about plans, agency onboarding, or multi-branch setups for India or international teams? Reach out directly to our support team.
@@ -61,7 +62,7 @@ const ContactPage = () => {
             </div>
             <h2 className="text-lg font-bold text-slate-950">Start Online Anytime</h2>
             <p className="mt-2 text-sm text-slate-600">
-              Create your Agency Upscale account directly, test modules, and pick a plan inside your workspace.
+              Create your <BrandWordmark spaced /> account directly, test modules, and pick a plan inside your workspace.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Link

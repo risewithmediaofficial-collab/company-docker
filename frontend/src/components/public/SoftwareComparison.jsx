@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Zap, AlertTriangle } from 'lucide-react';
 import ScrollReveal from './ScrollReveal';
+import { BrandWordmark } from '../common/BrandText';
 
 /**
  * FragmentedStackIllustration
@@ -536,7 +537,7 @@ export const SoftwareComparison = () => {
             The Agency Difference
           </p>
           <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-[40px] text-slate-950 tracking-tight leading-[1.2]">
-            Other Softwares vs <span className="marker-highlight">AgencyUpscale</span>
+            Other Softwares vs <BrandWordmark className="marker-highlight" />
           </h2>
           <p className="mt-2.5 sm:mt-3 text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-xl mx-auto">
             Why managing retainers in 6 disconnected apps costs you deals, time, and sanity.
@@ -555,7 +556,7 @@ export const SoftwareComparison = () => {
                 The Messy Way
               </span>
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Without AgencyUpscale
+                Without <BrandWordmark />
               </span>
             </div>
 
@@ -598,15 +599,15 @@ export const SoftwareComparison = () => {
               <span className="text-[11px] font-black uppercase tracking-wider text-[#07c8f9]">
                 The Simple All-in-One Way
               </span>
-              <span className="text-[11px] font-bold text-[#07c8f9] uppercase tracking-wider">
-                With AgencyUpscale
+              <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                With <BrandWordmark />
               </span>
             </div>
 
             {/* Title & Core Modules */}
             <div className="min-h-[58px] flex flex-col justify-start">
               <h3 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-tight">
-                AgencyUpscale
+                <BrandWordmark />
               </h3>
               <p className="text-xs text-slate-500 font-medium mt-1 leading-normal">
                 Proposals • Agreements • Vault • Projects • Tasks • Social Posts • Bills • Profit

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowRight, Menu, X, MessageSquare } from 'lucide-react';
 import { RiseWithMediaAttribution } from '../common/RiseWithMediaAttribution';
+import { BrandWordmark } from '../common/BrandText';
 
 const NAV_ITEMS = [
   { label: 'Home', path: '/' },
@@ -277,7 +278,7 @@ const PublicLayout = ({
           {/* Bottom Copyright Bar */}
           <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-slate-400 text-center sm:text-left">
             <p className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1">
-              <span>© {new Date().getFullYear()} AgencyUpscale. All rights reserved.</span>
+              <span>© {new Date().getFullYear()} <BrandWordmark />. All rights reserved.</span>
               <span className="text-slate-700">•</span>
               <RiseWithMediaAttribution linkClassName="text-slate-200 hover:text-[#07c8f9]" />
             </p>
