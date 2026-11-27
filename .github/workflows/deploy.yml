@@ -43,8 +43,16 @@ jobs:
             # Validate Docker Compose configuration before deploying
             docker compose config -q
 
+            # Build new images while the live site stays online
+            docker compose build backend frontend
+
+            # Enable maintenance page only during container recreation + health verification
+            mkdir -p /var/www/agencyupscale
+            trap 'rm -f /var/www/agencyupscale/maintenance.enable' EXIT
+            touch /var/www/agencyupscale/maintenance.enable
+
             # Deploy only application services; never touch external MongoDB or volumes
-            docker compose up -d --build --no-deps backend frontend
+            docker compose up -d --no-deps backend frontend
 
             # Verify backend health (fail deployment if unhealthy)
             echo "Waiting for backend healthcheck..."
@@ -67,4 +75,5 @@ jobs:
               exit 1
             fi
 
+            rm -f /var/www/agencyupscale/maintenance.enable
             echo "Deployment verified healthy."
