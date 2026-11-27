@@ -8,7 +8,7 @@ import {
   XCircle, Eye, RefreshCw, ChevronLeft, ChevronRight, Users2, Radio,
   Check, X, Sliders, Globe, Phone, Mail, MapPin, Copy, ExternalLink,
   Shield, ShieldAlert, Sparkles, FileText, ChevronDown, CheckSquare,
-  Square, ArrowUpRight, Lock, Zap
+  Square, ArrowUpRight, Lock, Zap, Trash2
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -256,7 +256,7 @@ const Companies = ({ defaultTab }) => {
     }
   };
 
-  // ── Reject Action ─────────────────────────────────────────────────────────
+  // ── Reject Pending Request ─────────────────────────────────────────────────
   const handleReject = async (orgId, companyName) => {
     if (!window.confirm(`Are you sure you want to reject registration for "${companyName}"? This will remove the request and owner account.`)) {
       return;
@@ -271,6 +271,26 @@ const Companies = ({ defaultTab }) => {
       fetchData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to reject registration');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // ── Permanent Delete / Remove Company & All Data ──────────────────────────
+  const handleDeleteCompany = async (orgId, companyName) => {
+    if (!window.confirm(`Permanently delete "${companyName}"? This removes the workspace, owner, users, clients, projects, finance, and all company data completely and cannot be undone.`)) {
+      return;
+    }
+    setActionLoadingId(orgId);
+    try {
+      await axios.delete(`/api/platform/organizations/${orgId}`, {
+        headers: getHeaders(),
+      });
+      toast.success(`Company "${companyName}" permanently removed`);
+      setDetailsModalOpen(false);
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete company');
     } finally {
       setActionLoadingId(null);
     }
@@ -875,7 +895,7 @@ const Companies = ({ defaultTab }) => {
                                 </>
                               )}
 
-                              {/* If Active: LIVE VIEW + ALL DETAILS / MANAGE + SUSPEND */}
+                              {/* If Active: LIVE VIEW + ALL DETAILS + SUSPEND + DELETE */}
                               {isActive && (
                                 <>
                                   <button
@@ -895,19 +915,30 @@ const Companies = ({ defaultTab }) => {
                                   </button>
                                   <button
                                     onClick={() => handleSuspend(org._id)}
-                                    className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
+                                    disabled={isLoadingThis}
+                                    className="px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs font-semibold transition-all cursor-pointer"
                                     title="Suspend company"
                                   >
                                     Suspend
                                   </button>
+                                  <button
+                                    onClick={() => handleDeleteCompany(org._id, org.name)}
+                                    disabled={isLoadingThis}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
+                                    title="Permanently delete company & all data"
+                                  >
+                                    <Trash2 size={13} />
+                                    <span>Delete</span>
+                                  </button>
                                 </>
                               )}
 
-                              {/* If Suspended: REACTIVATE + ALL DETAILS + LIVE VIEW */}
+                              {/* If Suspended: REACTIVATE + ALL DETAILS + LIVE VIEW + DELETE */}
                               {isSuspended && (
                                 <>
                                   <button
                                     onClick={() => handleReactivate(org._id)}
+                                    disabled={isLoadingThis}
                                     className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                                   >
                                     Reactivate
@@ -924,6 +955,36 @@ const Companies = ({ defaultTab }) => {
                                     title="Stealth Live View"
                                   >
                                     <Radio size={13} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteCompany(org._id, org.name)}
+                                    disabled={isLoadingThis}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
+                                    title="Permanently delete company & all data"
+                                  >
+                                    <Trash2 size={13} />
+                                    <span>Delete</span>
+                                  </button>
+                                </>
+                              )}
+
+                              {/* If Expired or Other Status: ALL DETAILS + DELETE */}
+                              {!isPending && !isActive && !isSuspended && (
+                                <>
+                                  <button
+                                    onClick={() => handleOpenDetails(org)}
+                                    className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold shadow-xs cursor-pointer"
+                                  >
+                                    All Details
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteCompany(org._id, org.name)}
+                                    disabled={isLoadingThis}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
+                                    title="Permanently delete company & all data"
+                                  >
+                                    <Trash2 size={13} />
+                                    <span>Delete</span>
                                   </button>
                                 </>
                               )}
@@ -1426,16 +1487,27 @@ const Companies = ({ defaultTab }) => {
                       </button>
                     </>
                   ) : (
-                    /* If Active or Suspended: SAVE PLAN & MODULES */
-                    <button
-                      type="button"
-                      onClick={handleSavePlanChanges}
-                      disabled={isSavingDetails}
-                      className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
-                    >
-                      {isSavingDetails ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-                      Save Changes
-                    </button>
+                    /* If Active or Suspended: DELETE PERMANENTLY + SAVE PLAN & MODULES */
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCompany(detailsOrg._id, detailsOrg.name)}
+                        disabled={actionLoadingId === detailsOrg._id}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
+                      >
+                        <Trash2 size={14} />
+                        Remove Company
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSavePlanChanges}
+                        disabled={isSavingDetails}
+                        className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                      >
+                        {isSavingDetails ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                        Save Changes
+                      </button>
+                    </>
                   )}
                 </div>
               </div>

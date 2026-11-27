@@ -3,6 +3,7 @@
 // Manages all organizations (tenants) in the SaaS
 // =============================================
 
+import mongoose from 'mongoose';
 import Organization from '../models/organization.model.js';
 import User from '../models/user.model.js';
 import BrandWorkspace from '../models/brandWorkspace.model.js';
@@ -270,23 +271,59 @@ export const reactivateOrganization = async (req, res) => {
   }
 };
 
-// ─── Reject/Delete Organization ───────────────────────────────────────────────
+// ─── Permanently Reject / Delete Organization & All Tenant Data ───────────────
 // DELETE /api/platform/organizations/:id
 export const rejectOrganization = async (req, res) => {
   try {
     const org = await Organization.findById(req.params.id);
     if (!org) return res.status(404).json({ success: false, message: 'Organization not found' });
 
-    // Only allow rejecting pending orgs
-    if (org.planStatus !== 'pending') {
-      return res.status(400).json({ success: false, message: 'Can only reject pending organizations' });
+    // Collect non-superAdmin users belonging to this organization
+    const orgUsers = await User.find({
+      $or: [
+        { organizationId: org._id },
+        ...(org.ownerId ? [{ _id: org.ownerId }] : []),
+      ],
+      role: { $ne: 'superAdmin' },
+    })
+      .select('_id')
+      .lean();
+    const orgUserIds = orgUsers.map((u) => u._id);
+
+    // Cascade delete across all registered Mongoose models referencing this org or its users
+    const deletePromises = [];
+    for (const model of Object.values(mongoose.models)) {
+      const name = model.modelName;
+      if (name === 'Organization' || name === 'User') continue;
+
+      const schema = model.schema;
+      const orClauses = [];
+      if (schema.path('organizationId')) orClauses.push({ organizationId: org._id });
+      if (schema.path('organization')) orClauses.push({ organization: org._id });
+      if (orgUserIds.length > 0 && schema.path('user')) {
+        orClauses.push({ user: { $in: orgUserIds } });
+      }
+      if (orgUserIds.length > 0 && schema.path('recipient')) {
+        orClauses.push({ recipient: { $in: orgUserIds } });
+      }
+      if (orClauses.length > 0) {
+        deletePromises.push(
+          model.deleteMany(orClauses.length === 1 ? orClauses[0] : { $or: orClauses }).catch(() => null)
+        );
+      }
     }
 
-    // Delete the owner user
-    await User.findByIdAndDelete(org.ownerId);
+    await Promise.all(deletePromises);
+
+    if (orgUserIds.length > 0) {
+      await User.deleteMany({ _id: { $in: orgUserIds }, role: { $ne: 'superAdmin' } });
+    }
     await Organization.findByIdAndDelete(org._id);
 
-    res.json({ success: true, message: 'Organization registration rejected and removed' });
+    res.json({
+      success: true,
+      message: `Organization "${org.name}" and all associated data permanently deleted`,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

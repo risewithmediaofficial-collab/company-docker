@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Building2, CheckCircle2, XCircle, AlertTriangle, Clock,
   Users2, Save, ToggleLeft, ToggleRight, Shield, Package, StickyNote,
-  RefreshCw, Globe, Phone, Mail, Calendar, Radio, Copy, Check, ExternalLink
+  RefreshCw, Globe, Phone, Mail, Calendar, Radio, Copy, Check, ExternalLink, Trash2
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -178,14 +178,15 @@ const CompanyDetail = () => {
   };
 
   const handleReject = async () => {
-    if (!window.confirm('Reject and delete this registration? This cannot be undone.')) return;
+    const label = org?.name || 'this company';
+    if (!window.confirm(`Permanently delete "${label}" and all associated workspace users and records? This cannot be undone.`)) return;
     setSaving(true);
     try {
       await axios.delete(`/api/platform/organizations/${id}`, { headers: headers() });
-      toast.success('Registration rejected and removed');
-      window.history.back();
+      toast.success(`"${label}" permanently deleted`);
+      navigate('/platform/companies', { replace: true });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed');
+      toast.error(err.response?.data?.message || 'Failed to delete company');
     } finally {
       setSaving(false);
     }
@@ -245,6 +246,15 @@ const CompanyDetail = () => {
           >
             <Radio size={13} className="animate-pulse text-emerald-600" />
             <span>Live View CRM</span>
+          </button>
+          <button
+            onClick={handleReject}
+            disabled={saving}
+            className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+            title="Permanently delete company & all data"
+          >
+            <Trash2 size={13} />
+            <span>Delete Company</span>
           </button>
           <button onClick={fetch} className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-xs transition-all cursor-pointer">
             <RefreshCw size={16} />
