@@ -128,8 +128,8 @@ export default function Finance() {
     return null;
   }
 
-  // Active section (from URL query param, route param, or default 'overview')
-  const rawTab = section || searchParams.get('tab') || 'overview';
+  // Active section (query param ?tab= takes priority over route :section, fallback 'overview')
+  const rawTab = searchParams.get('tab') || section || 'overview';
   const normalizedTab = rawTab === 'income' ? 'payments' : rawTab === 'forecast-reports' ? 'reports' : rawTab;
   const initialTab = VALID_TABS.includes(normalizedTab) ? normalizedTab : 'overview';
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -144,7 +144,7 @@ export default function Finance() {
 
   // Sync tab with URL
   useEffect(() => {
-    const tabFromUrl = section || searchParams.get('tab') || 'overview';
+    const tabFromUrl = searchParams.get('tab') || section || 'overview';
     const normalized = tabFromUrl === 'income' ? 'payments' : tabFromUrl === 'forecast-reports' ? 'reports' : tabFromUrl;
     const isGstBlocked = normalized === 'taxes' && !canViewGstDetails;
     const resolvedTab = VALID_TABS.includes(normalized) && !isGstBlocked ? normalized : 'overview';
@@ -154,14 +154,22 @@ export default function Finance() {
       });
     }
     if ((searchParams.get('tab') && !VALID_TABS.includes(searchParams.get('tab'))) || isGstBlocked) {
-      setSearchParams({ tab: 'overview' }, { replace: true });
+      if (section) {
+        navigate('/finance/overview', { replace: true });
+      } else {
+        setSearchParams({ tab: 'overview' }, { replace: true });
+      }
     }
-  }, [section, searchParams, activeTab, canViewGstDetails]);
+  }, [section, searchParams, activeTab, canViewGstDetails, navigate, setSearchParams]);
 
   const handleTabChange = (tabId) => {
     startTransition(() => {
       setActiveTab(tabId);
-      setSearchParams({ tab: tabId });
+      if (section) {
+        navigate(`/finance/${tabId}`);
+      } else {
+        setSearchParams({ tab: tabId });
+      }
     });
   };
 
