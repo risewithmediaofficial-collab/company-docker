@@ -153,6 +153,25 @@ const ProtectedRoute = ({ isAuthenticated, user, loading, allowedRoles, children
   return children;
 };
 
+// ─── Redirect Auth Routes to app.agencyupscale.com when on apex marketing domain ──
+const AppSubdomainAuthGate = ({ children }) => {
+  const isApexMarketingHost =
+    typeof window !== 'undefined' &&
+    ['agencyupscale.com', 'www.agencyupscale.com'].includes(window.location.hostname.toLowerCase());
+
+  useEffect(() => {
+    if (isApexMarketingHost) {
+      const target = `https://app.agencyupscale.com${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.location.replace(target);
+    }
+  }, [isApexMarketingHost]);
+
+  if (isApexMarketingHost) {
+    return <LoadingScreen />;
+  }
+  return children;
+};
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 const App = () => {
   const dispatch = useDispatch();
@@ -249,7 +268,7 @@ const App = () => {
 
           {/* ── Auth Routes ─────────────────────────────────────────────── */}
           <Route path="/auth/google/callback" element={<GoogleOAuthCallback />} />
-          <Route element={<AuthLayout />}>
+          <Route element={<AppSubdomainAuthGate><AuthLayout /></AppSubdomainAuthGate>}>
             <Route path="/login"                  element={!isAuthenticated ? <Login />          : <Navigate to={postLoginTarget} replace />} />
             <Route path="/login/:companySlug"      element={<Login />} />
             <Route path="/:companySlug/login"      element={<Login />} />
