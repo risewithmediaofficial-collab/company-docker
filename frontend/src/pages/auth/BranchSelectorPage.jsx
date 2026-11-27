@@ -156,7 +156,7 @@ export default function BranchSelectorPage() {
                 <img
                   src={organization?.logo || '/rise-with-media-logo.png'}
                   alt={orgTitle}
-                  className="h-7 w-auto object-contain"
+                  className="h-10 sm:h-11 w-auto object-contain"
                 />
               </span>
             ) : (
@@ -301,7 +301,7 @@ export default function BranchSelectorPage() {
                             <img
                               src={branch.organization?.logo || '/rise-with-media-logo.png'}
                               alt={branch.organization?.name || orgTitle}
-                              className="h-8 sm:h-9 w-auto object-contain mb-1.5"
+                              className="h-11 sm:h-12 w-auto object-contain mb-1.5"
                             />
                           ) : (
                             <div className="text-base sm:text-lg font-black text-slate-950 tracking-tight leading-snug">
