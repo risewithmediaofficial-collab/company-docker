@@ -11,6 +11,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import SeoHead from '../../components/seo/SeoHead';
 import HeroPattern from '../../components/public/HeroPattern';
 import ScrollReveal from '../../components/public/ScrollReveal';
 
@@ -18,8 +19,13 @@ export const AboutPage = () => {
   return (
     <PublicLayout
       ctaTitle="Join the Agencies Running on AgencyUpscale."
-      ctaSubtitle="Get your agency workspace set up in 2 minutes. Free 14-day trial, no credit card required."
+      ctaSubtitle="Get your agency workspace set up in 2 minutes. Free forever starter plan or ₹10/mo Starter available."
     >
+      <SeoHead
+        title="About Agency Upscale | SaaS CRM Built for Agencies & Businesses"
+        description="Learn how Agency Upscale helps digital marketing agencies, sales teams, and small businesses in India and worldwide replace spreadsheets with one organized CRM."
+        canonicalPath="/about"
+      />
       {/* ── 1. HERO HEADER ── */}
       <section className="relative overflow-hidden pt-12 sm:pt-20 pb-12 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
         <HeroPattern />

@@ -17,6 +17,10 @@ const AboutPage = lazy(() => import('./pages/public/AboutPage'));
 const CapabilitiesPage = lazy(() => import('./pages/public/CapabilitiesPage'));
 const MetricsPage = lazy(() => import('./pages/public/MetricsPage'));
 const PricingPage = lazy(() => import('./pages/public/PricingPage'));
+const SolutionsPage = lazy(() => import('./pages/public/SolutionsPage'));
+const FaqPage = lazy(() => import('./pages/public/FaqPage'));
+const BlogPage = lazy(() => import('./pages/public/BlogPage'));
+const ContactPage = lazy(() => import('./pages/public/ContactPage'));
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const SelectPlan = lazy(() => import('./pages/auth/SelectPlan'));
@@ -192,6 +196,14 @@ const App = () => {
           <Route path="/capabilities" element={<CapabilitiesPage />} />
           <Route path="/features" element={<CapabilitiesPage />} />
           <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/solutions" element={<SolutionsPage solutionKey="overview" />} />
+          <Route path="/solutions/marketing-agencies" element={<SolutionsPage solutionKey="marketing-agencies" />} />
+          <Route path="/solutions/sales-teams" element={<SolutionsPage solutionKey="sales-teams" />} />
+          <Route path="/solutions/small-businesses" element={<SolutionsPage solutionKey="small-businesses" />} />
+          <Route path="/faq" element={<FaqPage />} />
+          <Route path="/blog" element={<BlogPage />} />
+          <Route path="/blog/:slug" element={<BlogPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route path="/our-impact" element={<MetricsPage />} />
           <Route path="/metrics" element={<MetricsPage />} />
           <Route path="/overview" element={<MetricsPage />} />

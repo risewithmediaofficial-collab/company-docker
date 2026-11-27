@@ -19,6 +19,7 @@ import {
   CreditCard,
 } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import SeoHead from '../../components/seo/SeoHead';
 import HeroPattern from '../../components/public/HeroPattern';
 import ScrollReveal from '../../components/public/ScrollReveal';
 import SectionShowcase from '../../components/public/SectionShowcase';
@@ -102,6 +103,11 @@ export const CapabilitiesPage = () => {
       ctaTitle="Ready to Run Your Entire Agency in One Place?"
       ctaSubtitle="Register your agency in 2 minutes. Replace 6 separate apps and give your team complete peace of mind."
     >
+      <SeoHead
+        title="CRM Features: Leads, Clients, Social Media & GST Billing | Agency Upscale"
+        description="Explore Agency Upscale CRM features: lead pipeline, Clients 360, Kanban tasks, 31-day social media tracker, client portal, attendance, and GST invoicing."
+        canonicalPath="/features"
+      />
       {/* ── 1. HERO ── */}
       <section className="relative overflow-hidden pt-12 sm:pt-20 pb-12 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
         <HeroPattern />

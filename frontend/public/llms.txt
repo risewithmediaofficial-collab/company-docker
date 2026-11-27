@@ -1,0 +1,33 @@
+# Agency Upscale
+
+> Agency Upscale is a SaaS CRM and business management platform built for digital marketing agencies, sales teams, and growing small businesses in India and worldwide.
+
+## Official Links
+- Website: https://agencyupscale.com/
+- CRM Login: https://app.agencyupscale.com/
+- Features: https://agencyupscale.com/features
+- Solutions: https://agencyupscale.com/solutions
+- Pricing: https://agencyupscale.com/pricing
+- About: https://agencyupscale.com/about
+- Blog: https://agencyupscale.com/blog
+- FAQ: https://agencyupscale.com/faq
+- Contact & Support: https://agencyupscale.com/contact
+
+## Product Overview
+- **Product Name**: Agency Upscale
+- **Category**: SaaS CRM / Digital Marketing CRM / Agency Management Software
+- **Target Audience**: Digital marketing agencies, creative studios, sales teams, and small-to-mid-sized businesses (India and global markets)
+- **Pricing Model**: Free forever starter workspace, ₹10/month Starter plan, ₹2,999/month Growth plan, and ₹6,999/month Enterprise Pro plan (with annual billing options)
+
+## Verified Capabilities
+- **CRM & Lead Management**: Pipeline stages, lead scoring, follow-up reminders, and 1-click conversion from lead to client.
+- **Clients 360 & Client Portal**: Centralized client directory, credential vault, client portal for approvals, tasks, and invoices.
+- **Projects & Task Management**: Kanban boards, task timers, EOD checklists, sprint/development boards, and team workload views.
+- **Social Media & Content Calendar**: 31-day monthly post/reel tracker, ad campaign budget tracking, and client approval workflows.
+- **Finance & GST Invoicing**: Quotations, GST invoices, payment tracking, expense logs, payroll, and branch-level reporting.
+- **HR & Attendance**: Team directory, GPS-verified clock-in/out, WFH requests, and multi-branch management.
+- **Proposals & SOP Library**: Interactive client proposals and team standard operating procedures.
+
+## Support
+- Contact page: https://agencyupscale.com/contact
+- Support Email: risewithmediaofficial@gmail.com

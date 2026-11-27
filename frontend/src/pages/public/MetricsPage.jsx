@@ -17,6 +17,7 @@ import {
   HardDrive,
 } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import SeoHead from '../../components/seo/SeoHead';
 import HeroPattern from '../../components/public/HeroPattern';
 import ScrollReveal from '../../components/public/ScrollReveal';
 import StatsBanner from '../../components/public/StatsBanner';
@@ -27,6 +28,11 @@ export const MetricsPage = () => {
       ctaTitle="A Reliable System You Can Count On Every Day."
       ctaSubtitle="Focus on growing your clients while we keep your team organized, fast, and stress-free."
     >
+      <SeoHead
+        title="Agency Workflow Metrics & Reliability | Agency Upscale CRM"
+        description="See how Agency Upscale helps digital marketing agencies and growing businesses track client deliverables, invoices, and team productivity."
+        canonicalPath="/metrics"
+      />
       {/* 1. HERO HEADER */}
       <section className="relative overflow-hidden pt-12 sm:pt-20 pb-14 sm:pb-16 px-4 sm:px-8 text-left sm:text-center">
         <HeroPattern />

@@ -11,6 +11,7 @@ import ErrorBoundary from '../components/ui/ErrorBoundary';
 import GlobalDateSortBar from '../components/layout/GlobalDateSortBar';
 import OnboardingWelcomeModal from '../components/onboarding/OnboardingWelcomeModal';
 import PlanUpgradeModal from '../components/billing/PlanUpgradeModal';
+import SeoHead from '../components/seo/SeoHead';
 import { getLockedModuleForPath } from '../utils/planModules';
 import { RiseWithMediaAttribution } from '../components/common/RiseWithMediaAttribution';
 
@@ -53,6 +54,12 @@ const MainLayout = () => {
 
   return (
     <div className="flex h-[100dvh] bg-background text-foreground overflow-hidden">
+      <SeoHead
+        title="Workspace | Agency Upscale CRM"
+        description="Private Agency Upscale CRM workspace."
+        canonicalPath={location.pathname}
+        noIndex
+      />
       {/* Sidebar with stable search callback and path */}
       <Sidebar onOpenSearch={handleOpenSearch} currentPath={location.pathname} />
 

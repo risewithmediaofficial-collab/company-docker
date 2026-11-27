@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { HardDrive, ShieldCheck, ArrowUpRight, Layers } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import SeoHead from '../../components/seo/SeoHead';
 import PricingPlansGrid, { DEFAULT_STORAGE_PLANS } from '../../components/billing/PricingPlansGrid';
 import api from '../../api';
 
@@ -52,6 +53,24 @@ const PricingPage = () => {
       ctaTitle="Start Free with 100 MB or Starter 5 GB at ₹10/mo"
       ctaSubtitle="Create your agency account, pick your plan inside (Starter 5 GB opens Razorpay directly at ₹10/mo), and configure your company profile and live workspace URL in Settings."
     >
+      <SeoHead
+        title="CRM Pricing Plans: Free, ₹10/mo Starter to Enterprise Pro | Agency Upscale"
+        description="Compare Agency Upscale SaaS CRM plans from Free Forever and ₹10/month Starter to Growth (₹2,999/mo) and Enterprise Pro (₹6,999/mo) with multi-branch support."
+        canonicalPath="/pricing"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'SoftwareApplication',
+          name: 'Agency Upscale',
+          applicationCategory: 'BusinessApplication',
+          url: 'https://agencyupscale.com/pricing',
+          offers: [
+            { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: 'INR' },
+            { '@type': 'Offer', name: 'Starter', price: '10', priceCurrency: 'INR' },
+            { '@type': 'Offer', name: 'Growth', price: '2999', priceCurrency: 'INR' },
+            { '@type': 'Offer', name: 'Enterprise Pro', price: '6999', priceCurrency: 'INR' },
+          ],
+        }}
+      />
       <div className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-20">
           {/* Hero */}

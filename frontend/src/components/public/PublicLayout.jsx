@@ -5,10 +5,11 @@ import { RiseWithMediaAttribution } from '../common/RiseWithMediaAttribution';
 
 const NAV_ITEMS = [
   { label: 'Home', path: '/' },
-  { label: 'Our Story', path: '/our-story' },
-  { label: 'What We Do', path: '/what-we-do' },
+  { label: 'Features', path: '/features' },
+  { label: 'Solutions', path: '/solutions' },
   { label: 'Pricing', path: '/pricing' },
-  { label: 'Our Impact', path: '/our-impact' },
+  { label: 'Blog', path: '/blog' },
+  { label: 'FAQ', path: '/faq' },
 ];
 
 const PublicLayout = ({
@@ -247,25 +248,27 @@ const PublicLayout = ({
               </p>
               <ul className="space-y-2.5 text-xs sm:text-sm font-medium">
                 <li><Link to="/" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Home</Link></li>
-                <li><Link to="/our-story" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Our Story</Link></li>
-                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#07c8f9] transition-colors">What We Do</Link></li>
+                <li><Link to="/features" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Features</Link></li>
+                <li><Link to="/solutions" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Solutions</Link></li>
                 <li><Link to="/pricing" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Pricing</Link></li>
-                <li><Link to="/our-impact" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Our Impact</Link></li>
-                <li><Link to="/register" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Register</Link></li>
+                <li><Link to="/about" className="text-slate-400 hover:text-[#07c8f9] transition-colors">About Us</Link></li>
+                <li><Link to="/blog" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Blog</Link></li>
+                <li><Link to="/faq" className="text-slate-400 hover:text-[#07c8f9] transition-colors">FAQ</Link></li>
+                <li><Link to="/contact" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Contact</Link></li>
               </ul>
             </div>
 
             {/* Col 3: Platform Solutions (3 cols) */}
             <div className="sm:col-span-1 lg:col-span-3 space-y-3 text-left">
               <p className="text-xs font-bold text-white uppercase tracking-wider">
-                Platform Solutions
+                CRM Solutions
               </p>
               <ul className="space-y-2.5 text-xs sm:text-sm font-medium">
-                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Leads & Deals</Link></li>
-                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Social Media Calendar</Link></li>
-                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#07c8f9] transition-colors">1-Tap Client Approvals</Link></li>
-                <li><Link to="/what-we-do" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Invoices & Billing</Link></li>
-                <li><Link to="/our-impact" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Private Data & Backups</Link></li>
+                <li><Link to="/solutions/marketing-agencies" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Digital Marketing Agencies</Link></li>
+                <li><Link to="/solutions/sales-teams" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Sales Team CRM</Link></li>
+                <li><Link to="/solutions/small-businesses" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Small Business CRM</Link></li>
+                <li><Link to="/metrics" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Agency Metrics</Link></li>
+                <li><Link to="/register" className="text-slate-400 hover:text-[#07c8f9] transition-colors">Create Workspace</Link></li>
               </ul>
             </div>
 

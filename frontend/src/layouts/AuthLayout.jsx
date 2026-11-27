@@ -6,10 +6,12 @@ import { Sun, Moon, Building2 } from '@/components/ui/muiIcons';
 import { toggleDarkMode } from '../store/slices/uiSlice';
 import MobileAppInstallButton from '../components/ui/MobileAppInstallButton';
 import { RiseWithMediaAttribution } from '../components/common/RiseWithMediaAttribution';
+import SeoHead from '../components/seo/SeoHead';
 
 const RESERVED_SLUGS = new Set([
   'login', 'register', 'register-company', 'forgot-password', 'reset-password',
-  'about', 'home', 'features', 'landing', 'capabilities', 'metrics',
+  'about', 'our-story', 'home', 'features', 'what-we-do', 'landing', 'capabilities',
+  'metrics', 'our-impact', 'overview', 'pricing', 'solutions', 'faq', 'blog', 'contact', 'select-plan',
   'platform', 'crm', 'sop', 'proposals', 'projects', 'clients', 'client-vault',
   'client-followups', 'tasks', 'manager-tasks', 'calendar', 'influencers',
   'daily-tasks', 'daily_tasks', 'finance', 'call-history', 'hr', 'reports',
@@ -65,6 +67,12 @@ const AuthLayout = () => {
           : 'min-h-[100dvh] w-full bg-white dark:bg-slate-950 relative overflow-x-hidden transition-colors duration-300'
       }
     >
+      <SeoHead
+        title="Sign In | Agency Upscale CRM"
+        description="Sign in to your Agency Upscale CRM workspace."
+        canonicalPath={location.pathname}
+        noIndex
+      />
       {/* Floating Theme Toggle (Only for SubAuth standalone pages like forgot-password, styled with border & shadow) */}
       {isSubAuth && (
         <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">

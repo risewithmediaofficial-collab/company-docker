@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /platform/
+Disallow: /settings/
+Disallow: /profile/
+Disallow: /portal/
+Disallow: /clients/
+Disallow: /projects/
+Disallow: /tasks/
+Disallow: /finance/
+Disallow: /hr/
+Disallow: /attendance/
+Disallow: /smm/
+Disallow: /development/
+Disallow: /auth/
+
+Sitemap: https://agencyupscale.com/sitemap.xml

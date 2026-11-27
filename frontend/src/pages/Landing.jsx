@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, Sparkles, Zap, Layers, Calendar, CreditCard } from 'lucide-react';
 import PublicLayout from '../components/public/PublicLayout';
+import SeoHead from '../components/seo/SeoHead';
 import HeroPattern from '../components/public/HeroPattern';
 import ScrollReveal from '../components/public/ScrollReveal';
 import SectionShowcase from '../components/public/SectionShowcase';
@@ -22,6 +23,29 @@ export const Landing = () => {
 
   return (
     <PublicLayout>
+      <SeoHead
+        title="Agency Upscale | Digital Marketing CRM & Agency Management Software"
+        description="Manage leads, clients, tasks, social media calendars, and GST billing in one place. Affordable CRM software starting free and scaling to enterprise agencies in India and globally."
+        canonicalPath="/"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'SoftwareApplication',
+          name: 'Agency Upscale',
+          applicationCategory: 'BusinessApplication',
+          operatingSystem: 'Web',
+          url: 'https://agencyupscale.com/',
+          image: 'https://agencyupscale.com/agencyupscalelogo.png',
+          description:
+            'SaaS digital marketing CRM and agency management platform for leads, clients, projects, social media calendars, and GST invoicing.',
+          offers: {
+            '@type': 'AggregateOffer',
+            priceCurrency: 'INR',
+            lowPrice: '0',
+            highPrice: '6999',
+            offerCount: '4',
+          },
+        }}
+      />
       {/* ── 1. HERO SECTION ── */}
       <section className="relative overflow-hidden pt-14 sm:pt-20 pb-14 sm:pb-20 px-4 sm:px-8 text-left sm:text-center">
         <HeroPattern />
