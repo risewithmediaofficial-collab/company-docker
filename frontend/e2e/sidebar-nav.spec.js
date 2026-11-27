@@ -6,9 +6,9 @@ test('Sidebar navigation updates page content and URL', async ({ page }) => {
   page.on('pageerror', err => console.log('BROWSER PAGEERROR:', err.message));
 
   await page.goto('/login');
-  await page.fill('#email', 'admin@agencycrm.com');
-  await page.fill('#password', 'password123');
-  await page.click('button[type="submit"]');
+  await page.fill('form input[type="email"], #signin-email, #email', 'admin@agencycrm.com');
+  await page.fill('form input[type="password"], #signin-password, #password', 'password123');
+  await page.click('form button[type="submit"]');
   await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
   console.log('Logged in successfully. URL:', page.url());
 
@@ -44,5 +44,5 @@ test('Sidebar navigation updates page content and URL', async ({ page }) => {
   console.log('URL after /:', page.url());
   const newOverviewText = await page.locator('main').innerText();
   console.log('Main text after overview:', newOverviewText.substring(0, 100).replace(/\n/g, ' '));
-  expect(page.url()).toBe('http://localhost:5175/');
+  expect(new URL(page.url()).pathname).toBe('/');
 });

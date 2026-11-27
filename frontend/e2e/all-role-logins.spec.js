@@ -177,6 +177,9 @@ async function mockAppBackend(page) {
     const req = route.request();
     const url = new URL(req.url());
     const pathname = url.pathname;
+    if (!pathname.startsWith('/api/')) {
+      return route.continue();
+    }
 
     if (pathname.startsWith('/api/auth/company-portal/')) {
       return route.fulfill({

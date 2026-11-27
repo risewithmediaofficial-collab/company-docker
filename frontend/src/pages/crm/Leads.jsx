@@ -569,7 +569,7 @@ const Leads = () => {
         </div>
 
         <div ref={leadsBoardRef} className="w-full overflow-x-auto pb-4 custom-scrollbar responsive-table-container">
-          <div className="grid w-max min-w-full auto-cols-[minmax(260px,320px)] grid-flow-col gap-4 sm:gap-5 pr-1">
+          <div className="grid w-max min-w-full auto-cols-[296px] sm:auto-cols-[316px] grid-flow-col gap-4 sm:gap-5">
             {PIPELINE_STAGES.map((stage) => {
               const stageInfo = STAGE_META[stage];
               const stageLeads = filteredKanbanData[stage] || [];
@@ -589,26 +589,24 @@ const Leads = () => {
                     }
                   }}
                   onDrop={(e) => handleDrop(e, stage)}
-                  className={`flex flex-col min-h-[500px] max-h-[calc(100vh-300px)] rounded-[28px] transition-all shadow-sm ${stageInfo.surface} ${
+                  className={`flex flex-col h-[calc(100vh-290px)] min-h-[500px] rounded-[24px] transition-all shadow-sm ${stageInfo.surface} ${
                     isColActive ? 'ring-2 ring-primary/40 !bg-primary/10' : ''
                   }`}
                 >
-                  <div className="px-4 py-4 shrink-0">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${stageInfo.dot || 'bg-primary'}`} />
-                          <h3 className="text-sm font-bold text-foreground">{stageInfo.label}</h3>
-                          <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold tabular-nums ${stageInfo.badge}`}>
-                            {stageLeads.length}
-                          </span>
-                        </div>
+                  <div className="px-4 pt-4 pb-3 shrink-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${stageInfo.dot || 'bg-primary'}`} />
+                        <h3 className="text-sm font-bold text-foreground truncate">{stageInfo.label}</h3>
+                        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold tabular-nums shrink-0 ${stageInfo.badge}`}>
+                          {stageLeads.length}
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   <div
-                    className="flex min-h-0 flex-1 flex-col gap-3 p-4 overflow-y-auto max-h-[calc(100vh-370px)] custom-scrollbar pr-1"
+                    className="flex min-h-0 flex-1 flex-col gap-3 px-4 pt-1 pb-4 overflow-y-auto custom-scrollbar"
                   >
                     {stageLeads.length > 0 ? (
                       <>
@@ -735,7 +733,7 @@ const Leads = () => {
                               )}
                             </div>
 
-                            <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-secondary/60 px-3 py-2.5">
+                            <div className="mt-4 flex items-center justify-between gap-2.5 rounded-2xl bg-secondary/60 px-3 py-2.5">
                               <div className="flex min-w-0 items-center gap-2">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-[11px] font-bold text-foreground shrink-0">
                                   {lead.assignedTo?.name?.charAt(0) || 'U'}
@@ -747,7 +745,7 @@ const Leads = () => {
                                   <p className="text-[11px] text-muted-foreground">Owner</p>
                                 </div>
                               </div>
-                              <div className="text-right tabular-nums">
+                              <div className="shrink-0 text-right tabular-nums">
                                 <p className="text-[11px] font-semibold text-foreground">
                                   {leadValue || 'No value set'}
                                 </p>
