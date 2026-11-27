@@ -1,32 +1,10 @@
 # =============================================
-# Docker Compose - Agency CRM
-# Services: MongoDB, Backend API, Frontend
+# Docker Compose - Agency CRM (Application Stack)
+# Services: Backend API, Frontend
+# External Production DB: company_crm_mongodb on company_crm_network
 # =============================================
 
 services:
-
-  # ── MongoDB ──────────────────────────────────────────
-  mongodb:
-    image: mongo:7.0
-    container_name: agency_crm_mongodb
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:27019:27017"   # Bound to loopback only for security
-    volumes:
-      - mongodb_data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "3"
-    networks:
-      - crm_network
 
   # ── Backend API ──────────────────────────────────────
   backend:
@@ -35,21 +13,23 @@ services:
       dockerfile: Dockerfile
     container_name: agency_crm_backend
     restart: unless-stopped
+    expose:
+      - "5001"
     environment:
       NODE_ENV: production
       PORT: 5001
       ENABLE_CLUSTER: ${ENABLE_CLUSTER:-true}
       CLUSTER_WORKERS: ${CLUSTER_WORKERS:-2}
       MAX_CONCURRENT_REQUESTS: ${MAX_CONCURRENT_REQUESTS:-500}
-      # Primary production database
+      # External production MongoDB container (company_crm_mongodb)
       MONGO_URI: ${MONGO_URI:-mongodb://company-crm-mongodb:27017/company_crm}
       CLIENT_URL: ${CLIENT_URL:-https://company.risewithmedia.com}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
-      JWT_SECRET: ${JWT_SECRET:-changeme_strong_jwt_secret_32chars}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-changeme_strong_refresh_secret}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in environment}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET must be set in environment}
       JWT_EXPIRE: ${JWT_EXPIRE:-15m}
       JWT_REFRESH_EXPIRE: ${JWT_REFRESH_EXPIRE:-7d}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-changeme_32byte_encryption_key!!}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY must be set in environment}
       DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-}
       # Cloudinary (optional - for file uploads)
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
@@ -75,8 +55,8 @@ services:
       RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY:-}
       RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY:-}
       # Web Push Notifications (VAPID)
-      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-BKwkgrewQmAAflMVBGwXiK-MRe6MbZl6DNxH18aOwIU-mNTukiW3hLOTGcxdplps7T8NlcteaEVar_5zP6KlYMs}
-      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-RRqhBGqb0W0qOMRSfeHzP6a3wM6vrCBlpCdULj3Xjyo}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_EMAIL: ${VAPID_EMAIL:-mailto:risewithmediaofficial@gmail.com}
     volumes:
       - uploads_data:/app/uploads
@@ -91,11 +71,8 @@ services:
       options:
         max-size: "20m"
         max-file: "3"
-    depends_on:
-      mongodb:
-        condition: service_healthy
     networks:
-      - crm_network
+      - company_crm_network
 
   # ── Frontend (Nginx + React) ─────────────────────────
   frontend:
@@ -109,18 +86,17 @@ services:
     ports:
       - "82:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
-      - crm_network
+      - company_crm_network
 
 # ── Volumes ──────────────────────────────────────────
 volumes:
-  mongodb_data:
-    driver: local
   uploads_data:
     driver: local
 
 # ── Networks ─────────────────────────────────────────
 networks:
-  crm_network:
-    driver: bridge
+  company_crm_network:
+    external: true

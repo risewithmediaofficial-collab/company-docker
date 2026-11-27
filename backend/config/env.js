@@ -37,7 +37,15 @@ export const loadEnv = () => {
   process.env.PORT ||= '5001';
   const isProduction = process.env.NODE_ENV === 'production';
   process.env.CLIENT_URL ||= isProduction ? (process.env.CLIENT_URL || 'http://localhost') : 'http://localhost:5173';
-  process.env.MONGO_URI ||= process.env.MONGODB_URI || 'mongodb://localhost:27017/company_crm';
+
+  if (isProduction) {
+    process.env.MONGO_URI ||= process.env.MONGODB_URI;
+    if (!process.env.MONGO_URI && process.env.SKIP_DB_CONNECT !== 'true') {
+      throw new Error('[FATAL CONFIG] Production startup aborted: MONGO_URI environment variable is required.');
+    }
+  } else {
+    process.env.MONGO_URI ||= process.env.MONGODB_URI || 'mongodb://localhost:27017/company_crm';
+  }
 
   // Insecure placeholders that MUST never run in production
   const insecurePlaceholders = [
@@ -46,20 +54,23 @@ export const loadEnv = () => {
     'dev-super-secret-jwt-key',
     'replace-with-32-char-production-key',
     'rise-with-media-development-credential-key',
+    'changeme_strong_jwt_secret_32chars',
+    'changeme_strong_refresh_secret',
+    'changeme_32byte_encryption_key!!',
+    'YourVeryLongAndRandomJwtSecretKey1234567890',
+    'AnotherVeryLongAndRandomRefreshSecretKey',
+    'YourExact32ByteEncryptionKeyHere',
   ];
 
   if (isProduction) {
     if (!process.env.JWT_SECRET || insecurePlaceholders.includes(process.env.JWT_SECRET)) {
-      console.warn(
-        '[SECURITY NOTICE] Production running without a custom JWT_SECRET. Using generated fallback. Set JWT_SECRET in production.'
-      );
-      process.env.JWT_SECRET = 'rwm_prod_fallback_jwt_secret_98327498237498237498';
+      throw new Error('[FATAL SECURITY] Production startup aborted: insecure placeholder or missing JWT_SECRET.');
+    }
+    if (!process.env.JWT_REFRESH_SECRET || insecurePlaceholders.includes(process.env.JWT_REFRESH_SECRET)) {
+      throw new Error('[FATAL SECURITY] Production startup aborted: insecure placeholder or missing JWT_REFRESH_SECRET.');
     }
     if (!process.env.ENCRYPTION_KEY || insecurePlaceholders.includes(process.env.ENCRYPTION_KEY)) {
-      console.warn(
-        '[SECURITY NOTICE] Production running without a custom ENCRYPTION_KEY. Using 32-byte fallback. Set ENCRYPTION_KEY in production.'
-      );
-      process.env.ENCRYPTION_KEY = 'rwm_prod_fallback_encryption_key_32c';
+      throw new Error('[FATAL SECURITY] Production startup aborted: insecure placeholder or missing ENCRYPTION_KEY.');
     }
   }
 

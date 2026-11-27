@@ -1,5 +1,7 @@
 node_modules
 npm-debug.log*
 .env
+.env.*
+client_secret_*.json
 uploads
 *.log

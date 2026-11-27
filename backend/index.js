@@ -270,13 +270,15 @@ if (env.nodeEnv === 'development') {
 
 app.get('/api/health', (req, res) => {
   const readyState = mongoose.connection.readyState;
-  res.json({
-    success: true,
-    message: 'Agency CRM API is running',
+  const dbConnected = readyState === 1;
+  const isHealthy = dbConnected || process.env.SKIP_DB_CONNECT === 'true';
+  res.status(isHealthy ? 200 : 503).json({
+    success: isHealthy,
+    message: dbConnected ? 'Agency CRM API is running' : 'Waiting for MongoDB connection',
     timestamp: new Date().toISOString(),
     env: env.nodeEnv,
     workerPid: process.pid,
-    dbConnected: readyState === 1,
+    dbConnected,
     dbState: readyState,
     uptimeSeconds: Math.round(process.uptime()),
     load: loadShedder.getMetrics(),
@@ -441,13 +443,23 @@ process.on('uncaughtException', (err) => {
   }
 });
 
-if (process.env.NO_LISTEN !== 'true') {
+const startListening = () => {
+  if (process.env.NO_LISTEN === 'true' || httpServer.listening) return;
   httpServer.listen(env.port, () => {
     console.log(`\nAgency CRM Server running on port ${env.port} (PID ${process.pid})`);
     console.log(`Environment: ${env.nodeEnv}`);
     console.log(`Client URL: ${env.clientUrl}`);
     console.log(`API Health: http://localhost:${env.port}/api/health\n`);
   });
+};
+
+if (process.env.NO_LISTEN !== 'true') {
+  if (process.env.SKIP_DB_CONNECT === 'true' || mongoose.connection.readyState === 1) {
+    startListening();
+  } else {
+    console.warn('[Startup] Deferring HTTP server listen until MongoDB connects...');
+    mongoose.connection.once('connected', startListening);
+  }
 }
 
 export { app, httpServer };

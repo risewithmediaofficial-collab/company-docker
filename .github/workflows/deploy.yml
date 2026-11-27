@@ -13,22 +13,51 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy
+      - name: Deploy Application Services
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            set -eu
+            set -euo pipefail
             cd /docker/company
+
             echo "Before deploy: $(git rev-parse --short HEAD)"
             if ! git diff --quiet || ! git diff --cached --quiet; then
               echo "Stashing local tracked modifications before deploy..."
               git stash push -m "auto-backup-before-deploy-$(date +%s)" || true
             fi
+
             git fetch origin main
             git reset --hard origin/main
             echo "Deploying commit: $(git rev-parse --short HEAD)"
-            docker compose up -d --build --remove-orphans
+
+            # Validate Docker Compose configuration before deploying
+            docker compose config -q
+
+            # Deploy only application services; never touch external MongoDB or volumes
+            docker compose up -d --build --no-deps backend frontend
+
+            # Verify backend health (fail deployment if unhealthy)
+            echo "Waiting for backend healthcheck..."
+            HEALTHY=0
+            for i in $(seq 1 18); do
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' agency_crm_backend 2>/dev/null || echo "starting")
+              echo "Attempt $i/18: agency_crm_backend health=$STATUS"
+              if [ "$STATUS" = "healthy" ]; then
+                HEALTHY=1
+                break
+              fi
+              sleep 5
+            done
+
             docker compose ps
+            docker compose logs --tail=30 backend
+
+            if [ "$HEALTHY" -ne 1 ]; then
+              echo "ERROR: agency_crm_backend failed health verification!"
+              exit 1
+            fi
+
+            echo "Deployment verified healthy."

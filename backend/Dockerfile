@@ -11,8 +11,8 @@ WORKDIR /app
 # Copy package files first (for Docker layer caching)
 COPY package*.json ./
 
-# Install only production dependencies
-RUN npm install --omit=dev
+# Install only production dependencies cleanly from lockfile
+RUN npm ci --omit=dev
 
 # Copy the rest of the backend source code
 COPY . .

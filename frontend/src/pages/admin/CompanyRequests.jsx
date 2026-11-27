@@ -40,6 +40,13 @@ import WorkspacePage from '../../components/ui/WorkspacePage';
 import DatabaseView from '../../components/ui/DatabaseView';
 import { Button } from '../../components/ui/button';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
+import {
   exportCompanyDetailsToPDF,
   exportCompanyListToPDF,
 } from '../../utils/pdfExport';
@@ -805,18 +812,19 @@ export default function CompanyRequests() {
         </div>
 
         {/* Plan Filter Dropdown */}
-        <div className="flex items-center gap-2">
-          <select
-            value={planFilter}
-            onChange={(e) => setPlanFilter(e.target.value)}
-            className="h-8 px-2.5 rounded-xl border border-border bg-card text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="all">All Plans</option>
-            <option value="trial">Trial</option>
-            <option value="starter">Starter</option>
-            <option value="growth">Growth</option>
-            <option value="pro">Pro</option>
-          </select>
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <Select value={planFilter} onValueChange={setPlanFilter}>
+            <SelectTrigger className="h-9 w-full sm:w-[148px] rounded-xl border border-border bg-card px-3 text-xs font-semibold text-foreground shadow-sm hover:bg-secondary/60">
+              <SelectValue placeholder="All Plans" />
+            </SelectTrigger>
+            <SelectContent align="end" searchable={false} className="min-w-[148px]">
+              <SelectItem value="all">All Plans</SelectItem>
+              <SelectItem value="trial">Trial</SelectItem>
+              <SelectItem value="starter">Starter</SelectItem>
+              <SelectItem value="growth">Growth</SelectItem>
+              <SelectItem value="pro">Pro</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

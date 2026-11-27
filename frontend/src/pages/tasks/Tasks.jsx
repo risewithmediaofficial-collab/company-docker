@@ -481,16 +481,6 @@ const Tasks = () => {
       if (!task) return false;
       if (!globalStartDate && !globalEndDate) return true;
 
-      // Ongoing incomplete tasks remain visible even if their dueDate was earlier or is scheduled next month
-      const isIncomplete = !['Completed', 'Approved', 'done', 'completed'].includes(task.status);
-      if (isIncomplete) {
-        const created = task.createdAt ? new Date(task.createdAt) : null;
-        const rangeEndDate = globalEndDate ? new Date(`${globalEndDate}T23:59:59.999`) : null;
-        if (!created || !rangeEndDate || Number.isNaN(created.getTime()) || created <= rangeEndDate) {
-          return true;
-        }
-      }
-
       // Operational schedule/deadline dates take precedence over createdAt
       const operationalDates = [
         task.dueDate,
@@ -696,16 +686,19 @@ const Tasks = () => {
 
     // Sorting
     const priorityWeights = { Critical: 4, Urgent: 4, High: 3, Medium: 2, Low: 1 };
+    const createdMs = (item) => (item.createdAt ? new Date(item.createdAt).getTime() : 0);
     result.sort((a, b) => {
       if (sortBy === 'dueDate_asc') {
         const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
         const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-        return dateA - dateB;
+        if (dateA !== dateB) return dateA - dateB;
+        return createdMs(b) - createdMs(a);
       }
       if (sortBy === 'dueDate_desc') {
         const dateA = a.dueDate ? new Date(a.dueDate).getTime() : -Infinity;
         const dateB = b.dueDate ? new Date(b.dueDate).getTime() : -Infinity;
-        return dateB - dateA;
+        if (dateA !== dateB) return dateB - dateA;
+        return createdMs(b) - createdMs(a);
       }
       if (sortBy === 'priority_desc') {
         return (priorityWeights[b.priority] || 2) - (priorityWeights[a.priority] || 2);

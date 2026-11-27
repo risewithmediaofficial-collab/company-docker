@@ -233,7 +233,7 @@ const Projects = () => {
   const deleteProjectMutation = useDeleteProject();
   const updateProjectMutation = useUpdateProject();
 
-  // 1. Base projects filtered by global date sort (keeping ongoing active projects visible)
+  // 1. Base projects filtered strictly by selected global date range (All Dates shows everything)
   const baseDateFilteredProjects = useMemo(() => {
     if (!globalStartDate && !globalEndDate) return rawProjects;
 
@@ -241,28 +241,20 @@ const Projects = () => {
     const rangeEnd = globalEndDate || '9999-99-99';
 
     return rawProjects.filter((project) => {
-      const isOngoingActive = !['Completed', 'Cancelled', 'completed', 'cancelled'].includes(project.status);
-      if (isOngoingActive) {
-        const createdYmd = project.createdAt ? toLocalYMD(project.createdAt) : '';
-        if (!createdYmd || createdYmd <= rangeEnd) {
-          return true;
-        }
-      }
-
       const pStart = project.startDate ? toLocalYMD(project.startDate) : '';
       const pEnd = (project.endDate || project.dueDate) ? toLocalYMD(project.endDate || project.dueDate) : '';
 
-      // If both start and end exist, project is active if its duration overlaps [rangeStart, rangeEnd]
+      // If both start and end exist, project belongs to range if its duration overlaps [rangeStart, rangeEnd]
       if (pStart && pEnd) {
         return pStart <= rangeEnd && pEnd >= rangeStart;
       }
 
-      // If only start date exists
+      // If only start date exists, check if it falls within the selected range
       if (pStart) {
-        return pStart <= rangeEnd;
+        return isDateInRange(pStart);
       }
 
-      // If only end/due date exists
+      // If only end/due date exists, check if it falls within the selected range
       if (pEnd) {
         return isDateInRange(pEnd);
       }
@@ -354,16 +346,19 @@ const Projects = () => {
 
     // Sorting
     const priorityWeights = { Critical: 4, Urgent: 4, High: 3, Medium: 2, Low: 1 };
+    const createdMs = (item) => (item.createdAt ? new Date(item.createdAt).getTime() : 0);
     result.sort((a, b) => {
       if (sortBy === 'dueDate_asc') {
         const dateA = (a.dueDate || a.endDate) ? new Date(a.dueDate || a.endDate).getTime() : Infinity;
         const dateB = (b.dueDate || b.endDate) ? new Date(b.dueDate || b.endDate).getTime() : Infinity;
-        return dateA - dateB;
+        if (dateA !== dateB) return dateA - dateB;
+        return createdMs(b) - createdMs(a);
       }
       if (sortBy === 'dueDate_desc') {
         const dateA = (a.dueDate || a.endDate) ? new Date(a.dueDate || a.endDate).getTime() : -Infinity;
         const dateB = (b.dueDate || b.endDate) ? new Date(b.dueDate || b.endDate).getTime() : -Infinity;
-        return dateB - dateA;
+        if (dateA !== dateB) return dateB - dateA;
+        return createdMs(b) - createdMs(a);
       }
       if (sortBy === 'priority_desc') {
         return (priorityWeights[b.priority] || 2) - (priorityWeights[a.priority] || 2);
