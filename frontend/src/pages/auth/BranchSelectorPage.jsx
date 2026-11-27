@@ -287,11 +287,11 @@ export default function BranchSelectorPage() {
                     <div className="space-y-4">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <div className="text-[11px] font-bold uppercase tracking-wider text-[#0586a8]">
+                          <div className="text-base sm:text-lg font-black text-slate-950 tracking-tight leading-snug">
                             {branch.organization?.name || orgTitle}
                           </div>
-                          <h3 className="text-lg font-black text-slate-950 tracking-tight leading-snug">
-                            {branch.name}
+                          <h3 className="text-sm font-extrabold text-[#07c8f9] mt-0.5">
+                            {branch.name} Branch
                           </h3>
                         </div>
                         {branch.isHeadquarters && (
