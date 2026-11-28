@@ -1150,7 +1150,7 @@ const Companies = ({ defaultTab }) => {
       {/* ── MODAL 1: QUICK APPROVE MODAL ────────────────────────────────────── */}
       <AnimatePresence>
         {approveOrgTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+          <div className="!mt-0 fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -1258,7 +1258,7 @@ const Companies = ({ defaultTab }) => {
       {/* ── MODAL 2: ALL DETAILS COMPREHENSIVE MODAL ──────────────────────────── */}
       <AnimatePresence>
         {detailsModalOpen && detailsOrg && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+          <div className="!mt-0 fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
