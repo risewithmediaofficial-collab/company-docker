@@ -594,7 +594,15 @@ const SignInForm = ({
 };
 
 // ── Sign Up Form Component ───────────────────────────────────────────────────
-const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms }) => {
+const SignUpForm = ({
+  onSwitch,
+  portalOrg,
+  companySlug,
+  navigate,
+  onOpenTerms,
+  termsAccepted,
+  setTermsAccepted,
+}) => {
   const [signupData, setSignupData] = useState({
     name: '',
     email: '',
@@ -604,7 +612,6 @@ const SignUpForm = ({ onSwitch, portalOrg, companySlug, navigate, onOpenTerms })
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPass, setShowPass] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(false);
   const [captcha, setCaptcha] = useState({ captchaToken: '', captchaAnswer: '' });
   const [captchaRefreshKey, setCaptchaRefreshKey] = useState(0);
 
@@ -991,6 +998,8 @@ export const Login = ({ initialView }) => {
               portalOrg={portalOrg}
               companySlug={companySlug}
               navigate={navigate}
+              termsAccepted={termsAccepted}
+              setTermsAccepted={setTermsAccepted}
               onOpenTerms={() => setTermsModalOpen(true)}
             />
           )}
