@@ -30,7 +30,7 @@ import {
   Radio,
   Copy,
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../../api';
 import { toast } from 'sonner';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -93,16 +93,14 @@ const ALL_MODULES = [
   { key: 'sop', label: 'SOP Library', always: false },
   { key: 'assets', label: 'Asset Library', always: false },
   { key: 'smm', label: 'SMM Module', always: false },
-  { key: 'automations', label: 'Automations', always: false },
   { key: 'influencers', label: 'Influencer Hub', always: false },
-  { key: 'ai', label: 'AI Features', always: false },
 ];
 
 const PLAN_PRESETS = {
   trial: { maxUsers: 3, maxClients: 5, modules: ['crm', 'clients', 'projects', 'tasks'] },
   starter: { maxUsers: 10, maxClients: 25, modules: ['crm', 'clients', 'projects', 'tasks', 'finance', 'hr', 'attendance', 'portal', 'proposals', 'reports'] },
-  growth: { maxUsers: 25, maxClients: 100, modules: ['crm', 'clients', 'projects', 'tasks', 'finance', 'hr', 'attendance', 'smm', 'portal', 'sop', 'assets', 'proposals', 'reports', 'automations', 'influencers'] },
-  pro: { maxUsers: 999, maxClients: 9999, modules: ['crm', 'clients', 'projects', 'tasks', 'finance', 'hr', 'attendance', 'smm', 'portal', 'sop', 'assets', 'proposals', 'reports', 'automations', 'influencers', 'ai'] },
+  growth: { maxUsers: 25, maxClients: 100, modules: ['crm', 'clients', 'projects', 'tasks', 'finance', 'hr', 'attendance', 'smm', 'portal', 'sop', 'assets', 'proposals', 'reports', 'influencers'] },
+  pro: { maxUsers: 999, maxClients: 9999, modules: ['crm', 'clients', 'projects', 'tasks', 'finance', 'hr', 'attendance', 'smm', 'portal', 'sop', 'assets', 'proposals', 'reports', 'influencers'] },
 };
 
 export default function CompanyRequests() {
@@ -135,18 +133,12 @@ export default function CompanyRequests() {
   const [editModules, setEditModules] = useState({});
   const [editAdminNotes, setEditAdminNotes] = useState('');
 
-  const getHeaders = () => {
-    const token = localStorage.getItem('accessToken');
-    return { Authorization: `Bearer ${token}` };
-  };
-
   const fetchOrganizations = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('/api/platform/organizations?limit=100', {
-        headers: getHeaders(),
-      });
+      const res = await api.get('/platform/organizations?limit=100');
       setOrgs(res.data.organizations || []);
+      queryClient?.invalidateQueries({ queryKey: ['sidebar-badges'] });
     } catch {
       toast.error('Failed to load company registration requests');
     } finally {
@@ -168,15 +160,14 @@ export default function CompanyRequests() {
         modulesObj[m.key] = preset.modules.includes(m.key);
       });
 
-      await axios.put(
-        `/api/platform/organizations/${orgId}/approve`,
+      await api.put(
+        `/platform/organizations/${orgId}/approve`,
         {
           plan: planToApply,
           maxUsers: preset.maxUsers,
           maxClients: preset.maxClients,
           enabledModules: modulesObj,
-        },
-        { headers: getHeaders() }
+        }
       );
       toast.success('Company and owner account approved & activated successfully!');
       fetchOrganizations();
@@ -197,9 +188,7 @@ export default function CompanyRequests() {
     }
     setActionLoading(true);
     try {
-      await axios.delete(`/api/platform/organizations/${orgId}`, {
-        headers: getHeaders(),
-      });
+      await api.delete(`/platform/organizations/${orgId}`);
       toast.success(`Registration for "${companyName}" has been rejected`);
       fetchOrganizations();
       if (selectedOrg?._id === orgId) {
@@ -218,11 +207,7 @@ export default function CompanyRequests() {
     if (!reason) return;
     setActionLoading(true);
     try {
-      await axios.put(
-        `/api/platform/organizations/${orgId}/suspend`,
-        { reason },
-        { headers: getHeaders() }
-      );
+      await api.put(`/platform/organizations/${orgId}/suspend`, { reason });
       toast.success('Company suspended');
       fetchOrganizations();
       if (selectedOrg?._id === orgId) {
@@ -239,7 +224,7 @@ export default function CompanyRequests() {
   const handleReactivate = async (orgId) => {
     setActionLoading(true);
     try {
-      await axios.put(`/api/platform/organizations/${orgId}/reactivate`, {}, { headers: getHeaders() });
+      await api.put(`/platform/organizations/${orgId}/reactivate`, {});
       toast.success('Company reactivated successfully');
       fetchOrganizations();
       if (selectedOrg?._id === orgId) {
@@ -257,16 +242,15 @@ export default function CompanyRequests() {
     if (!selectedOrg) return;
     setActionLoading(true);
     try {
-      await axios.put(
-        `/api/platform/organizations/${selectedOrg._id}/plan`,
+      await api.put(
+        `/platform/organizations/${selectedOrg._id}/plan`,
         {
           plan: editPlan,
           maxUsers: editMaxUsers,
           maxClients: editMaxClients,
           enabledModules: editModules,
           adminNotes: editAdminNotes,
-        },
-        { headers: getHeaders() }
+        }
       );
       toast.success('Company plan, limits & modules updated successfully');
       fetchOrganizations();

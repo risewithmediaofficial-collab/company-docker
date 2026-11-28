@@ -566,45 +566,73 @@ const ClientDetails = () => {
           />
 
           {/* Client Information */}
-          <div className="bg-card rounded-3xl p-6 space-y-6">
-            <h2 className="font-bold text-lg">Client Information</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 text-sm">
+          <div className="bg-card border border-border/60 rounded-3xl p-5 sm:p-6 space-y-5 shadow-2xs">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-bold text-lg text-foreground">Client Information</h2>
+              {client.tier && (
+                <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-cyan-500/10 text-[#0586a8] dark:text-[#07c8f9] border border-cyan-500/20">
+                  {client.tier} Tier
+                </span>
+              )}
+            </div>
+
+            {/* Balanced 6-item Metadata Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5 text-sm">
               {[
                 ['Client ID', client.clientId || 'Not assigned'],
                 ['Type / Sector', client.industry || 'Not set'],
                 ['Account Tier', client.tier || 'Starter'],
                 ['Contract Start', client.contractStartDate ? new Date(client.contractStartDate).toLocaleDateString() : '—'],
-                ['Contract End', client.contractEndDate ? new Date(client.contractEndDate).toLocaleDateString() : 'Ongoing / Retainer (No End Date)'],
-                ['Requirements', client.services?.join(', ') || 'Not set'],
+                ['Contract End', client.contractEndDate ? new Date(client.contractEndDate).toLocaleDateString() : 'Ongoing / Retainer'],
                 ['Active Projects', `${projects.filter((p) => p.status === 'In Progress' || p.status === 'active').length} of ${projects.length}`],
               ].map(([label, value]) => (
-                <div key={label} className="p-4 bg-secondary/30 rounded-2xl">
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
-                  <p className="font-semibold capitalize">{value}</p>
+                <div key={label} className="p-3.5 sm:p-4 bg-secondary/35 border border-border/40 rounded-2xl">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
+                  <p className="font-bold text-foreground capitalize truncate">{value}</p>
                 </div>
               ))}
-              {/* Drive Link — full-width card */}
-              <div className="sm:col-span-2 lg:col-span-3 p-4 bg-secondary/30 rounded-2xl">
-                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-                  <FolderOpen size={13} /> Google Drive Folder
+            </div>
+
+            {/* Requirements / Services as Clean Pill Tags */}
+            <div className="p-4 bg-secondary/35 border border-border/40 rounded-2xl">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2.5 flex items-center gap-1.5">
+                <Briefcase size={13} className="text-[#0586a8] dark:text-[#07c8f9]" />
+                Requirements &amp; Services
+              </p>
+              {Array.isArray(client.services) && client.services.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {client.services.map((service) => (
+                    <span
+                      key={service}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-background border border-border/80 text-foreground shadow-2xs"
+                    >
+                      {service}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No requirements added yet.</p>
+              )}
+            </div>
+
+            {/* Google Drive Folder */}
+            <div className="p-4 bg-secondary/35 border border-border/40 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1.5">
+                  <FolderOpen size={13} className="text-[#0586a8] dark:text-[#07c8f9]" />
+                  Google Drive Folder
                 </p>
                 {client.driveLink ? (
-                  <a
-                    href={client.driveLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-foreground hover:underline break-all"
-                  >
-                    <FolderOpen size={15} className="shrink-0" />
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
                     {client.driveLink}
-                  </a>
+                  </p>
                 ) : (
                   <p className="text-sm text-muted-foreground italic">
                     No Drive folder linked yet.{' '}
                     {user?.role !== 'client' && (
                       <button
                         onClick={() => setShowEditModal(true)}
-                        className="text-foreground underline font-medium"
+                        className="text-foreground underline font-medium cursor-pointer"
                       >
                         Add one
                       </button>
@@ -612,11 +640,27 @@ const ClientDetails = () => {
                   </p>
                 )}
               </div>
+              {client.driveLink && (
+                <a
+                  href={client.driveLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#07c8f9] hover:bg-[#06b4e0] text-slate-950 font-extrabold text-xs shrink-0 transition-colors shadow-2xs"
+                >
+                  <span>Open Drive</span>
+                  <ExternalLink size={13} />
+                </a>
+              )}
             </div>
+
+            {/* Notes */}
             {client.notes && (
-              <div className="p-4 bg-secondary/30 rounded-2xl">
-                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Notes</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">{client.notes}</p>
+              <div className="p-4 bg-secondary/35 border border-border/40 border-l-4 border-l-[#07c8f9] rounded-2xl">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                  <FileText size={13} className="text-[#0586a8] dark:text-[#07c8f9]" />
+                  Notes &amp; Package Summary
+                </p>
+                <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">{client.notes}</p>
               </div>
             )}
             {client.socialMedia && Object.entries(client.socialMedia).some(([, v]) => v) && (
