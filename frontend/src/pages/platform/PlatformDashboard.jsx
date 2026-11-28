@@ -9,10 +9,10 @@ import axios from 'axios';
 import { toast } from 'sonner';
 
 const planColors = {
-  trial:   'text-slate-400 bg-slate-400/10',
-  starter: 'text-blue-400 bg-blue-400/10',
-  growth:  'text-violet-400 bg-violet-400/10',
-  pro:     'text-amber-400 bg-amber-400/10',
+  trial:   'text-slate-500 bg-slate-500/10',
+  starter: 'text-sky-600 bg-sky-500/10',
+  growth:  'text-[#0586a8] bg-[#07c8f9]/15',
+  pro:     'text-amber-600 bg-amber-500/10',
 };
 
 const statusColors = {
@@ -46,45 +46,45 @@ const PlatformDashboard = () => {
   const stats = data?.stats;
 
   const statCards = stats ? [
-    { label: 'Total Companies', value: stats.totalOrgs, icon: Building2, color: 'from-indigo-600 to-violet-600', sub: 'Registered' },
-    { label: 'Active Companies', value: stats.activeOrgs, icon: CheckCircle2, color: 'from-emerald-600 to-teal-600', sub: 'Currently using' },
-    { label: 'Pending Approval', value: stats.pendingOrgs, icon: Clock, color: 'from-amber-600 to-orange-600', sub: 'Awaiting review', urgent: stats.pendingOrgs > 0 },
-    { label: 'Total Users', value: stats.totalUsers, icon: Users2, color: 'from-blue-600 to-cyan-600', sub: 'Across all companies' },
+    { label: 'Total Companies', value: stats.totalOrgs, icon: Building2, color: 'from-[#07c8f9] to-[#0284c7]', sub: 'Registered' },
+    { label: 'Active Companies', value: stats.activeOrgs, icon: CheckCircle2, color: 'from-emerald-500 to-teal-600', sub: 'Currently using' },
+    { label: 'Pending Approval', value: stats.pendingOrgs, icon: Clock, color: 'from-amber-500 to-orange-600', sub: 'Awaiting review', urgent: stats.pendingOrgs > 0 },
+    { label: 'Total Users', value: stats.totalUsers, icon: Users2, color: 'from-sky-500 to-cyan-600', sub: 'Across all companies' },
   ] : [];
 
   const planItems = stats ? [
-    { label: 'Trial', count: stats.planBreakdown.trial, color: 'bg-slate-500' },
-    { label: 'Starter', count: stats.planBreakdown.starter, color: 'bg-blue-500' },
-    { label: 'Growth', count: stats.planBreakdown.growth, color: 'bg-violet-500' },
-    { label: 'Pro', count: stats.planBreakdown.pro, color: 'bg-amber-500' },
+    { label: 'Free / Trial', count: stats.planBreakdown.trial, color: 'bg-slate-400' },
+    { label: 'Starter', count: stats.planBreakdown.starter, color: 'bg-sky-500' },
+    { label: 'Growth', count: stats.planBreakdown.growth, color: 'bg-[#07c8f9]' },
+    { label: 'Enterprise Pro', count: stats.planBreakdown.pro, color: 'bg-amber-500' },
   ] : [];
 
   return (
     <div className="p-3.5 sm:p-5 lg:p-6 space-y-4 sm:space-y-6 w-full max-w-7xl mx-auto text-slate-900 min-w-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Platform Overview</h1>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight truncate">Platform Overview</h1>
         </div>
         <button
           onClick={fetch}
           disabled={loading}
-          className="self-start sm:self-auto flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-all text-xs sm:text-sm font-semibold shadow-xs cursor-pointer"
+          className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-all text-xs sm:text-sm font-semibold shadow-xs cursor-pointer shrink-0"
         >
-          <RefreshCw size={14} className={loading ? 'animate-spin text-indigo-600' : ''} />
+          <RefreshCw size={14} className={loading ? 'animate-spin text-[#0586a8]' : ''} />
           <span>Refresh</span>
         </button>
       </div>
 
       {/* Stat Cards */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="h-28 sm:h-32 rounded-2xl bg-white border border-slate-200 animate-pulse shadow-xs" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {statCards.map((card, i) => (
             <motion.div
               key={card.label}
@@ -111,7 +111,7 @@ const PlatformDashboard = () => {
         {/* Plan Distribution */}
         <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs">
           <h3 className="text-slate-900 font-bold mb-4 flex items-center gap-2">
-            <TrendingUp size={16} className="text-indigo-600" />
+            <TrendingUp size={16} className="text-[#0586a8]" />
             Plan Distribution
           </h3>
           <div className="space-y-3">
@@ -152,7 +152,7 @@ const PlatformDashboard = () => {
             </h3>
             <Link
               to="/platform/companies?tab=requests"
-              className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-1"
+              className="text-xs text-[#0586a8] hover:text-[#04718f] font-semibold flex items-center gap-1 shrink-0"
             >
               View all <ArrowRight size={12} />
             </Link>
@@ -166,8 +166,8 @@ const PlatformDashboard = () => {
           ) : (
             <div className="space-y-3">
               {data.recentPending.map((org) => (
-                <div key={org._id} className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <div className="flex items-center gap-3">
+                <div key={org._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 font-bold text-sm shrink-0">
                       {org.name?.charAt(0)}
                     </div>
@@ -178,7 +178,7 @@ const PlatformDashboard = () => {
                   </div>
                   <Link
                     to={`/platform/companies/${org._id}`}
-                    className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-colors shrink-0"
+                    className="w-full sm:w-auto text-center px-3.5 py-2 sm:py-1.5 rounded-lg bg-[#0586a8] hover:bg-[#04718f] text-white text-xs font-bold shadow-xs transition-colors shrink-0"
                   >
                     Review
                   </Link>
@@ -193,15 +193,15 @@ const PlatformDashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <Link
           to="/platform/companies"
-          className="flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-200 hover:border-indigo-300 shadow-xs transition-all group"
+          className="flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-200 hover:border-cyan-300 shadow-xs transition-all group"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-cyan-50 border border-cyan-100 flex items-center justify-center text-[#0586a8] shrink-0">
               <Building2 size={20} />
             </div>
             <span className="text-slate-900 font-bold text-sm">Manage All Companies</span>
           </div>
-          <ArrowRight size={16} className="text-indigo-600 group-hover:translate-x-1 transition-transform shrink-0" />
+          <ArrowRight size={16} className="text-[#0586a8] group-hover:translate-x-1 transition-transform shrink-0" />
         </Link>
         <Link
           to="/platform/companies?tab=requests"

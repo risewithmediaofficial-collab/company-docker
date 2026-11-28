@@ -224,7 +224,7 @@ const CompanyDetail = () => {
           <Link to="/platform/companies" className="p-2 sm:p-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 shadow-xs transition-all shrink-0">
             <ArrowLeft size={18} />
           </Link>
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-700 font-bold text-lg sm:text-xl overflow-hidden border border-indigo-100 shadow-xs shrink-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-cyan-50 flex items-center justify-center text-[#0586a8] font-bold text-lg sm:text-xl overflow-hidden border border-cyan-100 shadow-xs shrink-0">
             {org.logo ? (
               <img src={org.logo} alt={org.name} className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             ) : (
@@ -238,7 +238,7 @@ const CompanyDetail = () => {
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto">
           <button
             onClick={handleLiveViewCRM}
             className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-all shadow-xs cursor-pointer"
@@ -302,7 +302,7 @@ const CompanyDetail = () => {
             key={t}
             onClick={() => setActiveTab(t)}
             className={`whitespace-nowrap px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer ${
-              activeTab === t ? 'bg-white text-indigo-700 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              activeTab === t ? 'bg-white text-[#0586a8] font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             {t}
@@ -316,14 +316,14 @@ const CompanyDetail = () => {
         {activeTab === 'Overview' && (
           <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Dedicated Portal URL with Copied Feedback */}
-            <div className="lg:col-span-2 p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="lg:col-span-2 p-4 rounded-2xl bg-cyan-50/70 border border-cyan-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
               <div>
-                <p className="text-indigo-950 font-bold text-sm flex items-center gap-2">
-                  <Globe size={16} className="text-indigo-600" />
+                <p className="text-cyan-950 font-bold text-sm flex items-center gap-2">
+                  <Globe size={16} className="text-[#0586a8]" />
                   Dedicated Company Login Portal
                 </p>
-                <p className="text-indigo-800 text-xs mt-0.5 font-medium">
-                  Workspace members access CRM at: <strong className="text-indigo-950 font-mono font-bold">{portalUrlSafe}</strong>
+                <p className="text-cyan-800 text-xs mt-0.5 font-medium break-words">
+                  Workspace members access CRM at: <strong className="text-cyan-950 font-mono font-bold break-all">{portalUrlSafe}</strong>
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -333,7 +333,7 @@ const CompanyDetail = () => {
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
                     copied
                       ? 'bg-emerald-600 text-white'
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                      : 'bg-[#0586a8] hover:bg-[#04718f] text-white'
                   }`}
                 >
                   {copied ? (
@@ -363,7 +363,7 @@ const CompanyDetail = () => {
             {/* Company Info */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs">
               <h3 className="text-slate-900 font-bold flex items-center gap-2">
-                <Building2 size={16} className="text-indigo-600" /> Company Info
+                <Building2 size={16} className="text-[#0586a8]" /> Company Info
               </h3>
               <div className="space-y-3 text-sm">
                 {[
@@ -385,7 +385,7 @@ const CompanyDetail = () => {
             {/* Owner Info */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs">
               <h3 className="text-slate-900 font-bold flex items-center gap-2">
-                <Users2 size={16} className="text-indigo-600" /> Owner Details
+                <Users2 size={16} className="text-[#0586a8]" /> Owner Details
               </h3>
               <div className="space-y-3 text-sm">
                 {[
@@ -394,24 +394,33 @@ const CompanyDetail = () => {
                   { label: 'Phone', value: org.ownerId?.phone || '—' },
                   { label: 'Last Login', value: org.ownerId?.lastLogin ? new Date(org.ownerId.lastLogin).toLocaleString('en-IN') : 'Never' },
                 ].map(({ label, value }) => (
-                  <div key={label} className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500">{label}</span>
-                    <span className="text-slate-900 font-semibold">{value}</span>
+                  <div key={label} className="flex justify-between gap-3 py-1 border-b border-slate-100">
+                    <span className="text-slate-500 shrink-0">{label}</span>
+                    <span className="text-slate-900 font-semibold text-right break-all">{value}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Current Plan Summary */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-xs">
-              <h3 className="text-slate-900 font-bold flex items-center gap-2">
-                <Package size={16} className="text-indigo-600" /> Current Plan
-              </h3>
+            <div className={`bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs ${isPending ? 'lg:col-span-2' : ''}`}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-slate-900 font-bold flex items-center gap-2">
+                  <Package size={16} className="text-[#0586a8]" /> Current Plan
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('Plan & Modules')}
+                  className="text-xs font-bold text-[#0586a8] hover:underline cursor-pointer"
+                >
+                  Configure Plan &amp; Modules →
+                </button>
+              </div>
               <div className="flex items-center gap-3">
                 <span className="text-2xl font-black text-slate-900 capitalize">{org.plan}</span>
                 <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${statusColor}`}>{org.planStatus}</span>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                 <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-center">
                   <p className="text-2xl font-bold text-slate-900">{org.maxUsers}</p>
                   <p className="text-slate-500 text-xs mt-0.5">Max Users</p>
@@ -419,6 +428,10 @@ const CompanyDetail = () => {
                 <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-center">
                   <p className="text-2xl font-bold text-slate-900">{org.maxClients}</p>
                   <p className="text-slate-500 text-xs mt-0.5">Max Clients</p>
+                </div>
+                <div className="col-span-2 sm:col-span-1 bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-slate-900">{org.enabledModules?.length ?? 0}</p>
+                  <p className="text-slate-500 text-xs mt-0.5">Enabled Modules</p>
                 </div>
               </div>
             </div>
@@ -476,7 +489,7 @@ const CompanyDetail = () => {
                     onClick={() => applyPreset(p)}
                     className={`p-3 rounded-xl border text-sm font-bold capitalize transition-all cursor-pointer ${
                       plan === p
-                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs'
+                        ? 'bg-[#0586a8] border-[#0586a8] text-white shadow-xs'
                         : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
@@ -491,7 +504,7 @@ const CompanyDetail = () => {
                     type="number"
                     value={maxUsers}
                     onChange={(e) => setMaxUsers(Number(e.target.value))}
-                    className="w-full bg-white border border-slate-300 rounded-xl py-2.5 px-4 text-slate-900 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                    className="w-full bg-white border border-slate-300 rounded-xl py-2.5 px-4 text-slate-900 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
                   />
                 </div>
                 <div>
@@ -500,7 +513,7 @@ const CompanyDetail = () => {
                     type="number"
                     value={maxClients}
                     onChange={(e) => setMaxClients(Number(e.target.value))}
-                    className="w-full bg-white border border-slate-300 rounded-xl py-2.5 px-4 text-slate-900 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                    className="w-full bg-white border border-slate-300 rounded-xl py-2.5 px-4 text-slate-900 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
                   />
                 </div>
               </div>
@@ -518,16 +531,16 @@ const CompanyDetail = () => {
                       onClick={() => toggleModule(mod.key)}
                       className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
                         isOn
-                          ? 'bg-indigo-50/70 border-indigo-300'
+                          ? 'bg-cyan-50/70 border-cyan-300'
                           : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
                       } ${mod.always ? 'cursor-not-allowed opacity-75' : ''}`}
                     >
                       <div>
-                        <p className={`text-sm font-semibold ${isOn ? 'text-indigo-950 font-bold' : 'text-slate-600'}`}>{mod.label}</p>
+                        <p className={`text-sm font-semibold ${isOn ? 'text-cyan-950 font-bold' : 'text-slate-600'}`}>{mod.label}</p>
                         {mod.always && <p className="text-[10px] text-slate-400 font-medium">Core module (always on)</p>}
                       </div>
                       {isOn
-                        ? <ToggleRight size={22} className="text-indigo-600 flex-shrink-0" />
+                        ? <ToggleRight size={22} className="text-[#0586a8] flex-shrink-0" />
                         : <ToggleLeft size={22} className="text-slate-400 flex-shrink-0" />
                       }
                     </div>
@@ -540,7 +553,7 @@ const CompanyDetail = () => {
             <button
               onClick={isPending ? handleApprove : handleSavePlan}
               disabled={saving}
-              className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 rounded-xl bg-[#0586a8] hover:bg-[#04718f] text-white font-bold text-sm transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
               <Save size={16} />
               {saving ? 'Saving...' : isPending ? 'Approve & Activate with These Settings' : 'Save Plan & Module Changes'}
@@ -574,7 +587,7 @@ const CompanyDetail = () => {
                     <tr key={u._id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 text-sm font-bold">
+                          <div className="w-8 h-8 rounded-xl bg-cyan-50 border border-cyan-100 flex items-center justify-center text-[#0586a8] text-sm font-bold">
                             {u.name?.charAt(0)}
                           </div>
                           <span className="text-slate-900 text-sm font-semibold">{u.name}</span>
@@ -584,7 +597,7 @@ const CompanyDetail = () => {
                         <span className="text-slate-600 text-sm">{u.email}</span>
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className="text-indigo-700 font-medium text-xs bg-indigo-50 px-2 py-0.5 rounded capitalize">{u.role}</span>
+                        <span className="text-[#0586a8] font-medium text-xs bg-cyan-50 px-2 py-0.5 rounded capitalize">{u.role}</span>
                       </td>
                       <td className="px-5 py-3.5 hidden lg:table-cell">
                         <span className="text-slate-400 text-xs">{u.lastLogin ? new Date(u.lastLogin).toLocaleDateString('en-IN') : 'Never'}</span>
@@ -607,7 +620,7 @@ const CompanyDetail = () => {
           <motion.div key="notes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
             <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs">
               <h3 className="text-slate-900 font-bold flex items-center gap-2">
-                <StickyNote size={16} className="text-indigo-600" /> Admin Notes
+                <StickyNote size={16} className="text-[#0586a8]" /> Admin Notes
                 <span className="text-xs text-slate-400 font-normal">(Private — only visible to you)</span>
               </h3>
               <textarea
@@ -615,12 +628,12 @@ const CompanyDetail = () => {
                 onChange={(e) => setAdminNotes(e.target.value)}
                 rows={8}
                 placeholder="Add internal notes about this company, payment records, special arrangements, etc..."
-                className="w-full bg-white border border-slate-300 rounded-xl p-4 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none"
+                className="w-full bg-white border border-slate-300 rounded-xl p-4 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 resize-none"
               />
               <button
                 onClick={handleSavePlan}
                 disabled={saving}
-                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+                className="px-6 py-2.5 rounded-xl bg-[#0586a8] hover:bg-[#04718f] text-white text-sm font-bold transition-all shadow-sm disabled:opacity-50 cursor-pointer"
               >
                 {saving ? 'Saving...' : 'Save Notes'}
               </button>

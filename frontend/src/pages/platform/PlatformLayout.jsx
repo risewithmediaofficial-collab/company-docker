@@ -89,7 +89,7 @@ const PlatformLayout = () => {
             }}
             className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
               active
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 font-semibold'
+                ? 'bg-gradient-to-r from-[#06b4e0] to-[#0284c7] text-white shadow-md shadow-cyan-600/20 font-semibold'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
           >
@@ -102,7 +102,7 @@ const PlatformLayout = () => {
               <span
                 className={`px-2 py-0.5 rounded-full text-[11px] font-bold transition-all ${
                   active
-                    ? 'bg-white text-indigo-700'
+                    ? 'bg-white text-[#0586a8]'
                     : 'bg-amber-100 text-amber-800 border border-amber-300 shadow-xs animate-pulse'
                 }`}
               >
@@ -118,7 +118,7 @@ const PlatformLayout = () => {
   const renderUserProfileAndBack = (isMobile = false) => (
     <div className="p-3 sm:p-4 border-t border-slate-100 space-y-2">
       <div className="flex items-center gap-3 px-3 py-2 bg-slate-50/80 rounded-xl border border-slate-100">
-        <div className="w-8 h-8 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 text-xs font-bold shrink-0">
+        <div className="w-8 h-8 rounded-full bg-cyan-50 border border-cyan-200 flex items-center justify-center text-[#0586a8] text-xs font-bold shrink-0">
           {user?.name?.charAt(0)}
         </div>
         <div className="min-w-0">
@@ -156,12 +156,12 @@ const PlatformLayout = () => {
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#07c8f9] to-[#0284c7] flex items-center justify-center text-white shadow-xs shrink-0">
               <Shield size={14} />
             </div>
             <div className="leading-tight">
               <p className="text-slate-900 text-xs font-bold leading-none">Platform Admin</p>
-              <p className="text-indigo-600 text-[9px] font-semibold uppercase tracking-wider mt-0.5">Super Admin</p>
+              <p className="text-[#0586a8] text-[9px] font-semibold uppercase tracking-wider mt-0.5">Super Admin</p>
             </div>
           </div>
         </div>
@@ -209,12 +209,12 @@ const PlatformLayout = () => {
             >
               <div className="h-16 flex items-center justify-between px-5 border-b border-slate-100">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm shadow-indigo-600/20 shrink-0">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#07c8f9] to-[#0284c7] flex items-center justify-center text-white shadow-sm shadow-cyan-500/20 shrink-0">
                     <Shield size={16} />
                   </div>
                   <div>
                     <p className="text-slate-900 text-sm font-bold leading-tight">Platform Admin</p>
-                    <p className="text-indigo-600 text-[10px] font-semibold uppercase tracking-wider">Super Admin Console</p>
+                    <p className="text-[#0586a8] text-[10px] font-semibold uppercase tracking-wider">Super Admin Console</p>
                   </div>
                 </div>
                 <button
@@ -238,12 +238,12 @@ const PlatformLayout = () => {
       <aside className="hidden lg:flex w-64 shrink-0 bg-white border-r border-slate-200/80 flex-col shadow-xs sticky top-0 h-screen">
         {/* Logo */}
         <div className="h-16 flex items-center px-5 border-b border-slate-100 gap-3">
-          <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0 shadow-sm shadow-indigo-600/20">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#07c8f9] to-[#0284c7] flex items-center justify-center shrink-0 shadow-sm shadow-cyan-500/20">
             <Shield size={16} className="text-white" />
           </div>
           <div>
             <p className="text-slate-900 text-sm font-bold leading-tight">Platform Admin</p>
-            <p className="text-indigo-600 text-[10px] font-semibold uppercase tracking-wider">Super Admin Console</p>
+            <p className="text-[#0586a8] text-[10px] font-semibold uppercase tracking-wider">Super Admin Console</p>
           </div>
         </div>
 

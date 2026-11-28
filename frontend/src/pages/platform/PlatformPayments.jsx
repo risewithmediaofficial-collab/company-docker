@@ -173,7 +173,7 @@ export default function PlatformPayments() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <CreditCard size={22} className="text-indigo-600" />
+            <CreditCard size={22} className="text-[#0586a8]" />
             <span>Payments &amp; Failed Checkouts</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
@@ -196,7 +196,7 @@ export default function PlatformPayments() {
             disabled={loading}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-semibold shadow-xs cursor-pointer"
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin text-indigo-600' : ''} />
+            <RefreshCw size={14} className={loading ? 'animate-spin text-[#0586a8]' : ''} />
             <span>Refresh</span>
           </button>
         </div>
@@ -242,7 +242,7 @@ export default function PlatformPayments() {
                 statusFilter === tab.id
                   ? tab.id === 'failed'
                     ? 'bg-red-600 text-white shadow-xs'
-                    : 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-[#0586a8] text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -261,7 +261,7 @@ export default function PlatformPayments() {
               setPage(1);
             }}
             placeholder="Search name, contact number, company, order ID..."
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:outline-none"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-cyan-500 focus:outline-none"
           />
         </div>
       </div>
@@ -302,7 +302,7 @@ export default function PlatformPayments() {
                         {p.contactNumber ? (
                           <a
                             href={`tel:${p.contactNumber}`}
-                            className="inline-flex items-center gap-1 text-indigo-600 hover:underline font-semibold mt-0.5"
+                            className="inline-flex items-center gap-1 text-[#0586a8] hover:underline font-semibold mt-0.5"
                           >
                             <Phone size={11} />
                             <span>{p.contactNumber}</span>
@@ -322,7 +322,7 @@ export default function PlatformPayments() {
                         {p.organizationId?._id || p.organizationId ? (
                           <Link
                             to={`/platform/companies/${p.organizationId?._id || p.organizationId}`}
-                            className="inline-flex items-center gap-1.5 font-semibold text-slate-800 hover:text-indigo-600"
+                            className="inline-flex items-center gap-1.5 font-semibold text-slate-800 hover:text-[#0586a8]"
                           >
                             <Building2 size={13} className="text-slate-400 shrink-0" />
                             <span>{p.companyName || 'Workspace'}</span>
@@ -391,7 +391,7 @@ export default function PlatformPayments() {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="text-sm font-bold text-slate-900">{p.payerName || 'Unknown Payer'}</p>
-                      <p className="text-xs font-semibold text-indigo-600 mt-0.5">
+                      <p className="text-xs font-semibold text-[#0586a8] mt-0.5">
                         {p.contactNumber || 'No contact number'}
                       </p>
                       {p.payerEmail && <p className="text-[11px] text-slate-500">{p.payerEmail}</p>}

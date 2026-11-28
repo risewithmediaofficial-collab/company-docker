@@ -24,18 +24,18 @@ import { toast } from 'sonner';
 const planColors = {
   trial: { label: 'Trial', bar: 'bg-slate-500', text: 'text-slate-700', badge: 'bg-slate-100 text-slate-700 border-slate-200' },
   starter: { label: 'Starter', bar: 'bg-blue-600', text: 'text-blue-700', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
-  growth: { label: 'Growth', bar: 'bg-violet-600', text: 'text-violet-700', badge: 'bg-violet-50 text-violet-700 border-violet-200' },
+  growth: { label: 'Growth', bar: 'bg-sky-600', text: 'text-sky-700', badge: 'bg-sky-50 text-sky-700 border-sky-200' },
   pro: { label: 'Pro', bar: 'bg-amber-600', text: 'text-amber-800', badge: 'bg-amber-50 text-amber-800 border-amber-200' },
 };
 
 const moduleCatalog = [
   { key: 'crm', label: 'CRM & Client Pipeline', icon: Users2, color: 'text-blue-600' },
   { key: 'leads', label: 'Lead Management', icon: TrendingUp, color: 'text-emerald-600' },
-  { key: 'projects', label: 'Projects & Tasks', icon: Layers, color: 'text-indigo-600' },
+  { key: 'projects', label: 'Projects & Tasks', icon: Layers, color: 'text-[#0586a8]' },
   { key: 'finance', label: 'Finance & Invoicing', icon: BarChart3, color: 'text-cyan-600' },
   { key: 'hr', label: 'HR & Employee Management', icon: Shield, color: 'text-rose-600' },
   { key: 'attendance', label: 'Attendance & Geofencing', icon: MapPin, color: 'text-amber-600' },
-  { key: 'smm', label: 'SMM & Marketing Suite', icon: Activity, color: 'text-violet-600' },
+  { key: 'smm', label: 'SMM & Marketing Suite', icon: Activity, color: 'text-sky-600' },
   { key: 'sop', label: 'SOP & Standard Procedures', icon: Building2, color: 'text-teal-600' },
 ];
 
@@ -112,7 +112,7 @@ export default function PlatformAnalytics() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200 pb-4 sm:pb-5">
         <div>
-          <div className="flex items-center gap-2 text-indigo-600 text-xs font-bold uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-[#0586a8] text-xs font-bold uppercase tracking-wider mb-1">
             <BarChart3 size={15} />
             <span>Platform Intelligence</span>
           </div>
@@ -124,7 +124,7 @@ export default function PlatformAnalytics() {
           disabled={loading}
           className="self-start sm:self-center flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition-all text-xs font-bold shadow-xs cursor-pointer"
         >
-          <RefreshCw size={14} className={loading ? 'animate-spin text-indigo-600' : ''} />
+          <RefreshCw size={14} className={loading ? 'animate-spin text-[#0586a8]' : ''} />
           <span>Refresh Analytics</span>
         </button>
       </div>
@@ -143,7 +143,7 @@ export default function PlatformAnalytics() {
             animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 relative overflow-hidden shadow-xs"
           >
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center mb-3">
+            <div className="w-9 h-9 rounded-xl bg-cyan-50 border border-cyan-100 text-[#0586a8] flex items-center justify-center mb-3">
               <Building2 size={18} />
             </div>
             <div className="text-2xl sm:text-3xl font-bold text-slate-900">{totalOrgs}</div>
@@ -201,7 +201,7 @@ export default function PlatformAnalytics() {
         <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3.5 sm:space-y-4 shadow-xs">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="text-slate-900 font-bold text-sm flex items-center gap-2">
-              <PieChart size={16} className="text-indigo-600" />
+              <PieChart size={16} className="text-[#0586a8]" />
               <span>Subscription Tier Breakdown</span>
             </h3>
             <span className="text-xs text-slate-400 font-medium">Active Tenants</span>
@@ -237,9 +237,9 @@ export default function PlatformAnalytics() {
               <span className="text-slate-500 block text-[11px] font-medium">Free/Trial</span>
               <strong className="text-slate-900 text-sm font-bold">{stats?.planBreakdown?.trial || 0}</strong>
             </div>
-            <div className="p-2 sm:p-2.5 rounded-xl bg-indigo-50/70 border border-indigo-100">
-              <span className="text-indigo-700 block text-[11px] font-bold">Paid Tiers</span>
-              <strong className="text-indigo-950 text-sm font-bold">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-cyan-50/70 border border-cyan-100">
+              <span className="text-[#0586a8] block text-[11px] font-bold">Paid Tiers</span>
+              <strong className="text-cyan-950 text-sm font-bold">
                 {(stats?.planBreakdown?.starter || 0) + (stats?.planBreakdown?.growth || 0) + (stats?.planBreakdown?.pro || 0)}
               </strong>
             </div>
@@ -326,7 +326,7 @@ export default function PlatformAnalytics() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-slate-100 pb-3">
           <div>
             <h3 className="text-slate-900 font-bold text-sm flex items-center gap-2">
-              <Layers size={16} className="text-indigo-600" />
+              <Layers size={16} className="text-[#0586a8]" />
               <span>Core Module Adoption Across Tenants</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -343,7 +343,7 @@ export default function PlatformAnalytics() {
               className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2 hover:border-slate-300 transition-all shadow-2xs"
             >
               <div className="flex items-center justify-between">
-                <div className="p-2 rounded-lg bg-white border border-slate-200 text-indigo-600 shadow-2xs">
+                <div className="p-2 rounded-lg bg-white border border-slate-200 text-[#0586a8] shadow-2xs">
                   <mod.icon size={16} />
                 </div>
                 <span className="text-xs font-bold text-slate-900 font-mono">{mod.pct}%</span>
@@ -353,7 +353,7 @@ export default function PlatformAnalytics() {
                 <p className="text-[11px] text-slate-500 mt-0.5">{mod.enabledCount} of {totalOrgs} companies active</p>
               </div>
               <div className="h-2 rounded-full bg-slate-200/80 overflow-hidden">
-                <div className="h-full rounded-full bg-indigo-600" style={{ width: `${mod.pct}%` }} />
+                <div className="h-full rounded-full bg-[#0586a8]" style={{ width: `${mod.pct}%` }} />
               </div>
             </div>
           ))}
@@ -363,12 +363,12 @@ export default function PlatformAnalytics() {
       {/* Quick Action Navigation Footer */}
       <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2 text-slate-600 font-medium">
-          <Shield size={16} className="text-indigo-600 shrink-0" />
+          <Shield size={16} className="text-[#0586a8] shrink-0" />
           <span>Manage detailed company profiles, subscription plans, and enterprise modules from the Companies directory.</span>
         </div>
         <Link
           to="/platform/companies"
-          className="w-full sm:w-auto justify-center px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all shadow-xs shrink-0 flex items-center gap-1.5 cursor-pointer"
+          className="w-full sm:w-auto justify-center px-4 py-2 rounded-xl bg-[#0586a8] hover:bg-[#04718f] text-white font-bold transition-all shadow-xs shrink-0 flex items-center gap-1.5 cursor-pointer"
         >
           <span>Open Companies Management</span>
           <ArrowRight size={13} />
