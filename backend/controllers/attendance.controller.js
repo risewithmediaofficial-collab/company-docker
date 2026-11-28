@@ -839,75 +839,104 @@ export const submitLeave = async (req, res) => {
 
 export const submitWFH = async (req, res) => {
   try {
-    const { date, notes, reason } = req.body;
+    const { startDate, endDate, date, notes, reason } = req.body;
     const reasonText = notes || reason || 'Work From Home Requested';
 
-    if (!date) {
-      return res.status(400).json({ success: false, message: 'Date is required' });
+    const fromInput = startDate || date;
+    const toInput = endDate || fromInput;
+
+    if (!fromInput) {
+      return res.status(400).json({ success: false, message: 'From date is required' });
     }
 
-    const wfhDate = new Date(date);
-    wfhDate.setHours(0, 0, 0, 0);
+    const start = new Date(fromInput);
+    const end = new Date(toInput);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return res.status(400).json({ success: false, message: 'Invalid WFH date range' });
+    }
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    if (end < start) {
+      return res.status(400).json({ success: false, message: 'To date must be on or after From date' });
+    }
+
+    const totalDays = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    if (totalDays > 60) {
+      return res.status(400).json({ success: false, message: 'WFH request cannot exceed 60 days at once' });
+    }
 
     const isAdminOrManager = ['superAdmin', 'admin', 'organizationOwner', 'manager', 'accountManager'].includes(req.user.role);
-
-    const updateObj = {
-      notes: reasonText.trim(),
-      requestedStatus: 'work_from_home',
-      status: 'work_from_home',
-      approvalStatus: isAdminOrManager ? 'approved' : 'pending',
-      isApproved: isAdminOrManager,
-      approvedBy: isAdminOrManager ? req.user._id : undefined,
-      appliedAt: new Date(),
-      wfhApprovedForDate: isAdminOrManager,
-    };
-
-    // Keep WFHRequest model in sync if present
+    let WFHRequest = null;
     try {
-      const WFHRequest = (await import('../models/wfhRequest.model.js')).default;
-      const wfhReq = await WFHRequest.findOneAndUpdate(
-        { user: req.user._id, date: wfhDate },
-        {
-          user: req.user._id,
-          date: wfhDate,
-          reason: reasonText.trim(),
-          status: isAdminOrManager ? 'approved' : 'pending',
-          department: req.user.department,
-          reviewedBy: isAdminOrManager ? req.user._id : undefined,
-          reviewedAt: isAdminOrManager ? new Date() : undefined,
-        },
-        { upsert: true, new: true }
-      );
-      if (wfhReq) {
-        updateObj.wfhRequestId = wfhReq._id;
+      WFHRequest = (await import('../models/wfhRequest.model.js')).default;
+    } catch (_) {}
+
+    const createdAttendances = [];
+    for (let offset = 0; offset < totalDays; offset += 1) {
+      const dayDate = new Date(start);
+      dayDate.setDate(start.getDate() + offset);
+      dayDate.setHours(0, 0, 0, 0);
+
+      const updateObj = {
+        notes: reasonText.trim(),
+        requestedStatus: 'work_from_home',
+        status: 'work_from_home',
+        approvalStatus: isAdminOrManager ? 'approved' : 'pending',
+        isApproved: isAdminOrManager,
+        approvedBy: isAdminOrManager ? req.user._id : undefined,
+        appliedAt: new Date(),
+        wfhApprovedForDate: isAdminOrManager,
+      };
+
+      if (WFHRequest) {
+        try {
+          const wfhReq = await WFHRequest.findOneAndUpdate(
+            { user: req.user._id, date: dayDate },
+            {
+              user: req.user._id,
+              date: dayDate,
+              reason: reasonText.trim(),
+              status: isAdminOrManager ? 'approved' : 'pending',
+              department: req.user.department,
+              reviewedBy: isAdminOrManager ? req.user._id : undefined,
+              reviewedAt: isAdminOrManager ? new Date() : undefined,
+            },
+            { upsert: true, new: true }
+          );
+          if (wfhReq) {
+            updateObj.wfhRequestId = wfhReq._id;
+          }
+        } catch (_) {
+          // Non-blocking sync
+        }
       }
-    } catch (wfhErr) {
-      // Non-blocking sync
+
+      const attendance = await Attendance.findOneAndUpdate(
+        { user: req.user._id, date: dayDate },
+        { $set: updateObj },
+        { upsert: true, new: true }
+      ).populate('user', 'name avatar department position role email');
+
+      createdAttendances.push(attendance);
     }
 
-    if (isAdminOrManager) {
-      updateObj.status = 'work_from_home';
-    }
-
-    const attendance = await Attendance.findOneAndUpdate(
-      { user: req.user._id, date: wfhDate },
-      { $set: updateObj },
-      { upsert: true, new: true }
-    ).populate('user', 'name avatar department position role email');
+    const startLabel = start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    const endLabel = end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    const rangeLabel = totalDays > 1 ? `${startLabel} – ${endLabel} (${totalDays} days)` : startLabel;
 
     // Notify managers & admins if requested by an employee
     if (!isAdminOrManager) {
       try {
         const User = (await import('../models/user.model.js')).default;
         const managers = await User.find({ role: { $in: ['superAdmin', 'admin', 'manager', 'organizationOwner', 'accountManager'] }, isActive: true }).select('_id');
-        const formattedDate = wfhDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
         for (const mgr of managers) {
           await createNotification({
             recipient: mgr._id,
             sender: req.user._id,
             type: 'attendance',
             title: 'Work From Home Request Pending \u{1F3E0}',
-            message: `${req.user.name} requested WFH for ${formattedDate}: "${reasonText.trim()}"`,
+            message: `${req.user.name} requested WFH for ${rangeLabel}: "${reasonText.trim()}"`,
             link: '/attendance',
           });
         }
@@ -916,12 +945,16 @@ export const submitWFH = async (req, res) => {
       }
     }
 
-    emitLiveEvent('attendanceUpdated', { attendance, userId: req.user._id });
+    emitLiveEvent('attendanceUpdated', { attendance: createdAttendances[0], userId: req.user._id });
 
     res.json({
       success: true,
-      message: isAdminOrManager ? 'Work From Home marked successfully' : 'Work From Home request submitted for Admin/Manager approval',
-      attendance,
+      message: isAdminOrManager
+        ? `Work From Home marked for ${rangeLabel}`
+        : `Work From Home request submitted for ${rangeLabel}`,
+      attendance: createdAttendances[0],
+      attendances: createdAttendances,
+      count: createdAttendances.length,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

@@ -112,7 +112,7 @@ const Attendance = () => {
     endDate: todayStr,
     notes: '',
   });
-  const [wfhForm, setWfhForm] = useState({ date: todayStr, notes: '' });
+  const [wfhForm, setWfhForm] = useState({ startDate: todayStr, endDate: todayStr, notes: '' });
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [reminding, setReminding] = useState(false);
 
@@ -252,9 +252,20 @@ const Attendance = () => {
 
   const handleInformWFH = async (e) => {
     e.preventDefault();
+    const startDate = wfhForm.startDate || todayStr;
+    const endDate = wfhForm.endDate || startDate;
+    if (endDate < startDate) {
+      toast.error('To date must be on or after From date');
+      return;
+    }
     try {
-      await submitWFHMutation.mutateAsync(wfhForm);
-      setWfhForm({ date: todayStr, notes: '' });
+      await submitWFHMutation.mutateAsync({
+        startDate,
+        endDate,
+        date: startDate,
+        notes: wfhForm.notes,
+      });
+      setWfhForm({ startDate: todayStr, endDate: todayStr, notes: '' });
       setShowWFHModal(false);
     } catch (err) {
       console.error(err);
@@ -2353,23 +2364,50 @@ const Attendance = () => {
 
           <form onSubmit={handleInformWFH} className="flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="space-y-6 p-6 sm:p-7 overflow-y-auto flex-1 min-h-0 custom-scrollbar overscroll-contain">
-              <div>
-                <label className="text-sm font-semibold text-foreground mb-1.5 block">
-                  WFH Date <span className="text-foreground">*</span>
-                </label>
-                <input
-                  type="date"
-                  required
-                  min={todayStr}
-                  value={wfhForm.date || todayStr}
-                  onChange={(e) => setWfhForm((prev) => ({ ...prev, date: e.target.value }))}
-                  onClick={(e) => {
-                    try {
-                      e.target.showPicker();
-                    } catch (_) {}
-                  }}
-                  className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                    From Date <span className="text-foreground">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    min={todayStr}
+                    value={wfhForm.startDate || todayStr}
+                    onChange={(e) => {
+                      const nextStart = e.target.value;
+                      setWfhForm((prev) => ({
+                        ...prev,
+                        startDate: nextStart,
+                        endDate: !prev.endDate || prev.endDate < nextStart ? nextStart : prev.endDate,
+                      }));
+                    }}
+                    onClick={(e) => {
+                      try {
+                        e.target.showPicker();
+                      } catch (_) {}
+                    }}
+                    className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                    To Date <span className="text-foreground">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    min={wfhForm.startDate || todayStr}
+                    value={wfhForm.endDate || wfhForm.startDate || todayStr}
+                    onChange={(e) => setWfhForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                    onClick={(e) => {
+                      try {
+                        e.target.showPicker();
+                      } catch (_) {}
+                    }}
+                    className="h-11 w-full rounded-xl bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                  />
+                </div>
               </div>
 
               <div>
