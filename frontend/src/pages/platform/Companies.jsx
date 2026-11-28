@@ -52,16 +52,14 @@ const ALL_MODULES = [
   { key: 'sop',         label: 'SOPs',               always: false },
   { key: 'assets',      label: 'Asset Library',      always: false },
   { key: 'smm',         label: 'SMM Module',         always: false },
-  { key: 'automations', label: 'Automations',        always: false },
   { key: 'influencers', label: 'Influencer Hub',     always: false },
-  { key: 'ai',          label: 'AI Features',        always: false },
 ];
 
 const PLAN_PRESETS = {
   trial:   { maxUsers: 3,   maxClients: 5,    modules: ['crm','clients','projects','tasks'] },
   starter: { maxUsers: 10,  maxClients: 25,   modules: ['crm','clients','projects','tasks','finance','hr','attendance','portal','proposals','reports'] },
-  growth:  { maxUsers: 25,  maxClients: 100,  modules: ['crm','clients','projects','tasks','finance','hr','attendance','smm','portal','sop','assets','proposals','reports','automations','influencers'] },
-  pro:     { maxUsers: 999, maxClients: 9999, modules: ['crm','clients','projects','tasks','finance','hr','attendance','smm','portal','sop','assets','proposals','reports','automations','influencers','ai'] },
+  growth:  { maxUsers: 25,  maxClients: 100,  modules: ['crm','clients','projects','tasks','finance','hr','attendance','smm','portal','sop','assets','proposals','reports','influencers'] },
+  pro:     { maxUsers: 999, maxClients: 9999, modules: ['crm','clients','projects','tasks','finance','hr','attendance','smm','portal','sop','assets','proposals','reports','influencers'] },
 };
 
 const Companies = ({ defaultTab }) => {
